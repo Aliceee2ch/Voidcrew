@@ -3126,14 +3126,14 @@
      "png": "squab_squab_robotics_lab_cheap_frigate.png",
      "src_md5": "c0c7becbd820fdbb3bf9344c42ca5bbb"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 8,
      "height": 3,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_robotics_lab_standard.png",
+     "png": "squab_squab_robotics_lab_nanotrasen_frigate.png",
      "src_md5": "92ef7b0cace1ad48e6ac8ad5c49412ba"
     },
     "the_patrolboat": {
@@ -3166,14 +3166,14 @@
      "png": "squab_squab_medical_lab_cheap_frigate.png",
      "src_md5": "0024373d6373d0c9d4e96e95ae7e05ac"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 8,
      "height": 3,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_medical_lab_standard.png",
+     "png": "squab_squab_medical_lab_nanotrasen_frigate.png",
      "src_md5": "6743e67629d12de8bd21dc07341ce562"
     },
     "the_patrolboat": {
@@ -3206,14 +3206,14 @@
      "png": "squab_squab_nanite_lab_cheap_frigate.png",
      "src_md5": "db725c85a5df498ad7b4662cb25238b5"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 8,
      "height": 3,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_nanite_lab_standard.png",
+     "png": "squab_squab_nanite_lab_nanotrasen_frigate.png",
      "src_md5": "f432eed5076de17fdf88c9b8038a2154"
     },
     "the_patrolboat": {
@@ -3246,14 +3246,14 @@
      "png": "squab_squab_mecha_ripley_cheap_frigate.png",
      "src_md5": "ffc4eeddec82d61678f9504d4e49d964"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 2,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_mecha_ripley_standard.png",
+     "png": "squab_squab_mecha_ripley_nanotrasen_frigate.png",
      "src_md5": "5cb6252e888cbd1a6eca265b45de95a7"
     },
     "the_patrolboat": {
@@ -3286,14 +3286,14 @@
      "png": "squab_squab_mecha_paddy_cheap_frigate.png",
      "src_md5": "88df07c2a8a376fdf463279edfeec990"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 2,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_mecha_paddy_standard.png",
+     "png": "squab_squab_mecha_paddy_nanotrasen_frigate.png",
      "src_md5": "a558495f6097b76722526b24ea596f9a"
     },
     "the_patrolboat": {
@@ -3326,14 +3326,14 @@
      "png": "squab_squab_extra_gear_bay_cheap_frigate.png",
      "src_md5": "7a17ba3e62875c96a4f44e10caf3eae6"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 2,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_extra_gear_bay_standard.png",
+     "png": "squab_squab_extra_gear_bay_nanotrasen_frigate.png",
      "src_md5": "15284b8818710c70a4cfe4329e7ff3c2"
     },
     "the_patrolboat": {
@@ -3366,14 +3366,14 @@
      "png": "squab_squab_ai_core_cheap_frigate.png",
      "src_md5": "b241afc039604d5d60e1d5d7381637e5"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 1,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_ai_core_standard.png",
+     "png": "squab_squab_ai_core_nanotrasen_frigate.png",
      "src_md5": "41579cacf587992bab95f693c30aa971"
     },
     "the_patrolboat": {
@@ -3406,14 +3406,14 @@
      "png": "squab_squab_plumbing_storage_cheap_frigate.png",
      "src_md5": "5a90af7644b6e6ff25675c203aa12587"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 1,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_plumbing_storage_standard.png",
+     "png": "squab_squab_plumbing_storage_nanotrasen_frigate.png",
      "src_md5": "0a024269416b6a5d3a4f19345c11d43e"
     },
     "the_patrolboat": {
@@ -3446,14 +3446,14 @@
      "png": "squab_squab_science_director_cheap_frigate.png",
      "src_md5": "45c0c91ba3d38a9af80b79b54c5d5205"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 2,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_science_director_standard.png",
+     "png": "squab_squab_science_director_nanotrasen_frigate.png",
      "src_md5": "2278880fcce97b042f12d1948c94e3d6"
     },
     "the_patrolboat": {
@@ -3486,14 +3486,14 @@
      "png": "squab_squab_medical_director_cheap_frigate.png",
      "src_md5": "5a2d9d267fc29ec638ce256d727dfaa5"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 2,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_medical_director_standard.png",
+     "png": "squab_squab_medical_director_nanotrasen_frigate.png",
      "src_md5": "8ebbf057d0b00972e860282584584dbd"
     },
     "the_patrolboat": {
@@ -3526,14 +3526,14 @@
      "png": "squab_squab_security_director_cheap_frigate.png",
      "src_md5": "26c5e3bf2e850be5b31dad1251393fa9"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 3,
      "height": 2,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_security_director_standard.png",
+     "png": "squab_squab_security_director_nanotrasen_frigate.png",
      "src_md5": "d9a245418e9c4742c951c8565e1ad00a"
     },
     "the_patrolboat": {
@@ -3566,14 +3566,14 @@
      "png": "squab_squab_mining_gear_cheap_frigate.png",
      "src_md5": "1c5e3e1075de85238f8573558d3679fb"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 4,
      "height": 3,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_mining_gear_standard.png",
+     "png": "squab_squab_mining_gear_nanotrasen_frigate.png",
      "src_md5": "43f29375af9c938e5bc1e031748c6cc4"
     },
     "the_patrolboat": {
@@ -3606,14 +3606,14 @@
      "png": "squab_squab_security_gear_room_cheap_frigate.png",
      "src_md5": "19d7b49a18a002401963a4bf3eedc978"
     },
-    "standard": {
+    "nanotrasen_frigate": {
      "width": 4,
      "height": 3,
      "connector": [
       1,
       1
      ],
-     "png": "squab_squab_security_gear_room_standard.png",
+     "png": "squab_squab_security_gear_room_nanotrasen_frigate.png",
      "src_md5": "e4c01da54e1869dc37451e8337639594"
     },
     "the_patrolboat": {

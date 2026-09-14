@@ -113,6 +113,23 @@ SMOOTH_OBJS = {
     "/obj/structure/window/bronze/fulltile": ("icons/obj/smooth_structures/clockwork_window.dmi", "clockwork_window", "bronze_window"),
 }
 
+# dmm-tools expands these spawners into grilles and windows before rendering,
+# but our repair pass reads the original map paths. Resolve the window from
+# each spawn_list in code/game/objects/effects/spawners/structure.dm so it gets
+# both its glass overlay and the same smoothing joins as a placed window.
+WINDOW_SPAWNERS = {
+    "/obj/effect/spawner/structure/window": "/obj/structure/window/fulltile",
+    "/obj/effect/spawner/structure/window/reinforced": "/obj/structure/window/reinforced/fulltile",
+    "/obj/effect/spawner/structure/window/reinforced/tinted": "/obj/structure/window/reinforced/tinted/fulltile",
+    "/obj/effect/spawner/structure/window/bronze": "/obj/structure/window/bronze/fulltile",
+    "/obj/effect/spawner/structure/window/reinforced/shuttle": "/obj/structure/window/reinforced/shuttle",
+    "/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium": "/obj/structure/window/reinforced/plasma/plastitanium",
+    "/obj/effect/spawner/structure/window/ice": "/obj/structure/window/reinforced/fulltile/ice",
+    "/obj/effect/spawner/structure/window/survival_pod": "/obj/structure/window/reinforced/shuttle/survival_pod",
+    "/obj/effect/spawner/structure/window/plasma": "/obj/structure/window/plasma/fulltile",
+    "/obj/effect/spawner/structure/window/reinforced/plasma": "/obj/structure/window/reinforced/plasma/fulltile",
+}
+
 # Non-window tiles that also count as joins for a window group
 # (pod windows connect to pod walls/airlocks: SMOOTH_GROUP_SURVIVAL_TITANIUM_POD)
 WINDOW_JOIN_EXTRA = {
@@ -318,8 +335,20 @@ def smooth_turf_at(dmm: Dmm, x: int, y: int):
     return best
 
 
+def resolve_window_spawner(path: str) -> str:
+    """Resolve fulltile spawners; hollow spawners use directional panes."""
+    if path_matches(path, "/obj/effect/spawner/structure/window/hollow"):
+        return path
+    best = max(
+        (prefix for prefix in WINDOW_SPAWNERS if path_matches(path, prefix)),
+        key=len, default=None,
+    )
+    return WINDOW_SPAWNERS[best] if best else path
+
+
 def smooth_obj_entry(path: str):
     """Longest-prefix SMOOTH_OBJS entry for an obj path, or None."""
+    path = resolve_window_spawner(path)
     best = None
     best_len = -1
     for prefix, entry in SMOOTH_OBJS.items():
@@ -352,6 +381,7 @@ def build_join_sets(dmm: Dmm) -> tuple[dict, set, dict]:
     }
     for pos, key in dmm.grid.items():
         for path in dmm.key_paths[key]:
+            path = resolve_window_spawner(path)
             if any(path_matches(path, p) for p in WALL_JOIN_PREFIXES) and not any(
                 path_matches(path, p) for p in WALL_JOIN_EXCLUDE
             ):

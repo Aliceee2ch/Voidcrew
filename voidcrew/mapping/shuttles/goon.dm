@@ -22,10 +22,10 @@
 	suffix = "goon_a" // Default suffix, overridden by selected theme
 	short_name = "Goon-class"
 	catalog_desc = "Four colour-coded pods bolted onto a central corridor, salvaged from an \
-		old emergency shuttle. The cheapest hull with real rooms, and nearly all of it is \
+		old emergency shuttle. A compact hull with real rooms, and nearly all of it is \
 		modular: the port pod, engineering, the mining bay, the lounge and the cockpit \
 		annex all swap out. A good first ship for three or four crew."
-	part_requirements = list(PART_CLASS_TRADE = 5, PART_CLASS_MISC = 3, PART_CLASS_SCIENCE = 2)
+	part_requirements = list()
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list(
 		"goon_port",

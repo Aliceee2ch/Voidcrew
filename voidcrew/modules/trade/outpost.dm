@@ -77,6 +77,8 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	var/list/aggressor_strikes = list()
 	/// Last time each mind took a strike: mind -> world.time (see OUTPOST_AGGRESSION_GRACE)
 	var/list/aggressor_strike_times = list()
+	/// Personal retaliation exemptions: defender mind -> (attacker mind -> expiry time).
+	var/list/self_defense_targets = list()
 	/// Posted (not yet accepted) contracts (see outpost_missions.dm / outpost_quests.dm)
 	var/list/datum/mission/shop_offers = list()
 	/// Linked trader NPC fronting the main shop (the outpost's "face")
@@ -133,6 +135,7 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	aggressor_minds.Cut()
 	aggressor_strikes.Cut()
 	aggressor_strike_times.Cut()
+	self_defense_targets.Cut()
 	QDEL_LIST(shop_offers)
 	turrets.Cut()
 	traders.Cut()
@@ -378,6 +381,32 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 		npc.shop_ui?.update_static_data_for_all_viewers()
 
 // ===== EMBARGO / AGGRESSION =====
+
+/**
+ * Only the attacked person may retaliate, and only against their attacker.
+ * Check the exemption before recording aggression so defending oneself never
+ * gives the original attacker a reciprocal exemption or extends the fight.
+ */
+/obj/structure/overmap/trader_outpost/proc/register_pvp_aggression(mob/living/victim, mob/living/offender)
+	if(!victim?.mind || !offender?.mind || victim.mind == offender.mind)
+		return
+	var/list/allowed_targets = self_defense_targets[offender.mind]
+	var/defense_until = LAZYACCESS(allowed_targets, victim.mind)
+	if(defense_until > world.time)
+		return
+	if(defense_until)
+		allowed_targets -= victim.mind
+		if(!length(allowed_targets))
+			self_defense_targets -= offender.mind
+
+	var/list/victim_targets = self_defense_targets[victim.mind]
+	if(!victim_targets)
+		victim_targets = list()
+		self_defense_targets[victim.mind] = victim_targets
+	// Even hits inside the strike grace period or from an already marked
+	// aggressor renew the victim's permission to defend themselves.
+	victim_targets[offender.mind] = world.time + OUTPOST_SELF_DEFENSE_DURATION
+	register_aggression(offender)
 
 /**
  * Called when someone attacks outpost property or another visitor. The first

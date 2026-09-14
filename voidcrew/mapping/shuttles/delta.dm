@@ -1,7 +1,7 @@
 /**
  * Delta-class Frigate
  *
- * * Derelict NT frigate salvage; unlock 2 combat + 1 misc
+ * * Derelict NT frigate salvage; free base hull
  * * Converted to the phase-4 modular standard: 4 upgrade slots, 4 themes
  * * Slots: cargo (open, 7x5), cafe (open, 7x5), med (open, 6x3),
  *   dorms (enclosed-lite, 6x3 with the (14,16) cryo reserve tile)
@@ -21,7 +21,7 @@
 		with the engine block aft and an airlock arm on each side. Helm, engines, autolathe \
 		and cryo are permanent; the four slots are cargo, cafe, medical and dorms, so the \
 		same hull can fly as a trader, a clinic or a bunkhouse for a larger crew."
-	part_requirements = list(PART_CLASS_COMBAT = 8, PART_CLASS_MISC = 8, PART_CLASS_TRADE = 6)
+	part_requirements = list()
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list(
 		"delta_cargo",

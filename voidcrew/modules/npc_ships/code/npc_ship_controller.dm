@@ -907,7 +907,8 @@
 				continue
 			var/blocked = FALSE
 			for(var/obj/O in T)
-				if(O.density)
+				// Border windows and windoors leave room for a pod to land on the tile.
+				if(O.density && !(O.flags_1 & ON_BORDER_1))
 					blocked = TRUE
 					break
 			if(blocked)

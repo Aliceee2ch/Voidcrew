@@ -390,6 +390,8 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 		recipient.receive_ahelp(
 			link_to_us,
 			span_linkify(send_message),
+			raw_message = raw_message, // VOIDCREW EDIT ADDITION - AUTOTRANSLATE
+			sender = src, // VOIDCREW EDIT ADDITION - AUTOTRANSLATE
 		)
 
 		to_chat(src,
@@ -453,6 +455,8 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 			name_key_with_link,
 			span_linkify(keyword_parsed_msg),
 			"danger",
+			raw_message = raw_message, // VOIDCREW EDIT ADDITION - AUTOTRANSLATE
+			sender = src, // VOIDCREW EDIT ADDITION - AUTOTRANSLATE
 		)
 
 		to_chat(src,
@@ -483,10 +487,18 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 		"<font color='red'>[replymsg]</font>",
 		log_in_blackbox = FALSE,
 		player_message = player_replymsg)
+	// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+	var/datum/translated_speech/translation = recipient?.try_begin_adminhelp_translation(raw_message, src)
+	if(translation)
+		replymsg = "Reply PM from-<b>[name_key_with_link]</b>: [translation.wrapped_adminhelp_text(keyword_parsed_msg)]"
+	// VOIDCREW EDIT ADDITION END
 	to_chat(recipient,
 		type = MESSAGE_TYPE_ADMINPM,
 		html = span_danger("[replymsg]"),
 		confidential = TRUE)
+	// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+	translation?.begin()
+	// VOIDCREW EDIT ADDITION END
 
 	ticket.reply_to_admins_notification(send_message)
 	SSblackbox.LogAhelp(ticket_id, "Reply", send_message, recip_ckey, our_ckey)
@@ -529,10 +541,17 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 		else
 			log_admin_private("PM: [our_name]->External: [sanitize_text(trim(raw_message))]")
 		for(var/client/lad in GLOB.admins)
+			// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+			var/datum/translated_speech/translation = lad.try_begin_adminhelp_translation(raw_message, src)
+			var/display_message = translation ? translation.wrapped_adminhelp_text(keyword_parsed_msg) : keyword_parsed_msg
+			// VOIDCREW EDIT ADDITION END
 			to_chat(lad,
 				type = MESSAGE_TYPE_ADMINPM,
-				html = span_notice("<B>PM: [our_linked_ckey]-&gt;External:</B> [keyword_parsed_msg]"),
+				html = span_notice("<B>PM: [our_linked_ckey]-&gt;External:</B> [display_message]"), // VOIDCREW EDIT CHANGE - AUTOTRANSLATE
 				confidential = TRUE)
+			// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+			translation?.begin()
+			// VOIDCREW EDIT ADDITION END
 		return
 	if(!istype(ambiguious_recipient, /client))
 		to_chat(src,
@@ -558,10 +577,17 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 	for(var/client/lad in GLOB.admins)
 		if(lad.key == key || lad.key == recipient_key) //check to make sure client/lad isn't the sender or recipient
 			continue
+		// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+		var/datum/translated_speech/translation = lad.try_begin_adminhelp_translation(raw_message, src)
+		var/display_message = translation ? translation.wrapped_adminhelp_text(keyword_parsed_msg) : keyword_parsed_msg
+		// VOIDCREW EDIT ADDITION END
 		to_chat(lad,
 			type = MESSAGE_TYPE_ADMINPM,
-			html = span_notice("<B>PM: [our_linked_ckey]-&gt;[recipient_linked_ckey]:</B> [keyword_parsed_msg]") ,
+			html = span_notice("<B>PM: [our_linked_ckey]-&gt;[recipient_linked_ckey]:</B> [display_message]") , // VOIDCREW EDIT CHANGE - AUTOTRANSLATE
 			confidential = TRUE)
+		// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+		translation?.begin()
+		// VOIDCREW EDIT ADDITION END
 
 /// Accepts a message and an ambiguious recipient (some sort of client representative, or [EXTERNAL_PM_USER])
 /// Returns the filtered message if it passes all checks, or null if the send fails
@@ -685,6 +711,7 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 	var/stealthkey = GetTgsStealthKey()
 
 	message = sanitize(copytext_char(message, 1, MAX_MESSAGE_LEN))
+	var/raw_message = message // VOIDCREW EDIT ADDITION - AUTOTRANSLATE
 	message = emoji_parse(message)
 
 	if(!message)
@@ -695,12 +722,22 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 	// The ckey of our recipient, with their mob if one exists. No link
 	var/recipient_name = key_name_admin(recipient)
 
-	message_admins("External message from [sender] to [recipient_name_linked] : [message]")
+	// VOIDCREW EDIT CHANGE BEGIN - AUTOTRANSLATE
+	for(var/client/admin in GLOB.admins)
+		var/datum/translated_speech/translation = admin.try_begin_adminhelp_translation(raw_message)
+		var/display_message = translation ? translation.wrapped_adminhelp_text(message) : message
+		to_chat(admin,
+			type = MESSAGE_TYPE_ADMINLOG,
+			html = "<span class='admin'><span class='prefix'>ADMIN LOG:</span> <span class='message'>External message from [sender] to [recipient_name_linked] : [display_message]</span></span>",
+			confidential = TRUE)
+		translation?.begin()
+	// VOIDCREW EDIT CHANGE END
 	log_admin_private("External PM: [sender] -> [recipient_name] : [message]")
 
 	recipient.receive_ahelp(
 		"<a href='byond://?priv_msg=[stealthkey]'>[adminname]</a>",
 		message,
+		raw_message = raw_message, // VOIDCREW EDIT ADDITION - AUTOTRANSLATE
 	)
 
 	admin_ticket_log(recipient, "<font color='purple'>PM From [tgs_tagged]: [message]</font>", log_in_blackbox = FALSE)
@@ -743,18 +780,26 @@ ADMIN_VERB(cmd_admin_pm_panel, R_NONE, "Admin PM", "Show a list of clients to PM
 
 	return GLOB.directory[searching_ckey]
 
-/client/proc/receive_ahelp(reply_to, message, span_class = "adminsay")
+// VOIDCREW EDIT CHANGE - AUTOTRANSLATE: raw_message precedes any added markup.
+/client/proc/receive_ahelp(reply_to, message, span_class = "adminsay", raw_message = null, client/sender = null)
+	// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+	var/datum/translated_speech/translation = try_begin_adminhelp_translation(raw_message, sender)
+	var/display_message = translation ? translation.wrapped_adminhelp_text(message) : message
+	// VOIDCREW EDIT ADDITION END
 	to_chat(
 		src,
 		type = MESSAGE_TYPE_ADMINPM,
 		html = fieldset_block(
 			span_adminhelp("Administrator private message"),
 			"<span class='[span_class]'>Admin PM from-<b>[reply_to]</b></span>\n\n\
-			<span class='[span_class]'>[message]</span>\n\n\
+			<span class='[span_class]'>[display_message]</span>\n\n\
 			<i class='adminsay'>Click on the administrator's name to reply.</i>",
 			"boxed_message red_box"),
 		confidential = TRUE
 	)
+	// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+	translation?.begin()
+	// VOIDCREW EDIT ADDITION END
 
 	current_ticket?.player_replied = FALSE
 

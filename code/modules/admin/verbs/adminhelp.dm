@@ -402,13 +402,9 @@ GLOBAL_DATUM_INIT(ahelp_tickets, /datum/admin_help_tickets, new)
 /datum/admin_help/proc/MessageNoRecipient(msg, urgent = FALSE)
 	msg = sanitize(copytext_char(msg, 1, MAX_MESSAGE_LEN))
 	var/ref_src = "[REF(src)]"
-	//Message to be sent to all admins
-	var/admin_msg = fieldset_block(
-		span_adminhelp("Ticket [TicketHref("#[id]", ref_src)]"),
-		"<b>[LinkedReplyName(ref_src)]</b>\n\n\
-		[span_linkify(keywords_lookup(msg))]\n\n\
-		<b class='smaller'>[FullMonty(ref_src)]</b>",
-		"boxed_message red_box")
+	// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+	var/formatted_message = span_linkify(keywords_lookup(msg))
+	// VOIDCREW EDIT ADDITION END
 
 	AddInteraction("<font color='red'>[LinkedReplyName(ref_src)]: [msg]</font>", player_message = "<font color='red'>[LinkedReplyName(ref_src)]: [msg]</font>")
 	log_admin_private("Ticket #[id]: [key_name(initiator)]: [msg]")
@@ -418,10 +414,23 @@ GLOBAL_DATUM_INIT(ahelp_tickets, /datum/admin_help_tickets, new)
 		if(X.prefs.toggles & SOUND_ADMINHELP)
 			SEND_SOUND(X, sound('sound/effects/adminhelp.ogg'))
 		window_flash(X, ignorepref = TRUE)
+		// VOIDCREW EDIT CHANGE BEGIN - AUTOTRANSLATE
+		var/datum/translated_speech/translation = X?.try_begin_adminhelp_translation(msg, initiator)
+		var/display_message = translation ? translation.wrapped_adminhelp_text(formatted_message) : formatted_message
+		var/admin_msg = fieldset_block(
+			span_adminhelp("Ticket [TicketHref("#[id]", ref_src)]"),
+			"<b>[LinkedReplyName(ref_src)]</b>\n\n\
+			[display_message]\n\n\
+			<b class='smaller'>[FullMonty(ref_src)]</b>",
+			"boxed_message red_box")
+		// VOIDCREW EDIT CHANGE END
 		to_chat(X,
 			type = MESSAGE_TYPE_ADMINPM,
 			html = admin_msg,
 			confidential = TRUE)
+		// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+		translation?.begin()
+		// VOIDCREW EDIT ADDITION END
 
 	//show it to the person adminhelping too
 	reply_to_admins_notification(msg)

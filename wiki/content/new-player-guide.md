@@ -44,9 +44,9 @@ Danger and reward both scale with how close to the star you fly. The safe outer 
 
 ## Keeping what you earn
 
-Most of what you find is yours only for the round. Ship parts are the exception: they are the persistent currency that unlocks hulls, themes and modules for every future round, and they only carry over if you extract them.
+Most of what you find is yours only for the round. [Ship parts](ship-parts.md) are the exception: they are the persistent currency that unlocks hulls, themes and modules for every future round, and found parts only carry over if you extract them.
 
-To extract, the parts must be inside an extraction case, in your inventory, when the round ends or when your ship makes a bluespace jump out. Use the **Request Extraction Case** verb in the IC tab to get one. Only the first standard case you are carrying counts, and you have to be alive and conscious, nothing extracts off a corpse. Loose parts in your bag are lost. Everyone who played a character also gets one random part and a hundred credits at round end, so a bad round still moves you forward a little.
+Use **Request Extraction Case** in the **IC** tab, pick up the case, and put up to five parts inside. Carry it when the round ends or your ship makes a bluespace jump out; inside a backpack counts. You must be alive and connected. Each account extracts once per round, from its first standard case plus any champion's cases carried alongside it. Loose parts in your bag do not extract. If you played a character and remain connected at round end, you also get one random part directly into your account, even if you died. See [Ship Parts](ship-parts.md) for the full extraction rules.
 
 ## Staying alive
 

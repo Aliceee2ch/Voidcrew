@@ -18,7 +18,7 @@
 		dock prep strip. Helm, engine column, SMES bay and cryopods are all permanent, so \
 		the bare hull flies as bought. Its slots cover the service room, the dock strip and \
 		the hold, which lets it run as a pure ore hauler or a small freighter."
-	part_requirements = list(PART_CLASS_TRADE = 6, PART_CLASS_MISC = 4, PART_CLASS_SCIENCE = 2)
+	part_requirements = list()
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list(
 		"kilo_service",

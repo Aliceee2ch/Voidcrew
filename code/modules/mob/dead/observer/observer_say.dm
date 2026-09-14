@@ -70,12 +70,29 @@
 		else
 			to_follow = V.source
 	var/link = FOLLOW_LINK(src, to_follow)
+	// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+	// Observers receive clear speech regardless of IC language or whisper range.
+	var/datum/translated_speech/translation = try_begin_translation(speaker, raw_message, message_mods[MODE_CUSTOM_SAY_ERASE_INPUT], TRUE, FALSE)
+	if(translation)
+		translation.runechat_visible_only = TRUE
+		raw_message = translation.wrapped_text()
+	// VOIDCREW EDIT ADDITION END
 	// Create map text prior to modifying message for goonchat
 	if (safe_read_pref(client, /datum/preference/toggle/enable_runechat) && (safe_read_pref(client, /datum/preference/toggle/enable_runechat_non_mobs) || ismob(speaker)))
-		create_chat_message(speaker, message_language, raw_message, spans)
+		// VOIDCREW EDIT CHANGE BEGIN - AUTOTRANSLATE
+		// Global ghost hearing must not animate bubbles outside the current view.
+		var/atom/movable/bubble_speaker = speaker?.GetSource() || speaker
+		if(client.translation_bubble_in_view(bubble_speaker))
+			var/datum/chatmessage/bubble = create_chat_message(speaker, message_language, raw_message, spans)
+			translation?.attach_runechat(bubble)
+		// VOIDCREW EDIT CHANGE END
 	// Recompose the message, because it's scrambled by default
 	message = compose_message(speaker, message_language, raw_message, radio_freq, radio_freq_name, radio_freq_color, spans, message_mods)
 	to_chat(src,
 		html = "[link] [message]",
 		avoid_highlighting = speaker == src)
+	// VOIDCREW EDIT ADDITION BEGIN - AUTOTRANSLATE
+	// Queue the original first: cached translations can finish synchronously.
+	translation?.begin()
+	// VOIDCREW EDIT ADDITION END
 	return TRUE

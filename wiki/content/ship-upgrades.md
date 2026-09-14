@@ -2,34 +2,18 @@
 title: Buying & Upgrading Ships
 category: The Fleet
 order: 2
-blurb: How ship parts work, how the shipyard works, and what modules and themes do to a hull.
+blurb: Buying permanent unlocks in the shipyard and choosing a hull, theme and modules.
 ---
 
-Ships are bought with ship parts: physical items you find out in the galaxy, lock in an extraction case, and carry home. Parts bank to your account rather than your character, so they survive the round and pay for the next ship, and everything you buy stays bought. For the hulls themselves and their prices, see the [Ship Catalog](ship-catalog.md).
+The shipyard lets you choose a hull, theme and modules before launching. Purchases use [ship parts](ship-parts.md) banked to your account, and everything you buy stays unlocked for future rounds. For the hulls themselves, see the [Ship Catalog](ship-catalog.md).
 
 ## Ship parts
 
-Parts come in four classes, and hulls ask for specific ones: a Goon needs 5 trade, 3 misc and 2 science, and no amount of combat parts will substitute.
-
-| Class | Colour | Usually found in |
-|---|---|---|
-| Combat | Red | Wrecks, armories, syndicate sites, bounties on hostile ships |
-| Science | Blue | Laboratories, research sites, occult ruins |
-| Trade | Gold | Stations, trade posts, cargo and industrial ruins |
-| Misc | Grey | General loot, derelicts, expedition caches |
-
-Parts are not the credits your crew spends in-round on cargo and trade goods. Those are a separate, ship-level economy covered in [Money & Trade](money-and-trade.md). Everyone who plays a character gets one part of a random class at round end regardless of how the round went, but that is a floor, not an income.
+Parts come in four classes: **combat, science, trade and misc**. You need each class listed in a purchase's price; other classes cannot substitute. The shipyard displays your banked balance and each item's cost. See [Ship Parts](ship-parts.md) for loot sources, participation rewards and trading parts with other players.
 
 ### Getting parts home
 
-A part in your backpack is worth nothing. To bank it you need an **extraction case**, which you request with the **Request Extraction Case** verb under the IC tab. It holds five parts, accepts nothing else, and locks with a five-digit PIN if you use it in hand. Parts inside are banked when your ship completes a bluespace jump from the [helm](piloting.md), or automatically at round end.
-
-!!! warning "The case is the whole system"
-    Loose parts are never extracted. You can carry only one case, only the first case found on you is emptied, and each player banks once per round, and you have to be alive for it, so nothing is recovered from a corpse.
-
-The case is also a target: it can be stolen off your body, unscrewed and hacked open with a multitool over about forty seconds, or broken permanently with an emag. Do not walk into a boarding action with five parts on your back.
-
-The **Withdraw Ship Part** verb, also under IC, pulls a part back out of your account as an item. That is how you give parts to another player. Hand it over and let them bank it themselves.
+Use **Request Extraction Case** under the **IC** tab, put up to five parts inside, and carry the case when your ship bluespace jumps or the round ends. A case inside your backpack counts; loose parts do not. You must be alive and connected, and the current carrier receives the parts. Each account extracts once per round, from one standard case plus any champion's cases carried alongside it. Read [Banking your parts](ship-parts.md#banking-your-parts) before leaving with a haul.
 
 ## The shipyard
 

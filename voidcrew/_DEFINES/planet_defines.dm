@@ -148,8 +148,10 @@
 /// Tallest ruin template a slot can hold, once the berths have taken the bottom rows.
 #define MAP_SLOT_RUIN_REGION_HEIGHT (MAP_SLOT_SIDE - MAP_SLOT_RUIN_MARGIN - MAP_SLOT_RUIN_MIN_Y_OFFSET)
 
-/// How long after the last ship undocks before an abandoned planet releases its z-levels
+/// Minimum cleanup delay once an undocked planet has no living, connected players.
 #define PLANET_DESPAWN_TIMER 5 MINUTES
+/// A living SSD player's body is protected for this long after its last disconnect.
+#define PLANET_SSD_GRACE_PERIOD 10 MINUTES
 
 /// How long a site waits before retrying a load that was refused for want of map volume
 /// (world.maxz at its ceiling - see /datum/config_entry/number/max_z_levels).

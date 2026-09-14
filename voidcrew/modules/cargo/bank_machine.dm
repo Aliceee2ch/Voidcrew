@@ -10,8 +10,8 @@
 
 /obj/machinery/computer/bank_machine/add_context(atom/source, list/context, obj/item/held_item, mob/user)
 	. = ..()
-	if(istype(held_item, /obj/item/card/id))
-		context[SCREENTIP_CONTEXT_LMB] = get_outpost_from_atom(src) ? "Treasury transfer instructions" : "Connect Account"
+	if(istype(held_item, /obj/item/card/id) && get_outpost_from_atom(src))
+		context[SCREENTIP_CONTEXT_LMB] = "Treasury transfer instructions"
 		return CONTEXTUAL_SCREENTIP_SET
 
 /obj/machinery/computer/bank_machine/examine(mob/user)
@@ -20,7 +20,7 @@
 	if(synced_bank_account)
 		. += span_notice("It is connected to [synced_bank_account.account_holder]'s account.")
 	else
-		. += span_notice("It is not connected to an account. Use an ID to connect it")
+		. += span_notice("It is not connected to a ship or claim account.")
 
 /obj/machinery/computer/bank_machine/multitool_act(mob/living/user, obj/item/multitool/tool)
 	user.balloon_alert(user, "buffer saved in storage")
@@ -48,14 +48,12 @@
 
 /obj/machinery/computer/bank_machine/attackby(obj/item/weapon, mob/user, params)
 	var/obj/structure/overmap/dynamic/player_outpost/site = resolve_outpost_bank()
-	if(site && isidcard(weapon))
-		to_chat(user, span_notice("This terminal serves [site.treasury.account_holder]. Keep your ID in hand and use the terminal interface for account transfers."))
-		return
 	if(isidcard(weapon))
-		var/obj/item/card/id/id_weapon = weapon
-		synced_bank_account = id_weapon.registered_account
-		playsound(user, 'sound/machines/ding.ogg', 50, TRUE)
-		balloon_alert_to_viewers(user, "account updated")
+		if(site)
+			to_chat(user, span_notice("This terminal serves [site.treasury.account_holder]. Keep your ID in hand and use the terminal interface for account transfers."))
+		else
+			balloon_alert(user, "cannot link ID accounts")
+		return
 
 	if(!synced_bank_account && (istype(weapon, /obj/item/stack/spacecash) || istype(weapon, /obj/item/holochip) || istype(weapon, /obj/item/coin)))
 		return //don't let them continue the attack chain because they'll waste money on a machine with no account

@@ -52,15 +52,15 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	RegisterSignal(living_mob, COMSIG_ATOM_ATTACK_MECH, PROC_REF(on_outpost_pvp_mech_attack))
 
 /**
- * Routes player-on-player violence through the same strike and embargo path as
- * property damage. Both parties need minds so outpost NPCs, fauna, and ordinary
- * interactions with them retain their existing behavior.
+ * Checks personal self-defense before applying strikes and embargoes. Both
+ * parties need minds so outpost NPCs, fauna, and ordinary interactions with
+ * them retain their existing behavior.
  */
 /datum/outpost_pvp_enforcement/proc/register_pvp_aggression(mob/living/victim, mob/living/offender)
 	if(!victim.mind || !offender?.mind || victim == offender)
 		return
 	var/obj/structure/overmap/trader_outpost/guarding_outpost = get_trader_outpost_for_turf(get_turf(victim))
-	guarding_outpost?.register_aggression(offender)
+	guarding_outpost?.register_pvp_aggression(victim, offender)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_item_attack(mob/living/victim, obj/item/weapon, mob/living/offender, list/modifiers, list/attack_modifiers)
 	SIGNAL_HANDLER

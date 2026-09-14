@@ -15,7 +15,7 @@
 		proper engineering under one roof. The fleet's all-rounder: comfortable for five to \
 		eight crew, nothing exceptional in any one direction, and slots for medical, \
 		engineering, commons and cargo to lean it whichever way you want."
-	part_requirements = list(PART_CLASS_SCIENCE = 14, PART_CLASS_MISC = 10, PART_CLASS_TRADE = 8, PART_CLASS_COMBAT = 4)
+	part_requirements = list()
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list(
 		"scarab_med",

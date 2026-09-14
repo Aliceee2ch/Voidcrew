@@ -183,11 +183,6 @@
 		new /obj/effect/landmark/blobstart(safe_turf) // Stationloving component
 		new /obj/effect/landmark/observer_start(safe_turf) // Observer and Unit tests
 
-	// No hull configuration may launch without breathing gear, or without a
-	// surgical kit if it has somewhere to operate (BAL-6) - see
-	// voidcrew/modules/shuttle/ship_parts/starter_supplies.dm
-	loaded.ensure_starter_supplies()
-
 	worldgen_end(probe)
 	return ship_to_spawn
 
@@ -290,5 +285,4 @@
 	if(!check_rights(R_ADMIN))
 		return
 	src.holder.check_teams()
-
 

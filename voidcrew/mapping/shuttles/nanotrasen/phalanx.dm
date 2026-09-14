@@ -1,7 +1,7 @@
 /**
  * Phalanx-Class Super Battlecruiser
  *
- * * Decommissioned marine carrier; the fleet's capstone combat unlock (3 combat)
+ * * Decommissioned marine carrier; free base hull with paid combat modules
  * * Converted to the phase-4 modular standard: 5 upgrade slots, 4 themes
  * * Slots: bay_north (open, 11x3), bay_south (open, 11x3), lab (enclosed, 10x3),
  *   medical (enclosed, 10x3), armory (enclosed, 6x4)
@@ -22,8 +22,8 @@
 		fights by boarding rather than by guns: two long internal bays, cycling airlocks and \
 		room for a big crew, with no heavy weapons on the bare hull. The lab, medbay and \
 		armory are all slots, so the marine gear only comes back if you pay for it. \
-		The fleet's capstone unlock - expensive, and a lot of ship to keep running."
-	part_requirements = list(PART_CLASS_COMBAT = 24, PART_CLASS_SCIENCE = 12, PART_CLASS_TRADE = 12, PART_CLASS_MISC = 12)
+		A lot of ship to keep running."
+	part_requirements = list()
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list(
 		"phalanx_bay_north",

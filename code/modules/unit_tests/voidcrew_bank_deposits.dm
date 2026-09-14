@@ -5,6 +5,37 @@
 /obj/structure/overmap/dynamic/player_outpost/bank_deposit_test/contains_service_turf(turf/location)
 	return location == service_turf
 
+/datum/unit_test/voidcrew_bank_id_siphoning/Run()
+	var/mob/living/carbon/human/consistent/user = allocate(__IMPLIED_TYPE__)
+	var/obj/machinery/computer/bank_machine/bank = allocate(__IMPLIED_TYPE__)
+	var/obj/item/card/id/id = allocate(__IMPLIED_TYPE__)
+	var/datum/bank_account/personal = allocate(/datum/bank_account, "ID siphon test", null, 1, FALSE)
+	personal.account_balance = 1000
+	id.registered_account = personal
+	TEST_ASSERT(user.put_in_active_hand(id), "The user could not hold the account ID.")
+
+	bank.attackby(id, user)
+	TEST_ASSERT_NULL(bank.synced_bank_account, "Swiping an ID linked an unassigned bank terminal to its account.")
+	bank.start_siphon(user)
+	bank.process(1)
+	TEST_ASSERT_EQUAL(personal.account_balance, 1000, "An unassigned bank terminal siphoned funds from an ID.")
+	TEST_ASSERT_EQUAL(bank.syphoning_credits, 0, "An unassigned bank terminal created siphoned credits.")
+	bank.end_siphon()
+
+	var/datum/bank_account/ship/ship_account = allocate(/datum/bank_account/ship, "ID siphon test ship", null, 1, FALSE)
+	ship_account.account_balance = 1000
+	bank.synced_bank_account = ship_account
+	bank.attackby(id, user)
+	TEST_ASSERT_EQUAL(bank.synced_bank_account, ship_account, "Swiping an ID replaced the terminal's ship account.")
+	bank.start_siphon(user)
+	bank.attackby(id, user)
+	bank.process(1)
+	TEST_ASSERT_EQUAL(bank.synced_bank_account, ship_account, "Swiping an ID redirected an active siphon.")
+	TEST_ASSERT_EQUAL(personal.account_balance, 1000, "An active bank terminal siphoned funds from an ID.")
+	TEST_ASSERT_EQUAL(ship_account.account_balance, 900, "The terminal no longer siphons from its ship account.")
+	TEST_ASSERT_EQUAL(bank.syphoning_credits, 100, "The terminal did not retain the credits withdrawn from its ship account.")
+	bank.end_siphon()
+
 /datum/unit_test/voidcrew_bank_coin_deposits
 	var/obj/docking_port/mobile/voidcrew/test_port
 

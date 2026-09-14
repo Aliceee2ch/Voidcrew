@@ -14,6 +14,9 @@
 /// first warning is read.
 #define OUTPOST_AGGRESSION_GRACE (2 SECONDS)
 
+/// How long a victim may retaliate against their attacker after the latest unprovoked hit.
+#define OUTPOST_SELF_DEFENSE_DURATION (2 MINUTES)
+
 /// Placement attempts when scattering trader outposts across the zone bands
 #define MAX_OUTPOST_PLACEMENT_ATTEMPTS 300
 

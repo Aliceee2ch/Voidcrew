@@ -3,10 +3,10 @@
  *
  * Three properties of the hull shelf that are enforced by convention today:
  *
- * 1. **Catalog rules.** Only curated `force_purchasable` gag hulls are free,
- *    and those must never be on the starting line, the roundstart fleet rolls
- *    hull, theme and modules at random, so a hull with no themes and no slots
- *    hands a crew four tiles and no way to configure anything.
+ * 1. **Catalog rules.** Modular base hulls are free; only alternative themes
+ *    and module upgrades cost parts. Curated `force_purchasable` gag hulls
+ *    must never be on the starting line: the roundstart fleet rolls hull,
+ *    theme and modules at random and needs configurable ships.
  * 2. **Dock rotation.** A hull whose `preferred_direction` disagrees with the
  *    aspect-ratio guess in adjust_reserve_dock_to_shuttle() spins 90 degrees on
  *    every dock and undock, forever, and nothing says so.
@@ -35,8 +35,8 @@
 			if(is_roundstart_eligible_hull(hull))
 				TEST_FAIL("[hull.type] is force_purchasable (curated back onto the shelf by hand) but is roundstart-eligible. The roundstart fleet rolls hull, theme and modules at random and these hulls have none of that to roll.")
 			continue
-		if(ship_template_total_part_cost(hull) <= 0)
-			TEST_FAIL("[hull.type] is on the shelf for nothing. Only curated force_purchasable hulls are free. There is deliberately no free starter hull.")
+		if(ship_template_total_part_cost(hull) != 0)
+			TEST_FAIL("[hull.type] costs parts to unlock. Modular base hulls must be free; only alternative themes and module upgrades cost parts.")
 		if(!length(hull.catalog_desc))
 			TEST_FAIL("[hull.type] has no catalog_desc, so the shelf falls back to a generated 'N-class with capacity for N crew' line")
 

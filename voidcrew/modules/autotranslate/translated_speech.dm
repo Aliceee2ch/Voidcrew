@@ -19,7 +19,7 @@
  * If begin() returns FALSE nothing was dispatched, the handle has already
  * cleaned itself up, and the message displays untranslated as normal.
  *
- * Used for player say, radio and OOC. OOC only uses the chat panel; attaching
+ * Used for player say, radio, OOC and adminhelp. OOC/adminhelp only use the chat panel; attaching
  * a runechat bubble is optional. Emotes and LOOC are not translated.
  */
 /datum/translated_speech
@@ -37,6 +37,8 @@
 
 	/// The runechat bubble, if this listener had runechat enabled.
 	var/datum/weakref/runechat_ref
+	/// Ghosts stop updating overhead text once its location leaves their view.
+	var/runechat_visible_only = FALSE
 	/// The body text as the bubble actually rendered it - already clipped to
 	/// the viewer max_chat_length preference, which original_text is not.
 	var/runechat_base
@@ -86,6 +88,12 @@
 /datum/translated_speech/proc/wrapped_text()
 	return wrap_translatable(original_text, id)
 
+/// Preserve admin keyword/action links when the translated body replaces their markup.
+/datum/translated_speech/proc/wrapped_adminhelp_text(formatted_message)
+	. = span_linkify(wrap_translatable(formatted_message, id))
+	if(findtext(formatted_message, "<a "))
+		. += "<details><summary>Original</summary>[formatted_message]</details>"
+
 /**
  * Registers the runechat bubble this listener got, if any.
  *
@@ -117,6 +125,12 @@
 		return null
 	if(isnull(runechat_base))
 		runechat_base = bubble.translate_body
+	if(runechat_visible_only && !owner?.translation_bubble_in_view(bubble.message_loc))
+		// Restore the original without measuring or animating an off-screen bubble.
+		bubble.set_display_text(runechat_base)
+		runechat_ref = null
+		stop_pending_indicator()
+		return null
 	return bubble
 
 /// Polls briefly for the bubble's image generation to finish, then starts the
@@ -221,7 +235,8 @@
 	if(pending_timer || isnull(runechat_ref))
 		return
 	pending_index = 1
-	pending_timer = addtimer(CALLBACK(src, PROC_REF(advance_pending_indicator)), TRANSLATION_PENDING_INTERVAL, TIMER_STOPPABLE | TIMER_LOOP)
+	// Moving off-screen can stop this timer from inside its own callback.
+	pending_timer = addtimer(CALLBACK(src, PROC_REF(advance_pending_indicator)), TRANSLATION_PENDING_INTERVAL, TIMER_STOPPABLE | TIMER_LOOP | TIMER_DELETE_ME)
 	// After arming the timer, so a bubble that vanished between binding and
 	// now can actually stop it again.
 	advance_pending_indicator()
@@ -293,7 +308,7 @@
 	active_morph.start()
 
 /datum/translated_speech/proc/on_morph_frame(frame)
-	var/datum/chatmessage/bubble = runechat_ref?.resolve()
+	var/datum/chatmessage/bubble = resolve_runechat()
 	if(isnull(bubble))
 		if(active_morph)
 			QDEL_NULL(active_morph)

@@ -389,6 +389,15 @@ All ShuttleMove procs go here
 	// therefore killed silently and permanently by a ship taking off next to it.
 	if(!(. & MOVE_AREA))
 		return
+	// Voidcrew: a powernet is only a set of cables and machines - nothing in it is
+	// positional - so a grid that travels whole does not need cutting at all. Cutting it
+	// anyway left every power machine on the hull netless for the ticks between here and
+	// lateShuttleMove(), and machines that latch on that (emitters switch themselves off,
+	// see emitter/process_early) broke on every jump. Only a net with a member that is
+	// staying behind (a cable run onto the berth, a docked neighbour's grid) has to be
+	// severed at the hull edge, and that decision is made once per net per move.
+	if(!moving_dock?.powernet_leaves_hull(powernet))
+		return
 	// No neighbour re-propagation: every neighbour is also about to be cut and moved,
 	// and the deferred timers would fire mid-transplant (the move CHECK_TICK-yields),
 	// pinning half-built powernets onto cables that afterShuttleMove() then trusts.

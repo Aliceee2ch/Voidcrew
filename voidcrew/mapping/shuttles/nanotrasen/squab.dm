@@ -1,7 +1,7 @@
 /datum/map_template/shuttle/voidcrew/squab
 	name = "Squab-Class Multipurpose Frigate"
-	suffix = "squab_a"
 	short_name = "Squab-Class"
+	suffix = "squab_a"
 	catalog_desc = "A commonly seen Nanotrasen frigate, usually manufactured with some sort of dual cargo-sci department. \
 		The hull itself is highly modular and well equipped, although rather slow due to it's poor thrust-to-mass ratio. \
 		Nontheless the Squab-Class continues to maintain Nanotrasen's interests in the region, while providing fairly \

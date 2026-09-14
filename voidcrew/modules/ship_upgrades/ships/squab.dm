@@ -44,7 +44,6 @@
 	name = "Robotics Lab"
 	slot = "squab_lab"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/robotics_lab.dmm"
 	is_default = TRUE
 	desc = "Squab's classic Lab designed for field research and robotics: Two fabricators and a basic lathe setup to keep you going."
@@ -56,7 +55,6 @@
 	name = "Medical Lab"
 	slot = "squab_lab"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/medical_lab.dmm"
 	is_default = FALSE
 	desc = "A chemistry lab with some spare medical supplies designed for pharmaceutical research."
@@ -68,7 +66,6 @@
 	name = "Nanite Lab"
 	slot = "squab_lab"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/nanite_lab.dmm"
 	is_default = FALSE
 	desc = "A nanite research compartment for quick access to nanite technology and research."
@@ -78,7 +75,6 @@
 	name = "Mecha Ripley"
 	slot = "squab_mech_bay"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/mecha_ripley.dmm"
 	is_default = TRUE
 	desc = "Squab's basic mecha setup: A mining ripley with some spare repair tools, a recharging station and a crate full of mining equipment."
@@ -89,7 +85,6 @@
 	name = "Mecha Paddy"
 	slot = "squab_mech_bay"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/mecha_paddy.dmm"
 	is_default = FALSE
 	desc = "A security upgrade for your vessel: A high-speed, low-drag Paddy mecha to keep your assistants in check."
@@ -100,7 +95,6 @@
 	name = "Extra gear bay"
 	slot = "squab_mech_bay"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/extra_gear_bay.dmm"
 	is_default = FALSE
 	desc = "A small section of the cargobay that includes some extra mining gear for your adventures."
@@ -110,7 +104,6 @@
 	name = "AI core"
 	slot = "lab_storage"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/ai_core.dmm"
 	is_default = TRUE
 	desc = "Squab's default AI core setup designed for the robotics lab."
@@ -121,7 +114,6 @@
 	name = "Plumbing storage"
 	slot = "lab_storage"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/plumbing_storage.dmm"
 	is_default = FALSE
 	desc = "A basic storage compartment for medical plumbing gear."
@@ -132,7 +124,6 @@
 	name = "Science Director"
 	slot = "director_s_quarters"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/science_director.dmm"
 	is_default = TRUE
 	desc = "A bedroom for the science director with a research modsuit and a filled locker. An experimental prototype resides on the table."
@@ -144,7 +135,6 @@
 	name = "Medical Director"
 	slot = "director_s_quarters"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/medical_director.dmm"
 	is_default = FALSE
 	desc = "Medical Director's quarters containing a modsuit, a compact defibrillator and a filled locker for medical research."
@@ -156,7 +146,6 @@
 	name = "Security Director"
 	slot = "director_s_quarters"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/security_director.dmm"
 	is_default = FALSE
 	desc = "Sleeping quarters for the security director with all his gear intact. A displaycase proudly showcases a multiphase energy gun."
@@ -167,7 +156,6 @@
 	name = "Mining gear"
 	slot = "squab_gear_room"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/mining_gear.dmm"
 	is_default = TRUE
 	desc = "Two suit storage units filled with modsuits and two clothing lockers used for mining."
@@ -179,7 +167,6 @@
 	name = "Security gear room"
 	slot = "squab_gear_room"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	for_theme = list("standard", "cheap_frigate", "the_patrolboat")
 	map_file = "squab/security_gear_room.dmm"
 	is_default = FALSE
 	desc = "Extra security modsuits and security clothing used for enforcment."

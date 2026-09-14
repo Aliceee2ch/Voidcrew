@@ -11,7 +11,7 @@
 	id = "nanotrasen_frigate"
 	name = "Nanotrasen Frigate"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	template_suffix = "squab_nanotrasen_frigate"
+	template_suffix = "squab_a"
 	is_default = TRUE
 	upgrade_slot_ids = list("squab_lab", "squab_mech_bay", "lab_storage", "director_s_quarters", "squab_gear_room")
 	desc = "A dusty, but still relatively fresh hull garbed in Nanotrasen titanium is the basic configuration used by the multipurpose frigate."
@@ -22,7 +22,7 @@
 	id = "cheap_frigate"
 	name = "Cheap Frigate"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	template_suffix = "squab_cheap_frigate"
+	template_suffix = "squab_b"
 	is_default = FALSE
 	upgrade_slot_ids = list("squab_lab", "squab_mech_bay", "lab_storage", "director_s_quarters", "squab_gear_room")
 	desc = "An old, incredibly cheap hull created due to massive cost-cutting by Nanotrasen. Something about it makes it feel soulful."
@@ -33,7 +33,7 @@
 	id = "the_patrolboat"
 	name = "The Patrolboat"
 	for_ship = /datum/map_template/shuttle/voidcrew/squab
-	template_suffix = "squab_the_patrolboat"
+	template_suffix = "squab_c"
 	is_default = FALSE
 	upgrade_slot_ids = list("squab_lab", "squab_mech_bay", "lab_storage", "director_s_quarters", "squab_gear_room")
 	desc = "An extensively modified Squab frigate refit to house a security patrol team used in regions of space where Nanotrasen does not bother spending money on dedicated combat ships."

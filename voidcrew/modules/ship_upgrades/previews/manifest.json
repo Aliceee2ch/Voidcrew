@@ -492,8 +492,8 @@
    },
    "src_md5": "250efd19fcf01d79756a98e68ca8af2e"
   },
-  "squab_cheap_frigate": {
-   "png": "ship_squab_cheap_frigate.png",
+  "squab_b": {
+   "png": "ship_squab_b.png",
    "width": 36,
    "height": 20,
    "slots": {
@@ -520,8 +520,8 @@
    },
    "src_md5": "28c90f0295ca72a67c1843a1a94f8bf7"
   },
-  "squab_nanotrasen_frigate": {
-   "png": "ship_squab_nanotrasen_frigate.png",
+  "squab_a": {
+   "png": "ship_squab_a.png",
    "width": 36,
    "height": 20,
    "slots": {
@@ -548,8 +548,8 @@
    },
    "src_md5": "02126eaa919347e81b6353aa7d7c785a"
   },
-  "squab_the_patrolboat": {
-   "png": "ship_squab_the_patrolboat.png",
+  "squab_c": {
+   "png": "ship_squab_c.png",
    "width": 36,
    "height": 20,
    "slots": {

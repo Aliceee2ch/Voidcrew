@@ -583,6 +583,10 @@
 	pixel_y = 20
 	},
 /obj/structure/cable,
+/obj/machinery/computer/cryopod{
+	pixel_x = 32;
+	pixel_y = 0
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/cryogenics)
 "dhX" = (
@@ -782,11 +786,6 @@
 	},
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
-"eLb" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable,
-/turf/open/floor/iron/textured_large,
-/area/shuttle/voidcrew/squab/cargo_entrance)
 "eUT" = (
 /obj/structure/railing{
 	dir = 4
@@ -3768,6 +3767,7 @@
 	dir = 1
 	},
 /obj/item/radio/intercom/command/directional/south,
+/obj/item/storage/box/rndboards/all,
 /turf/open/floor/iron/white,
 /area/shuttle/voidcrew/squab/bridge)
 
@@ -4375,8 +4375,8 @@ ptr
 ksk
 dMh
 qpL
-eLb
-eLb
+qpL
+qpL
 qpL
 atS
 cYM

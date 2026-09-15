@@ -122,11 +122,6 @@
 	},
 /turf/open/floor/iron,
 /area/shuttle/voidcrew/squab/central_hallway)
-"aEA" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable,
-/turf/open/floor/iron/textured_large,
-/area/shuttle/voidcrew/squab/cargo_entrance)
 "aFt" = (
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/laboratory)
@@ -304,6 +299,10 @@
 	pixel_y = 20
 	},
 /obj/structure/cable,
+/obj/machinery/computer/cryopod{
+	pixel_x = 32;
+	pixel_y = 0
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/cryogenics)
 "btL" = (
@@ -1082,6 +1081,7 @@
 	dir = 1
 	},
 /obj/item/radio/intercom/command/directional/south,
+/obj/item/storage/box/rndboards/all,
 /turf/open/floor/iron/white,
 /area/shuttle/voidcrew/squab/bridge)
 "gnj" = (
@@ -4486,8 +4486,8 @@ lQg
 faZ
 fTT
 dOQ
-aEA
-aEA
+dOQ
+dOQ
 dOQ
 hho
 hQf

@@ -2164,11 +2164,11 @@
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/squab/cargobay)
 "ngt" = (
-/obj/structure/closet/secure_closet/security{
+/obj/structure/closet/secure_closet{
 	anchored = 1;
-	populate = 0;
 	name = "armor locker";
 	icon_state = "armory"
+    icon_door = "armory_door"
 	},
 /obj/item/clothing/gloves/combat{
 	pixel_x = -7;
@@ -2705,15 +2705,9 @@
 "qPY" = (
 /obj/structure/closet/secure_closet/security{
 	anchored = 1;
-	populate = 0;
 	name = "security detail's locker"
 	},
-/obj/item/reagent_containers/spray/pepper,
 /obj/item/storage/box/handcuffs,
-/obj/item/clothing/gloves/color/black{
-	pixel_y = -4;
-	pixel_x = -6
-	},
 /obj/item/storage/backpack/satchel/sec{
 	pixel_x = 7;
 	pixel_y = -5
@@ -2721,10 +2715,6 @@
 /obj/item/storage/backpack/security{
 	pixel_x = 8;
 	pixel_y = -7
-	},
-/obj/item/clothing/glasses/hud/security/sunglasses{
-	pixel_x = 0;
-	pixel_y = 5
 	},
 /obj/item/gun/energy/disabler{
 	pixel_x = -8;

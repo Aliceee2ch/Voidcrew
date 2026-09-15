@@ -1,26 +1,11 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "dGw" = (
 /obj/structure/closet/secure_closet/miner{
-	populate = 0;
 	name = "miner's locker";
 	anchored = 1
 	},
 /obj/effect/turf_decal/siding/thinplating/dark{
 	layer = 2.041
-	},
-/obj/item/storage/belt/mining/alt,
-/obj/item/clothing/glasses/meson,
-/obj/item/gps/mining{
-	pixel_x = -8;
-	pixel_y = -8
-	},
-/obj/item/clothing/shoes/workboots{
-	pixel_x = -4;
-	pixel_y = -9
-	},
-/obj/item/clothing/gloves/fingerless{
-	pixel_x = -1;
-	pixel_y = -4
 	},
 /obj/effect/turf_decal/siding/wideplating/dark{
 	dir = 1
@@ -71,26 +56,11 @@
 /area/template_noop)
 "uHu" = (
 /obj/structure/closet/secure_closet/miner{
-	populate = 0;
 	name = "miner's locker";
 	anchored = 1
 	},
 /obj/effect/turf_decal/siding/thinplating/dark{
 	layer = 2.041
-	},
-/obj/item/storage/belt/mining/alt,
-/obj/item/clothing/glasses/meson,
-/obj/item/gps/mining{
-	pixel_x = -8;
-	pixel_y = -8
-	},
-/obj/item/clothing/shoes/workboots{
-	pixel_x = -4;
-	pixel_y = -9
-	},
-/obj/item/clothing/gloves/fingerless{
-	pixel_x = -1;
-	pixel_y = -4
 	},
 /obj/effect/turf_decal/siding/wideplating/dark{
 	dir = 1

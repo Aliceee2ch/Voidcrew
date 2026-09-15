@@ -3,6 +3,9 @@
 /obj/effect/turf_decal/siding/white{
 	dir = 5
 	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/structure/cable,
 /turf/template_noop,
 /area/template_noop)
 "nSo" = (
@@ -28,6 +31,9 @@
 /obj/effect/turf_decal/siding/white{
 	dir = 1
 	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/structure/cable,
 /turf/template_noop,
 /area/template_noop)
 "oQM" = (
@@ -45,11 +51,13 @@
 /turf/template_noop,
 /area/template_noop)
 "qMI" = (
+/obj/modular_map_connector,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/structure/cable,
 /obj/effect/turf_decal/siding/white{
-	layer = 2.041;
 	dir = 10
 	},
-/obj/modular_map_connector,
 /turf/template_noop,
 /area/template_noop)
 "tMh" = (
@@ -87,6 +95,9 @@
 /obj/effect/turf_decal/siding/white{
 	dir = 9
 	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/structure/cable,
 /turf/template_noop,
 /area/template_noop)
 "vUn" = (
@@ -123,6 +134,7 @@
 	pixel_x = -6;
 	pixel_y = -28
 	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/template_noop,
 /area/template_noop)
 

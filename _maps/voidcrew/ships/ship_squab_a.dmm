@@ -1,18 +1,4 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
-"acb" = (
-/obj/machinery/door/poddoor{
-	dir = 4;
-	id = "delta2_doors"
-	},
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
-/obj/structure/fans/tiny,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/squab/cargo_entrance)
 "acA" = (
 /obj/structure/rack,
 /obj/item/multitool{
@@ -128,9 +114,6 @@
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "aFt" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/laboratory)
 "aHW" = (
@@ -271,9 +254,6 @@
 /turf/open/floor/iron/dark/herringbone,
 /area/shuttle/voidcrew/squab/laboratory)
 "blL" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/firealarm/directional/north{
 	pixel_x = 6;
 	pixel_y = 32
@@ -301,9 +281,6 @@
 	layer = 2.5
 	},
 /obj/machinery/power/apc/auto_name/directional/north,
-/obj/structure/cable{
-	icon_state = "0-2"
-	},
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
 /obj/machinery/light_switch{
 	pixel_x = -12;
@@ -347,9 +324,6 @@
 /obj/effect/turf_decal/siding/white/corner{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/structure/cable,
@@ -363,20 +337,11 @@
 /area/shuttle/voidcrew/squab/central_hallway)
 "bBv" = (
 /obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/light_switch{
 	dir = 1;
 	pixel_x = -12;
 	pixel_y = -24
 	},
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/modular_map_root/ship_upgrade{
 	key = "squab_gear_room"
 	},
@@ -411,9 +376,6 @@
 	dir = 4
 	},
 /obj/machinery/door/airlock/science,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -422,16 +384,10 @@
 "bPK" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/machinery/power/apc/auto_name/directional/west,
-/obj/structure/cable{
-	icon_state = "0-2"
-	},
 /obj/machinery/light_switch{
 	dir = 4;
 	pixel_x = -20;
 	pixel_y = -11
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/effect/turf_decal/siding/white{
 	dir = 4
@@ -463,12 +419,6 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "bZb" = (
-/obj/structure/cable{
-	icon_state = "2-4"
-	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},
@@ -536,9 +486,6 @@
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/herringbone,
 /area/shuttle/voidcrew/squab/cargo_hall)
 "cCP" = (
@@ -552,9 +499,6 @@
 /turf/open/floor/engine/hull/reinforced,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "cFn" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/siding/thinplating/dark{
 	dir = 1
 	},
@@ -564,9 +508,6 @@
 /obj/effect/turf_decal/siding/wood{
 	color = "#543C30";
 	dir = 5
-	},
-/obj/structure/cable{
-	icon_state = "2-4"
 	},
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 4
@@ -579,14 +520,6 @@
 /obj/effect/decal/cleanable/dirt,
 /obj/machinery/power/terminal{
 	dir = 8
-	},
-/obj/structure/cable{
-	d2 = 2;
-	icon_state = "0-2";
-	pixel_y = 1
-	},
-/obj/structure/cable{
-	icon_state = "2-4"
 	},
 /obj/structure/cable,
 /turf/open/floor/catwalk_floor/iron_dark,
@@ -606,12 +539,6 @@
 	dir = 4;
 	id = "delta2_doors"
 	},
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable,
 /obj/structure/fans/tiny,
 /turf/open/floor/plating,
@@ -620,9 +547,6 @@
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/voidcrew/squab/cargo_hall)
 "cOQ" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/stripes{
 	dir = 1
 	},
@@ -645,9 +569,6 @@
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/squab/dormitory)
 "cTm" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/structure/fake_stairs/directional/south{
 	color = "#a3a2a0"
 	},
@@ -658,9 +579,6 @@
 /area/shuttle/voidcrew/squab/central_hallway)
 "cTH" = (
 /obj/effect/turf_decal/siding/white,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -677,18 +595,6 @@
 	},
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/squab/cargobay)
-"djd" = (
-/obj/effect/turf_decal/siding/thinplating{
-	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron/large,
-/area/shuttle/voidcrew/squab/central_hallway)
 "dke" = (
 /obj/structure/grille,
 /obj/structure/window/reinforced/shuttle,
@@ -699,9 +605,6 @@
 /area/shuttle/voidcrew/squab/engineering)
 "drD" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/tile/brown/half{
 	dir = 1
 	},
@@ -771,20 +674,9 @@
 	},
 /turf/open/floor/engine/hull,
 /area/shuttle/voidcrew/squab/cargo_entrance)
-"dOQ" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable,
-/turf/open/floor/iron/textured_large,
-/area/shuttle/voidcrew/squab/cargo_entrance)
 "dSs" = (
 /obj/machinery/door/firedoor/border_only{
 	dir = 1
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new{
@@ -805,9 +697,6 @@
 "dYP" = (
 /obj/effect/turf_decal/siding/white{
 	dir = 4
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -834,9 +723,6 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "enR" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/fake_stairs/directional/east{
 	color = "#a3a2a0"
 	},
@@ -848,17 +734,8 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/central_hallway)
-"esd" = (
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
-/turf/open/floor/iron/dark/textured_large,
-/area/shuttle/voidcrew/squab/cargobay)
 "esA" = (
 /obj/machinery/airalarm/directional/west,
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/siding/white{
 	dir = 4
 	},
@@ -882,9 +759,6 @@
 /turf/open/floor/iron/white,
 /area/shuttle/voidcrew/squab/laboratory)
 "eMD" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/door/firedoor/border_only,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
@@ -937,12 +811,11 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_caplock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "fip" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/light/directional/west,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 1
@@ -961,16 +834,10 @@
 /turf/open/floor/engine/hull/reinforced,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "fmu" = (
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/herringbone,
 /area/shuttle/voidcrew/squab/cargo_hall)
 "fsp" = (
 /obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/stripes{
 	dir = 4
 	},
@@ -980,9 +847,6 @@
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "fvX" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/structure/fake_stairs/directional/north{
 	color = "#a3a2a0"
 	},
@@ -992,9 +856,6 @@
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "fyP" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable,
 /turf/open/floor/engine/hull,
 /area/shuttle/voidcrew/squab/cargo_entrance)
@@ -1016,12 +877,11 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_sdlock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/command_quarters)
 "fSh" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/light/directional/west,
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new,
@@ -1050,9 +910,6 @@
 /obj/machinery/door/airlock/public{
 	name = "Cryogenics"
 	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/door/firedoor/border_only{
 	dir = 1
 	},
@@ -1076,9 +933,6 @@
 	layer = 2.041
 	},
 /obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 8
 	},
@@ -1096,9 +950,6 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/bridge)
 "ggm" = (
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
 /obj/machinery/light/directional/east,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)
@@ -1156,11 +1007,9 @@
 /obj/machinery/door/firedoor/border_only{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/structure/cable,
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/office)
 "gQs" = (
@@ -1180,19 +1029,11 @@
 /obj/structure/chair/sofa/corp/right{
 	dir = 4
 	},
+/obj/item/toy/plush/shark,
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "gRC" = (
 /obj/effect/turf_decal/siding/white/corner,
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -1201,9 +1042,6 @@
 "gXP" = (
 /obj/effect/turf_decal/siding{
 	dir = 5
-	},
-/obj/structure/cable{
-	icon_state = "1-8"
 	},
 /obj/effect/turf_decal/siding/wideplating/light/corner{
 	dir = 8
@@ -1230,9 +1068,6 @@
 "hfU" = (
 /obj/effect/turf_decal/siding/thinplating/dark{
 	dir = 1
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/effect/turf_decal/trimline/dark_blue/line{
 	dir = 1;
@@ -1269,9 +1104,6 @@
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/door/airlock/mining{
 	name = "Cargo"
 	},
@@ -1286,12 +1118,6 @@
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/squab/dormitory)
 "hvG" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
@@ -1306,9 +1132,6 @@
 /obj/machinery/door/firedoor/border_only,
 /obj/machinery/door/firedoor/border_only{
 	dir = 1
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -1342,20 +1165,6 @@
 	},
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/bridge)
-"hMy" = (
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
-/obj/effect/turf_decal/stripes{
-	dir = 1
-	},
-/obj/effect/turf_decal/siding/thinplating/dark{
-	dir = 1
-	},
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron/textured_large,
-/area/shuttle/voidcrew/squab/cargobay)
 "hQf" = (
 /obj/machinery/door/firedoor/border_only,
 /obj/machinery/door/firedoor/border_only{
@@ -1383,9 +1192,6 @@
 /area/shuttle/voidcrew/squab/cargo_hall)
 "hZK" = (
 /obj/machinery/atmospherics/components/binary/pump/layer4,
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/tile/brown/half,
 /obj/effect/turf_decal/trimline/neutral/filled/warning,
 /obj/effect/turf_decal/siding/thinplating/dark{
@@ -1403,9 +1209,6 @@
 	dir = 8
 	},
 /obj/structure/floodlight_frame,
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
 /obj/structure/cable,
 /turf/open/floor/engine/hull/reinforced,
 /area/shuttle/voidcrew/squab/cargo_entrance)
@@ -1421,12 +1224,6 @@
 /obj/effect/turf_decal/siding/white{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/effect/turf_decal/trimline/neutral/filled/warning{
 	dir = 1
 	},
@@ -1436,9 +1233,6 @@
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "itd" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/fake_stairs/directional/east{
 	color = "#a3a2a0"
 	},
@@ -1467,9 +1261,6 @@
 /obj/machinery/door/firedoor/border_only,
 /obj/machinery/door/firedoor/border_only{
 	dir = 1
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_rndbay";
@@ -1505,9 +1296,6 @@
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/lab_storage)
 "iHe" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/siding/white/corner,
 /obj/machinery/light/small/directional/west,
 /obj/effect/turf_decal/siding/wideplating_new{
@@ -1521,9 +1309,6 @@
 "iIb" = (
 /obj/structure/railing/corner{
 	dir = 4
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/structure/cable,
 /turf/open/floor/engine/hull,
@@ -1546,13 +1331,7 @@
 /turf/open/floor/engine/hull/reinforced,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "iPd" = (
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable{
-	icon_state = "2-4"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/cyan/visible/layer4,
 /turf/open/floor/plating,
@@ -1580,28 +1359,13 @@
 /obj/effect/turf_decal/siding/thinplating{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "iXE" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable{
-	icon_state = "2-4"
-	},
 /obj/effect/turf_decal/trimline/brown/filled/line{
 	dir = 8
 	},
@@ -1645,9 +1409,6 @@
 /obj/effect/turf_decal/siding/thinplating{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/trimline/brown/line{
 	dir = 8
 	},
@@ -1665,12 +1426,6 @@
 	color = "#FFFFFF"
 	},
 /obj/machinery/power/apc/auto_name/directional/north,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
 /obj/machinery/light_switch{
 	pixel_x = -12;
 	pixel_y = 22
@@ -1733,9 +1488,6 @@
 "kdG" = (
 /obj/machinery/power/terminal{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "0-1"
 	},
 /obj/machinery/light/small/directional/south,
 /obj/structure/cable,
@@ -1813,9 +1565,6 @@
 /obj/effect/turf_decal/siding/white{
 	dir = 1
 	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/airalarm/directional/east,
 /obj/effect/turf_decal/trimline/neutral/filled/warning,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -1833,9 +1582,6 @@
 /obj/effect/turf_decal/siding,
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/machinery/firealarm/directional/north{
 	pixel_x = 6;
@@ -1869,9 +1615,6 @@
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/squab/central_hallway)
 "kGc" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/white/corner{
 	dir = 4
@@ -1894,9 +1637,6 @@
 /obj/effect/turf_decal/siding/thinplating/dark{
 	dir = 8;
 	layer = 2.5
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
 /obj/machinery/light/small/directional/east,
@@ -1949,9 +1689,6 @@
 	dir = 8
 	},
 /obj/machinery/door/airlock/science/glass,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/siding/wideplating/light{
 	dir = 1
 	},
@@ -2053,17 +1790,11 @@
 /area/shuttle/voidcrew/squab/central_hallway)
 "lAJ" = (
 /obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/light_switch{
 	dir = 1;
 	pixel_x = -12;
 	pixel_y = -18
-	},
-/obj/structure/cable{
-	icon_state = "0-8"
 	},
 /obj/effect/turf_decal/siding/wideplating_new,
 /obj/effect/turf_decal/trimline/brown/filled/warning,
@@ -2071,11 +1802,6 @@
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/squab/cargobay)
 "lJz" = (
-/obj/structure/closet/secure_closet{
-	icon_state = "science";
-	name = "roboticist's locker";
-	req_access_txt = "7"
-	},
 /obj/item/clothing/suit/hooded/wintercoat/science,
 /obj/item/clothing/gloves/fingerless,
 /obj/item/analyzer{
@@ -2087,6 +1813,12 @@
 	pixel_y = 9
 	},
 /obj/machinery/light/directional/east,
+/obj/structure/closet/secure_closet{
+	icon_state = "science";
+	name = "roboticist's locker";
+	req_access_txt = "7";
+	icon_door = "science_door"
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/science_hall)
 "lKd" = (
@@ -2146,22 +1878,13 @@
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/white/small,
 /area/shuttle/voidcrew/squab/science_hall)
 "mfu" = (
-/obj/structure/cable{
-	icon_state = "0-2"
-	},
 /obj/structure/rack,
 /turf/open/floor/catwalk_floor/iron_dark,
 /area/shuttle/voidcrew/squab/engineering)
 "mgJ" = (
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
 /obj/machinery/power/shuttle_engine/ship/electric{
 	dir = 4
 	},
@@ -2200,9 +1923,6 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)
 "mAO" = (
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
 /obj/machinery/airalarm/directional/south,
 /turf/open/floor/iron/herringbone,
 /area/shuttle/voidcrew/squab/cargo_hall)
@@ -2227,9 +1947,6 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/command_quarters)
 "mDZ" = (
-/obj/structure/cable{
-	icon_state = "1-4"
-	},
 /obj/effect/turf_decal/siding/wideplating_new,
 /obj/effect/turf_decal/trimline/brown/filled/warning,
 /obj/structure/cable,
@@ -2250,7 +1967,6 @@
 "ngt" = (
 /obj/structure/closet/secure_closet/security{
 	anchored = 1;
-	populate = 0;
 	name = "armor locker";
 	icon_state = "armory"
 	},
@@ -2277,9 +1993,6 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/office)
 "nmr" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/cyan/visible/layer4,
 /turf/open/floor/plating,
@@ -2291,9 +2004,6 @@
 /obj/machinery/door/firedoor/border_only{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/door/airlock/mining/glass{
 	name = "Storage"
 	},
@@ -2303,9 +2013,6 @@
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/cargobay)
 "nre" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new,
 /obj/effect/turf_decal/trimline/brown/filled/warning,
@@ -2357,9 +2064,6 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)
 "nJb" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/light/directional/west,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
@@ -2379,15 +2083,6 @@
 /obj/effect/turf_decal/siding/thinplating/dark{
 	layer = 2.041
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/effect/turf_decal/trimline/dark_blue/line{
 	dir = 2;
 	color = "#32426b"
@@ -2399,9 +2094,6 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/bridge)
 "nPS" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/structure/cable,
 /obj/structure/cable/layer1,
 /turf/open/floor/iron/dark/textured,
@@ -2410,9 +2102,6 @@
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/voidcrew/squab/dormitory)
 "nTY" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
 	},
@@ -2443,9 +2132,6 @@
 	id = "squab_rndbay";
 	name = "Lower Bay Shutters";
 	dir = 4
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating/light,
@@ -2493,14 +2179,10 @@
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/firealarm/directional/south{
 	pixel_x = 6;
 	pixel_y = -32
 	},
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron/herringbone,
 /area/shuttle/voidcrew/squab/cargo_hall)
 "osW" = (
@@ -2537,12 +2219,6 @@
 /turf/open/floor/engine/hull/reinforced,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "oKJ" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/effect/turf_decal/stripes{
 	dir = 4
 	},
@@ -2563,12 +2239,10 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/science_hall)
 "pfO" = (
-/obj/structure/cable{
-	icon_state = "2-4"
-	},
 /obj/machinery/holopad,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/structure/cable,
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/office)
 "plp" = (
@@ -2577,20 +2251,6 @@
 /obj/item/bedsheet/brown,
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/squab/dormitory)
-"pqd" = (
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron/herringbone,
-/area/shuttle/voidcrew/squab/cargo_hall)
-"pqO" = (
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
-/obj/machinery/power/shuttle_engine/ship/electric{
-	dir = 4
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/squab/engineering)
 "pyf" = (
 /obj/item/clothing/suit/hooded/wintercoat/science,
 /obj/item/analyzer{
@@ -2601,12 +2261,13 @@
 	pixel_x = 5;
 	pixel_y = 9
 	},
+/obj/item/storage/box/stockparts/basic,
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
 	name = "scientist's locker";
-	req_access_txt = "7"
+	req_access_txt = "7";
+	icon_door = "science_door"
 	},
-/obj/item/storage/box/stockparts/basic,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/science_hall)
 "pFj" = (
@@ -2619,18 +2280,12 @@
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/wood/walnut,
 /area/shuttle/voidcrew/squab/dormitory)
 "pFy" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/trimline/brown/filled/line{
 	dir = 8
 	},
@@ -2665,9 +2320,6 @@
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
 /obj/modular_map_root/ship_upgrade{
 	key = "lab_storage"
 	},
@@ -2683,9 +2335,6 @@
 	dir = 9
 	},
 /obj/machinery/power/apc/auto_name/directional/north,
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 4
 	},
@@ -2742,9 +2391,6 @@
 	dir = 1
 	},
 /obj/machinery/door/firedoor/border_only,
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/structure/cable,
@@ -2819,7 +2465,6 @@
 "qPY" = (
 /obj/structure/closet/secure_closet/security{
 	anchored = 1;
-	populate = 0;
 	name = "security detail's locker"
 	},
 /obj/item/reagent_containers/spray/pepper,
@@ -2858,6 +2503,7 @@
 	pixel_x = 5;
 	pixel_y = -7
 	},
+/obj/structure/cable,
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/office)
 "qSN" = (
@@ -2866,9 +2512,6 @@
 /area/shuttle/voidcrew/squab/central_hallway)
 "qXN" = (
 /obj/machinery/power/apc/auto_name/directional/north,
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 4
 	},
@@ -2880,12 +2523,11 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/command_quarters)
 "raN" = (
-/obj/item/clothing/mask/gas/atmos,
-/obj/item/tank/internals/oxygen/yellow,
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 10
 	},
+/obj/machinery/suit_storage_unit/engine,
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "rfz" = (
@@ -2910,21 +2552,6 @@
 	},
 /obj/structure/fans/tiny,
 /turf/open/floor/plating,
-/area/shuttle/voidcrew/squab/cargo_entrance)
-"rkB" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/effect/turf_decal/trimline/brown/filled/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/neutral/filled/warning{
-	dir = 8
-	},
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "rmB" = (
 /obj/effect/turf_decal/siding/thinplating{
@@ -2954,15 +2581,13 @@
 	pixel_x = 11;
 	pixel_y = 20
 	},
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},
 /obj/effect/turf_decal/trimline/brown/line{
 	dir = 8
 	},
+/obj/structure/cable,
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "rzE" = (
@@ -2994,9 +2619,6 @@
 /obj/machinery/door/airlock/hatch{
 	name = "AI Core access hatch"
 	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -3012,15 +2634,6 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/cargo_entrance)
-"rIm" = (
-/obj/structure/cable{
-	icon_state = "2-4"
-	},
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron/herringbone,
-/area/shuttle/voidcrew/squab/cargo_hall)
 "rOU" = (
 /obj/structure/chair/office{
 	dir = 8
@@ -3035,30 +2648,11 @@
 /obj/machinery/suit_storage_unit/security,
 /turf/open/floor/iron,
 /area/shuttle/voidcrew/squab/office)
-"rTK" = (
-/obj/effect/turf_decal/siding/thinplating/dark{
-	layer = 2.041
-	},
-/obj/structure/cable{
-	icon_state = "1-4"
-	},
-/obj/effect/turf_decal/siding/wideplating/light{
-	dir = 1
-	},
-/obj/effect/turf_decal/trimline/purple/warning,
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron/dark/textured,
-/area/shuttle/voidcrew/squab/science_hall)
 "rVW" = (
 /obj/structure/sign/poster/official/science/directional/north,
 /turf/open/floor/iron/dark/herringbone,
 /area/shuttle/voidcrew/squab/laboratory)
 "rYK" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
 	},
@@ -3085,27 +2679,6 @@
 	},
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
-"sef" = (
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
-/obj/structure/cable{
-	icon_state = "1-4"
-	},
-/obj/effect/turf_decal/siding/wideplating_new{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/brown/filled/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/neutral/filled/warning{
-	dir = 8
-	},
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron/large,
-/area/shuttle/voidcrew/squab/central_hallway)
 "siH" = (
 /obj/item/clothing/neck/stethoscope,
 /obj/item/storage/pill_bottle/iron,
@@ -3128,9 +2701,6 @@
 	},
 /obj/machinery/power/apc/auto_name/directional/south,
 /obj/machinery/rnd/server,
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 4
 	},
@@ -3169,11 +2739,6 @@
 /obj/effect/decal/cleanable/dirt,
 /obj/machinery/power/terminal{
 	dir = 8
-	},
-/obj/structure/cable{
-	d2 = 2;
-	icon_state = "0-2";
-	pixel_y = 1
 	},
 /obj/machinery/light/small/directional/north,
 /obj/structure/cable,
@@ -3259,9 +2824,6 @@
 /obj/effect/turf_decal/siding/thinplating/dark{
 	layer = 2.041
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/firealarm/directional/south,
 /obj/effect/turf_decal/trimline/dark_blue/line{
 	dir = 2;
@@ -3290,9 +2852,6 @@
 	},
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -3341,9 +2900,6 @@
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/voidcrew/squab/laboratory)
 "ukw" = (
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new,
 /obj/effect/turf_decal/trimline/brown/filled/warning,
@@ -3365,12 +2921,6 @@
 "uub" = (
 /obj/machinery/power/terminal{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "1-4"
-	},
-/obj/structure/cable{
-	icon_state = "0-4"
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/structure/cable,
@@ -3453,12 +3003,6 @@
 	},
 /turf/open/floor/engine/hull,
 /area/shuttle/voidcrew/squab/cargo_entrance)
-"uQZ" = (
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
-/turf/open/floor/iron/white,
-/area/shuttle/voidcrew/squab/laboratory)
 "uSQ" = (
 /obj/machinery/light/floor,
 /obj/effect/turf_decal/siding/thinplating/dark{
@@ -3467,9 +3011,6 @@
 /turf/open/floor/engine/hull/reinforced,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "uTR" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/fake_stairs/directional/south{
 	dir = 4;
 	color = "#a3a2a0"
@@ -3531,9 +3072,6 @@
 	name = "Upper Bay Shutters";
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 1
@@ -3546,9 +3084,6 @@
 /obj/structure/window/reinforced{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
 /obj/machinery/door/poddoor/shutters{
 	dir = 4;
 	id = "delta2_eng"
@@ -3559,15 +3094,6 @@
 	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)
-"vJb" = (
-/obj/structure/cable{
-	icon_state = "2-4"
-	},
-/obj/structure/cable{
-	icon_state = "1-4"
-	},
-/turf/open/floor/iron/white,
-/area/shuttle/voidcrew/squab/laboratory)
 "vMV" = (
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 8
@@ -3579,9 +3105,6 @@
 /area/shuttle/voidcrew/squab/laboratory)
 "vNp" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/siding/white{
 	dir = 4
 	},
@@ -3594,9 +3117,6 @@
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "vOY" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
 	},
@@ -3618,14 +3138,8 @@
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/voidcrew/squab/science_hall)
 "vRS" = (
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/effect/turf_decal/siding/white{
 	dir = 4
-	},
-/obj/structure/cable{
-	icon_state = "1-4"
 	},
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 8
@@ -3645,12 +3159,6 @@
 /area/shuttle/voidcrew/squab/dormitory)
 "wbI" = (
 /obj/machinery/power/apc/auto_name/directional/north,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
-	icon_state = "0-8"
-	},
 /obj/machinery/light_switch{
 	pixel_x = -12;
 	pixel_y = 20
@@ -3686,9 +3194,6 @@
 	name = "Restroom";
 	id_tag = "tegu_bathroom"
 	},
-/obj/structure/cable{
-	icon_state = "1-2"
-	},
 /obj/machinery/door/firedoor/border_only,
 /obj/machinery/door/firedoor/border_only{
 	dir = 1
@@ -3715,9 +3220,6 @@
 	pixel_x = -3;
 	pixel_y = 6
 	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/machinery/airalarm/directional/north,
 /obj/machinery/camera/autoname{
 	dir = 1
@@ -3728,9 +3230,6 @@
 /obj/machinery/door/firedoor/border_only,
 /obj/machinery/door/firedoor/border_only{
 	dir = 1
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_cargobay";
@@ -3744,9 +3243,6 @@
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/voidcrew/squab/cargobay)
 "wqJ" = (
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/structure/cable,
@@ -3828,9 +3324,6 @@
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "wUz" = (
 /obj/machinery/light/small/directional/north,
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/machinery/firealarm/directional/north{
 	pixel_x = -17;
 	pixel_y = 20
@@ -3868,9 +3361,6 @@
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "xeZ" = (
 /obj/machinery/power/smes/engineering,
-/obj/structure/cable{
-	icon_state = "0-4"
-	},
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
 	},
@@ -3880,9 +3370,6 @@
 "xfp" = (
 /obj/effect/turf_decal/siding/white{
 	dir = 4
-	},
-/obj/structure/cable{
-	icon_state = "1-2"
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -3907,9 +3394,6 @@
 /obj/effect/turf_decal/siding/thinplating/corner{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/trimline/brown/line{
 	dir = 4
 	},
@@ -3923,25 +3407,11 @@
 	color = "#543C30";
 	dir = 10
 	},
-/obj/structure/cable{
-	icon_state = "2-8"
-	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/structure/cable,
 /turf/open/floor/wood/parquet,
 /area/shuttle/voidcrew/squab/captain_quarters)
-"xvA" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/effect/turf_decal/siding/wideplating_new/dark{
-	dir = 1
-	},
-/obj/structure/cable,
-/turf/open/floor/iron/dark/textured,
-/area/shuttle/voidcrew/squab/engineering)
 "xyY" = (
 /obj/structure/chair/plastic,
 /obj/effect/decal/cleanable/dirt/dust,
@@ -3954,9 +3424,6 @@
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "xOf" = (
-/obj/structure/cable{
-	icon_state = "1-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
@@ -4030,8 +3497,8 @@ jKO
 jKO
 jKO
 wDp
-pqO
-pqO
+mgJ
+mgJ
 wDp
 jKO
 jKO
@@ -4042,8 +3509,8 @@ jKO
 wDp
 vvX
 vvX
+mua
 wDp
-wDp
 jKO
 jKO
 jKO
@@ -4051,7 +3518,7 @@ jKO
 jKO
 jKO
 wDp
-wDp
+mua
 vvX
 vvX
 wDp
@@ -4096,7 +3563,7 @@ mua
 wDp
 mua
 dII
-xvA
+hvG
 wjx
 xeZ
 wDp
@@ -4330,15 +3797,15 @@ jfm
 bZb
 nJb
 cTm
-djd
-djd
-djd
 iWI
-djd
-djd
+iWI
+iWI
+iWI
+iWI
+iWI
 fvX
 nJb
-sef
+bZb
 rzE
 fVq
 jKO
@@ -4392,7 +3859,7 @@ jKO
 jKO
 cOx
 qgq
-pqd
+fmu
 bBv
 dXp
 dXp
@@ -4458,7 +3925,7 @@ jKO
 jKO
 cOx
 sQk
-rIm
+fmu
 mAO
 dXp
 aVL
@@ -4471,7 +3938,7 @@ ccc
 yah
 wYd
 wnG
-rTK
+jzV
 lJz
 nFT
 jKO
@@ -4504,7 +3971,7 @@ tUz
 ymd
 cOQ
 wFp
-esd
+hmR
 neB
 rCC
 ohq
@@ -4524,7 +3991,7 @@ jKO
 jKO
 tUz
 siH
-hMy
+cir
 mDZ
 hmR
 kSD
@@ -4536,8 +4003,8 @@ khA
 rCC
 wUz
 rDc
-vJb
-uQZ
+iUy
+iUy
 iUy
 tWK
 jKO
@@ -4596,13 +4063,13 @@ vuq
 woH
 fSh
 iXE
-rkB
+iXE
 pFy
 iXE
 fip
 ivt
 oho
-uQZ
+iUy
 ocl
 bMh
 tWK
@@ -4617,10 +4084,10 @@ aUe
 lQg
 faZ
 fTT
-dOQ
 aEA
 aEA
-dOQ
+aEA
+aEA
 hho
 hQf
 vMV
@@ -4661,7 +4128,7 @@ axI
 wpO
 gBa
 gBa
-acb
+rjD
 rjD
 rjD
 cMF

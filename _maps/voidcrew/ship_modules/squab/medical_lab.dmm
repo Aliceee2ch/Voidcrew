@@ -17,8 +17,7 @@
 /area/template_noop)
 "dBA" = (
 /obj/effect/turf_decal/siding/thinplating/dark{
-	dir = 4;
-	layer = 2.5
+	dir = 4
 	},
 /obj/effect/turf_decal/siding/dark{
 	dir = 8
@@ -106,6 +105,10 @@
 /obj/effect/turf_decal/siding/wideplating/dark{
 	dir = 4
 	},
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 8;
+	layer = 2.5
+	},
 /turf/open/floor/iron/herringbone,
 /area/template_noop)
 "nLq" = (
@@ -182,8 +185,7 @@
 /area/template_noop)
 "uNe" = (
 /obj/effect/turf_decal/siding/thinplating/dark{
-	dir = 4;
-	layer = 2.5
+	dir = 4
 	},
 /obj/machinery/newscaster/directional/south,
 /obj/effect/turf_decal/siding/dark{

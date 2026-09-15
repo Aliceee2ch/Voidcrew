@@ -4,9 +4,6 @@
 /obj/effect/turf_decal/siding/thinplating/corner{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/trimline/brown/line{
 	dir = 4
 	},
@@ -240,9 +237,6 @@
 /turf/open/floor/wood,
 /area/space)
 "cr" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/fake_stairs/directional/south{
 	dir = 4;
 	color = "#a3a2a0"
@@ -325,9 +319,6 @@
 /turf/open/floor/plating,
 /area/space)
 "cW" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
 	},
@@ -513,9 +504,6 @@
 /turf/open/floor/iron/white,
 /area/space)
 "eG" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
 	},
@@ -863,15 +851,9 @@
 /obj/structure/cable{
 	icon_state = "1-8"
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/large,
 /area/space)
 "kf" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/stripes{
 	dir = 1
 	},
@@ -1131,9 +1113,6 @@
 /turf/open/floor/plating,
 /area/space)
 "pa" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/fake_stairs/directional/east{
 	color = "#a3a2a0"
 	},
@@ -1199,9 +1178,6 @@
 /turf/open/floor/iron/dark/textured,
 /area/space)
 "pM" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/cable{
 	icon_state = "2-8"
 	},
@@ -1390,9 +1366,6 @@
 	dir = 4
 	},
 /obj/machinery/door/airlock/science,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/dark/textured_large,
 /area/space)
 "tl" = (
@@ -1415,9 +1388,6 @@
 /area/space)
 "tA" = (
 /obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/stripes{
 	dir = 4
 	},
@@ -1464,9 +1434,6 @@
 /obj/machinery/door/firedoor/border_only{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/door/airlock/mining/glass{
 	name = "Storage"
 	},
@@ -1475,9 +1442,6 @@
 "uI" = (
 /obj/effect/turf_decal/siding/thinplating{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/effect/turf_decal/trimline/brown/line{
 	dir = 8
@@ -1533,9 +1497,6 @@
 "vs" = (
 /obj/effect/turf_decal/siding/thinplating/dark{
 	layer = 2.041
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/structure/cable{
 	icon_state = "1-8"
@@ -1673,9 +1634,6 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/space)
 "wW" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/engine/hull)
 "xa" = (
 /obj/effect/turf_decal/siding/thinplating/dark{
@@ -1726,9 +1684,6 @@
 /area/space)
 "xr" = (
 /obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/light_switch{
 	dir = 1;
@@ -2032,9 +1987,6 @@
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/firealarm/directional/north{
 	pixel_x = 6;
 	pixel_y = 32
@@ -2046,9 +1998,6 @@
 /turf/open/floor/iron/white/small,
 /area/space)
 "AE" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new,
 /obj/effect/turf_decal/trimline/brown/filled/warning,
@@ -2084,9 +2033,6 @@
 	dir = 8
 	},
 /obj/machinery/door/airlock/science/glass,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/siding/wideplating/light{
 	dir = 1
 	},
@@ -2157,16 +2103,10 @@
 /obj/machinery/door/firedoor/border_only{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/dark,
 /area/space)
 "BG" = (
 /obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/textured_large,
 /area/space)
 "BH" = (
@@ -2346,9 +2286,6 @@
 	},
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
 	icon_state = "0-8"
 	},
 /obj/machinery/light_switch{
@@ -2452,9 +2389,6 @@
 /turf/open/floor/iron/large,
 /area/space)
 "Gi" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
@@ -2463,9 +2397,6 @@
 /area/space)
 "Gj" = (
 /obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/light_switch{
 	dir = 1;
 	pixel_x = -12;
@@ -2492,9 +2423,6 @@
 /area/space)
 "Gz" = (
 /obj/effect/turf_decal/siding/white,
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/textured,
 /area/space)
 "GD" = (
@@ -2550,15 +2478,9 @@
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/iron/white/small,
 /area/space)
 "Ha" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/plating)
 "Hg" = (
 /obj/machinery/door/poddoor/shutters{
@@ -2799,9 +2721,6 @@
 /obj/effect/turf_decal/siding/thinplating/dark{
 	layer = 2.041
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/firealarm/directional/south,
 /obj/effect/turf_decal/trimline/dark_blue/line{
 	dir = 2;
@@ -2862,9 +2781,6 @@
 	},
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /turf/open/floor/iron/dark/textured,
 /area/space)
@@ -2952,9 +2868,6 @@
 	},
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	})
 "LZ" = (
 /obj/machinery/light/directional/west,
@@ -3068,9 +2981,6 @@
 /turf/open/floor/iron/white,
 /area/space)
 "NJ" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
 	},
@@ -3203,9 +3113,6 @@
 "ON" = (
 /obj/structure/railing{
 	layer = 3.4
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/firealarm/directional/north{
@@ -3347,9 +3254,6 @@
 /obj/structure/railing/corner{
 	dir = 4
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /turf/open/floor/engine/hull)
 "Rp" = (
 /obj/structure/railing{
@@ -3412,9 +3316,6 @@
 "RJ" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
 	icon_state = "0-8"
 	},
 /obj/structure/railing/corner{
@@ -3436,9 +3337,6 @@
 /turf/open/floor/iron/herringbone,
 /area/space)
 "Sd" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/effect/turf_decal/tile/purple/half{
 	dir = 8
 	},
@@ -3529,9 +3427,6 @@
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
 	},
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/machinery/door/airlock/mining{
 	name = "Cargo"
 	},
@@ -3562,9 +3457,6 @@
 	},
 /obj/machinery/door/firedoor/border_only{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /turf/open/floor/wood/walnut)
 "Ty" = (
@@ -3641,9 +3533,6 @@
 	dir = 8
 	},
 /obj/structure/cable{
-	icon_state = "4-8"
-	},
-/obj/structure/cable{
 	icon_state = "2-8"
 	},
 /obj/structure/cable{
@@ -3676,9 +3565,6 @@
 "Va" = (
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/effect/turf_decal/siding/white,
 /turf/open/floor/iron/herringbone,
@@ -3893,9 +3779,6 @@
 	},
 /turf/open/floor/plating)
 "Ym" = (
-/obj/structure/cable{
-	icon_state = "4-8"
-	},
 /obj/structure/fake_stairs/directional/east{
 	color = "#a3a2a0"
 	},
@@ -3972,9 +3855,6 @@
 "Zh" = (
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
 	dir = 8
-	},
-/obj/structure/cable{
-	icon_state = "4-8"
 	},
 /obj/effect/turf_decal/siding/white,
 /obj/machinery/firealarm/directional/south{

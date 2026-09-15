@@ -94,6 +94,8 @@
 	if(istype(I, /obj/item/ship_key))
 		attempt_claim_ship(I, user)
 		return TRUE
+	if(!check_crew_access(user))
+		return TRUE
 	// Handle star chart uploads
 	if(istype(I, /obj/item/disk/star_chart))
 		var/obj/item/disk/star_chart/chart = I
@@ -103,6 +105,87 @@
 		chart.upload_to_ship(current_ship, user)
 		return TRUE
 	return ..()
+
+// Item-side effects (including tools, emags and RCDs) run before attackby().
+/obj/machinery/computer/helm/base_item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	// Claiming an NPC hull establishes membership; the key validates ownership.
+	if(istype(tool, /obj/item/ship_key))
+		attempt_claim_ship(tool, user)
+		return ITEM_INTERACT_SUCCESS
+	if(!check_crew_access(user))
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/obj/machinery/computer/helm/base_ranged_item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	if(!check_crew_access(user))
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/obj/machinery/computer/helm/can_interact(mob/user)
+	return is_crew_member(user) && ..()
+
+/obj/machinery/computer/helm/attack_hand(mob/user, list/modifiers)
+	if(!check_crew_access(user))
+		return TRUE
+	return ..()
+
+/obj/machinery/computer/helm/attack_paw(mob/living/user, list/modifiers)
+	if(!check_crew_access(user))
+		return TRUE
+	return ..()
+
+/obj/machinery/computer/helm/attack_hulk(mob/living/carbon/user)
+	if(!check_crew_access(user))
+		return TRUE
+	return ..()
+
+/obj/machinery/computer/helm/attack_generic(mob/user, damage_amount = 0, damage_type = BRUTE, damage_flag = 0, sound_effect = TRUE, armor_penetration = 0)
+	if(!check_crew_access(user))
+		return FALSE
+	return ..()
+
+/obj/machinery/computer/helm/mech_melee_attack(obj/vehicle/sealed/mecha/mecha_attacker, mob/living/user)
+	if(!check_crew_access(user))
+		return FALSE
+	return ..()
+
+/obj/machinery/computer/helm/bullet_act(obj/projectile/hitting_projectile, def_zone, piercing_hit = FALSE)
+	if(ismob(hitting_projectile.firer) && !is_crew_member(hitting_projectile.firer))
+		return BULLET_ACT_BLOCK
+	return ..()
+
+/obj/machinery/computer/helm/hitby(atom/movable/hit_by, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
+	var/mob/thrower = throwingdatum?.get_thrower()
+	if(thrower && !is_crew_member(thrower))
+		return
+	return ..()
+
+/obj/machinery/computer/helm/mouse_drop_receive(mob/living/dropping, mob/user, params)
+	if(!check_crew_access(user))
+		return
+	// Later drags go straight to the component's signal handler.
+	LoadComponent(/datum/component/leanable/helm, dropping)
+
+/datum/component/leanable/helm/mousedrop_receive(atom/source, atom/movable/dropped, mob/user, params)
+	var/obj/machinery/computer/helm/console = source
+	if(!console.check_crew_access(user))
+		return COMPONENT_CANCEL_MOUSEDROPPED_ONTO
+	return ..()
+
+/obj/machinery/computer/helm/click_ctrl(mob/user)
+	if(!check_crew_access(user))
+		return CLICK_ACTION_BLOCKING
+	return ..()
+
+/obj/machinery/computer/helm/screwdriver_act(mob/living/user, obj/item/tool)
+	if(!check_crew_access(user))
+		return TRUE
+	// Keep checking while disconnecting: removal from the crew cancels the job.
+	if(circuit)
+		balloon_alert(user, "disconnecting monitor...")
+		if(tool.use_tool(src, user, time_to_unscrew, volume = 50, extra_checks = CALLBACK(src, PROC_REF(is_crew_member), user)))
+			deconstruct(TRUE)
+	return TRUE
 
 /// Attempts to claim the ship using an authorization key
 /obj/machinery/computer/helm/proc/attempt_claim_ship(obj/item/ship_key/key, mob/living/user)
@@ -114,6 +197,11 @@
 	var/obj/structure/overmap/ship/npc/npc_ship = key.get_ship()
 	if(npc_ship != current_ship)
 		to_chat(user, span_warning("This key is for a different vessel: [key.ship_name]"))
+		return FALSE
+
+	// A disabled player-owned hull still belongs to its crew, even with an old key.
+	if(npc_ship.player_controlled && !npc_ship.abandoned)
+		to_chat(user, span_warning("This vessel already belongs to a crew."))
 		return FALSE
 
 	// Check if key is valid (has AI controller) OR ship is abandoned OR ship is disabled (all claimable)
@@ -242,6 +330,8 @@
 	return list(get_asset_datum(/datum/asset/simple/helm_faceplate))
 
 /obj/machinery/computer/helm/ui_interact(mob/user, datum/tgui/ui)
+	if(!check_crew_access(user))
+		return FALSE
 	. = ..()
 	if(!current_ship && !attempt_ship_connection(last_resort = TRUE))
 		return FALSE
@@ -626,11 +716,21 @@
 	var/mob/living/living_user = user
 	if(!istype(living_user) || !living_user.mind)
 		return FALSE
+	// Freshly built consoles must find their hull before applying its crew lock.
+	if(!current_ship)
+		attempt_ship_connection()
 	if(!current_ship?.ship_team)
 		return TRUE // No ship team set up, allow access
 	if(current_ship.abandoned)
 		return TRUE // Abandoned ships allow anyone to access for claiming
 	return (living_user.mind in current_ship.ship_team.members)
+
+/// The interactive version of the crew check; UI status polling stays silent.
+/obj/machinery/computer/helm/proc/check_crew_access(mob/user)
+	if(is_crew_member(user))
+		return TRUE
+	balloon_alert(user, "crew access only!")
+	return FALSE
 
 /**
  * The distress-beacon switch.

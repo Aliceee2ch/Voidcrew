@@ -305,8 +305,7 @@
 	pixel_x = 21;
 	dir = 8;
 	id = "squab_dormview";
-	name = "Window Shutters";
-	req_ship_access = 1
+	name = "Window Shutters"
 	},
 /obj/item/modular_computer/laptop/preset,
 /turf/open/floor/wood,
@@ -391,9 +390,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "bNk" = (
-/obj/machinery/door/airlock/external{
-	req_access_txt = "10"
-	},
+/obj/machinery/door/airlock/external,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)
 "bXs" = (
@@ -1122,7 +1119,6 @@
 	specialfunctions = 4;
 	name = "Security Office Bolt Control";
 	dir = 4;
-	req_access_txt = "19"
 	},
 /obj/effect/turf_decal/tile/dark_red/half{
 	dir = 8
@@ -1559,7 +1555,6 @@
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
 	name = "roboticist's locker";
-	req_access_txt = "7";
 	icon_door = "science_door"
 	},
 /obj/item/clothing/suit/hooded/wintercoat/science,
@@ -1853,9 +1848,7 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "kpO" = (
-/obj/machinery/vending/coffee{
-	all_items_free = 1
-	},
+/obj/machinery/vending/coffee,
 /obj/effect/turf_decal/tile/brown/half{
 	dir = 8
 	},
@@ -1947,9 +1940,7 @@
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/squab/central_hallway)
 "lew" = (
-/obj/machinery/door/airlock/external{
-	req_access_txt = "10"
-	},
+/obj/machinery/door/airlock/external,
 /obj/docking_port/mobile/voidcrew/squab,
 /obj/structure/fans/tiny,
 /turf/open/floor/plating,
@@ -3450,7 +3441,6 @@
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
 	name = "scientist's locker";
-	req_access_txt = "7";
 	icon_door = "science_door"
 	},
 /obj/item/storage/box/stockparts/basic,

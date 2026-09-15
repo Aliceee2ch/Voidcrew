@@ -139,8 +139,7 @@
 	pixel_x = 21;
 	dir = 8;
 	id = "squab_dormview";
-	name = "Window Shutters";
-	req_ship_access = 1
+	name = "Window Shutters"
 	},
 /obj/item/modular_computer/laptop/preset,
 /turf/open/floor/wood,
@@ -402,8 +401,7 @@
 	normaldoorcontrol = 1;
 	specialfunctions = 4;
 	name = "Security Office Bolt Control";
-	dir = 4;
-	req_access_txt = "19"
+	dir = 4
 	},
 /obj/effect/turf_decal/tile/dark_red/half{
 	dir = 8
@@ -540,9 +538,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/space)
 "ft" = (
-/obj/machinery/door/airlock/external{
-	req_access_txt = "10"
-	},
+/obj/machinery/door/airlock/external,
 /turf/open/floor/plating)
 "fC" = (
 /obj/effect/turf_decal/siding/thinplating/dark{
@@ -902,8 +898,7 @@
 	icon_state = "2-8"
 	},
 /obj/structure/closet/crate/radiation{
-	name = "exosuit equipment crate";
-	populate = 0
+	name = "exosuit equipment crate"
 	},
 /obj/item/mecha_parts/mecha_equipment/generator,
 /obj/item/mecha_parts/mecha_equipment/mining_scanner,
@@ -994,9 +989,7 @@
 	},
 /turf/open/floor/plating)
 "mF" = (
-/obj/machinery/vending/snack{
-	all_items_free = 1
-	},
+/obj/machinery/vending/snack,
 /obj/effect/turf_decal/tile/brown/half{
 	dir = 8
 	},
@@ -1419,8 +1412,7 @@
 	},
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
-	name = "scientist's locker";
-	req_access_txt = "7"
+	name = "scientist's locker"
 	},
 /obj/item/storage/box/stockparts/basic,
 /turf/open/floor/iron/dark/textured_large,
@@ -1606,8 +1598,7 @@
 /obj/structure/closet/secure_closet{
 	anchored = 1;
 	icon_state = "rd";
-	name = "science director's locker";
-	req_access_txt = "30"
+	name = "science director's locker"
 	},
 /obj/item/aicard,
 /obj/effect/turf_decal/siding/thinplating/dark{
@@ -2076,8 +2067,7 @@
 "Bz" = (
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
-	name = "roboticist's locker";
-	req_access_txt = "7"
+	name = "roboticist's locker"
 	},
 /obj/item/clothing/suit/hooded/wintercoat/science,
 /obj/item/clothing/gloves/fingerless,
@@ -2621,8 +2611,7 @@
 /obj/structure/closet/secure_closet{
 	icon_state = "qm";
 	name = "captain's locker";
-	anchored = 1;
-	req_access_txt = "20"
+	anchored = 1
 	},
 /obj/item/storage/backpack/satchel/explorer{
 	pixel_x = 6;
@@ -3127,9 +3116,7 @@
 /turf/open/floor/iron/white,
 /area/space)
 "OW" = (
-/obj/machinery/vending/coffee{
-	all_items_free = 1
-	},
+/obj/machinery/vending/coffee,
 /obj/effect/turf_decal/tile/brown/half{
 	dir = 8
 	},
@@ -3443,8 +3430,7 @@
 /area/space)
 "Tq" = (
 /obj/machinery/mecha_part_fabricator{
-	dir = 1;
-	output_direction = 1
+	dir = 1
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/space)
@@ -3685,17 +3671,14 @@
 /turf/open/floor/iron/dark/herringbone,
 /area/space)
 "Xi" = (
-/obj/machinery/door/airlock/external{
-	req_access_txt = "10"
-	},
+/obj/machinery/door/airlock/external,
 /obj/machinery/atmospherics/pipe/layer_manifold/visible,
 /turf/open/floor/plating)
 "Xp" = (
 /obj/structure/closet/secure_closet{
 	anchored = 1;
 	icon_state = "eng_secure";
-	name = "ship engineer's locker";
-	req_access_txt = "10"
+	name = "ship engineer's locker"
 	},
 /obj/item/tank/internals/emergency_oxygen/engi,
 /obj/item/clothing/shoes/workboots,

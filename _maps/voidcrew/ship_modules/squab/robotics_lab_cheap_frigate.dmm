@@ -183,8 +183,7 @@
 /area/template_noop)
 "xgd" = (
 /obj/machinery/mecha_part_fabricator{
-	dir = 1;
-	output_direction = 1
+	dir = 1
 	},
 /turf/template_noop,
 /area/template_noop)

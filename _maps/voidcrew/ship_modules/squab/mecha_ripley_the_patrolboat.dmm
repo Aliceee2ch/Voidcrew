@@ -9,8 +9,7 @@
 /area/template_noop)
 "ecT" = (
 /obj/structure/closet/crate/radiation{
-	name = "exosuit equipment crate";
-	populate = 0
+	name = "exosuit equipment crate"
 	},
 /obj/item/mecha_parts/mecha_equipment/generator,
 /obj/item/mecha_parts/mecha_equipment/mining_scanner,

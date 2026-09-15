@@ -2167,7 +2167,7 @@
 /obj/structure/closet/secure_closet{
 	anchored = 1;
 	name = "armor locker";
-	icon_state = "armory"
+	icon_state = "armory";
     icon_door = "armory_door"
 	},
 /obj/item/clothing/gloves/combat{

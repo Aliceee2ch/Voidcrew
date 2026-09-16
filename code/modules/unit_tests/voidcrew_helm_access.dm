@@ -1,3 +1,17 @@
+/// Exercise real UI entry points without needing a connected client.
+/obj/machinery/computer/helm/access_test
+	var/datum/tgui/helm_access_test/test_ui
+
+/obj/machinery/computer/helm/access_test/ui_interact(mob/user, datum/tgui/ui)
+	return ..(user, ui || test_ui)
+
+/datum/tgui/helm_access_test
+	var/updates = 0
+
+/datum/tgui/helm_access_test/send_update(custom_data, force)
+	updates++
+	return ..()
+
 /// Expose the protected item entry points without changing their behavior.
 /obj/machinery/computer/helm/access_test/proc/test_item_interaction(mob/living/user, obj/item/tool, ranged = FALSE)
 	return ranged ? base_ranged_item_interaction(user, tool, list()) : base_item_interaction(user, tool, list())
@@ -34,6 +48,7 @@
 	var/obj/machinery/computer/helm/access_test/helm = allocate(/obj/machinery/computer/helm/access_test)
 	var/mob/living/carbon/human/consistent/user = allocate(/mob/living/carbon/human/consistent)
 	user.mind_initialize()
+	ADD_TRAIT(user, TRAIT_PRESERVE_UI_WITHOUT_CLIENT, TRAIT_SOURCE_UNIT_TESTS)
 	var/obj/structure/overmap/ship/enemy_ship = allocate(/obj/structure/overmap/ship)
 	enemy_ship.ship_team = new /datum/team/voidcrew()
 	enemy_ship.ship_team.ship = enemy_ship
@@ -43,9 +58,21 @@
 	helm.set_current_ship(null)
 	TEST_ASSERT(!helm.is_crew_member(user), "An enemy crewmember must not use a newly built helm.")
 	TEST_ASSERT_EQUAL(helm.current_ship, ship, "The first authorization check must resolve the owning hull.")
-	TEST_ASSERT(!helm.can_interact(user), "An enemy crewmember must not interact with the helm.")
-	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.always_state), UI_CLOSE, "Even an unrestricted UI state must close for an enemy.")
-	TEST_ASSERT(!helm.ui_interact(user), "Direct UI opening must reject an enemy.")
+	TEST_ASSERT(helm.can_interact(user), "An enemy crewmember must be able to view the helm.")
+	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.default_state), UI_INTERACTIVE, "The UI must stay available to display its crew lock.")
+	var/datum/tgui/helm_access_test/console_ui = allocate(/datum/tgui/helm_access_test, user, helm, "HelmComputer")
+	helm.test_ui = console_ui
+	helm.ui_interact(user)
+	TEST_ASSERT_EQUAL(console_ui.updates, 1, "Direct UI access must reach the locked console.")
+	helm.attack_hand(user)
+	TEST_ASSERT_EQUAL(console_ui.updates, 2, "An enemy's empty-hand click must reach the locked console.")
+	helm.attack_paw(user)
+	TEST_ASSERT_EQUAL(console_ui.updates, 3, "A peaceful paw click must also reach the locked console.")
+	var/list/ui_data = helm.ui_data(user)
+	TEST_ASSERT(ui_data["isNotCrew"] && !ui_data["isAbandoned"], "An enemy must see the existing crew-locked interface.")
+	ship.autopilot_allow_neutral = TRUE
+	world.push_usr(user, CALLBACK(helm, TYPE_PROC_REF(/datum, ui_act), "autopilot_pref", list("key" = "allowNeutral", "value" = FALSE), console_ui))
+	TEST_ASSERT(ship.autopilot_allow_neutral, "An enemy must not issue orders through the visible UI.")
 	TEST_ASSERT(helm.click_ctrl(user) & CLICK_ACTION_BLOCKING, "An enemy must not pull the console.")
 
 	var/obj/item/screwdriver/screwdriver = allocate(/obj/item/screwdriver)
@@ -67,11 +94,19 @@
 	ship.ship_team.add_member(user.mind)
 	TEST_ASSERT(helm.is_crew_member(user), "A member of both crews must have access.")
 	TEST_ASSERT(helm.can_interact(user), "Crew must retain normal helm interaction.")
-	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.always_state), UI_INTERACTIVE, "Crew must retain an interactive UI.")
+	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.default_state), UI_INTERACTIVE, "Crew must retain an interactive UI.")
+	ui_data = helm.ui_data(user)
+	TEST_ASSERT(!ui_data["isNotCrew"], "Joining the crew must unlock an already open UI.")
+	world.push_usr(user, CALLBACK(helm, TYPE_PROC_REF(/datum, ui_act), "autopilot_pref", list("key" = "allowNeutral", "value" = FALSE), console_ui))
+	TEST_ASSERT(!ship.autopilot_allow_neutral, "Crew must still be able to issue the same UI order.")
 	helm.test_mouse_drop(user)
 	TEST_ASSERT_NOTNULL(helm.GetComponent(/datum/component/leanable/helm), "Crew must be able to make the helm leanable.")
 	ship.ship_team.remove_member(user.mind)
-	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.always_state), UI_CLOSE, "Removing a crewmember must invalidate an existing UI.")
+	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.default_state), UI_INTERACTIVE, "Removing a crewmember must leave the locked UI visible.")
+	ui_data = helm.ui_data(user)
+	TEST_ASSERT(ui_data["isNotCrew"], "Removing a crewmember must lock an already open UI on its next update.")
+	world.push_usr(user, CALLBACK(helm, TYPE_PROC_REF(/datum, ui_act), "autopilot_pref", list("key" = "allowNeutral", "value" = TRUE), console_ui))
+	TEST_ASSERT(!ship.autopilot_allow_neutral, "A former crewmember's open UI must no longer accept orders.")
 	TEST_ASSERT(SEND_SIGNAL(helm, COMSIG_MOUSEDROPPED_ONTO, user, user, list()) & COMPONENT_CANCEL_MOUSEDROPPED_ONTO, "An existing lean component must still reject enemy drags.")
 
 	// The rigger may waive distance, but must never waive membership.
@@ -82,7 +117,7 @@
 	TEST_ASSERT_NULL(socket.uplink_console, "A refused uplink must not leave an active console behind.")
 	socket.uplink_console = helm
 	TEST_ASSERT(!socket.uplink_covers(helm, user), "A stale enemy uplink must not grant remote access.")
-	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.always_state), UI_CLOSE, "The rigger exemption must not reopen an enemy UI.")
+	TEST_ASSERT_EQUAL(helm.ui_status(user, GLOB.default_state), UI_INTERACTIVE, "A refused rigger uplink must not prevent normal locked UI viewing.")
 	ship.ship_team.add_member(user.mind)
 	TEST_ASSERT(socket.uplink_covers(helm, user), "A crew rigger on the same hull must retain its uplink.")
 	socket.drop_uplink(user, silent = TRUE)
@@ -97,8 +132,12 @@
 
 	ship.abandoned = TRUE
 	TEST_ASSERT(helm.is_crew_member(user), "An abandoned hull must remain accessible for claiming.")
+	ui_data = helm.ui_data(user)
+	TEST_ASSERT(!ui_data["isNotCrew"] && ui_data["isAbandoned"], "An abandoned hull must unlock the live UI.")
 	ship.abandoned = FALSE
 	TEST_ASSERT(!helm.is_crew_member(user), "Returning to an owned hull must restore the crew lock.")
+	ui_data = helm.ui_data(user)
+	TEST_ASSERT(ui_data["isNotCrew"] && !ui_data["isAbandoned"], "Restoring ownership must restore the live UI lock.")
 	ship.ship_team.add_member(user.mind)
 	helm.time_to_unscrew = 0
 	screwdriver.melee_attack_chain(user, helm, list())

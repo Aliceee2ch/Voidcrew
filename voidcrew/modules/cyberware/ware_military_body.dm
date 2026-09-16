@@ -802,8 +802,6 @@
  * UI_CLOSE, which is what actually shuts the window, on the next poll.
  */
 /obj/machinery/computer/helm/ui_status(mob/user, datum/ui_state/state)
-	if(!is_crew_member(user))
-		return UI_CLOSE
 	. = ..()
 	if(. >= UI_INTERACTIVE)
 		return .

@@ -121,16 +121,9 @@
 		return ITEM_INTERACT_BLOCKING
 	return ..()
 
-/obj/machinery/computer/helm/can_interact(mob/user)
-	return is_crew_member(user) && ..()
-
-/obj/machinery/computer/helm/attack_hand(mob/user, list/modifiers)
-	if(!check_crew_access(user))
-		return TRUE
-	return ..()
-
 /obj/machinery/computer/helm/attack_paw(mob/living/user, list/modifiers)
-	if(!check_crew_access(user))
+	// Peaceful clicks may open the locked UI; combat paw attacks damage machinery.
+	if(user.combat_mode && !check_crew_access(user))
 		return TRUE
 	return ..()
 
@@ -330,8 +323,6 @@
 	return list(get_asset_datum(/datum/asset/simple/helm_faceplate))
 
 /obj/machinery/computer/helm/ui_interact(mob/user, datum/tgui/ui)
-	if(!check_crew_access(user))
-		return FALSE
 	. = ..()
 	if(!current_ship && !attempt_ship_connection(last_resort = TRUE))
 		return FALSE
@@ -348,6 +339,10 @@
 /obj/machinery/computer/helm/ui_data(mob/user)
 	// var/list/data = list()
 	var/list/data = ..()
+
+	// Keep an open console's lock current when crew membership or ownership changes.
+	data["isNotCrew"] = !is_crew_member(user)
+	data["isAbandoned"] = current_ship.abandoned
 
 	data["integrity"] = current_ship.get_integrity_percent()
 	data["overhealth"] = current_ship.get_overhealth_percent()
@@ -650,17 +645,11 @@
 		"viewRange" = SHIP_VIEW_RANGE,
 	)
 
-	// Check if user is a crew member of this ship
 	// Everything the ship has ever seen. Static because it only changes on a new
 	// discovery, which pushes a refresh (see get_charted_contacts), it is much
 	// the largest table the helm sends, and re-sending it every frame was the
 	// whole cost of charting the map as you go.
 	data["chartedContacts"] = current_ship.get_charted_contacts()
-
-	data["isNotCrew"] = !is_crew_member(user)
-
-	// Abandoned ship status
-	data["isAbandoned"] = current_ship?.abandoned
 
 	return data
 

@@ -15,6 +15,26 @@
 // =========================================================================
 
 /**
+ * NPC markets protect their entire concourse and allocated hangars, including
+ * docked ship turfs. Never use a z-level check: unrelated sites share levels.
+ * The area fallback also covers the concourse while its template initializes.
+ * Player-founded outposts share the hangar area type but not this protection.
+ */
+/proc/is_trader_outpost_protected(atom/target)
+	var/turf/location = get_turf(target)
+	if(!location)
+		return FALSE
+	return istype(get_area(location), /area/voidcrew/trader_outpost) || !isnull(get_trader_outpost_for_turf(location))
+
+/// Engine hazards transported into a market must stop before processing damage.
+/proc/neutralize_trader_outpost_hazard(atom/movable/hazard)
+	if(!is_trader_outpost_protected(hazard))
+		return FALSE
+	log_game("OUTPOST PROTECTION: Neutralized [hazard] ([hazard.type]) at [AREACOORD(hazard)].")
+	qdel(hazard)
+	return TRUE
+
+/**
  * Watches every living mob for player-on-player attacks. Whether an attack is
  * protected is resolved from the victim's turf at impact time, rather than by
  * area Entered/Exited events: admin teleports and docked ships retain their own
@@ -308,6 +328,7 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	// Never restored on Detach, which only ever runs at qdel
 	var/obj/property = target
 	property.resistance_flags |= INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
+	property.AddElement(/datum/element/empprotection, EMP_PROTECT_ALL)
 
 	RegisterSignals(target, list(
 		COMSIG_ATOM_TOOL_ACT(TOOL_CROWBAR),

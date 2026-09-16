@@ -150,9 +150,9 @@
 		if(zone?.zone_type != ZONE_RED)
 			var/list/scanned_ships = controller.blackboard[BB_NPC_SCANNED_SHIPS]
 			if(scanned_ships)
-				var/scanned_time = scanned_ships[REF(potential_target)]
-				if(scanned_time && (world.time - scanned_time) < NPC_SCAN_MEMORY_TIME)
-					continue  // Skip - we scanned this ship recently
+				var/memory_expires = scanned_ships[REF(potential_target)]
+				if(memory_expires && world.time < memory_expires)
+					continue  // Skip - we scanned (or tried to scan) this ship recently
 
 		// Skip hulls with nobody alive aboard. There's nothing to rob off a ship whose crew
 		// is dead or gone, and without this a pirate that had just wiped a crew and broken
@@ -180,7 +180,8 @@
 			// taking the target) used to leave no memory, so the next tick
 			// re-acquired the same hull and re-announced the scan - round 76 logged
 			// 268 "scanning your financial systems" starts against one ship.
-			controller.remember_scanned_ship(potential_target)
+			// Short memory: a finished scan upgrades it to the full duration.
+			controller.remember_scanned_ship(potential_target, NPC_SCAN_ABORT_MEMORY_TIME)
 		else if(istype(ship, /obj/structure/overmap/ship/npc/pirate))
 			// Red zone: hail first (give player chance to respond)
 			var/obj/structure/overmap/ship/npc/pirate/pirate_ship = ship
@@ -246,7 +247,7 @@
 
 	// Record this ship as scanned
 	controller.blackboard[BB_NPC_SCAN_COMPLETE] = TRUE
-	controller.remember_scanned_ship(target)
+	controller.remember_scanned_ship(target, NPC_SCAN_MEMORY_TIME)
 
 	// Check target's wealth
 	var/target_wealth = target.ship_account?.account_balance || 0
@@ -339,15 +340,18 @@
 			if(M.client)
 				SEND_SOUND(M, stop_sound)
 
-/// Stamps the scan memory for a target so scan_threats skips it for NPC_SCAN_MEMORY_TIME.
-/datum/ai_controller/npc_ship/proc/remember_scanned_ship(obj/structure/overmap/ship/target)
+/// Holds scan_threats off a target for `duration`. Stores the expiry, so an attempted
+/// scan (short) and a completed one (long) can carry different lengths; a longer
+/// memory never gets shortened by a later stamp.
+/datum/ai_controller/npc_ship/proc/remember_scanned_ship(obj/structure/overmap/ship/target, duration)
 	if(!target)
 		return
 	var/list/scanned_ships = blackboard[BB_NPC_SCANNED_SHIPS]
 	if(!scanned_ships)
 		scanned_ships = list()
 		blackboard[BB_NPC_SCANNED_SHIPS] = scanned_ships
-	scanned_ships[REF(target)] = world.time
+	var/key = REF(target)
+	scanned_ships[key] = max(scanned_ships[key], world.time + duration)
 
 // ========== HAILING ==========
 

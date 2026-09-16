@@ -189,6 +189,11 @@ GLOBAL_LIST_EMPTY(patrol_stagger_counter)
 // How long to remember a scanned ship before re-scanning (5 minutes)
 #define NPC_SCAN_MEMORY_TIME (5 MINUTES)
 
+// How long an abandoned scan holds the pirate off the same ship. Long enough to break
+// the acquire/abort/re-announce loop, short enough that a ship which only briefly
+// slipped out of range is fair game again soon.
+#define NPC_SCAN_ABORT_MEMORY_TIME (1 MINUTES)
+
 // Extra tiles beyond territory_range a target may drift during a financial scan before
 // the scan is abandoned. Acquisition happens right at territory_range, so without slack
 // one tile of drift by either hull aborts a 6-second scan a second or two in.

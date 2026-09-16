@@ -6,7 +6,7 @@
 	part_requirements = list()
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list("Biomedical_North", "Services_North", "Biomedical_South", "Services_South")
-	player_hidden = TRUE
+	player_hidden = FALSE
 	job_slots = list()
 	available_themes = list("standard", "dark")
 

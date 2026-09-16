@@ -396,7 +396,7 @@
     ]
   },
   "Crew": 4,
-  "Hidden": true,
+  "Hidden": false,
   "Cost": 0,
   "FileID": "nanobead",
   "PartCosts": {

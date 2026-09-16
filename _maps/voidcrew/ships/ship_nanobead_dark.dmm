@@ -304,6 +304,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 4
 	},
+/obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "hLO" = (
@@ -334,6 +335,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 8
 	},
+/obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "jdz" = (
@@ -458,6 +460,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 4
 	},
+/obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "nsk" = (

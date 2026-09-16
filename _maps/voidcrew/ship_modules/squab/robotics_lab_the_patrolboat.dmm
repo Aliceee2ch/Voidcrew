@@ -104,10 +104,10 @@
 /turf/template_noop,
 /area/template_noop)
 "pkx" = (
-/obj/machinery/rnd/production/circuit_imprinter/department/science,
 /obj/effect/turf_decal/siding/wideplating/dark{
 	dir = 4
 	},
+/obj/machinery/rnd/production/circuit_imprinter,
 /turf/template_noop,
 /area/template_noop)
 "rGi" = (
@@ -138,10 +138,10 @@
 /turf/template_noop,
 /area/template_noop)
 "thR" = (
-/obj/machinery/rnd/production/protolathe/department/science,
 /obj/effect/turf_decal/siding/wideplating/dark{
 	dir = 4
 	},
+/obj/machinery/rnd/production/techfab,
 /turf/template_noop,
 /area/template_noop)
 "tYt" = (

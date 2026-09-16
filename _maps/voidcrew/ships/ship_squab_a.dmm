@@ -2168,7 +2168,7 @@
 	anchored = 1;
 	name = "armor locker";
 	icon_state = "armory";
-    icon_door = "armory_door"
+	icon_door = "armory_door"
 	},
 /obj/item/clothing/gloves/combat{
 	pixel_x = -7;
@@ -2756,12 +2756,11 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/command_quarters)
 "raN" = (
-/obj/item/clothing/mask/gas/atmos,
-/obj/item/tank/internals/oxygen/yellow,
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 10
 	},
+/obj/machinery/suit_storage_unit/engine,
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "rfz" = (
@@ -2997,7 +2996,6 @@
 	layer = 2.5
 	},
 /obj/machinery/power/apc/auto_name/directional/south,
-/obj/machinery/rnd/server,
 /obj/structure/cable{
 	icon_state = "0-4"
 	},
@@ -3014,6 +3012,7 @@
 	dir = 8
 	},
 /obj/structure/cable,
+/obj/machinery/rnd/server/ship,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "sty" = (

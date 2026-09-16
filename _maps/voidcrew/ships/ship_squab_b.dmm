@@ -178,7 +178,7 @@
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/squab/bathroom)
 "aUM" = (
-/turf/closed/wall,
+/turf/closed/wall/mineral/iron,
 /area/shuttle/voidcrew/squab/command_quarters)
 "aVU" = (
 /obj/structure/cable{
@@ -254,8 +254,8 @@
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "bmz" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/voidcrew/squab/cargobay)
+/turf/closed/wall/mineral/iron,
+/area/shuttle/voidcrew/squab/captain_quarters)
 "bpX" = (
 /turf/template_noop,
 /area/template_noop)
@@ -524,8 +524,8 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "cLX" = (
-/turf/closed/wall/mineral/titanium/nodiagonal,
-/area/shuttle/voidcrew/squab/cargobay)
+/turf/closed/wall/mineral/iron,
+/area/shuttle/voidcrew/squab/office)
 "cQD" = (
 /obj/machinery/door/airlock{
 	name = "Restroom";
@@ -1003,9 +1003,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/office)
-"fSF" = (
-/turf/closed/wall/mineral/titanium/nodiagonal,
-/area/shuttle/voidcrew/squab/engineering)
 "fUh" = (
 /obj/machinery/washing_machine{
 	pixel_x = -15;
@@ -1118,7 +1115,7 @@
 	normaldoorcontrol = 1;
 	specialfunctions = 4;
 	name = "Security Office Bolt Control";
-	dir = 4;
+	dir = 4
 	},
 /obj/effect/turf_decal/tile/dark_red/half{
 	dir = 8
@@ -1164,7 +1161,7 @@
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/squab/cargobay)
 "gLF" = (
-/turf/closed/wall,
+/turf/closed/wall/mineral/iron,
 /area/shuttle/voidcrew/squab/lab_storage)
 "gQq" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -1584,9 +1581,6 @@
 /obj/structure/cable,
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/engineering)
-"joQ" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/voidcrew/squab/bathroom)
 "joW" = (
 /obj/effect/turf_decal/siding/thinplating{
 	dir = 8
@@ -1630,7 +1624,7 @@
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "jzC" = (
-/turf/closed/wall/mineral/titanium,
+/turf/closed/wall,
 /area/shuttle/voidcrew/squab/science_hall)
 "jBJ" = (
 /obj/effect/turf_decal/siding/white{
@@ -2085,8 +2079,8 @@
 /turf/open/floor/iron/white,
 /area/shuttle/voidcrew/squab/laboratory)
 "lIV" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/voidcrew/squab/laboratory)
+/turf/closed/wall/mineral/iron,
+/area/shuttle/voidcrew/squab/cargobay)
 "lJO" = (
 /obj/machinery/autolathe,
 /obj/machinery/airalarm/directional/north,
@@ -2103,13 +2097,13 @@
 /turf/open/floor/iron/white,
 /area/shuttle/voidcrew/squab/laboratory)
 "lSi" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/voidcrew/squab/office)
-"mav" = (
-/turf/closed/wall/mineral/titanium,
+/turf/closed/wall/mineral/iron,
 /area/shuttle/voidcrew/squab/dormitory)
+"mav" = (
+/turf/closed/wall/mineral/iron,
+/area/shuttle/voidcrew/squab/cryogenics)
 "min" = (
-/turf/closed/wall/mineral/titanium,
+/turf/closed/wall,
 /area/shuttle/voidcrew/squab/cargo_hall)
 "mmp" = (
 /obj/effect/turf_decal/siding/wood{
@@ -2222,9 +2216,6 @@
 "nAq" = (
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/laboratory)
-"nDL" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/voidcrew/squab/cargo_entrance)
 "nFe" = (
 /obj/structure/railing{
 	dir = 4
@@ -2482,7 +2473,7 @@
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "pDN" = (
-/turf/closed/wall,
+/turf/closed/wall/mineral/iron,
 /area/shuttle/voidcrew/squab/bridge)
 "pEq" = (
 /obj/machinery/door/poddoor{
@@ -2556,7 +2547,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/turf/open/floor/wood/parquet,
+/turf/closed/wall/mineral/iron,
 /area/shuttle/voidcrew/squab/bridge)
 "qxP" = (
 /obj/machinery/power/terminal{
@@ -2776,7 +2767,6 @@
 	layer = 2.5
 	},
 /obj/machinery/power/apc/auto_name/directional/south,
-/obj/machinery/rnd/server,
 /obj/structure/cable{
 	icon_state = "0-4"
 	},
@@ -2792,6 +2782,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 8
 	},
+/obj/machinery/rnd/server/ship,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "rdJ" = (
@@ -2949,9 +2940,6 @@
 	},
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/central_hallway)
-"sva" = (
-/turf/closed/wall/mineral/titanium/nodiagonal,
-/area/shuttle/voidcrew/squab/laboratory)
 "sFy" = (
 /obj/machinery/atmospherics/components/binary/pump/layer4,
 /obj/structure/cable{
@@ -3233,8 +3221,8 @@
 /turf/open/floor/iron/white/smooth_large,
 /area/shuttle/voidcrew/squab/bathroom)
 "uuU" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/voidcrew/squab/cryogenics)
+/turf/closed/wall/mineral/iron,
+/area/shuttle/voidcrew/squab/engineering)
 "uvM" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/spawner/random/trash/box,
@@ -3274,8 +3262,8 @@
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "uJE" = (
-/turf/closed/wall/mineral/titanium/nodiagonal,
-/area/shuttle/voidcrew/squab/office)
+/turf/closed/wall/mineral/iron,
+/area/shuttle/voidcrew/squab/cargo_entrance)
 "uLE" = (
 /obj/effect/turf_decal/siding/thinplating{
 	dir = 8
@@ -3297,7 +3285,7 @@
 	anchored = 1;
 	name = "armor locker";
 	icon_state = "armory";
-    icon_door = "armory_door"
+	icon_door = "armory_door"
 	},
 /obj/item/clothing/gloves/combat{
 	pixel_x = -7;
@@ -3425,9 +3413,6 @@
 	},
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/office)
-"vRD" = (
-/turf/closed/wall/mineral/titanium/nodiagonal,
-/area/shuttle/voidcrew/squab/dormitory)
 "wbO" = (
 /obj/item/clothing/suit/hooded/wintercoat/science,
 /obj/item/analyzer{
@@ -3458,8 +3443,8 @@
 /turf/open/floor/iron/kitchen,
 /area/shuttle/voidcrew/squab/central_hallway)
 "wmM" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/voidcrew/squab/engineering)
+/turf/closed/wall/mineral/iron,
+/area/shuttle/voidcrew/squab/laboratory)
 "wqL" = (
 /obj/machinery/light/floor,
 /obj/effect/turf_decal/siding/thinplating/dark{
@@ -3754,10 +3739,10 @@
 (1,1,1) = {"
 bpX
 bpX
-wmM
+lpf
 ozG
 ozG
-wmM
+lpf
 bpX
 bpX
 bpX
@@ -3766,56 +3751,56 @@ bpX
 bpX
 bpX
 bpX
-wmM
+lpf
 fFE
 fFE
-wmM
+lpf
 bpX
 bpX
 "}
 (2,1,1) = {"
 bpX
 bpX
-wmM
+lpf
 sls
 sls
-wmM
-wmM
+lpf
+lpf
 bpX
 bpX
 bpX
 bpX
 bpX
 bpX
-wmM
-wmM
+lpf
+lpf
 sls
 sls
-wmM
+lpf
 bpX
 bpX
 "}
 (3,1,1) = {"
-wmM
-wmM
-fSF
+lpf
+lpf
+lpf
 nSM
 qxP
 hXt
 hEr
 nvx
-wmM
-wmM
-wmM
-wmM
+lpf
+lpf
+lpf
+lpf
 beF
 orf
 bKj
 avN
 vAe
-wmM
-wmM
-wmM
+lpf
+lpf
+lpf
 "}
 (4,1,1) = {"
 lew
@@ -3824,25 +3809,25 @@ bNk
 tGt
 tDO
 jsI
-fSF
-wmM
-fSF
+lpf
+lpf
+lpf
 xTC
 gHA
-fSF
-wmM
-fSF
+lpf
+lpf
+lpf
 qZV
 wrB
 ahT
 osa
-wmM
-wmM
+lpf
+lpf
 "}
 (5,1,1) = {"
-wmM
-fSF
-fSF
+lpf
+lpf
+lpf
 awm
 sPY
 sFy
@@ -3858,60 +3843,60 @@ baT
 fCO
 fuU
 fhq
-wmM
-wmM
+lpf
+lpf
 "}
 (6,1,1) = {"
 bpX
-wmM
+lpf
 wAF
 aVU
 oJJ
 vxl
 cjE
 rXU
-lpf
+uuU
 eAq
 ioN
-lpf
+uuU
 lkY
 brU
 oHz
 xnr
 vxy
 vKl
-wmM
+lpf
 bpX
 "}
 (7,1,1) = {"
 bpX
-wmM
 lpf
-lpf
-lpf
-lpf
-lpf
-lpf
-lpf
+uuU
+uuU
+uuU
+uuU
+uuU
+uuU
+uuU
 soL
 fXj
+uuU
+uuU
+uuU
+uuU
+uuU
+uuU
+uuU
 lpf
-lpf
-lpf
-lpf
-lpf
-lpf
-lpf
-wmM
 bpX
 "}
 (8,1,1) = {"
 bpX
-uuU
+pmo
 vsW
 cev
 aKV
-pmo
+mav
 eBQ
 joW
 exH
@@ -3924,12 +3909,12 @@ jHU
 fUh
 sVk
 aLa
-joQ
+jHU
 bpX
 "}
 (9,1,1) = {"
 bpX
-uuU
+pmo
 dfU
 bGn
 jBJ
@@ -3946,46 +3931,46 @@ cQD
 umS
 asu
 ftk
-joQ
+jHU
 bpX
 "}
 (10,1,1) = {"
 bpX
-lSi
 mwE
-mwE
-mwE
-mwE
-mwE
+cLX
+cLX
+cLX
+cLX
+cLX
 scP
 luS
 iLm
 dUK
 qDn
 lGs
+lSi
+lSi
+lSi
+lSi
+lSi
 hrD
-hrD
-hrD
-hrD
-hrD
-mav
 bpX
 "}
 (11,1,1) = {"
 bpX
-lSi
+mwE
 jHb
 vMW
 guF
 tsR
-mwE
+cLX
 frd
 dkz
 daJ
 alU
 sLM
 sLM
-hrD
+lSi
 ehn
 rai
 lny
@@ -3995,19 +3980,19 @@ bpX
 "}
 (12,1,1) = {"
 bpX
-lSi
+mwE
 pBd
 ooh
 fNS
 vbE
-mwE
+cLX
 uwU
 dkz
 daJ
 alU
 coY
 mmp
-hrD
+lSi
 jSy
 jQl
 nbP
@@ -4017,45 +4002,45 @@ bpX
 "}
 (13,1,1) = {"
 bpX
-lSi
-uJE
+mwE
+mwE
 iKC
 fHe
 xCV
-mwE
+cLX
 tyM
 dkz
 daJ
 alU
 laN
 jNE
-hrD
+lSi
 icm
 hKy
 umE
-vRD
-mav
+hrD
+hrD
 bpX
 "}
 (14,1,1) = {"
 bpX
 bpX
-lSi
 mwE
+cLX
 ghG
-mwE
-mwE
+cLX
+cLX
 wcA
 eUT
 daJ
 alU
 lEb
 kuP
-hrD
-hrD
+lSi
+lSi
 hMM
+lSi
 hrD
-mav
 bpX
 bpX
 "}
@@ -4109,8 +4094,8 @@ min
 min
 jgk
 bbC
-ibV
-ibV
+bmz
+bmz
 kpO
 xcz
 kle
@@ -4131,9 +4116,9 @@ min
 gvf
 qKK
 pro
-ibV
-ibV
-ibV
+bmz
+bmz
+bmz
 pDN
 kCZ
 rHG
@@ -4153,7 +4138,7 @@ min
 gvf
 qKK
 jhS
-ibV
+bmz
 jSJ
 rco
 pDN
@@ -4215,12 +4200,12 @@ bpX
 "}
 (22,1,1) = {"
 bpX
-bmz
+gCI
 gCI
 fDL
-gCI
-ibV
-ibV
+lIV
+bmz
+bmz
 pDN
 pDN
 qFf
@@ -4229,15 +4214,15 @@ pDN
 pDN
 aUM
 aUM
-iTU
+wmM
 qMH
 iTU
-lIV
+iTU
 bpX
 "}
 (23,1,1) = {"
 bpX
-bmz
+gCI
 fux
 djx
 ybH
@@ -4254,12 +4239,12 @@ gLF
 bfH
 nAq
 qIb
-lIV
+iTU
 bpX
 "}
 (24,1,1) = {"
 bpX
-bmz
+gCI
 eap
 iWe
 gJE
@@ -4276,12 +4261,12 @@ tim
 tSe
 hUk
 lIm
-lIV
+iTU
 bpX
 "}
 (25,1,1) = {"
 bpX
-bmz
+gCI
 qIO
 kUn
 hFB
@@ -4298,34 +4283,34 @@ gLF
 rdJ
 nev
 vlm
-lIV
+iTU
 bpX
 "}
 (26,1,1) = {"
 bpX
-bmz
+gCI
 veJ
 ilt
 wsp
-gCI
-gCI
-iLT
+lIV
+lIV
+uJE
 mBq
 mBq
 mBq
 jDT
-iLT
+uJE
 gLF
 gLF
 wKU
 nev
 vlm
-lIV
+iTU
 bpX
 "}
 (27,1,1) = {"
 bpX
-bmz
+gCI
 icY
 ilt
 phn
@@ -4342,12 +4327,12 @@ anM
 hUk
 nev
 vlm
-lIV
+iTU
 bpX
 "}
 (28,1,1) = {"
 bpX
-bmz
+gCI
 cBU
 hoE
 mHH
@@ -4364,17 +4349,17 @@ dQC
 lPE
 gnS
 gnS
-lIV
+iTU
 bpX
 "}
 (29,1,1) = {"
 bpX
-bmz
+gCI
 lJO
 nTq
 gQq
 iye
-nDL
+iLT
 ydA
 tNW
 sLZ
@@ -4386,38 +4371,38 @@ qLg
 lIm
 gnS
 gnS
-lIV
+iTU
 bpX
 "}
 (30,1,1) = {"
 bpX
-bmz
+gCI
 gCI
 gCI
 xgt
-cLX
-nDL
-nDL
+gCI
+iLT
+iLT
 nKj
 lsE
 lsE
 pEq
-nDL
-nDL
-sva
+iLT
+iLT
+iTU
 gnS
 gnS
 gnS
-lIV
+iTU
 bpX
 "}
 (31,1,1) = {"
 bpX
-bmz
+gCI
 bFS
 ikk
 lnV
-bmz
+gCI
 hdQ
 gsM
 xGm
@@ -4426,20 +4411,20 @@ xGm
 xMJ
 xGm
 qQl
-lIV
+iTU
 jed
 dmS
 fja
-lIV
+iTU
 bpX
 "}
 (32,1,1) = {"
 bpX
-bmz
-cLX
+gCI
+gCI
 uvM
 tcC
-bmz
+gCI
 wAe
 wqL
 qpt
@@ -4448,20 +4433,20 @@ xGm
 hrz
 xXg
 lCE
-lIV
+iTU
 ljt
 rrk
-sva
-lIV
+iTU
+iTU
 bpX
 "}
 (33,1,1) = {"
 bpX
 bpX
-bmz
-bmz
-cLX
-bmz
+gCI
+gCI
+gCI
+gCI
 kjY
 alS
 eia
@@ -4470,32 +4455,32 @@ bpX
 hce
 bXs
 nFe
-lIV
-lIV
-lIV
-lIV
+iTU
+iTU
+iTU
+iTU
 bpX
 bpX
 "}
 (34,1,1) = {"
 bpX
 bpX
-bmz
-bmz
-cLX
-cLX
-bmz
+gCI
+gCI
+gCI
+gCI
+gCI
 bpX
 bpX
 bpX
 bpX
 bpX
 bpX
-lIV
-sva
-lIV
-lIV
-lIV
+iTU
+iTU
+iTU
+iTU
+iTU
 bpX
 bpX
 "}
@@ -4503,20 +4488,20 @@ bpX
 bpX
 bpX
 bpX
-bmz
-bmz
-cLX
-bmz
+gCI
+gCI
+gCI
+gCI
 bpX
 bpX
 bpX
 bpX
 bpX
 bpX
-lIV
-sva
-lIV
-lIV
+iTU
+iTU
+iTU
+iTU
 bpX
 bpX
 bpX
@@ -4526,18 +4511,18 @@ bpX
 bpX
 bpX
 bpX
-bmz
-bmz
-bmz
+gCI
+gCI
+gCI
 bpX
 bpX
 bpX
 bpX
 bpX
 bpX
-lIV
-lIV
-lIV
+iTU
+iTU
+iTU
 bpX
 bpX
 bpX

@@ -21,7 +21,6 @@
 	dir = 1
 	},
 /obj/structure/closet/secure_closet/security,
-/obj/structure/closet/secure_closet/security,
 /obj/effect/turf_decal/siding/red,
 /turf/template_noop,
 /area/template_noop)

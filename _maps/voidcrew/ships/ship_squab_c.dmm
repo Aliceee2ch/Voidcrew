@@ -574,7 +574,9 @@
 /area/shuttle/voidcrew/squab/engineering)
 "dYy" = (
 /obj/machinery/door/airlock/external,
-/obj/docking_port/mobile/voidcrew/squab,
+/obj/docking_port/mobile/voidcrew/squab{
+	dir = 2
+	},
 /obj/structure/fans/tiny,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)
@@ -1348,7 +1350,6 @@
 /turf/open/floor/iron,
 /area/shuttle/voidcrew/squab/central_hallway)
 "jnS" = (
-/obj/docking_port/mobile/voidcrew/squab,
 /turf/open/floor/iron/white,
 /area/shuttle/voidcrew/squab/laboratory)
 "jpy" = (

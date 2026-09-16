@@ -43,7 +43,9 @@
 /area/shuttle/voidcrew/squab/central_hallway)
 "aqp" = (
 /obj/machinery/door/airlock/external,
-/obj/docking_port/mobile/voidcrew/squab,
+/obj/docking_port/mobile/voidcrew/squab{
+	dir = 2
+	},
 /obj/structure/fans/tiny,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)

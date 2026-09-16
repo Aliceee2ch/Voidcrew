@@ -25,7 +25,15 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 	spawn_catalog = null
 	return ..()
 
+/// Player outposts belong to the separate Outpost Manipulator.
+/datum/overmap_management/proc/can_manage_contact(obj/structure/overmap/contact)
+	return !QDELETED(contact) && !istype(contact, /obj/structure/overmap/dynamic/player_outpost)
+
 /datum/overmap_management/proc/select_contact(obj/structure/overmap/contact, obj/structure/overmap/return_to)
+	if(!can_manage_contact(contact))
+		contact = null
+	if(!can_manage_contact(return_to))
+		return_to = null
 	var/obj/structure/overmap/previous = selected_ref?.resolve()
 	if(previous)
 		UnregisterSignal(previous, COMSIG_QDELETING)
@@ -94,7 +102,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		"queued_jobs" = SSovermap.worldgen_queue_length(),
 	)
 	for(var/obj/structure/overmap/contact as anything in GLOB.overmap_objects)
-		if(QDELETED(contact))
+		if(!can_manage_contact(contact))
 			continue
 		data["objects"] += list(list(
 			"ref" = REF(contact),
@@ -105,7 +113,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 			"active" = contact.admin_is_active(),
 		))
 	var/obj/structure/overmap/selected = selected_ref?.resolve()
-	if(selected)
+	if(can_manage_contact(selected))
 		data["selected"] = contact_details(selected)
 	return data
 
@@ -198,17 +206,13 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		if(!spawning)
 			INVOKE_ASYNC(src, PROC_REF(spawn_contact), ui.user, params["id"], params["location"], params["ref"])
 		return TRUE
-	if(action == "outposts")
-		var/datum/outpost_manipulator/panel = new(ui.user)
-		panel.ui_interact(ui.user)
-		return TRUE
 	if(action == "select")
 		var/obj/structure/overmap/contact = locate(params["ref"]) in GLOB.overmap_objects
 		select_contact(contact)
 		return TRUE
 	var/obj/structure/overmap/contact = selected_ref?.resolve()
 	// Bind every action to the displayed selection, including across confirmation dialogs.
-	if(!contact || REF(contact) != params["ref"])
+	if(!can_manage_contact(contact) || REF(contact) != params["ref"])
 		error = "That contact is no longer selected or has been deleted."
 		return TRUE
 	switch(action)
@@ -694,7 +698,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 	if(istype(src, /obj/structure/overmap/planet) || istype(src, /obj/structure/overmap/space_ruin) || istype(src, /obj/structure/overmap/event))
 		return null
 	if(istype(src, /obj/structure/overmap/dynamic/player_outpost))
-		return "Use Manage outposts to remove a player outpost."
+		return "Use Outpost Manipulator to remove a player outpost."
 	return "This is a permanent location; deletion is unavailable."
 
 /// Runs on the contact, so closing the panel cannot interrupt a map teardown.

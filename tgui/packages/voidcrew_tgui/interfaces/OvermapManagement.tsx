@@ -151,9 +151,6 @@ export const OvermapManagement = () => {
                 >
                   Spawn new
                 </Button>
-                <Button icon="building" onClick={() => act('outposts')}>
-                  Manage player outposts
-                </Button>
               </Stack.Item>
             </Stack>
           </Stack.Item>

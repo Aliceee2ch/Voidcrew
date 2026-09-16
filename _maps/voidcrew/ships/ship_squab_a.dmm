@@ -897,6 +897,8 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_caplock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "fip" = (
@@ -967,6 +969,8 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_sdlock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/command_quarters)
 "fSh" = (
@@ -2003,8 +2007,7 @@
 /obj/machinery/light/directional/east,
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
-	name = "roboticist's locker";
-	icon_door = "science_door"
+	name = "roboticist's locker"
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/science_hall)
@@ -2167,8 +2170,7 @@
 /obj/structure/closet/secure_closet{
 	anchored = 1;
 	name = "armor locker";
-	icon_state = "armory";
-	icon_door = "armory_door"
+	icon_state = "armory"
 	},
 /obj/item/clothing/gloves/combat{
 	pixel_x = -7;
@@ -2493,8 +2495,7 @@
 /obj/item/storage/box/stockparts/basic,
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
-	name = "scientist's locker";
-	icon_door = "science_door"
+	name = "scientist's locker"
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/science_hall)

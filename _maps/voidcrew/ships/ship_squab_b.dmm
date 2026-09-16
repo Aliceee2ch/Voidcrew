@@ -2027,6 +2027,8 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_sdlock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/fulltile,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/command_quarters)
 "lCE" = (
@@ -3516,6 +3518,8 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_caplock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/fulltile,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "wKU" = (

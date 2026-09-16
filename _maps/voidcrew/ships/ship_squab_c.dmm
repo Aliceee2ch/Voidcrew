@@ -62,6 +62,8 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_caplock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/plasma/fulltile,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "aFE" = (
@@ -443,6 +445,8 @@
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_sdlock"
 	},
+/obj/structure/grille,
+/obj/structure/window/reinforced/plasma/fulltile,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/command_quarters)
 "dbp" = (
@@ -806,8 +810,7 @@
 /obj/machinery/light/directional/east,
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
-	name = "roboticist's locker";
-	icon_door = "science_door"
+	name = "roboticist's locker"
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/science_hall)
@@ -1557,48 +1560,14 @@
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/laboratory)
 "jIn" = (
-/obj/structure/closet/secure_closet{
-	icon_state = "cap";
-	name = "captain's locker";
-	anchored = 1
-	},
-/obj/item/clothing/suit/armor/vest{
-	pixel_x = 7;
-	pixel_y = 7
-	},
-/obj/item/clothing/shoes/laceup{
-	pixel_y = -14;
-	pixel_x = -9
-	},
-/obj/item/clothing/shoes/combat{
-	pixel_x = -4;
-	pixel_y = -9
-	},
 /obj/effect/turf_decal/siding/thinplating/dark{
 	dir = 4;
 	layer = 2.5
 	},
-/obj/item/clothing/glasses/sunglasses{
-	pixel_y = 14;
-	pixel_x = 8
-	},
-/obj/item/clipboard{
-	pixel_x = 8;
-	pixel_y = -8
-	},
-/obj/item/clothing/gloves/tackler/combat/insulated{
-	pixel_x = -8;
-	pixel_y = -7
-	},
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 8
 	},
-/obj/item/megaphone/command,
-/obj/item/storage/bag/garment/captain{
-	pixel_x = -8;
-	pixel_y = 7
-	},
-/obj/item/storage/belt/sheath/sabre,
+/obj/structure/closet/secure_closet/captains,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "jNj" = (
@@ -1831,8 +1800,7 @@
 /obj/item/storage/box/stockparts/basic,
 /obj/structure/closet/secure_closet{
 	icon_state = "science";
-	name = "scientist's locker";
-	icon_door = "science_door"
+	name = "scientist's locker"
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/science_hall)

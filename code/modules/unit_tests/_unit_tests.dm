@@ -377,6 +377,7 @@
 #include "voidcrew_outpost_management_lifecycle.dm"
 #include "voidcrew_outpost_services.dm"
 #include "voidcrew_outpost_self_defense.dm"
+#include "voidcrew_outpost_protection.dm"
 #include "voidcrew_outpost_founding.dm"
 #include "voidcrew_medical_research_links.dm"
 #include "voidcrew_megafauna_aggro.dm"

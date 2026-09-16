@@ -2238,12 +2238,6 @@
 /obj/item/bedsheet/brown,
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/squab/dormitory)
-"pqO" = (
-/obj/machinery/power/shuttle_engine/ship/electric{
-	dir = 4
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/squab/engineering)
 "pyf" = (
 /obj/item/clothing/suit/hooded/wintercoat/science,
 /obj/item/analyzer{
@@ -3482,8 +3476,8 @@ jKO
 jKO
 jKO
 wDp
-pqO
-pqO
+mgJ
+mgJ
 wDp
 jKO
 jKO

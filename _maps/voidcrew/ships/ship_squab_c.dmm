@@ -1349,9 +1349,6 @@
 	},
 /turf/open/floor/iron,
 /area/shuttle/voidcrew/squab/central_hallway)
-"jnS" = (
-/turf/open/floor/iron/white,
-/area/shuttle/voidcrew/squab/laboratory)
 "jpy" = (
 /obj/machinery/door/firedoor/border_only,
 /obj/machinery/door/firedoor/border_only{
@@ -2196,12 +2193,6 @@
 	},
 /obj/effect/turf_decal/siding/thinplating/dark,
 /turf/open/floor/iron/dark/textured,
-/area/shuttle/voidcrew/squab/engineering)
-"poz" = (
-/obj/machinery/power/shuttle_engine/ship/electric{
-	dir = 4
-	},
-/turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/engineering)
 "psE" = (
 /obj/effect/turf_decal/siding/wood{
@@ -3393,8 +3384,8 @@ ecX
 ecX
 ecX
 gfb
-poz
-poz
+faV
+faV
 gfb
 ecX
 ecX
@@ -3965,7 +3956,7 @@ tUw
 qXt
 jpy
 jyz
-jnS
+scq
 iBM
 xql
 fas

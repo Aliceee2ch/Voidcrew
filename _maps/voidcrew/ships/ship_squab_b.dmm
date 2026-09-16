@@ -870,12 +870,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/cargobay)
-"fFE" = (
-/obj/machinery/power/shuttle_engine/ship/electric{
-	dir = 4
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/squab/engineering)
 "fHe" = (
 /obj/machinery/holopad,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -3363,8 +3357,8 @@ bpX
 bpX
 bpX
 lpf
-fFE
-fFE
+ozG
+ozG
 lpf
 bpX
 bpX

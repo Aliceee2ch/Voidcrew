@@ -21,8 +21,9 @@
 /obj/docking_port/mobile/voidcrew/squab
 	name = "Squab-Class Multipurpose Frigate"
 	area_type = /area/shuttle/voidcrew/squab
-	port_direction = 4
-	preferred_direction = 4
+	// The north-edge port faces south into the hull in every theme.
+	port_direction = WEST
+	preferred_direction = EAST
 
 /area/shuttle/voidcrew/squab
 	name = "Squab-Class Multipurpose Frigate"

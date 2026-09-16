@@ -1,0 +1,106 @@
+{
+  "Rosters": {
+    "module/med_sci_north_basic": [],
+    "module/nanites": [],
+    "module/xenobio": [],
+    "ship": [],
+    "theme/dark": [
+      {
+        "ID": "job_6",
+        "Name": "Commander",
+        "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_6",
+        "BaseOutfit": "/datum/outfit/job/captain",
+        "Category": "Command",
+        "Slots": 1,
+        "Officer": true,
+        "Equipment": {
+          "accessory": "/obj/item/clothing/accessory/medal/gold/captain",
+          "back": "/obj/item/storage/backpack/satchel/leather",
+          "belt": "/obj/item/modular_computer/pda/nukeops",
+          "gloves": "",
+          "head": "/obj/item/clothing/head/hats/hos/cap/syndicate",
+          "id": "/obj/item/card/id/advanced/gold",
+          "l_pocket": "/obj/item/gun/ballistic/revolver",
+          "mask": "",
+          "neck": "",
+          "shoes": "/obj/item/clothing/shoes/workboots/black",
+          "suit": "/obj/item/clothing/suit/armor/vest/capcarapace/syndicate",
+          "uniform": "/obj/item/clothing/under/costume/dutch/syndicate"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_7",
+        "Name": "Crew",
+        "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_7",
+        "BaseOutfit": "/datum/outfit/job/assistant",
+        "Category": "Assistant",
+        "Slots": 3,
+        "Officer": false,
+        "Equipment": {
+          "accessory": "",
+          "back": "/obj/item/storage/backpack/messenger",
+          "belt": "/obj/item/modular_computer/pda/assistant",
+          "gloves": "",
+          "head": "/obj/item/clothing/head/hats/hos/beret/syndicate",
+          "shoes": "/obj/item/clothing/shoes/workboots/black",
+          "suit": "",
+          "uniform": "/obj/item/clothing/under/syndicate/tacticool"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      }
+    ],
+    "theme/standard": [
+      {
+        "ID": "job_4",
+        "Name": "Commander",
+        "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_4",
+        "BaseOutfit": "/datum/outfit/job/captain",
+        "Category": "Command",
+        "Slots": 1,
+        "Officer": true,
+        "Equipment": {
+          "accessory": "/obj/item/clothing/accessory/medal/gold/captain",
+          "back": "/obj/item/storage/backpack/satchel/leather",
+          "belt": "/obj/item/modular_computer/pda/heads",
+          "gloves": "",
+          "head": "/obj/item/clothing/head/hats/centcom_cap",
+          "id": "/obj/item/card/id/advanced/gold",
+          "l_pocket": "/obj/item/gun/ballistic/revolver",
+          "mask": "",
+          "neck": "",
+          "suit": "/obj/item/clothing/suit/armor/centcom_formal",
+          "uniform": "/obj/item/clothing/under/rank/centcom/commander"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_5",
+        "Name": "Crew",
+        "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_5",
+        "BaseOutfit": "/datum/outfit/job/assistant",
+        "Category": "Assistant",
+        "Slots": 3,
+        "Officer": false,
+        "Equipment": {
+          "accessory": "",
+          "back": "/obj/item/storage/backpack/messenger",
+          "belt": "/obj/item/modular_computer/pda/assistant",
+          "gloves": "/obj/item/clothing/gloves/fingerless",
+          "head": "/obj/item/clothing/head/hats/intern",
+          "suit": "",
+          "uniform": "/obj/item/clothing/under/rank/centcom/intern"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      }
+    ]
+  }
+}

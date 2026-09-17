@@ -76,6 +76,10 @@
 	refresh_respawn_delay()
 	. = ..()
 	if(!.)
+		//Admins can talk their way past the delay in abandon_mob(), so their button stays lit
+		//and the verb's confirmation prompt takes it from there.
+		if(next_use_time > world.time && check_rights_for(owner?.client, R_ADMIN))
+			return TRUE
 		//Ghosts read chat rather than their own sprite, and it is where abandon_mob() reports
 		//its own refusals, so the reason goes there rather than into a balloon alert.
 		if(feedback && owner && next_use_time > world.time)

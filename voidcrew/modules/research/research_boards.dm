@@ -19,6 +19,11 @@
  * `build_path` and runs `on_construction()`, so what comes out is a finished, working machine with
  * no parts required. Four of the kit's items become flatpacks.
  *
+ * The kit is deliberately expensive to print - see the material cost on /datum/design/research in
+ * voidcrew/modules/research/designs/autolathe_designs.dm. It replaces a research bay's worth of
+ * machine frames and stock parts, so it should cost more than the loose boards it used to carry.
+ * That price is the trade: you skip the assembly, not the cost of the equipment.
+ *
  * ## What stays loose, and why
  *
  * The R&D console stays a circuit board. `/obj/item/flatpack` types its board as

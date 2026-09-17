@@ -4,11 +4,10 @@
  * console board, the disk, and the materials to frame the console.
  *
  * The assertions are deliberately about both halves of that: the four flatpacks must each carry
- * the right machine board, and the three items that stay loose must still be there. The storage
- * assertion pins the custom datum - flatpacks are WEIGHT_CLASS_HUGE and the default box datum
- * rejects them, but because `new type(src)` inserts bypass storage limits the kit would still
- * *look* correct while being over capacity, which is exactly the kind of thing that only shows up
- * when a player tries to take something out.
+ * the right machine board, and the three items that stay loose must still be there. The last
+ * assertion pins the box itself: flatpacks are WEIGHT_CLASS_HUGE and arrive through spawn-time
+ * insertion, which bypasses storage limits, so the box deliberately keeps the standard small-item
+ * datum - a kit that could swallow machine frames would be a free bag of holding.
  */
 /datum/unit_test/voidcrew_rnd_kit
 
@@ -37,5 +36,8 @@
 	TEST_ASSERT_NOTNULL(locate(/obj/item/stack/sheet/glass) in kit, "the console frame glass is missing from the kit")
 	TEST_ASSERT_NOTNULL(locate(/obj/item/stack/cable_coil) in kit, "the console frame cable coil is missing from the kit")
 
-	// ---- and the box must actually be able to hold what it ships ------------------------------
-	TEST_ASSERT(kit.atom_storage.max_specific_storage >= WEIGHT_CLASS_HUGE, "the R&D kit's storage datum cannot hold the HUGE flatpacks it ships")
+	// ---- and the box must NOT become a container for oversized items --------------------------
+	// The flatpacks are inserted at spawn, which bypasses storage limits, but the box's own datum
+	// stays the standard small-item one - so an emptied kit cannot then be used to lug machine
+	// frames around like a bag of holding. Pinned on purpose.
+	TEST_ASSERT(kit.atom_storage.max_specific_storage <= WEIGHT_CLASS_SMALL, "the R&D kit's box must stay a normal box, not a container for huge items")

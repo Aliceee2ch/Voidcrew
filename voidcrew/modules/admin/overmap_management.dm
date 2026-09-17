@@ -546,6 +546,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 
 /// Read the timers actually owned by the contact, rather than inferring that a retry exists.
 /obj/structure/overmap/proc/admin_cleanup_timers()
+	// Planet and ruin countdowns share callback names.
 	var/static/list/cleanup_procs = list(
 		TYPE_PROC_REF(/obj/structure/overmap/planet, check_start_despawn) = "Next check",
 		TYPE_PROC_REF(/obj/structure/overmap/planet, attempt_despawn) = "Unload interior",
@@ -621,6 +622,11 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 			return details
 	if(length(timers))
 		var/list/timer = timers[1]
+		// A final eligibility retry can coexist with the countdown it has armed.
+		for(var/list/candidate as anything in timers)
+			if(candidate["label"] == "Unload interior")
+				timer = candidate
+				break
 		details["timer_label"] = timer["label"]
 		details["seconds"] = timer["seconds"]
 		if(!blocker)

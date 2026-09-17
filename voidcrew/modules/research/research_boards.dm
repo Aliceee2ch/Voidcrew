@@ -28,14 +28,6 @@
  * To keep the console buildable without a trip to a lathe, the kit now carries the standard
  * computer frame materials alongside the board: 5 iron sheet, 2 glass, 5 cable coil.
  *
- * ## Storage
- *
- * Flatpacks are WEIGHT_CLASS_HUGE, and the default `/datum/storage/box` caps
- * `max_specific_storage` at WEIGHT_CLASS_SMALL, so the kit needs its own datum - same shape as
- * `/datum/storage/box/stabilized`, which exists for the same reason (extract boxes hold gigantic
- * crossbreeds). Note that `generate_items_inside()`/`new type(src)` inserts bypass storage checks
- * entirely, so without this datum the kit would *look* fine while being permanently over capacity.
- *
  * ## Follow-up worth knowing about
  *
  * A flatpack adopts any component items placed inside it as `replacement_parts` on deploy, so a
@@ -44,7 +36,7 @@
  */
 /datum/storage/box/rndkit
 	max_slots = 12
-	max_specific_storage = WEIGHT_CLASS_GIGANTIC
+	max_specific_storage = WEIGHT_CLASS_SMALL
 	max_total_storage = 99
 
 /obj/item/storage/box/rndboards/all

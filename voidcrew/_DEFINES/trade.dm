@@ -3,6 +3,11 @@
 /// How long an outpost trade embargo against a ship lasts after aggression
 #define OUTPOST_EMBARGO_DURATION (15 MINUTES)
 
+/// How long a marked aggressor stays a turret target and is refused service.
+/// Matches the embargo their crew serves for the same offense, so both lift
+/// together. Also how long unspent warning strikes linger before they reset.
+#define OUTPOST_AGGRESSION_MARK_DURATION OUTPOST_EMBARGO_DURATION
+
 /// How many violent infractions at an outpost it takes before turrets open fire.
 /// Earlier offenses only issue a warning; the final strike marks the aggressor.
 #define OUTPOST_AGGRESSION_STRIKES 3

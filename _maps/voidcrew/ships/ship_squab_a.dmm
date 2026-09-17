@@ -1559,6 +1559,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/structure/cable,
+/obj/structure/cable,
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/cryogenics)
 "kxw" = (
@@ -2562,6 +2563,7 @@
 /obj/effect/turf_decal/trimline/brown/line{
 	dir = 8
 	},
+/obj/structure/cable,
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
 "rzE" = (

@@ -362,6 +362,7 @@
 #include "voidcrew_launch_progression.dm"
 #include "voidcrew_loot.dm"
 #include "voidcrew_map_packing.dm"
+#include "voidcrew_mapload_floor_dir.dm"
 #include "voidcrew_planetary_factions.dm"
 #include "voidcrew_overmap_management.dm"
 #include "voidcrew_planet_cleanup.dm"

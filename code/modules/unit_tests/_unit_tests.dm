@@ -393,6 +393,7 @@
 #include "voidcrew_survey_capabilities.dm"
 #include "voidcrew_camera_scope.dm"
 #include "voidcrew_ruin_bounds.dm"
+#include "voidcrew_ruin_cleanup.dm"
 #include "voidcrew_ruin_reservation.dm"
 #include "voidcrew_ship_abandonment.dm"
 #include "voidcrew_ship_access.dm"

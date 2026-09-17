@@ -486,8 +486,10 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	return FALSE
 
 /**
- * Whether this mob is a valid turret target: marked aggressors AND crew of
- * embargoed ships, an embargo means shot on sight, not just refused service.
+ * Whether the outpost has barred this mob from the sanctuary: marked aggressors
+ * AND crew of embargoed ships, an embargo means shot on sight, not just refused
+ * service. Per-mind, so it holds for a player in any body. The turrets layer
+ * their own on-sight rules (xenos, hostile wildlife) on top in valid_target().
  */
 /obj/structure/overmap/trader_outpost/proc/is_turret_target(mob/living/target)
 	return istype(target) && is_user_barred(target)

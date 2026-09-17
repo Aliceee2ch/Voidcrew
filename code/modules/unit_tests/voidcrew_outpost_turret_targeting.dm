@@ -82,8 +82,11 @@
 	// Unspent warnings go stale on the same clock. Fork defines are included after
 	// unit tests: OUTPOST_AGGRESSION_MARK_DURATION = OUTPOST_EMBARGO_DURATION = 15 minutes.
 	outpost.register_aggression(aggressor)
-	outpost.register_aggression(aggressor) // inside the 2-second grace window, no second strike
+	outpost.register_aggression(aggressor) // same tick, so the same-swing grace folds it in
 	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[aggressor.mind], 1, "a fresh infraction did not earn exactly one strike")
+	outpost.aggressor_strike_times[aggressor.mind] = world.time - 0.8 SECONDS // one melee cooldown later
+	outpost.register_aggression(aggressor)
+	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[aggressor.mind], 2, "a second swing after the melee cooldown was folded into the first")
 	outpost.aggressor_strike_times[aggressor.mind] = world.time - 15 MINUTES
 	outpost.register_aggression(aggressor)
 	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[aggressor.mind], 1, "a warning from 15 minutes ago still counted toward the ladder")

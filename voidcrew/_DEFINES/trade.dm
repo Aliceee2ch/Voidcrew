@@ -14,10 +14,10 @@
 
 /// Grace window after an infraction during which further hits don't add strikes.
 /// A single swing reaches register_aggression through more than one route (the
-/// machine's own attacked_by override and the outpost_property relay), and an
-/// autoattack burst would otherwise blow through the whole ladder before the
-/// first warning is read.
-#define OUTPOST_AGGRESSION_GRACE (2 SECONDS)
+/// machine's own attacked_by override and the outpost_property relay), all in the
+/// same tick. Kept under CLICK_CD_MELEE (0.8 s) so it only folds those duplicates
+/// together: every real swing is its own strike.
+#define OUTPOST_AGGRESSION_GRACE (0.5 SECONDS)
 
 /// How long a victim may retaliate against their attacker after the latest unprovoked hit.
 #define OUTPOST_SELF_DEFENSE_DURATION (2 MINUTES)

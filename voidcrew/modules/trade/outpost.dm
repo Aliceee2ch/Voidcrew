@@ -422,8 +422,8 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	if(is_marked_aggressor(offender.mind))
 		return
 
-	// One swing can arrive here down several routes, and holding the mouse down
-	// shouldn't spend the whole warning ladder in a tick.
+	// One swing can arrive here down several routes in the same tick; fold those
+	// together without letting a second real swing ride along for free.
 	var/last_strike = aggressor_strike_times[offender.mind]
 	if(last_strike && world.time < last_strike + OUTPOST_AGGRESSION_GRACE)
 		return

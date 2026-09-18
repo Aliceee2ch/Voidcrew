@@ -89,7 +89,8 @@
 "aPx" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/west,
-/turf/closed/indestructible/grille,
+/obj/structure/grille,
+/turf/template_noop,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "aWy" = (
 /obj/structure/table/reinforced,
@@ -138,7 +139,8 @@
 "bRU" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/west,
-/turf/closed/indestructible/grille,
+/obj/structure/grille,
+/turf/template_noop,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "bUa" = (
 /obj/effect/spawner/structure/window/hollow/survival_pod/end{
@@ -198,7 +200,8 @@
 "don" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
-/turf/closed/indestructible/grille,
+/obj/structure/grille,
+/turf/template_noop,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "dAK" = (
 /obj/effect/spawner/structure/window/hollow/survival_pod/end,
@@ -281,7 +284,8 @@
 "gSu" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
-/turf/closed/indestructible/grille,
+/obj/structure/grille,
+/turf/template_noop,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "hht" = (
 /obj/structure/cable,
@@ -560,10 +564,6 @@
 	dir = 1
 	},
 /area/shuttle/voidcrew/ship_nanobead/hall)
-"omz" = (
-/obj/structure/grille,
-/turf/open/floor/plating/airless,
-/area/shuttle/voidcrew/ship_nanobead/maint)
 "oza" = (
 /obj/machinery/computer/helm{
 	dir = 8
@@ -754,7 +754,8 @@
 "syN" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
-/turf/closed/indestructible/grille,
+/obj/structure/grille,
+/turf/template_noop,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "sNe" = (
 /obj/machinery/computer/security{
@@ -873,7 +874,8 @@
 "whC" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
-/turf/closed/indestructible/grille,
+/obj/structure/grille,
+/turf/template_noop,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "wiz" = (
 /obj/machinery/door/airlock/external{
@@ -1001,7 +1003,7 @@ uGk
 uGk
 uGk
 uGk
-omz
+uGk
 uGk
 uGk
 uGk
@@ -1009,7 +1011,7 @@ fIL
 uGk
 uGk
 uGk
-omz
+uGk
 uGk
 uGk
 uGk

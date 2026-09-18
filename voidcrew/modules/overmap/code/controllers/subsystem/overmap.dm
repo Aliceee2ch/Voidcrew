@@ -199,6 +199,11 @@ SUBSYSTEM_DEF(overmap)
  * says nothing about them and their own crew-death tracking drives abandonment. Once
  * abandoned, claimed by players, or destroyed they are subject to the same rules as any
  * hull, which is what finally stops every killed pirate leaving a permanent wreck.
+ *
+ * A hull docked at a player outpost is exempt from all three clocks, unconditionally -
+ * it is parked at somebody's home rather than sitting abandoned in the field, and
+ * nothing about it should tick towards a claim window or a despawn. This is the one
+ * site type that pauses the clocks without requiring anyone to actually be present.
  */
 /datum/controller/subsystem/overmap/proc/sweep_derelicts()
 	var/despawned_one = FALSE
@@ -209,6 +214,15 @@ SUBSYSTEM_DEF(overmap)
 		if(QDELETED(ship))
 			continue
 		if(ship.has_active_crew())
+			ship.crewless_since = 0
+			ship.site_dead_since = 0
+			ship.site_dead_undock_refused = FALSE
+			continue
+		// A hull docked at a player outpost is parked at someone's home, not drifting
+		// derelict in the field - none of the three clocks above should run against it
+		// at all, occupied or not. Unlike every other site type, presence doesn't even
+		// enter into it here.
+		if(istype(ship.docked, /obj/structure/overmap/dynamic/player_outpost))
 			ship.crewless_since = 0
 			ship.site_dead_since = 0
 			ship.site_dead_undock_refused = FALSE

@@ -835,7 +835,7 @@
 	},
 /obj/structure/closet{
 	icon_state = "atmos";
-	icon_door = atmos_door
+	icon_door = "atmos_door"
 	},
 /obj/item/extinguisher/advanced,
 /obj/item/storage/toolbox/mechanical,

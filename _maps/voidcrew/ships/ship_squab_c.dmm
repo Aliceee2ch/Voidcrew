@@ -764,14 +764,10 @@
 	pixel_x = -10;
 	pixel_y = -28
 	},
-/obj/machinery/camera/autoname{
-	dir = 10;
-	pixel_x = 12;
-	pixel_y = 0
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},
+/obj/machinery/camera/autoname,
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "fnv" = (
@@ -1441,6 +1437,9 @@
 	dir = 8
 	},
 /obj/structure/closet/secure_closet/captains,
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 4
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "jNj" = (
@@ -2390,6 +2389,9 @@
 "rpr" = (
 /obj/modular_map_root/ship_upgrade{
 	key = "director_s_quarters"
+	},
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 4
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/command_quarters)

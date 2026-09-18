@@ -8,6 +8,22 @@
 /obj/machinery/camera/autoname{
 	dir = 9
 	},
+/obj/item/wallframe/camera{
+	pixel_x = -7;
+	pixel_y = 6
+	},
+/obj/item/wallframe/camera{
+	pixel_x = -7;
+	pixel_y = 0
+	},
+/obj/item/wallframe/camera{
+	pixel_x = -6;
+	pixel_y = -5
+	},
+/obj/item/screwdriver{
+	pixel_x = 1;
+	pixel_y = 0
+	},
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/cargobay)
 "afh" = (
@@ -80,14 +96,10 @@
 	pixel_x = -10;
 	pixel_y = -28
 	},
-/obj/machinery/camera/autoname{
-	dir = 10;
-	pixel_x = 12;
-	pixel_y = 0
-	},
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},
+/obj/machinery/camera/autoname,
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/cargo_entrance)
 "aBY" = (
@@ -129,6 +141,18 @@
 	dir = 10;
 	pixel_x = -10;
 	pixel_y = 0
+	},
+/obj/item/encryptionkey/headset_cargo{
+	pixel_x = 6;
+	pixel_y = 1
+	},
+/obj/item/encryptionkey/headset_cargo{
+	pixel_x = 6;
+	pixel_y = 6
+	},
+/obj/item/encryptionkey/headset_cargo{
+	pixel_x = 6;
+	pixel_y = 11
 	},
 /turf/open/floor/iron/textured,
 /area/shuttle/voidcrew/squab/cryogenics)
@@ -295,6 +319,9 @@
 /obj/structure/closet/secure_closet/quartermaster{
 	name = "captain's locker"
 	},
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 4
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/captain_quarters)
 "bvd" = (
@@ -306,6 +333,10 @@
 /obj/item/food/cakeslice/chocolate{
 	pixel_x = 6;
 	pixel_y = 0
+	},
+/obj/item/reagent_containers/cup/glass/mug/nanotrasen{
+	pixel_x = -7;
+	pixel_y = 8
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/squab/central_hallway)
@@ -1592,8 +1623,8 @@
 	},
 /obj/structure/table/reinforced,
 /obj/item/storage/fancy/donut_box{
-	pixel_x = 5;
-	pixel_y = -10
+	pixel_x = 1;
+	pixel_y = -9
 	},
 /obj/structure/railing{
 	dir = 9
@@ -1602,6 +1633,10 @@
 	pixel_x = 5;
 	pixel_y = 9;
 	layer = 3.10
+	},
+/obj/item/reagent_containers/cup/bottle/syrup_bottle/caramel{
+	pixel_x = -6;
+	pixel_y = 10
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/squab/central_hallway)
@@ -1933,6 +1968,9 @@
 "mDU" = (
 /obj/modular_map_root/ship_upgrade{
 	key = "director_s_quarters"
+	},
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 4
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/command_quarters)
@@ -2705,12 +2743,13 @@
 	},
 /obj/structure/table/reinforced,
 /obj/item/storage/box/coffeepack/robusta{
-	pixel_x = 9;
-	pixel_y = 6
+	pixel_x = 12;
+	pixel_y = -5
 	},
 /obj/machinery/camera/autoname{
 	dir = 10
 	},
+/obj/machinery/coffeemaker/impressa,
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/squab/central_hallway)
 "sun" = (
@@ -2997,6 +3036,10 @@
 /area/shuttle/voidcrew/squab/central_hallway)
 "uYv" = (
 /obj/structure/dresser,
+/obj/item/radio/entertainment/speakers/physical{
+	pixel_x = -1;
+	pixel_y = 15
+	},
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/squab/dormitory)
 "vlL" = (
@@ -3017,6 +3060,10 @@
 /obj/item/pen{
 	pixel_x = -5;
 	pixel_y = 3
+	},
+/obj/item/reagent_containers/cup/glass/mug/nanotrasen{
+	pixel_x = 8;
+	pixel_y = 2
 	},
 /turf/open/floor/wood/parquet,
 /area/shuttle/voidcrew/squab/captain_quarters)

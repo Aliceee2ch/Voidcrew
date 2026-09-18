@@ -423,7 +423,7 @@
      13
     ]
    },
-   "src_md5": "e5632c1c103fb42c4595d869f3ccc636"
+   "src_md5": "0be8771eedf268088fa7d5a9cef4d428"
   },
   "nanobead_dark": {
    "png": "ship_nanobead_dark.png",
@@ -447,7 +447,7 @@
      13
     ]
    },
-   "src_md5": "e4a6b12d088286f0c3470999e69801e3"
+   "src_md5": "d4cfaa3d7f56611ae724201845a3f852"
   },
   "pill": {
    "png": "ship_pill.png",
@@ -2050,7 +2050,7 @@
       1
      ],
      "png": "nanobead_empty_biomedical_north_dark.png",
-     "src_md5": "6812efd0d2b4367066787fa5605bd90b"
+     "src_md5": "7c6c2d3f46bfdc48d3933e105ba9023e"
     },
     "standard": {
      "width": 4,
@@ -2060,7 +2060,7 @@
       1
      ],
      "png": "nanobead_empty_biomedical_north_standard.png",
-     "src_md5": "d8053579c86f0908fbf4d2f035296bdc"
+     "src_md5": "9c4afee920c47343466d90057a1e9ea5"
     }
    }
   },
@@ -2290,7 +2290,7 @@
       1
      ],
      "png": "nanobead_empty_services_north_dark.png",
-     "src_md5": "9eb991f6c8f8d18fe57ac6547c183939"
+     "src_md5": "33e93943d89dc9b957d360d792a6f497"
     },
     "standard": {
      "width": 6,
@@ -2300,7 +2300,7 @@
       1
      ],
      "png": "nanobead_empty_services_north_standard.png",
-     "src_md5": "500b44e4ee5b2ab4462144cf7fd56632"
+     "src_md5": "8d401b0e7a0ec79fd66721b4de973e37"
     }
    }
   },
@@ -2330,7 +2330,7 @@
       1
      ],
      "png": "nanobead_bitrunning_north_standard.png",
-     "src_md5": "f419c0e93a24e6963f3c301b7779cea8"
+     "src_md5": "75ed628f6df042d43e6df3b2fedf38fb"
     }
    }
   },
@@ -2530,7 +2530,7 @@
       1
      ],
      "png": "nanobead_empty_biomedical_south_dark.png",
-     "src_md5": "bfb769ee33a323eaeec64448d4b59089"
+     "src_md5": "1eaaee157f2033a749b5707c3850c360"
     },
     "standard": {
      "width": 4,
@@ -2540,7 +2540,7 @@
       1
      ],
      "png": "nanobead_empty_biomedical_south_standard.png",
-     "src_md5": "d6147f2fbf69887d81dc9db3a2c64fc4"
+     "src_md5": "ba44c1095b53e50b94b1b9e678e0d9bd"
     }
    }
   },
@@ -2770,7 +2770,7 @@
       1
      ],
      "png": "nanobead_empty_services_south_dark.png",
-     "src_md5": "a8788877ef08438a3d24e4831309d827"
+     "src_md5": "60a6c924692307b269a0decf5be42c3b"
     },
     "standard": {
      "width": 6,
@@ -2780,7 +2780,7 @@
       1
      ],
      "png": "nanobead_empty_services_south_standard.png",
-     "src_md5": "84aec3461d02db7d082a338e211199ed"
+     "src_md5": "5345cdc15077fa078407703d87c8b985"
     }
    }
   },

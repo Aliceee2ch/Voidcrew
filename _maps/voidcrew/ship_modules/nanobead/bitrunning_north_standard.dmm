@@ -333,7 +333,8 @@
 	icon_state = "laptop";
 	dir = 2;
 	pixel_w = 0;
-	pixel_z = 3
+	pixel_z = 3;
+	base_icon_state = "laptop"
 	},
 /obj/effect/turf_decal/trimline/brown/filled/line,
 /obj/effect/turf_decal/siding/thinplating_new/dark,

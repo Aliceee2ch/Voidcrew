@@ -17,11 +17,16 @@
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "axz" = (
-/obj/machinery/shower/directional/south,
-/obj/structure/fluff/shower_drain,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 9
 	},
+/obj/structure/closet/crate,
+/obj/item/stack/sheet/iron/fifty,
+/obj/item/stack/sheet/iron/fifty,
+/obj/item/stack/sheet/glass/fifty,
+/obj/item/stack/sheet/glass/fifty,
+/obj/item/circuitboard/machine/ore_silo,
+/obj/item/circuitboard/machine/autolathe,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "aya" = (
@@ -88,11 +93,10 @@
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "aWy" = (
 /obj/structure/table/reinforced,
-/obj/item/storage/box/rndboards/all{
-	pixel_w = -3;
-	pixel_z = 8
-	},
 /obj/effect/turf_decal/siding/thinplating_new/dark,
+/obj/item/storage/fancy/donut_box{
+	pixel_z = 6
+	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "bdL" = (
@@ -201,11 +205,11 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "dZs" = (
-/obj/machinery/atmospherics/components/tank/plasma{
-	dir = 1
-	},
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 6
+	},
+/obj/machinery/atmospherics/components/tank{
+	dir = 8
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
@@ -228,6 +232,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "ffX" = (
@@ -250,10 +255,11 @@
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "gcL" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 5
 	},
+/obj/machinery/power/rtg,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "gsj" = (
@@ -297,10 +303,6 @@
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "hER" = (
-/obj/machinery/atmospherics/components/binary/pump{
-	name = "engine fuel pump";
-	dir = 1
-	},
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 4
 	},
@@ -471,12 +473,12 @@
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "nvr" = (
-/obj/machinery/atmospherics/components/tank{
-	dir = 4
-	},
 /obj/structure/extinguisher_cabinet/directional/south,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 10
+	},
+/obj/machinery/atmospherics/components/tank/plasma{
+	dir = 1
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
@@ -492,12 +494,18 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 6
 	},
+/obj/machinery/power/rtg,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "nGW" = (
 /obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 8
+	},
+/obj/machinery/atmospherics/components/binary/pump{
+	name = "engine fuel pump";
+	dir = 1
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
@@ -632,6 +640,30 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark,
 /turf/open/floor/iron/dark/smooth_large,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
+"qaV" = (
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/neutral/filled/mid_joiner{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/neutral,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/structure/table,
+/obj/item/storage/medkit/toxin{
+	pixel_w = -1;
+	pixel_z = 6
+	},
+/obj/item/storage/medkit/o2{
+	pixel_w = 6;
+	pixel_z = 3
+	},
+/turf/open/floor/iron/dark/smooth_edge{
+	dir = 1
+	},
+/area/shuttle/voidcrew/ship_nanobead/hall)
 "qsM" = (
 /obj/machinery/atmospherics/components/tank/air/layer4,
 /obj/structure/extinguisher_cabinet/directional/north,
@@ -733,6 +765,26 @@
 "tmq" = (
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
+"twR" = (
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/neutral/filled/mid_joiner{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/neutral,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/structure/table,
+/obj/item/storage/medkit/advanced{
+	pixel_w = 0;
+	pixel_z = 4
+	},
+/turf/open/floor/iron/dark/smooth_edge{
+	dir = 1
+	},
+/area/shuttle/voidcrew/ship_nanobead/hall)
 "tHe" = (
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
@@ -745,6 +797,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 4
 	},
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "uts" = (
@@ -754,6 +807,16 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 5
 	},
+/obj/structure/closet{
+	icon_door = "eng_elec";
+	icon_state = "eng"
+	},
+/obj/item/inducer,
+/obj/item/storage/toolbox/electrical,
+/obj/item/clothing/gloves/color/yellow,
+/obj/item/multitool,
+/obj/item/weldingtool/experimental,
+/obj/item/clothing/head/utility/welding,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "uus" = (
@@ -836,6 +899,15 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
 	},
+/obj/structure/table,
+/obj/item/storage/box/rndboards/all{
+	pixel_w = -3;
+	pixel_z = 8
+	},
+/obj/item/storage/box/stockparts/basic{
+	pixel_w = 3;
+	pixel_z = 5
+	},
 /turf/open/floor/iron/dark/smooth_edge{
 	dir = 1
 	},
@@ -910,6 +982,16 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 6
 	},
+/obj/structure/closet{
+	icon_state = "atmos"
+	},
+/obj/item/extinguisher/advanced,
+/obj/item/storage/toolbox/mechanical,
+/obj/item/pipe_dispenser,
+/obj/item/tank/internals/emergency_oxygen/engi,
+/obj/item/holosign_creator/atmos,
+/obj/item/clothing/glasses/meson/engine/tray,
+/obj/item/clothing/mask/gas,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 
@@ -1132,7 +1214,7 @@ xUL
 xUL
 xUL
 aMR
-aBM
+qaV
 hht
 oGc
 aMR
@@ -1174,7 +1256,7 @@ pmQ
 pmQ
 cyz
 vzP
-aBM
+twR
 hht
 oGc
 gDl

@@ -127,12 +127,205 @@
     ]
   },
   "ModuleThemes": {
+    "biomedical_south_basic": {
+      "standard": [
+        {
+          "ID": "job_22",
+          "Name": "Crew",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_22",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Assistant",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "back": "/obj/item/storage/backpack/messenger",
+            "gloves": "/obj/item/clothing/gloves/fingerless",
+            "head": "/obj/item/clothing/head/hats/intern",
+            "uniform": "/obj/item/clothing/under/rank/centcom/intern"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "bitrunning": {
+      "standard": [
+        {
+          "ID": "job_15",
+          "Name": "Bitrunner",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_15",
+          "BaseOutfit": "/datum/outfit/job/bitrunner",
+          "Category": "Cargo",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/science",
+            "back": "/obj/item/storage/backpack/messenger/explorer",
+            "ears": "/obj/item/radio/headset/headset_cargo",
+            "glasses": "/obj/item/clothing/glasses/sunglasses",
+            "shoes": "/obj/item/clothing/shoes/sneakers/black",
+            "suit": ""
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "bitrunning_south": {
+      "standard": [
+        {
+          "ID": "job_31",
+          "Name": "Bitrunner",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_31",
+          "BaseOutfit": "/datum/outfit/job/bitrunner",
+          "Category": "Cargo",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/science",
+            "back": "/obj/item/storage/backpack/messenger/explorer",
+            "ears": "/obj/item/radio/headset/headset_cargo",
+            "glasses": "/obj/item/clothing/glasses/sunglasses",
+            "shoes": "/obj/item/clothing/shoes/sneakers/black",
+            "suit": ""
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "botany": {
+      "standard": [
+        {
+          "ID": "job_17",
+          "Name": "Botanist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_17",
+          "BaseOutfit": "/datum/outfit/job/botanist",
+          "Category": "Service",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/hydro",
+            "back": "/obj/item/storage/backpack/messenger/hyd",
+            "mask": "",
+            "suit_store": ""
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "botany_south": {
+      "standard": [
+        {
+          "ID": "job_33",
+          "Name": "Botanist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_33",
+          "BaseOutfit": "/datum/outfit/job/botanist",
+          "Category": "Service",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/hydro",
+            "back": "/obj/item/storage/backpack/messenger/hyd",
+            "mask": "",
+            "suit_store": ""
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "cargo": {
+      "standard": [
+        {
+          "ID": "job_19",
+          "Name": "Forklift Operator",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_19",
+          "BaseOutfit": "/datum/outfit/job/cargo_tech",
+          "Category": "Cargo",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/cargo",
+            "back": "/obj/item/storage/backpack/messenger/explorer",
+            "gloves": "/obj/item/clothing/gloves/fingerless",
+            "head": "/obj/item/clothing/head/soft",
+            "l_hand": "",
+            "mask": "",
+            "suit": "/obj/item/clothing/suit/toggle/cargo_tech",
+            "uniform": "/obj/item/clothing/under/rank/cargo/tech/alt"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "cargo_south": {
+      "standard": [
+        {
+          "ID": "job_35",
+          "Name": "Forklift Operator",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_35",
+          "BaseOutfit": "/datum/outfit/job/cargo_tech",
+          "Category": "Cargo",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/cargo",
+            "back": "/obj/item/storage/backpack/messenger/explorer",
+            "gloves": "/obj/item/clothing/gloves/fingerless",
+            "head": "/obj/item/clothing/head/soft",
+            "l_hand": "",
+            "mask": "",
+            "suit": "/obj/item/clothing/suit/toggle/cargo_tech",
+            "uniform": "/obj/item/clothing/under/rank/cargo/tech/alt"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
     "chemistry": {
       "standard": [
         {
           "ID": "job_9",
           "Name": "Chemist",
           "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_9",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Medical",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/med",
+            "back": "/obj/item/storage/backpack/messenger/chem",
+            "belt": "/obj/item/modular_computer/pda/chemist",
+            "ears": "/obj/item/radio/headset/headset_med",
+            "glasses": "/obj/item/clothing/glasses/science",
+            "gloves": "",
+            "shoes": "/obj/item/clothing/shoes/sneakers/white",
+            "suit": "/obj/item/clothing/suit/toggle/labcoat/chemist",
+            "uniform": "/obj/item/clothing/under/rank/medical/chemist"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "chemistry_south": {
+      "standard": [
+        {
+          "ID": "job_26",
+          "Name": "Chemist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_26",
           "BaseOutfit": "/datum/outfit/job/assistant",
           "Category": "Medical",
           "Slots": 1,
@@ -184,6 +377,124 @@
         }
       ]
     },
+    "cryo_cells_south": {
+      "standard": [
+        {
+          "ID": "job_27",
+          "Name": "Cryogenicist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_27",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Medical",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/medblue",
+            "back": "/obj/item/storage/backpack/messenger/med",
+            "belt": "/obj/item/modular_computer/pda/medical",
+            "ears": "/obj/item/radio/headset/headset_med",
+            "glasses": "/obj/item/clothing/glasses/hud/health",
+            "gloves": "",
+            "head": "",
+            "mask": "",
+            "neck": "",
+            "shoes": "/obj/item/clothing/shoes/sneakers/white",
+            "suit": "/obj/item/clothing/suit/toggle/labcoat",
+            "uniform": "/obj/item/clothing/under/rank/medical/doctor"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "dining": {
+      "standard": [
+        {
+          "ID": "job_16",
+          "Name": "Chef",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_16",
+          "BaseOutfit": "/datum/outfit/job/cook",
+          "Category": "Service",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "",
+            "back": "/obj/item/storage/backpack/messenger",
+            "mask": "",
+            "suit": "/obj/item/clothing/suit/toggle/chef"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "dining_south": {
+      "standard": [
+        {
+          "ID": "job_32",
+          "Name": "Chef",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_32",
+          "BaseOutfit": "/datum/outfit/job/cook",
+          "Category": "Service",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "",
+            "back": "/obj/item/storage/backpack/messenger",
+            "mask": "",
+            "suit": "/obj/item/clothing/suit/toggle/chef"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "eva": {
+      "standard": [
+        {
+          "ID": "job_21",
+          "Name": "Crew",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_21",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Assistant",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "back": "/obj/item/storage/backpack/messenger",
+            "gloves": "/obj/item/clothing/gloves/fingerless",
+            "head": "/obj/item/clothing/head/hats/intern",
+            "uniform": "/obj/item/clothing/under/rank/centcom/intern"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "eva_south": {
+      "standard": [
+        {
+          "ID": "job_37",
+          "Name": "Crew",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_37",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Assistant",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "back": "/obj/item/storage/backpack/messenger",
+            "gloves": "/obj/item/clothing/gloves/fingerless",
+            "head": "/obj/item/clothing/head/hats/intern",
+            "uniform": "/obj/item/clothing/under/rank/centcom/intern"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
     "med_sci_north_basic": {
       "standard": [
         {
@@ -206,12 +517,95 @@
         }
       ]
     },
+    "mining": {
+      "standard": [
+        {
+          "ID": "job_18",
+          "Name": "Metallurgist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_18",
+          "BaseOutfit": "/datum/outfit/job/miner",
+          "Category": "Cargo",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/cargo",
+            "back": "/obj/item/storage/backpack/messenger/explorer",
+            "glasses": "",
+            "l_pocket": "",
+            "r_pocket": "",
+            "uniform": "/obj/item/clothing/under/rank/cargo/miner/lavaland"
+          },
+          "Backpack": {
+            "/obj/item/knife/combat/survival": 1,
+            "/obj/item/mining_voucher": 1,
+            "/obj/item/stack/marker_beacon/ten": 1
+          },
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "mining_south": {
+      "standard": [
+        {
+          "ID": "job_34",
+          "Name": "Metallurgist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_34",
+          "BaseOutfit": "/datum/outfit/job/miner",
+          "Category": "Cargo",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/cargo",
+            "back": "/obj/item/storage/backpack/messenger/explorer",
+            "glasses": "",
+            "l_pocket": "",
+            "r_pocket": "",
+            "uniform": "/obj/item/clothing/under/rank/cargo/miner/lavaland"
+          },
+          "Backpack": {
+            "/obj/item/knife/combat/survival": 1,
+            "/obj/item/mining_voucher": 1,
+            "/obj/item/stack/marker_beacon/ten": 1
+          },
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
     "nanites": {
       "standard": [
         {
           "ID": "job_3",
           "Name": "Nanotechnologist",
           "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_3",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Science",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/science",
+            "back": "/obj/item/storage/backpack/messenger/science",
+            "belt": "/obj/item/modular_computer/pda/science",
+            "ears": "/obj/item/radio/headset/headset_sci",
+            "glasses": "/obj/item/clothing/glasses/science",
+            "mask": "",
+            "shoes": "/obj/item/clothing/shoes/sneakers/purple",
+            "suit": "/obj/item/clothing/suit/toggle/labcoat/science",
+            "uniform": "/obj/item/clothing/under/rank/rnd/scientist"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "nanites_south": {
+      "standard": [
+        {
+          "ID": "job_24",
+          "Name": "Nanotechnologist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_24",
           "BaseOutfit": "/datum/outfit/job/assistant",
           "Category": "Science",
           "Slots": 1,
@@ -257,12 +651,164 @@
         }
       ]
     },
+    "robotics_south": {
+      "standard": [
+        {
+          "ID": "job_25",
+          "Name": "Roboticist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_25",
+          "BaseOutfit": "/datum/outfit/job/roboticist",
+          "Category": "Science",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/science",
+            "back": "/obj/item/storage/backpack/messenger/science",
+            "belt": "/obj/item/modular_computer/pda/science",
+            "ears": "/obj/item/radio/headset/headset_sci",
+            "l_pocket": "",
+            "shoes": "/obj/item/clothing/shoes/sneakers/black"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "security": {
+      "standard": [
+        {
+          "ID": "job_20",
+          "Name": "Security Guard",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_20",
+          "BaseOutfit": "/datum/outfit/job/security",
+          "Category": "Security",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/deputy",
+            "back": "/obj/item/storage/backpack/messenger/sec",
+            "belt": "/obj/item/modular_computer/pda/heads/hos",
+            "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
+            "gloves": "/obj/item/clothing/gloves/color/black",
+            "head": "/obj/item/clothing/head/soft/sec",
+            "mask": "",
+            "suit": "/obj/item/clothing/suit/armor/vest",
+            "uniform": "/obj/item/clothing/under/rank/security/officer/formal"
+          },
+          "Backpack": {},
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "security_south": {
+      "standard": [
+        {
+          "ID": "job_36",
+          "Name": "Security Guard",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_36",
+          "BaseOutfit": "/datum/outfit/job/security",
+          "Category": "Security",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/deputy",
+            "back": "/obj/item/storage/backpack/messenger/sec",
+            "belt": "/obj/item/modular_computer/pda/heads/hos",
+            "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
+            "gloves": "/obj/item/clothing/gloves/color/black",
+            "head": "/obj/item/clothing/head/soft/sec",
+            "mask": "",
+            "suit": "/obj/item/clothing/suit/armor/vest",
+            "uniform": "/obj/item/clothing/under/rank/security/officer/formal"
+          },
+          "Backpack": {},
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "services_north_basic": {
+      "standard": [
+        {
+          "ID": "job_14",
+          "Name": "Crew",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_14",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Assistant",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "back": "/obj/item/storage/backpack/messenger",
+            "gloves": "/obj/item/clothing/gloves/fingerless",
+            "head": "/obj/item/clothing/head/hats/intern",
+            "uniform": "/obj/item/clothing/under/rank/centcom/intern"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "services_south_basic": {
+      "standard": [
+        {
+          "ID": "job_30",
+          "Name": "Crew",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_30",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Assistant",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "back": "/obj/item/storage/backpack/messenger",
+            "gloves": "/obj/item/clothing/gloves/fingerless",
+            "head": "/obj/item/clothing/head/hats/intern",
+            "uniform": "/obj/item/clothing/under/rank/centcom/intern"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
     "sleeper_bay": {
       "standard": [
         {
           "ID": "job_12",
           "Name": "Physician",
           "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_12",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Medical",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/medblue",
+            "back": "/obj/item/storage/backpack/messenger/med",
+            "belt": "/obj/item/modular_computer/pda/medical",
+            "ears": "/obj/item/radio/headset/headset_med",
+            "glasses": "/obj/item/clothing/glasses/hud/health",
+            "gloves": "/obj/item/clothing/gloves/latex/nitrile",
+            "head": "",
+            "mask": "",
+            "neck": "/obj/item/clothing/neck/stethoscope",
+            "shoes": "/obj/item/clothing/shoes/sneakers/white",
+            "suit": "/obj/item/clothing/suit/toggle/labcoat/cmo",
+            "uniform": "/obj/item/clothing/under/rank/medical/doctor"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "sleeper_bay_south": {
+      "standard": [
+        {
+          "ID": "job_28",
+          "Name": "Physician",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_28",
           "BaseOutfit": "/datum/outfit/job/assistant",
           "Category": "Medical",
           "Slots": 1,
@@ -316,12 +862,70 @@
         }
       ]
     },
+    "surgery_south": {
+      "standard": [
+        {
+          "ID": "job_29",
+          "Name": "Surgeon",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_29",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Medical",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "",
+            "back": "/obj/item/storage/backpack/messenger/med",
+            "belt": "/obj/item/modular_computer/pda/medical",
+            "ears": "/obj/item/radio/headset/headset_med",
+            "glasses": "/obj/item/clothing/glasses/hud/health",
+            "gloves": "/obj/item/clothing/gloves/latex/nitrile",
+            "head": "/obj/item/clothing/head/utility/surgerycap/green",
+            "mask": "/obj/item/clothing/mask/surgical",
+            "shoes": "/obj/item/clothing/shoes/sneakers/white",
+            "suit": "/obj/item/clothing/suit/apron/surgical",
+            "uniform": "/obj/item/clothing/under/rank/medical/scrubs/green"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
     "xenobio": {
       "standard": [
         {
           "ID": "job_2",
           "Name": "Xenobiologist",
           "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_2",
+          "BaseOutfit": "/datum/outfit/job/assistant",
+          "Category": "Science",
+          "Slots": 1,
+          "Officer": false,
+          "Equipment": {
+            "accessory": "/obj/item/clothing/accessory/armband/science",
+            "back": "/obj/item/storage/backpack/messenger/science",
+            "belt": "/obj/item/modular_computer/pda/science",
+            "ears": "/obj/item/radio/headset/headset_sci",
+            "glasses": "/obj/item/clothing/glasses/science",
+            "gloves": "",
+            "head": "",
+            "shoes": "/obj/item/clothing/shoes/sneakers/purple",
+            "suit": "/obj/item/clothing/suit/toggle/labcoat/science",
+            "suit_store": "",
+            "uniform": "/obj/item/clothing/under/rank/rnd/scientist"
+          },
+          "Backpack": null,
+          "Belt": null,
+          "Extra": null
+        }
+      ]
+    },
+    "xenobio_south": {
+      "standard": [
+        {
+          "ID": "job_23",
+          "Name": "Xenobiologist",
+          "Outfit": "/datum/outfit/job/workshop_ship_nanobead_job_23",
           "BaseOutfit": "/datum/outfit/job/assistant",
           "Category": "Science",
           "Slots": 1,

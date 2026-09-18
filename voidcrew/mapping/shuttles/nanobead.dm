@@ -1,6 +1,6 @@
 /datum/map_template/shuttle/voidcrew/ship_nanobead
-	name = "NanoBead"
-	catalog_desc = ""
+	name = "NanoBead-Class Corvette"
+	catalog_desc = "A compact ship including 2 biomedical rooms and 2 service rooms along a central hallway, capped by command and engine maintenance on either side."
 	suffix = "nanobead"
 	short_name = "NanoBead"
 	part_requirements = list()

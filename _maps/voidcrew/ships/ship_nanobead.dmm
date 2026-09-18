@@ -397,10 +397,6 @@
 /obj/effect/spawner/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
-"jbr" = (
-/obj/structure/grille,
-/turf/open/floor/plating/airless,
-/area/shuttle/voidcrew/ship_nanobead/maint)
 "jHE" = (
 /obj/effect/spawner/structure/window/reinforced/shuttle,
 /turf/open/floor/plating,
@@ -519,6 +515,10 @@
 /obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
+"nje" = (
+/obj/structure/grille,
+/turf/template_noop,
+/area/shuttle/voidcrew/ship_nanobead/maint)
 "nHe" = (
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
@@ -963,7 +963,7 @@ kxb
 kxb
 kxb
 kxb
-jbr
+nje
 kxb
 kxb
 kxb
@@ -971,7 +971,7 @@ gCz
 kxb
 kxb
 kxb
-jbr
+nje
 kxb
 kxb
 kxb
@@ -984,7 +984,7 @@ kxb
 kxb
 kxb
 kxb
-gmm
+dAf
 pYn
 lbA
 pYn
@@ -992,7 +992,7 @@ yfU
 pYn
 lbA
 pYn
-gmm
+dAf
 kxb
 kxb
 kxb

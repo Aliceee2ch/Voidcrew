@@ -257,6 +257,10 @@
 	},
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
+"fZH" = (
+/obj/structure/grille,
+/turf/template_noop,
+/area/shuttle/voidcrew/ship_nanobead/maint)
 "gcL" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 5
@@ -1003,7 +1007,7 @@ uGk
 uGk
 uGk
 uGk
-uGk
+fZH
 uGk
 uGk
 uGk
@@ -1011,7 +1015,7 @@ fIL
 uGk
 uGk
 uGk
-uGk
+fZH
 uGk
 uGk
 uGk
@@ -1024,7 +1028,7 @@ uGk
 uGk
 uGk
 uGk
-buY
+hth
 ozr
 oMr
 ozr
@@ -1032,7 +1036,7 @@ ecu
 ozr
 oMr
 ozr
-buY
+hth
 uGk
 uGk
 uGk

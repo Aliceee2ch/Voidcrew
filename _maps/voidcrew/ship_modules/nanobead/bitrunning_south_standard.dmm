@@ -366,7 +366,8 @@
 	icon_state = "laptop";
 	dir = 1;
 	pixel_w = 32;
-	pixel_z = 3
+	pixel_z = 3;
+	base_icon_state = "laptop"
 	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)

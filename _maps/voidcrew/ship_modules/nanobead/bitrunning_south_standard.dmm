@@ -203,13 +203,6 @@
 /area/template_noop)
 "mLG" = (
 /obj/structure/table/reinforced,
-/obj/machinery/quantum_server{
-	icon = 'icons/obj/machines/computer.dmi';
-	icon_state = "laptop";
-	dir = 1;
-	pixel_w = 0;
-	pixel_z = 3
-	},
 /obj/effect/turf_decal/trimline/brown/filled/line{
 	dir = 1
 	},
@@ -367,6 +360,13 @@
 	},
 /obj/effect/turf_decal/siding/thinplating_new/dark/corner{
 	dir = 4
+	},
+/obj/machinery/quantum_server{
+	icon = 'icons/obj/machines/computer.dmi';
+	icon_state = "laptop";
+	dir = 1;
+	pixel_w = 32;
+	pixel_z = 3
 	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)

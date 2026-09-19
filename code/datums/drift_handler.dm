@@ -180,7 +180,7 @@
 	SIGNAL_HANDLER
 	// This does mean it falls very slightly behind, but otherwise they'll potentially run into us
 	var/next_move_in = drifting_loop.timer - world.time + world.tick_lag
-	was_pulling.newtonian_move(angle2dir(drifting_loop.angle), start_delay = next_move_in, drift_force = drift_force, controlled_cap = drift_force)
+	was_pulling.newtonian_move(drifting_loop.angle, start_delay = next_move_in, drift_force = drift_force, controlled_cap = drift_force)
 
 /datum/drift_handler/proc/glide_to_halt(glide_for)
 	if(!ismob(parent))
@@ -250,7 +250,8 @@
 	var/applied_force = sqrt(force_x * force_x + force_y * force_y)
 	var/force_projection = max(0, cos(target_angle - force_angle)) * applied_force
 	force_x -= min(force_projection, drift_projection) * sin(target_angle)
-	force_x -= min(force_projection, drift_projection) * cos(target_angle)
+	force_y -= min(force_projection, drift_projection) * cos(target_angle)
+	force_angle = delta_to_angle(force_x, force_y)
 	applied_force = min(sqrt(force_x * force_x + force_y * force_y), stabilization_force)
 	parent.newtonian_move(force_angle, instant = TRUE, drift_force = applied_force)
 
@@ -262,4 +263,4 @@
 
 	var/projected_force = max(0, cos(target_angle - drifting_loop.angle)) * drift_force
 	if (projected_force > 0)
-		parent.newtonian_move(REVERSE_ANGLE(target_angle), projected_force)
+		parent.newtonian_move(REVERSE_ANGLE(target_angle), drift_force = projected_force)

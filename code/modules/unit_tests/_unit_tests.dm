@@ -231,6 +231,7 @@
 #include "monkey_business.dm"
 #include "mouse_bite_cable.dm"
 #include "movement_order_sanity.dm"
+#include "drift_vectors.dm"
 #include "mutant_hands_consistency.dm"
 #include "mutant_organs.dm"
 #include "novaflower_burn.dm"

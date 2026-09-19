@@ -90,7 +90,7 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/west,
 /obj/structure/grille,
-/turf/template_noop,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "aWy" = (
 /obj/structure/table/reinforced,
@@ -140,7 +140,7 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/west,
 /obj/structure/grille,
-/turf/template_noop,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "bUa" = (
 /obj/effect/spawner/structure/window/hollow/survival_pod/end{
@@ -201,7 +201,7 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/grille,
-/turf/template_noop,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "dAK" = (
 /obj/effect/spawner/structure/window/hollow/survival_pod/end,
@@ -289,7 +289,7 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/grille,
-/turf/template_noop,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "hht" = (
 /obj/structure/cable,
@@ -759,7 +759,7 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/grille,
-/turf/template_noop,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "sNe" = (
 /obj/machinery/computer/security{
@@ -879,7 +879,7 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/grille,
-/turf/template_noop,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "wiz" = (
 /obj/machinery/door/airlock/external{

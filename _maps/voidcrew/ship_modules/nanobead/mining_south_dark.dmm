@@ -20,10 +20,6 @@
 	input_dir = 2;
 	output_dir = 8
 	},
-/obj/machinery/mineral/ore_redemption/offstation{
-	dir = 2;
-	output_dir = 8
-	},
 /obj/effect/turf_decal/trimline/brown/filled/line{
 	dir = 6
 	},

@@ -23,6 +23,9 @@
 	dir = 1
 	},
 /obj/machinery/light/directional/south,
+/obj/item/ammo_box/magazine/wt550m9,
+/obj/item/ammo_box/magazine/wt550m9,
+/obj/item/ammo_box/magazine/wt550m9,
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)
 "cgf" = (
@@ -222,6 +225,7 @@
 	dir = 2
 	},
 /obj/effect/turf_decal/trimline/red/filled/mid_joiner,
+/obj/item/gun/energy/laser,
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)
 "rER" = (
@@ -280,8 +284,6 @@
 /area/template_noop)
 "ttc" = (
 /obj/structure/guncase/shotgun,
-/obj/item/gun/ballistic/shotgun/riot,
-/obj/item/gun/ballistic/shotgun/riot,
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 1
 	},
@@ -293,6 +295,9 @@
 	},
 /obj/structure/extinguisher_cabinet/directional/east,
 /obj/machinery/airalarm/directional/south,
+/obj/effect/spawner/random/armory/buckshot,
+/obj/effect/spawner/random/armory/buckshot,
+/obj/item/gun/ballistic/shotgun/riot,
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)
 "tua" = (

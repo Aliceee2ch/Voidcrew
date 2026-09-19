@@ -447,7 +447,7 @@
      13
     ]
    },
-   "src_md5": "38b5cd262e808b14b3c3fc0e47d26e31"
+   "src_md5": "ea71cdbd5888af3382aa0d88288481a7"
   },
   "pill": {
    "png": "ship_pill.png",
@@ -2320,7 +2320,7 @@
       1
      ],
      "png": "nanobead_bitrunning_north_dark.png",
-     "src_md5": "d42b90e9d2429847e92ab4f4717a2320"
+     "src_md5": "7cee1a65f975994a8b508c3bd19d63e2"
     },
     "standard": {
      "width": 6,
@@ -2470,7 +2470,7 @@
       1
      ],
      "png": "nanobead_security_north_dark.png",
-     "src_md5": "a7e5849a7eab5392a9724a726cdfcb60"
+     "src_md5": "37d4dd3fd797d8a79fd5ff2780014f63"
     },
     "standard": {
      "width": 6,
@@ -2480,7 +2480,7 @@
       1
      ],
      "png": "nanobead_security_north_standard.png",
-     "src_md5": "722bc688f697de407621a33a63c99c51"
+     "src_md5": "530d699b9735ea5d7039499377a79e96"
     }
    }
   },
@@ -2800,7 +2800,7 @@
       1
      ],
      "png": "nanobead_bitrunning_south_dark.png",
-     "src_md5": "51b98a2a787021a40895fea4c7e113c5"
+     "src_md5": "25925c64bfadec485eabd1162e141206"
     },
     "standard": {
      "width": 6,
@@ -2890,7 +2890,7 @@
       1
      ],
      "png": "nanobead_mining_south_dark.png",
-     "src_md5": "5ec388e6d92ff402cb8cfe315c6f2dfa"
+     "src_md5": "09e40017317eb79b66f07d00bbd2ef76"
     },
     "standard": {
      "width": 6,
@@ -2900,7 +2900,7 @@
       1
      ],
      "png": "nanobead_mining_south_standard.png",
-     "src_md5": "f7cc463b6ed9938c347a3318d6fac4f3"
+     "src_md5": "8bfc0d19df959fd281a768057650cdc5"
     }
    }
   },
@@ -2950,7 +2950,7 @@
       1
      ],
      "png": "nanobead_security_south_dark.png",
-     "src_md5": "0383209eb703a6311c8e3383248b0173"
+     "src_md5": "673791403bf7919d7fc85f50b39d3685"
     },
     "standard": {
      "width": 6,
@@ -2960,7 +2960,7 @@
       1
      ],
      "png": "nanobead_security_south_standard.png",
-     "src_md5": "da91050437b58e381f6328c38563eb6f"
+     "src_md5": "5d290e649caad60c4f8aee612a18be2b"
     }
    }
   },

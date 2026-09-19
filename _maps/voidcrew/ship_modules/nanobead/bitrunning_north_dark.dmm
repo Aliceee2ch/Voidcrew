@@ -75,6 +75,14 @@
 	},
 /obj/effect/turf_decal/trimline/brown/filled/corner,
 /obj/effect/turf_decal/siding/thinplating_new/dark/corner,
+/obj/machinery/quantum_server{
+	icon = 'icons/obj/machines/computer.dmi';
+	icon_state = "laptop";
+	dir = 2;
+	pixel_w = 32;
+	pixel_z = 3;
+	base_icon_state = "laptop"
+	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)
 "cJE" = (
@@ -358,13 +366,6 @@
 /area/template_noop)
 "wFN" = (
 /obj/structure/table/reinforced,
-/obj/machinery/quantum_server{
-	icon = 'icons/obj/machines/computer.dmi';
-	icon_state = "laptop";
-	dir = 2;
-	pixel_w = 0;
-	pixel_z = 3
-	},
 /obj/effect/turf_decal/trimline/brown/filled/line,
 /obj/effect/turf_decal/siding/thinplating_new/dark,
 /obj/effect/turf_decal/trimline/brown/filled/mid_joiner,

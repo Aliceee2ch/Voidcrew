@@ -1116,7 +1116,7 @@
 	console.item_interaction(engineer, duplicate, list())
 	TEST_ASSERT(!QDELETED(duplicate), "A duplicate upgrade disk was consumed")
 	TEST_ASSERT_EQUAL(length(console.installed_upgrade_types), length(disk_types), "A rejected disk would be duplicated on deconstruction")
-	duplicate.forceMove(null)
+	qdel(duplicate)
 	var/turf/drop = get_turf(console)
 	console.deconstruct(TRUE)
 	for(var/disk_type in disk_types)

@@ -338,6 +338,7 @@
 #include "voidcrew_blueprint_guns.dm"
 #include "voidcrew_colosseum.dm"
 #include "voidcrew_construction_refunds.dm"
+#include "voidcrew_combat_camera_breaches.dm"
 #include "voidcrew_construction_automation.dm"
 #include "voidcrew_repair_robotics.dm"
 #include "voidcrew_cordon_teleport.dm"

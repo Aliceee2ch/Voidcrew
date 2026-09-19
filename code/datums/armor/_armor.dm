@@ -81,6 +81,8 @@ GLOBAL_LIST_INIT(armor_by_type, generate_armor_type_cache())
 			new_armor.vars[mod] = vars[mod] + modifier_all
 		return new_armor
 
+	for(var/rating in all_keys)
+		new_armor.vars[rating] = vars[rating]
 	for(var/modifier in modifiers)
 		if(modifier in all_keys)
 			new_armor.vars[modifier] = vars[modifier] + modifiers[modifier]
@@ -104,6 +106,8 @@ GLOBAL_LIST_INIT(armor_by_type, generate_armor_type_cache())
 			new_armor.vars[multiplier] = vars[multiplier] * multiplier_all
 		return new_armor
 
+	for(var/rating in all_keys)
+		new_armor.vars[rating] = vars[rating]
 	for(var/multiplier in multipliers)
 		if(multiplier in all_keys)
 			new_armor.vars[multiplier] = vars[multiplier] * multipliers[multiplier]

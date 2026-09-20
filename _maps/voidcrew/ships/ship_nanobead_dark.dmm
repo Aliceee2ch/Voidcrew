@@ -47,7 +47,6 @@
 /obj/machinery/power/terminal{
 	dir = 8
 	},
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/structure/cable,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 8
@@ -56,6 +55,7 @@
 	dir = 1
 	},
 /obj/machinery/duct,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "aBM" = (
@@ -92,6 +92,10 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/west,
 /obj/structure/grille,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "aWy" = (
@@ -145,23 +149,43 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/west,
 /obj/structure/grille,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "bUa" = (
 /obj/effect/spawner/structure/window/hollow/survival_pod/end{
 	dir = 8
 	},
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/bridge)
+"bZt" = (
+/obj/machinery/button/door{
+	id = "lockdown";
+	name = "Lockdown";
+	desc = "Ship exterior emergency lockdown.";
+	pixel_w = -27;
+	pixel_z = -26
+	},
+/turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "cbI" = (
 /obj/item/kirbyplants/organic/plant22,
-/obj/machinery/light_switch/directional/south,
 /obj/machinery/light/small/directional/south,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 8
 	},
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 4
+	},
+/obj/machinery/light_switch/directional/south{
+	pixel_w = -7
 	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
@@ -206,10 +230,18 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/grille,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "dAK" = (
 /obj/effect/spawner/structure/window/hollow/survival_pod/end,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "dZs" = (
@@ -243,6 +275,14 @@
 "ffX" = (
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
+"fqs" = (
+/obj/effect/spawner/structure/window/hollow/survival_pod,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "fIL" = (
 /obj/machinery/atmospherics/components/unary/passive_vent/layer2{
 	dir = 4
@@ -279,17 +319,21 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "gPP" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 4
 	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "gSu" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/grille,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "hht" = (
@@ -338,7 +382,6 @@
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "iGZ" = (
 /obj/machinery/power/apc/auto_name/directional/west,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -347,11 +390,16 @@
 /obj/machinery/light/directional/west,
 /obj/machinery/power/rtg/advanced,
 /obj/machinery/duct,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "jdz" = (
 /obj/effect/spawner/structure/window/hollow/survival_pod/end{
 	dir = 8
+	},
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
 	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
@@ -366,6 +414,14 @@
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
+"jAn" = (
+/obj/effect/spawner/structure/window/hollow/survival_pod,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "jEq" = (
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
@@ -379,6 +435,10 @@
 /obj/effect/spawner/structure/window/hollow/survival_pod/middle{
 	dir = 4
 	},
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "mjc" = (
@@ -388,10 +448,13 @@
 /obj/effect/spawner/structure/window/hollow/survival_pod/end{
 	dir = 1
 	},
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "mtW" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/airalarm/directional/east,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -399,6 +462,7 @@
 	},
 /obj/machinery/shower/directional/west,
 /obj/structure/fluff/shower_drain,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "mxr" = (
@@ -466,8 +530,8 @@
 	},
 /area/shuttle/voidcrew/ship_nanobead/hall)
 "nfo" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "ngh" = (
@@ -694,6 +758,10 @@
 /obj/effect/spawner/structure/window/hollow/survival_pod/end{
 	dir = 8
 	},
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "rry" = (
@@ -766,6 +834,10 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/grille,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "sNe" = (
@@ -804,11 +876,11 @@
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "upq" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 4
 	},
 /obj/structure/cable,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "uts" = (
@@ -890,6 +962,10 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/east,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/grille,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "wiz" = (
@@ -972,13 +1048,13 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "xQL" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/firealarm/directional/east,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 4
 	},
 /obj/machinery/shower/directional/west,
 /obj/structure/fluff/shower_drain,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "xTF" = (
@@ -1183,7 +1259,7 @@ uGk
 "}
 (9,1,1) = {"
 uGk
-aMR
+fqs
 xUL
 xUL
 xUL
@@ -1199,7 +1275,7 @@ bIc
 bIc
 bIc
 bIc
-vfh
+jAn
 uGk
 "}
 (10,1,1) = {"
@@ -1225,7 +1301,7 @@ uGk
 "}
 (11,1,1) = {"
 uGk
-aMR
+fqs
 xUL
 xUL
 xUL
@@ -1241,7 +1317,7 @@ bIc
 bIc
 bIc
 bIc
-vfh
+jAn
 uGk
 "}
 (12,1,1) = {"
@@ -1402,7 +1478,7 @@ jEq
 aWy
 mjc
 biW
-mjc
+bZt
 nwB
 jEq
 tHe

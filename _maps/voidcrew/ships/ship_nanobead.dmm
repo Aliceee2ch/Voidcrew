@@ -36,6 +36,14 @@
 	dir = 1
 	},
 /area/shuttle/voidcrew/ship_nanobead/hall)
+"ana" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "ayP" = (
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_south)
@@ -82,6 +90,14 @@
 	},
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
+"bIW" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "bNV" = (
 /obj/machinery/atmospherics/components/tank/air/layer4,
 /obj/structure/extinguisher_cabinet/directional/north,
@@ -275,8 +291,8 @@
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "fKo" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/effect/turf_decal/siding/wideplating_new/corner,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "gkk" = (
@@ -294,7 +310,9 @@
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "gze" = (
 /obj/item/kirbyplants/organic/plant22,
-/obj/machinery/light_switch/directional/south,
+/obj/machinery/light_switch/directional/south{
+	pixel_w = -7
+	},
 /obj/machinery/light/small/directional/south,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
@@ -344,7 +362,6 @@
 /area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "gZP" = (
 /obj/machinery/power/apc/auto_name/directional/west,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/effect/turf_decal/siding/wideplating_new{
@@ -353,6 +370,7 @@
 /obj/machinery/light/directional/west,
 /obj/machinery/power/rtg/advanced,
 /obj/machinery/duct,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "hdx" = (
@@ -407,7 +425,6 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "jZi" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/airalarm/directional/east,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/effect/turf_decal/siding/wideplating_new{
@@ -415,6 +432,7 @@
 	},
 /obj/machinery/shower/directional/west,
 /obj/structure/fluff/shower_drain,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "kol" = (
@@ -457,6 +475,14 @@
 /obj/structure/cable,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/maint)
+"lsX" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/bridge)
 "lFG" = (
 /obj/effect/turf_decal/trimline/neutral/filled/line{
 	dir = 1
@@ -558,11 +584,11 @@
 	},
 /area/shuttle/voidcrew/ship_nanobead/hall)
 "nNg" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 4
 	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "ohd" = (
@@ -649,6 +675,14 @@
 	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
+"qfP" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/services_south)
 "qje" = (
 /turf/closed/wall/mineral/titanium/interior,
 /area/shuttle/voidcrew/ship_nanobead/maint)
@@ -657,13 +691,13 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "qtf" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/firealarm/directional/east,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},
 /obj/machinery/shower/directional/west,
 /obj/structure/fluff/shower_drain,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "qtE" = (
@@ -708,13 +742,23 @@
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "rDn" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 4
 	},
 /obj/structure/cable,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
+"rEk" = (
+/obj/machinery/button/door{
+	id = "lockdown";
+	name = "Lockdown";
+	desc = "Ship exterior emergency lockdown.";
+	pixel_w = -27;
+	pixel_z = -26
+	},
+/turf/open/floor/carpet/executive,
+/area/shuttle/voidcrew/ship_nanobead/bridge)
 "rWC" = (
 /obj/modular_map_root/ship_upgrade{
 	footprint = "###.../####../#####./######/######/#####.";
@@ -800,7 +844,6 @@
 /obj/machinery/power/terminal{
 	dir = 8
 	},
-/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/structure/cable,
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 8
@@ -809,6 +852,7 @@
 	dir = 1
 	},
 /obj/machinery/duct,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "uFW" = (
@@ -876,6 +920,14 @@
 /obj/effect/turf_decal/siding/thinplating_new,
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
+"vQb" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle,
+/obj/machinery/door/poddoor/preopen{
+	name = "Lockdown";
+	id = "lockdown"
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/services_north)
 "vXW" = (
 /obj/machinery/computer/monitor{
 	dir = 8
@@ -1138,7 +1190,7 @@ kxb
 "}
 (9,1,1) = {"
 kxb
-jHE
+bIW
 xVJ
 xVJ
 xVJ
@@ -1154,7 +1206,7 @@ ayP
 ayP
 ayP
 ayP
-tRZ
+ana
 kxb
 "}
 (10,1,1) = {"
@@ -1180,7 +1232,7 @@ kxb
 "}
 (11,1,1) = {"
 kxb
-jHE
+bIW
 xVJ
 xVJ
 xVJ
@@ -1196,7 +1248,7 @@ ayP
 ayP
 ayP
 ayP
-tRZ
+ana
 kxb
 "}
 (12,1,1) = {"
@@ -1285,7 +1337,7 @@ xUz
 "}
 (16,1,1) = {"
 ahq
-iVR
+vQb
 tPU
 tPU
 tPU
@@ -1301,13 +1353,13 @@ cdG
 cdG
 cdG
 cdG
-qqH
+qfP
 xUz
 "}
 (17,1,1) = {"
 kxb
-iVR
-iVR
+vQb
+vQb
 tPU
 tPU
 tPU
@@ -1321,15 +1373,15 @@ cdG
 cdG
 cdG
 cdG
-qqH
-qqH
+qfP
+qfP
 kxb
 "}
 (18,1,1) = {"
 kxb
 kxb
-iVR
-iVR
+vQb
+vQb
 tPU
 tPU
 tMP
@@ -1341,8 +1393,8 @@ tOw
 kXJ
 cdG
 cdG
-qqH
-qqH
+qfP
+qfP
 kxb
 kxb
 "}
@@ -1357,7 +1409,7 @@ hHh
 egG
 fAJ
 xwZ
-fAJ
+rEk
 pJu
 hHh
 xUz
@@ -1396,11 +1448,11 @@ kxb
 kxb
 kxb
 xPf
-xhC
+lsX
 vXW
 uFW
 twf
-xhC
+lsX
 xPf
 kxb
 kxb
@@ -1417,11 +1469,11 @@ kxb
 kxb
 kxb
 kxb
-xhC
-xhC
-xhC
-xhC
-xhC
+lsX
+lsX
+lsX
+lsX
+lsX
 kxb
 kxb
 kxb

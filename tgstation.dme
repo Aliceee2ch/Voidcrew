@@ -6772,6 +6772,7 @@
 #include "voidcrew\edits\hyperspace_overboard.dm"
 #include "voidcrew\edits\id_card.dm"
 #include "voidcrew\edits\jobs.dm"
+#include "voidcrew\edits\ship_silicon.dm"
 #include "voidcrew\edits\keybindings.dm"
 #include "voidcrew\edits\lighting.dm"
 #include "voidcrew\edits\map_config.dm"

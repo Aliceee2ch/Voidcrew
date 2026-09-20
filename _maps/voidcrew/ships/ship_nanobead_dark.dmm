@@ -1001,9 +1001,6 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 6
 	},
-/obj/structure/closet{
-	icon_state = "atmos"
-	},
 /obj/item/extinguisher/advanced,
 /obj/item/storage/toolbox/mechanical,
 /obj/item/pipe_dispenser,
@@ -1011,6 +1008,10 @@
 /obj/item/holosign_creator/atmos,
 /obj/item/clothing/glasses/meson/engine/tray,
 /obj/item/clothing/mask/gas,
+/obj/structure/closet{
+	icon_state = "atmos";
+	icon_door = "atmos_door"
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 

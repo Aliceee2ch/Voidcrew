@@ -121,7 +121,9 @@
 	mask = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_49/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -130,7 +132,9 @@
 	mask = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_17
@@ -138,14 +142,18 @@
 	name = "NanoBead-Class Corvette — Botanist"
 	mask = null
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_17/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
 	mask = null
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_65
@@ -155,7 +163,9 @@
 	mask = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_65/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -164,7 +174,9 @@
 	mask = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_33
@@ -172,14 +184,18 @@
 	name = "NanoBead-Class Corvette — Botanist"
 	mask = null
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_33/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
 	mask = null
 	back = /obj/item/storage/backpack/messenger/hyd
+	belt = /obj/item/storage/bag/plants
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/botanist
 	accessory = /obj/item/clothing/accessory/armband/hydro
 
 /datum/outfit/job/workshop_ship_nanobead_job_51
@@ -288,7 +304,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_42/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -300,7 +317,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_9
@@ -313,7 +331,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/white
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_9/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -325,7 +344,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/white
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_58
@@ -338,7 +358,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_58/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -350,7 +371,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_26
@@ -363,7 +385,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/white
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_26/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -375,7 +398,8 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/white
 	back = /obj/item/storage/backpack/messenger/chem
-	belt = /obj/item/modular_computer/pda/chemist
+	belt = /obj/item/storage/bag/chemistry
+	l_pocket = /obj/item/modular_computer/pda/chemist
 	accessory = /obj/item/clothing/accessory/armband/med
 
 /datum/outfit/job/workshop_ship_nanobead_job_43
@@ -393,6 +417,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_43/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -408,6 +433,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_10
 	parent_type = /datum/outfit/job/assistant
@@ -424,6 +450,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_10/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -439,6 +466,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_59
 	parent_type = /datum/outfit/job/assistant
@@ -455,6 +483,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_59/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -470,6 +499,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_27
 	parent_type = /datum/outfit/job/assistant
@@ -486,6 +516,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_27/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -501,6 +532,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_48
 	parent_type = /datum/outfit/job/cook
@@ -696,7 +728,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -706,7 +739,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -717,7 +751,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -727,7 +762,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -738,7 +774,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -748,7 +785,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -759,7 +797,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -769,7 +808,8 @@
 	uniform = /obj/item/clothing/under/rank/cargo/miner/lavaland
 	glasses = null
 	back = /obj/item/storage/backpack/messenger/explorer
-	l_pocket = null
+	belt = /obj/item/storage/bag/ore
+	l_pocket = /obj/item/modular_computer/pda/shaftminer
 	r_pocket = null
 	accessory = /obj/item/clothing/accessory/armband/cargo
 	backpack_contents = list(/obj/item/knife/combat/survival = 1, /obj/item/mining_voucher = 1, /obj/item/stack/marker_beacon/ten = 1)
@@ -880,8 +920,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_41/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -889,8 +929,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_8
@@ -899,8 +939,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/sneakers/black
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_8/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -908,8 +948,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/sneakers/black
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_57
@@ -918,8 +958,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_57/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -927,8 +967,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_25
@@ -937,8 +977,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/sneakers/black
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_25/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -946,8 +986,8 @@
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/sneakers/black
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
-	l_pocket = null
+	belt = /obj/item/storage/belt/utility/full
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_52
@@ -960,7 +1000,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -973,7 +1014,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -987,7 +1029,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -1000,7 +1043,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -1014,7 +1058,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -1027,7 +1072,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -1041,7 +1087,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -1054,7 +1101,8 @@
 	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
 	gloves = /obj/item/clothing/gloves/color/black
 	back = /obj/item/storage/backpack/messenger/sec
-	belt = /obj/item/modular_computer/pda/heads/hos
+	belt = /obj/item/storage/belt/security/full
+	l_pocket = /obj/item/modular_computer/pda/heads/hos
 	accessory = /obj/item/clothing/accessory/armband/deputy
 	backpack_contents = list()
 
@@ -1149,6 +1197,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_44/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1164,6 +1213,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_12
 	parent_type = /datum/outfit/job/assistant
@@ -1180,6 +1230,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_12/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1195,6 +1246,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_60
 	parent_type = /datum/outfit/job/assistant
@@ -1211,6 +1263,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_60/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1226,6 +1279,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_28
 	parent_type = /datum/outfit/job/assistant
@@ -1242,6 +1296,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_28/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1257,6 +1312,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = /obj/item/clothing/accessory/armband/medblue
+	backpack_contents = list(/obj/item/storage/medkit/regular = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_45
 	parent_type = /datum/outfit/job/assistant
@@ -1272,6 +1328,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_45/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1286,6 +1343,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_13
 	parent_type = /datum/outfit/job/assistant
@@ -1301,6 +1359,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_13/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1315,6 +1374,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_61
 	parent_type = /datum/outfit/job/assistant
@@ -1330,6 +1390,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_61/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1344,6 +1405,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_29
 	parent_type = /datum/outfit/job/assistant
@@ -1359,6 +1421,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_29/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
@@ -1373,6 +1436,7 @@
 	back = /obj/item/storage/backpack/messenger/med
 	belt = /obj/item/modular_computer/pda/medical
 	accessory = null
+	backpack_contents = list(/obj/item/storage/medkit/coroner = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_38
 	parent_type = /datum/outfit/job/assistant
@@ -1385,8 +1449,9 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_38/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -1399,8 +1464,9 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_2
@@ -1414,8 +1480,9 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/purple
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_2/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -1428,8 +1495,9 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/purple
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_55
@@ -1443,8 +1511,9 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_55/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -1457,8 +1526,9 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_23
@@ -1472,8 +1542,9 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/purple
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_23/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
@@ -1486,14 +1557,15 @@
 	gloves = null
 	shoes = /obj/item/clothing/shoes/sneakers/purple
 	back = /obj/item/storage/backpack/messenger/science
-	belt = /obj/item/modular_computer/pda/science
+	belt = /obj/item/storage/bag/xeno
 	suit_store = null
+	l_pocket = /obj/item/modular_computer/pda/science
 	accessory = /obj/item/clothing/accessory/armband/science
 
 /datum/outfit/job/workshop_ship_nanobead_job_6
 	parent_type = /datum/outfit/job/captain
 	name = "NanoBead-Class Corvette — Commander"
-	uniform = /obj/item/clothing/under/costume/dutch/syndicate
+	uniform = /obj/item/clothing/under/syndicate/sniper
 	suit = /obj/item/clothing/suit/armor/vest/capcarapace/syndicate
 	head = /obj/item/clothing/head/hats/hos/cap/syndicate
 	mask = null
@@ -1509,7 +1581,7 @@
 
 /datum/outfit/job/workshop_ship_nanobead_job_6/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
-	uniform = /obj/item/clothing/under/costume/dutch/syndicate
+	uniform = /obj/item/clothing/under/syndicate/sniper
 	suit = /obj/item/clothing/suit/armor/vest/capcarapace/syndicate
 	head = /obj/item/clothing/head/hats/hos/cap/syndicate
 	mask = null
@@ -1526,25 +1598,29 @@
 /datum/outfit/job/workshop_ship_nanobead_job_7
 	parent_type = /datum/outfit/job/assistant
 	name = "NanoBead-Class Corvette — Assistant to the Regional Commander"
-	uniform = /obj/item/clothing/under/syndicate/tacticool
+	uniform = /obj/item/clothing/under/syndicate/combat
 	suit = null
 	head = /obj/item/clothing/head/hats/hos/beret/syndicate
+	glasses = /obj/item/clothing/glasses/sunglasses
 	gloves = null
 	shoes = /obj/item/clothing/shoes/workboots/black
 	back = /obj/item/storage/backpack/messenger
 	belt = /obj/item/modular_computer/pda/assistant
 	accessory = /obj/item/clothing/accessory/medal/gold
+	backpack_contents = list(/obj/item/melee/baton = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_7/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
-	uniform = /obj/item/clothing/under/syndicate/tacticool
+	uniform = /obj/item/clothing/under/syndicate/combat
 	suit = null
 	head = /obj/item/clothing/head/hats/hos/beret/syndicate
+	glasses = /obj/item/clothing/glasses/sunglasses
 	gloves = null
 	shoes = /obj/item/clothing/shoes/workboots/black
 	back = /obj/item/storage/backpack/messenger
 	belt = /obj/item/modular_computer/pda/assistant
 	accessory = /obj/item/clothing/accessory/medal/gold
+	backpack_contents = list(/obj/item/melee/baton = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_70
 	parent_type = /datum/outfit/job/assistant
@@ -1614,22 +1690,26 @@
 	uniform = /obj/item/clothing/under/rank/centcom/official
 	suit = null
 	head = /obj/item/clothing/head/hats/intern
+	glasses = /obj/item/clothing/glasses/sunglasses
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger
 	belt = /obj/item/modular_computer/pda/assistant
 	accessory = /obj/item/clothing/accessory/medal/gold
+	backpack_contents = list(/obj/item/melee/baton = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_5/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
 	. = ..()
 	uniform = /obj/item/clothing/under/rank/centcom/official
 	suit = null
 	head = /obj/item/clothing/head/hats/intern
+	glasses = /obj/item/clothing/glasses/sunglasses
 	gloves = null
 	shoes = /obj/item/clothing/shoes/laceup
 	back = /obj/item/storage/backpack/messenger
 	belt = /obj/item/modular_computer/pda/assistant
 	accessory = /obj/item/clothing/accessory/medal/gold
+	backpack_contents = list(/obj/item/melee/baton = 1)
 
 /datum/outfit/job/workshop_ship_nanobead_job_11
 	parent_type = /datum/outfit/job/assistant

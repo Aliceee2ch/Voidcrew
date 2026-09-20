@@ -25,7 +25,7 @@
           "neck": "",
           "shoes": "/obj/item/clothing/shoes/workboots/black",
           "suit": "/obj/item/clothing/suit/armor/vest/capcarapace/syndicate",
-          "uniform": "/obj/item/clothing/under/costume/dutch/syndicate"
+          "uniform": "/obj/item/clothing/under/syndicate/sniper"
         },
         "Backpack": {
           "/obj/item/gun/ballistic/revolver": 1,
@@ -46,13 +46,16 @@
           "accessory": "/obj/item/clothing/accessory/medal/gold",
           "back": "/obj/item/storage/backpack/messenger",
           "belt": "/obj/item/modular_computer/pda/assistant",
+          "glasses": "/obj/item/clothing/glasses/sunglasses",
           "gloves": "",
           "head": "/obj/item/clothing/head/hats/hos/beret/syndicate",
           "shoes": "/obj/item/clothing/shoes/workboots/black",
           "suit": "",
-          "uniform": "/obj/item/clothing/under/syndicate/tacticool"
+          "uniform": "/obj/item/clothing/under/syndicate/combat"
         },
-        "Backpack": null,
+        "Backpack": {
+          "/obj/item/melee/baton": 1
+        },
         "Belt": null,
         "Extra": null
       },
@@ -125,13 +128,16 @@
           "accessory": "/obj/item/clothing/accessory/medal/gold",
           "back": "/obj/item/storage/backpack/messenger",
           "belt": "/obj/item/modular_computer/pda/assistant",
+          "glasses": "/obj/item/clothing/glasses/sunglasses",
           "gloves": "",
           "head": "/obj/item/clothing/head/hats/intern",
           "shoes": "/obj/item/clothing/shoes/laceup",
           "suit": "",
           "uniform": "/obj/item/clothing/under/rank/centcom/official"
         },
-        "Backpack": null,
+        "Backpack": {
+          "/obj/item/melee/baton": 1
+        },
         "Belt": null,
         "Extra": null
       },
@@ -315,6 +321,8 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/hydro",
             "back": "/obj/item/storage/backpack/messenger/hyd",
+            "belt": "/obj/item/storage/bag/plants",
+            "l_pocket": "/obj/item/modular_computer/pda/botanist",
             "mask": "",
             "shoes": "/obj/item/clothing/shoes/laceup",
             "suit_store": "",
@@ -337,6 +345,8 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/hydro",
             "back": "/obj/item/storage/backpack/messenger/hyd",
+            "belt": "/obj/item/storage/bag/plants",
+            "l_pocket": "/obj/item/modular_computer/pda/botanist",
             "mask": "",
             "suit_store": ""
           },
@@ -359,6 +369,8 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/hydro",
             "back": "/obj/item/storage/backpack/messenger/hyd",
+            "belt": "/obj/item/storage/bag/plants",
+            "l_pocket": "/obj/item/modular_computer/pda/botanist",
             "mask": "",
             "shoes": "/obj/item/clothing/shoes/laceup",
             "suit_store": "",
@@ -381,6 +393,8 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/hydro",
             "back": "/obj/item/storage/backpack/messenger/hyd",
+            "belt": "/obj/item/storage/bag/plants",
+            "l_pocket": "/obj/item/modular_computer/pda/botanist",
             "mask": "",
             "suit_store": ""
           },
@@ -505,10 +519,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/med",
             "back": "/obj/item/storage/backpack/messenger/chem",
-            "belt": "/obj/item/modular_computer/pda/chemist",
+            "belt": "/obj/item/storage/bag/chemistry",
             "ears": "/obj/item/radio/headset/headset_med",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
+            "l_pocket": "/obj/item/modular_computer/pda/chemist",
             "shoes": "/obj/item/clothing/shoes/laceup",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/chemist",
             "uniform": "/obj/item/clothing/under/syndicate/tacticool"
@@ -530,10 +545,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/med",
             "back": "/obj/item/storage/backpack/messenger/chem",
-            "belt": "/obj/item/modular_computer/pda/chemist",
+            "belt": "/obj/item/storage/bag/chemistry",
             "ears": "/obj/item/radio/headset/headset_med",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
+            "l_pocket": "/obj/item/modular_computer/pda/chemist",
             "shoes": "/obj/item/clothing/shoes/sneakers/white",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/chemist",
             "uniform": "/obj/item/clothing/under/rank/medical/chemist"
@@ -557,10 +573,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/med",
             "back": "/obj/item/storage/backpack/messenger/chem",
-            "belt": "/obj/item/modular_computer/pda/chemist",
+            "belt": "/obj/item/storage/bag/chemistry",
             "ears": "/obj/item/radio/headset/headset_med",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
+            "l_pocket": "/obj/item/modular_computer/pda/chemist",
             "shoes": "/obj/item/clothing/shoes/laceup",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/chemist",
             "uniform": "/obj/item/clothing/under/syndicate/tacticool"
@@ -582,10 +599,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/med",
             "back": "/obj/item/storage/backpack/messenger/chem",
-            "belt": "/obj/item/modular_computer/pda/chemist",
+            "belt": "/obj/item/storage/bag/chemistry",
             "ears": "/obj/item/radio/headset/headset_med",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
+            "l_pocket": "/obj/item/modular_computer/pda/chemist",
             "shoes": "/obj/item/clothing/shoes/sneakers/white",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/chemist",
             "uniform": "/obj/item/clothing/under/rank/medical/chemist"
@@ -620,7 +638,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat",
             "uniform": "/obj/item/clothing/under/rank/medical/chief_medical_officer/turtleneck"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -648,7 +668,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat",
             "uniform": "/obj/item/clothing/under/rank/medical/doctor"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -678,7 +700,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat",
             "uniform": "/obj/item/clothing/under/rank/medical/chief_medical_officer/turtleneck"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -706,7 +730,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat",
             "uniform": "/obj/item/clothing/under/rank/medical/doctor"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -954,8 +980,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/cargo",
             "back": "/obj/item/storage/backpack/messenger/explorer",
+            "belt": "/obj/item/storage/bag/ore",
             "glasses": "",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/shaftminer",
             "r_pocket": "",
             "uniform": "/obj/item/clothing/under/rank/cargo/miner/lavaland"
           },
@@ -980,8 +1007,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/cargo",
             "back": "/obj/item/storage/backpack/messenger/explorer",
+            "belt": "/obj/item/storage/bag/ore",
             "glasses": "",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/shaftminer",
             "r_pocket": "",
             "uniform": "/obj/item/clothing/under/rank/cargo/miner/lavaland"
           },
@@ -1008,8 +1036,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/cargo",
             "back": "/obj/item/storage/backpack/messenger/explorer",
+            "belt": "/obj/item/storage/bag/ore",
             "glasses": "",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/shaftminer",
             "r_pocket": "",
             "uniform": "/obj/item/clothing/under/rank/cargo/miner/lavaland"
           },
@@ -1034,8 +1063,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/cargo",
             "back": "/obj/item/storage/backpack/messenger/explorer",
+            "belt": "/obj/item/storage/bag/ore",
             "glasses": "",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/shaftminer",
             "r_pocket": "",
             "uniform": "/obj/item/clothing/under/rank/cargo/miner/lavaland"
           },
@@ -1166,9 +1196,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/belt/utility/full",
             "ears": "/obj/item/radio/headset/headset_sci",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/laceup"
           },
           "Backpack": null,
@@ -1188,9 +1218,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/belt/utility/full",
             "ears": "/obj/item/radio/headset/headset_sci",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/sneakers/black"
           },
           "Backpack": null,
@@ -1212,9 +1242,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/belt/utility/full",
             "ears": "/obj/item/radio/headset/headset_sci",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/laceup"
           },
           "Backpack": null,
@@ -1234,9 +1264,9 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/belt/utility/full",
             "ears": "/obj/item/radio/headset/headset_sci",
-            "l_pocket": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/sneakers/black"
           },
           "Backpack": null,
@@ -1258,10 +1288,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/deputy",
             "back": "/obj/item/storage/backpack/messenger/sec",
-            "belt": "/obj/item/modular_computer/pda/heads/hos",
+            "belt": "/obj/item/storage/belt/security/full",
             "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
             "gloves": "/obj/item/clothing/gloves/color/black",
             "head": "/obj/item/clothing/head/hats/hos/beret/syndicate",
+            "l_pocket": "/obj/item/modular_computer/pda/heads/hos",
             "mask": "",
             "suit": "/obj/item/clothing/suit/armor/vest",
             "uniform": "/obj/item/clothing/under/costume/dutch/syndicate"
@@ -1283,10 +1314,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/deputy",
             "back": "/obj/item/storage/backpack/messenger/sec",
-            "belt": "/obj/item/modular_computer/pda/heads/hos",
+            "belt": "/obj/item/storage/belt/security/full",
             "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
             "gloves": "/obj/item/clothing/gloves/color/black",
             "head": "/obj/item/clothing/head/soft/sec",
+            "l_pocket": "/obj/item/modular_computer/pda/heads/hos",
             "mask": "",
             "suit": "/obj/item/clothing/suit/armor/vest",
             "uniform": "/obj/item/clothing/under/rank/security/officer/formal"
@@ -1310,10 +1342,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/deputy",
             "back": "/obj/item/storage/backpack/messenger/sec",
-            "belt": "/obj/item/modular_computer/pda/heads/hos",
+            "belt": "/obj/item/storage/belt/security/full",
             "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
             "gloves": "/obj/item/clothing/gloves/color/black",
             "head": "/obj/item/clothing/head/hats/hos/beret/syndicate",
+            "l_pocket": "/obj/item/modular_computer/pda/heads/hos",
             "mask": "",
             "suit": "/obj/item/clothing/suit/armor/vest",
             "uniform": "/obj/item/clothing/under/costume/dutch/syndicate"
@@ -1335,10 +1368,11 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/deputy",
             "back": "/obj/item/storage/backpack/messenger/sec",
-            "belt": "/obj/item/modular_computer/pda/heads/hos",
+            "belt": "/obj/item/storage/belt/security/full",
             "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
             "gloves": "/obj/item/clothing/gloves/color/black",
             "head": "/obj/item/clothing/head/soft/sec",
+            "l_pocket": "/obj/item/modular_computer/pda/heads/hos",
             "mask": "",
             "suit": "/obj/item/clothing/suit/armor/vest",
             "uniform": "/obj/item/clothing/under/rank/security/officer/formal"
@@ -1465,7 +1499,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat/cmo",
             "uniform": "/obj/item/clothing/under/rank/medical/chief_medical_officer/turtleneck"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1493,7 +1529,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat/cmo",
             "uniform": "/obj/item/clothing/under/rank/medical/doctor"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1523,7 +1561,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat/cmo",
             "uniform": "/obj/item/clothing/under/rank/medical/chief_medical_officer/turtleneck"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1551,7 +1591,9 @@
             "suit": "/obj/item/clothing/suit/toggle/labcoat/cmo",
             "uniform": "/obj/item/clothing/under/rank/medical/doctor"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/regular": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1580,7 +1622,9 @@
             "suit": "",
             "uniform": "/obj/item/clothing/under/rank/medical/scrubs/coroner"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/coroner": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1607,7 +1651,9 @@
             "suit": "/obj/item/clothing/suit/apron/surgical",
             "uniform": "/obj/item/clothing/under/rank/medical/scrubs/green"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/coroner": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1636,7 +1682,9 @@
             "suit": "",
             "uniform": "/obj/item/clothing/under/rank/medical/scrubs/coroner"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/coroner": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1663,7 +1711,9 @@
             "suit": "/obj/item/clothing/suit/apron/surgical",
             "uniform": "/obj/item/clothing/under/rank/medical/scrubs/green"
           },
-          "Backpack": null,
+          "Backpack": {
+            "/obj/item/storage/medkit/coroner": 1
+          },
           "Belt": null,
           "Extra": null
         }
@@ -1682,11 +1732,12 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/bag/xeno",
             "ears": "/obj/item/radio/headset/headset_sci",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
             "head": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/laceup",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/science",
             "suit_store": "",
@@ -1709,11 +1760,12 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/bag/xeno",
             "ears": "/obj/item/radio/headset/headset_sci",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
             "head": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/sneakers/purple",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/science",
             "suit_store": "",
@@ -1738,11 +1790,12 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/bag/xeno",
             "ears": "/obj/item/radio/headset/headset_sci",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
             "head": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/laceup",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/science",
             "suit_store": "",
@@ -1765,11 +1818,12 @@
           "Equipment": {
             "accessory": "/obj/item/clothing/accessory/armband/science",
             "back": "/obj/item/storage/backpack/messenger/science",
-            "belt": "/obj/item/modular_computer/pda/science",
+            "belt": "/obj/item/storage/bag/xeno",
             "ears": "/obj/item/radio/headset/headset_sci",
             "glasses": "/obj/item/clothing/glasses/science",
             "gloves": "",
             "head": "",
+            "l_pocket": "/obj/item/modular_computer/pda/science",
             "shoes": "/obj/item/clothing/shoes/sneakers/purple",
             "suit": "/obj/item/clothing/suit/toggle/labcoat/science",
             "suit_store": "",

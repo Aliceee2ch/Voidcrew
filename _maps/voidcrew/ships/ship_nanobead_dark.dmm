@@ -85,19 +85,9 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "aMR" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod,
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
-"aPx" = (
-/obj/structure/window/reinforced/survival_pod/spawner/directional/north,
-/obj/structure/window/reinforced/survival_pod/spawner/directional/west,
-/obj/structure/grille,
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/services_south)
 "aWy" = (
 /obj/structure/table/reinforced,
 /obj/effect/turf_decal/siding/thinplating_new/dark,
@@ -145,26 +135,6 @@
 "bIc" = (
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_south)
-"bRU" = (
-/obj/structure/window/reinforced/survival_pod/spawner/directional/south,
-/obj/structure/window/reinforced/survival_pod/spawner/directional/west,
-/obj/structure/grille,
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/services_north)
-"bUa" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod/end{
-	dir = 8
-	},
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/bridge)
 "bZt" = (
 /obj/machinery/button/door{
 	id = "lockdown";
@@ -227,23 +197,13 @@
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "don" = (
-/obj/structure/window/reinforced/survival_pod/spawner/directional/east,
-/obj/structure/window/reinforced/survival_pod/spawner/directional/south,
-/obj/structure/grille,
 /obj/machinery/door/poddoor/preopen{
 	name = "Lockdown";
 	id = "lockdown"
 	},
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
-"dAK" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod/end,
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/services_north)
 "dZs" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 6
@@ -276,11 +236,11 @@
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "fqs" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod,
 /obj/machinery/door/poddoor/preopen{
 	name = "Lockdown";
 	id = "lockdown"
 	},
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "fIL" = (
@@ -315,7 +275,7 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "gDl" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod,
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "gPP" = (
@@ -327,13 +287,11 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "gSu" = (
-/obj/structure/window/reinforced/survival_pod/spawner/directional/east,
-/obj/structure/window/reinforced/survival_pod/spawner/directional/south,
-/obj/structure/grille,
 /obj/machinery/door/poddoor/preopen{
 	name = "Lockdown";
 	id = "lockdown"
 	},
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "hht" = (
@@ -393,16 +351,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
-"jdz" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod/end{
-	dir = 8
-	},
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/services_south)
 "jwj" = (
 /obj/machinery/door/firedoor,
 /obj/structure/cable,
@@ -415,11 +363,11 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "jAn" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod,
 /obj/machinery/door/poddoor/preopen{
 	name = "Lockdown";
 	id = "lockdown"
 	},
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "jEq" = (
@@ -431,29 +379,9 @@
 "kgg" = (
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
-"lMz" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod/middle{
-	dir = 4
-	},
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/bridge)
 "mjc" = (
 /turf/open/floor/carpet/black,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
-"mkZ" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod/end{
-	dir = 1
-	},
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/services_south)
 "mtW" = (
 /obj/machinery/airalarm/directional/east,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -755,13 +683,11 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/ship_nanobead/hall)
 "raL" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod/end{
-	dir = 8
-	},
 /obj/machinery/door/poddoor/preopen{
 	name = "Lockdown";
 	id = "lockdown"
 	},
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "rry" = (
@@ -829,16 +755,6 @@
 	dir = 8
 	},
 /turf/open/floor/iron/dark/smooth_large,
-/area/shuttle/voidcrew/ship_nanobead/bridge)
-"syN" = (
-/obj/structure/window/reinforced/survival_pod/spawner/directional/east,
-/obj/structure/window/reinforced/survival_pod/spawner/directional/north,
-/obj/structure/grille,
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "sNe" = (
 /obj/machinery/computer/security{
@@ -927,7 +843,7 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "vfh" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod,
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "vrz" = (
@@ -952,22 +868,12 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "vzP" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod,
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "vSc" = (
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
-"whC" = (
-/obj/structure/window/reinforced/survival_pod/spawner/directional/east,
-/obj/structure/window/reinforced/survival_pod/spawner/directional/north,
-/obj/structure/grille,
-/obj/machinery/door/poddoor/preopen{
-	name = "Lockdown";
-	id = "lockdown"
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/ship_nanobead/services_north)
 "wiz" = (
 /obj/machinery/door/airlock/external{
 	name = "Docking Airlock"
@@ -1006,7 +912,7 @@
 	},
 /area/shuttle/voidcrew/ship_nanobead/hall)
 "wRR" = (
-/obj/effect/spawner/structure/window/hollow/survival_pod,
+/obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "xgP" = (
@@ -1422,13 +1328,13 @@ gsj
 gsj
 gsj
 gsj
-jdz
+don
 tHe
 "}
 (17,1,1) = {"
 uGk
-whC
-bRU
+raL
+raL
 pmQ
 pmQ
 pmQ
@@ -1442,15 +1348,15 @@ gsj
 gsj
 gsj
 gsj
-aPx
+don
 don
 uGk
 "}
 (18,1,1) = {"
 uGk
 uGk
-whC
-dAK
+raL
+raL
 pmQ
 pmQ
 ffX
@@ -1462,7 +1368,7 @@ jEq
 doi
 gsj
 gsj
-mkZ
+don
 don
 uGk
 uGk
@@ -1517,11 +1423,11 @@ uGk
 uGk
 uGk
 kgg
-bUa
+gSu
 fSb
 oza
 sNe
-bUa
+gSu
 kgg
 uGk
 uGk
@@ -1538,10 +1444,10 @@ uGk
 uGk
 uGk
 uGk
-syN
-lMz
-lMz
-lMz
+gSu
+gSu
+gSu
+gSu
 gSu
 uGk
 uGk

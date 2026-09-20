@@ -901,14 +901,13 @@
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/voidcrew/squab/office)
 "fGr" = (
-/obj/machinery/power/port_gen/pacman/super{
-	cable_layer = 1;
-	anchored = 1
-	},
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
 	},
-/obj/structure/cable/layer1,
+/obj/structure/cable,
+/obj/machinery/power/port_gen/pacman/super{
+	anchored = 1
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/engineering)
 "fJT" = (
@@ -1315,10 +1314,6 @@
 	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/squab/cargobay)
-"iAB" = (
-/obj/structure/cable/layer1,
-/turf/open/floor/iron/dark/textured,
-/area/shuttle/voidcrew/squab/engineering)
 "iCa" = (
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 8
@@ -2122,8 +2117,6 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/bridge)
 "nPS" = (
-/obj/structure/cable,
-/obj/structure/cable/layer1,
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "nRf" = (
@@ -2795,7 +2788,6 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
 	},
-/obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "tka" = (
@@ -3226,10 +3218,7 @@
 /turf/open/floor/iron/white/smooth_edge,
 /area/shuttle/voidcrew/squab/bathroom)
 "wjx" = (
-/obj/machinery/power/terminal{
-	cable_layer = 1
-	},
-/obj/structure/cable/layer1,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/engineering)
 "wnG" = (
@@ -3462,6 +3451,9 @@
 /obj/structure/closet/crate/nakamura,
 /obj/item/stack/sheet/mineral/uranium/five,
 /obj/item/stack/sheet/mineral/uranium/five,
+/obj/machinery/power/terminal{
+	dir = 8
+	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/engineering)
 "yah" = (
@@ -3638,7 +3630,7 @@ xyY
 tNK
 iQv
 tgP
-iAB
+nPS
 fGr
 wDp
 jKO

@@ -94,9 +94,7 @@
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 6
 	},
-/obj/machinery/atmospherics/components/tank{
-	dir = 8
-	},
+/obj/structure/reagent_dispensers/plumbed/fuel,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "cdG" = (

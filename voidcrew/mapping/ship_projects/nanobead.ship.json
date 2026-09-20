@@ -1,10 +1,10 @@
 {
   "Version": 1,
   "ID": "ship_nanobead",
-  "Description": "",
+  "Description": "A compact ship including 2 biomedical rooms and 2 service rooms along a central hallway, capped by command and engine maintenance on either side.",
   "Hull": {
     "Type": "/datum/map_template/shuttle/voidcrew/ship_nanobead",
-    "Name": "NanoBead",
+    "Name": "NanoBead-Class Corvette",
     "Prefix": "_maps/voidcrew/ships/",
     "Port": "ship",
     "Suffix": "nanobead",

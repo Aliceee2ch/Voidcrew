@@ -20,14 +20,17 @@
           "gloves": "",
           "head": "/obj/item/clothing/head/hats/hos/cap/syndicate",
           "id": "/obj/item/card/id/advanced/gold",
-          "l_pocket": "/obj/item/gun/ballistic/revolver",
+          "l_pocket": "",
           "mask": "",
           "neck": "",
           "shoes": "/obj/item/clothing/shoes/workboots/black",
           "suit": "/obj/item/clothing/suit/armor/vest/capcarapace/syndicate",
           "uniform": "/obj/item/clothing/under/costume/dutch/syndicate"
         },
-        "Backpack": null,
+        "Backpack": {
+          "/obj/item/gun/ballistic/revolver": 1,
+          "/obj/item/melee/baton/telescopic/gold": 1
+        },
         "Belt": null,
         "Extra": null
       },
@@ -40,7 +43,7 @@
         "Slots": 1,
         "Officer": false,
         "Equipment": {
-          "accessory": "",
+          "accessory": "/obj/item/clothing/accessory/medal/gold",
           "back": "/obj/item/storage/backpack/messenger",
           "belt": "/obj/item/modular_computer/pda/assistant",
           "gloves": "",
@@ -64,15 +67,19 @@
         "Equipment": {
           "accessory": "/obj/item/clothing/accessory/armband/engine",
           "back": "/obj/item/storage/backpack/messenger/eng",
-          "belt": "/obj/item/modular_computer/pda/engineering",
+          "belt": "/obj/item/storage/belt/utility/full/engi",
           "ears": "/obj/item/radio/headset/headset_eng",
           "glasses": "/obj/item/clothing/glasses/meson/engine",
           "head": "/obj/item/clothing/head/utility/hardhat/orange",
-          "shoes": "/obj/item/clothing/shoes/workboots",
+          "l_hand": "",
+          "l_pocket": "/obj/item/modular_computer/pda/engineering",
+          "shoes": "/obj/item/clothing/shoes/workboots/black",
           "suit": "",
           "uniform": "/obj/item/clothing/under/rank/engineering/engineer/hazard"
         },
-        "Backpack": null,
+        "Backpack": {
+          "/obj/item/construction/rcd": 1
+        },
         "Belt": null,
         "Extra": null
       }
@@ -93,13 +100,16 @@
           "gloves": "",
           "head": "/obj/item/clothing/head/hats/centcom_cap",
           "id": "/obj/item/card/id/advanced/gold",
-          "l_pocket": "/obj/item/gun/ballistic/revolver",
+          "l_pocket": "",
           "mask": "",
           "neck": "",
           "suit": "/obj/item/clothing/suit/armor/centcom_formal",
           "uniform": "/obj/item/clothing/under/rank/centcom/commander"
         },
-        "Backpack": null,
+        "Backpack": {
+          "/obj/item/gun/ballistic/revolver": 1,
+          "/obj/item/melee/baton/telescopic/gold": 1
+        },
         "Belt": null,
         "Extra": null
       },
@@ -112,7 +122,7 @@
         "Slots": 1,
         "Officer": false,
         "Equipment": {
-          "accessory": "",
+          "accessory": "/obj/item/clothing/accessory/medal/gold",
           "back": "/obj/item/storage/backpack/messenger",
           "belt": "/obj/item/modular_computer/pda/assistant",
           "gloves": "",
@@ -136,14 +146,18 @@
         "Equipment": {
           "accessory": "/obj/item/clothing/accessory/armband/engine",
           "back": "/obj/item/storage/backpack/messenger/eng",
-          "belt": "/obj/item/modular_computer/pda/engineering",
+          "belt": "/obj/item/storage/belt/utility/full/engi",
           "ears": "/obj/item/radio/headset/headset_eng",
           "glasses": "/obj/item/clothing/glasses/meson/engine",
-          "head": "/obj/item/clothing/head/utility/hardhat/welding",
+          "head": "/obj/item/clothing/head/utility/hardhat",
+          "l_hand": "",
+          "l_pocket": "/obj/item/modular_computer/pda/engineering",
           "shoes": "/obj/item/clothing/shoes/workboots",
           "uniform": "/obj/item/clothing/under/rank/engineering/engineer"
         },
-        "Backpack": null,
+        "Backpack": {
+          "/obj/item/construction/rcd": 1
+        },
         "Belt": null,
         "Extra": null
       }
@@ -896,6 +910,7 @@
             "belt": "/obj/item/modular_computer/pda/assistant",
             "gloves": "",
             "head": "/obj/item/clothing/head/soft/black",
+            "mask": "",
             "shoes": "/obj/item/clothing/shoes/workboots/black",
             "suit": "",
             "uniform": "/obj/item/clothing/under/syndicate"

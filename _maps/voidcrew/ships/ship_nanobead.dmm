@@ -192,6 +192,7 @@
 	},
 /obj/machinery/power/rtg,
 /obj/structure/cable,
+/obj/machinery/firealarm/directional/east,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "dPd" = (
@@ -427,7 +428,6 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "jZi" = (
-/obj/machinery/airalarm/directional/east,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
@@ -515,6 +515,7 @@
 	},
 /obj/machinery/power/rtg,
 /obj/structure/cable,
+/obj/machinery/airalarm/directional/east,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "mEl" = (
@@ -694,7 +695,6 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "qtf" = (
-/obj/machinery/firealarm/directional/east,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},

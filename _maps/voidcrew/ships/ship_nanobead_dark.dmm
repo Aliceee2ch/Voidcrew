@@ -27,6 +27,7 @@
 /obj/item/stack/sheet/glass/fifty,
 /obj/item/circuitboard/machine/ore_silo,
 /obj/item/circuitboard/machine/autolathe,
+/obj/machinery/duct,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "aya" = (
@@ -54,6 +55,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 1
 	},
+/obj/machinery/duct,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "aBM" = (
@@ -236,7 +238,6 @@
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "eFW" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
@@ -282,7 +283,6 @@
 "gPP" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 4
 	},
@@ -332,11 +332,10 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/services_south)
 "ipK" = (
-/obj/machinery/shower/directional/north,
-/obj/structure/fluff/shower_drain,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 10
 	},
+/obj/structure/tank_dispenser/oxygen,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "iGZ" = (
@@ -349,6 +348,7 @@
 	},
 /obj/machinery/light/directional/west,
 /obj/machinery/power/rtg/advanced,
+/obj/machinery/duct,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "jdz" = (
@@ -396,10 +396,11 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/airalarm/directional/east,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 4
 	},
+/obj/machinery/shower/directional/west,
+/obj/structure/fluff/shower_drain,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "mxr" = (
@@ -442,6 +443,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 8
 	},
+/obj/machinery/duct,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "mIx" = (
@@ -467,7 +469,6 @@
 /area/shuttle/voidcrew/ship_nanobead/hall)
 "nfo" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
@@ -513,7 +514,6 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "nGW" = (
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 8
 	},
@@ -807,7 +807,6 @@
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "upq" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 4
 	},
@@ -817,7 +816,6 @@
 "uts" = (
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 5
 	},
@@ -855,6 +853,7 @@
 	name = "Waste To Exhaust"
 	},
 /obj/structure/cable,
+/obj/machinery/duct,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "vfh" = (
@@ -872,6 +871,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 8
 	},
+/obj/machinery/duct,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "vuG" = (
@@ -976,10 +976,11 @@
 "xQL" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/firealarm/directional/east,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 4
 	},
+/obj/machinery/shower/directional/west,
+/obj/structure/fluff/shower_drain,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "xTF" = (
@@ -997,7 +998,6 @@
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 1
 	},
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 6
 	},

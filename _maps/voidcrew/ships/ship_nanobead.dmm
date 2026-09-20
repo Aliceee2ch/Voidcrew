@@ -144,11 +144,10 @@
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "djX" = (
-/obj/machinery/shower/directional/north,
-/obj/structure/fluff/shower_drain,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 10
 	},
+/obj/structure/tank_dispenser/oxygen,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "dlZ" = (
@@ -279,7 +278,6 @@
 /area/shuttle/voidcrew/ship_nanobead/services_north)
 "fKo" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/corner,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
@@ -356,6 +354,7 @@
 	},
 /obj/machinery/light/directional/west,
 /obj/machinery/power/rtg/advanced,
+/obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "hdx" = (
@@ -375,6 +374,7 @@
 /obj/structure/closet/crate,
 /obj/item/circuitboard/machine/ore_silo,
 /obj/item/circuitboard/machine/autolathe,
+/obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "ivD" = (
@@ -397,6 +397,7 @@
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
 	},
+/obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "iVR" = (
@@ -411,16 +412,16 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/airalarm/directional/east,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},
+/obj/machinery/shower/directional/west,
+/obj/structure/fluff/shower_drain,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "kol" = (
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 5
 	},
@@ -561,7 +562,6 @@
 "nNg" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 4
 	},
@@ -616,10 +616,10 @@
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 8
 	},
+/obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "oXG" = (
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 8
 	},
@@ -661,10 +661,11 @@
 "qtf" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/machinery/firealarm/directional/east,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 4
 	},
+/obj/machinery/shower/directional/west,
+/obj/structure/fluff/shower_drain,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "qtE" = (
@@ -710,7 +711,6 @@
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "rDn" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 4
 	},
@@ -740,6 +740,7 @@
 	name = "Waste To Exhaust"
 	},
 /obj/structure/cable,
+/obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "twf" = (
@@ -809,6 +810,7 @@
 /obj/effect/turf_decal/siding/wideplating_new/corner{
 	dir = 1
 	},
+/obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "uFW" = (
@@ -842,7 +844,6 @@
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 1
 	},
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 6
 	},
@@ -960,7 +961,6 @@
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "xWm" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/duct,
 /obj/effect/turf_decal/siding/wideplating_new/corner,
 /obj/structure/cable,
 /turf/open/floor/iron/textured_large,

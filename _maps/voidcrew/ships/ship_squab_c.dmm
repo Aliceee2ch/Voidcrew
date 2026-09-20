@@ -1067,12 +1067,6 @@
 	},
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/squab/central_hallway)
-"gGy" = (
-/obj/machinery/power/terminal{
-	cable_layer = 1
-	},
-/turf/closed/wall/mineral/titanium/survival,
-/area/shuttle/voidcrew/squab/bathroom)
 "gJv" = (
 /obj/machinery/power/terminal{
 	dir = 8
@@ -1781,6 +1775,12 @@
 	},
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/squab/bridge)
+"lWh" = (
+/obj/machinery/power/terminal{
+	cable_layer = 1
+	},
+/turf/closed/wall/mineral/titanium/survival,
+/area/shuttle/voidcrew/squab/bathroom)
 "lXg" = (
 /obj/effect/turf_decal/siding/wideplating_new{
 	dir = 8
@@ -3351,11 +3351,13 @@
 	},
 /obj/structure/cable,
 /obj/structure/closet/crate/nakamura,
-/obj/item/stack/sheet/mineral/uranium/five,
-/obj/item/stack/sheet/mineral/uranium/five,
 /obj/machinery/power/terminal{
 	dir = 8
 	},
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/engineering)
 "ydi" = (
@@ -3547,7 +3549,7 @@ mvm
 gGr
 lOk
 dzY
-gGy
+lWh
 rYU
 rNz
 fnv

@@ -3449,11 +3449,13 @@
 	},
 /obj/structure/cable,
 /obj/structure/closet/crate/nakamura,
-/obj/item/stack/sheet/mineral/uranium/five,
-/obj/item/stack/sheet/mineral/uranium/five,
 /obj/machinery/power/terminal{
 	dir = 8
 	},
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/engineering)
 "yah" = (

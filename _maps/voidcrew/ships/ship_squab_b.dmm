@@ -752,11 +752,13 @@
 	},
 /obj/structure/cable,
 /obj/structure/closet/crate/nakamura,
-/obj/item/stack/sheet/mineral/uranium/five,
-/obj/item/stack/sheet/mineral/uranium/five,
 /obj/machinery/power/terminal{
 	dir = 8
 	},
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
+/obj/item/stack/sheet/mineral/uranium/five,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/engineering)
 "fja" = (
@@ -858,9 +860,6 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/cargobay)
-"fuU" = (
-/turf/open/floor/iron/dark/textured,
-/area/shuttle/voidcrew/squab/engineering)
 "fzK" = (
 /obj/effect/turf_decal/siding/white/corner{
 	dir = 4
@@ -3036,6 +3035,9 @@
 /obj/effect/turf_decal/tile/yellow/half,
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/engineering)
+"vxy" = (
+/turf/open/floor/iron/dark/textured,
+/area/shuttle/voidcrew/squab/engineering)
 "vAe" = (
 /obj/machinery/power/terminal{
 	dir = 8
@@ -3499,7 +3501,7 @@ sSH
 ljg
 baT
 wrB
-fuU
+vxy
 fhq
 lpf
 lpf
@@ -3521,7 +3523,7 @@ lkY
 brU
 oHz
 xnr
-fuU
+vxy
 vKl
 lpf
 bpX

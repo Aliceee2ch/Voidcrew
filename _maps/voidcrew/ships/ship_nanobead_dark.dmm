@@ -349,6 +349,7 @@
 /obj/machinery/power/rtg/advanced,
 /obj/machinery/duct,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
+/obj/machinery/camera/autoname/directional/west,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "jwj" = (
@@ -828,6 +829,7 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 4
 	},
+/obj/machinery/camera/autoname/directional/north,
 /turf/open/floor/iron/dark/smooth_large,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "uGk" = (
@@ -907,6 +909,7 @@
 	pixel_w = 3;
 	pixel_z = 5
 	},
+/obj/machinery/camera/autoname/directional/north,
 /turf/open/floor/iron/dark/smooth_edge{
 	dir = 1
 	},
@@ -990,7 +993,7 @@
 /obj/item/clothing/mask/gas,
 /obj/structure/closet{
 	icon_state = "atmos";
-	icon_door = "atmos_door"
+	icon_door = "atmos"
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)

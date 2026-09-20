@@ -88,6 +88,7 @@
 /obj/effect/turf_decal/siding/thinplating_new{
 	dir = 4
 	},
+/obj/machinery/camera/autoname/directional/north,
 /turf/open/floor/iron/large,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
 "bIW" = (
@@ -371,6 +372,7 @@
 /obj/machinery/power/rtg/advanced,
 /obj/machinery/duct,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/hidden,
+/obj/machinery/camera/autoname/directional/west,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "hdx" = (
@@ -579,6 +581,7 @@
 	pixel_w = 3;
 	pixel_z = 5
 	},
+/obj/machinery/camera/autoname/directional/north,
 /turf/open/floor/iron/edge{
 	dir = 1
 	},
@@ -891,7 +894,7 @@
 	},
 /obj/structure/closet{
 	icon_state = "atmos";
-	icon_door = "atmos_door"
+	icon_door = "atmos"
 	},
 /obj/item/extinguisher/advanced,
 /obj/item/storage/toolbox/mechanical,

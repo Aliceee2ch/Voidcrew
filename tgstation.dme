@@ -6717,6 +6717,7 @@
 #include "voidcrew\_HELPERS\stock_parts.dm"
 #include "voidcrew\_strings\star_names.dm"
 #include "voidcrew\area\colosseum.dm"
+#include "voidcrew\area\kudzu_ban.dm"
 #include "voidcrew\area\lich.dm"
 #include "voidcrew\area\megafauna_ban.dm"
 #include "voidcrew\area\ship_areas.dm"

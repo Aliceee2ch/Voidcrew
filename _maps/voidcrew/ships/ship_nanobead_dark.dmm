@@ -110,7 +110,7 @@
 	name = "Biomedical South"
 	},
 /turf/open/floor/iron/dark/textured_large,
-/area/shuttle/voidcrew/ship_nanobead/biomedical_north)
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "biW" = (
 /obj/machinery/holopad,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -136,6 +136,9 @@
 "buY" = (
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/ship_nanobead/maint)
+"bIc" = (
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "bRU" = (
 /obj/structure/window/reinforced/survival_pod/spawner/directional/south,
 /obj/structure/window/reinforced/survival_pod/spawner/directional/west,
@@ -338,7 +341,6 @@
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "iGZ" = (
 /obj/machinery/power/apc/auto_name/directional/west,
-/obj/machinery/power/rtg,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -346,6 +348,7 @@
 	dir = 8
 	},
 /obj/machinery/light/directional/west,
+/obj/machinery/power/rtg/advanced,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "jdz" = (
@@ -368,6 +371,9 @@
 "jEq" = (
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
+"jNC" = (
+/turf/closed/wall/mineral/plastitanium/nodiagonal,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "kgg" = (
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
@@ -479,7 +485,7 @@
 	key = "Biomedical_South"
 	},
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
-/area/shuttle/voidcrew/ship_nanobead/biomedical_north)
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "nvr" = (
 /obj/structure/extinguisher_cabinet/directional/south,
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -517,6 +523,9 @@
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
+"nJP" = (
+/turf/closed/wall/mineral/plastitanium,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "nVa" = (
 /obj/machinery/light/directional/south,
 /obj/machinery/light_switch/directional/west,
@@ -848,6 +857,10 @@
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
+"vfh" = (
+/obj/effect/spawner/structure/window/hollow/survival_pod,
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "vrz" = (
 /obj/machinery/power/terminal{
 	dir = 8
@@ -1139,12 +1152,12 @@ vSc
 hth
 xpi
 hth
-vSc
-vSc
-vSc
-vSc
-tmq
-tmq
+jNC
+jNC
+jNC
+jNC
+nJP
+nJP
 uGk
 uGk
 "}
@@ -1160,13 +1173,13 @@ vSc
 oca
 rTg
 nVa
-vSc
-xUL
-xUL
-xUL
-xUL
+jNC
+bIc
+bIc
+bIc
+bIc
 nsk
-tmq
+nJP
 uGk
 "}
 (9,1,1) = {"
@@ -1181,13 +1194,13 @@ aMR
 aBM
 hht
 pha
-aMR
-xUL
-xUL
-xUL
-xUL
-xUL
-aMR
+vfh
+bIc
+bIc
+bIc
+bIc
+bIc
+vfh
 uGk
 "}
 (10,1,1) = {"
@@ -1203,12 +1216,12 @@ rKL
 hht
 bjc
 bdL
-xUL
-xUL
-xUL
-xUL
-xUL
-tmq
+bIc
+bIc
+bIc
+bIc
+bIc
+nJP
 uGk
 "}
 (11,1,1) = {"
@@ -1223,13 +1236,13 @@ aMR
 qaV
 hht
 oGc
-aMR
-xUL
-xUL
-xUL
-xUL
-xUL
-aMR
+vfh
+bIc
+bIc
+bIc
+bIc
+bIc
+vfh
 uGk
 "}
 (12,1,1) = {"
@@ -1244,14 +1257,14 @@ vSc
 wRL
 hht
 xgP
-vSc
-vSc
-vSc
-aMR
-vSc
-vSc
-tmq
-tmq
+jNC
+jNC
+jNC
+vfh
+jNC
+jNC
+nJP
+nJP
 "}
 (13,1,1) = {"
 tOW

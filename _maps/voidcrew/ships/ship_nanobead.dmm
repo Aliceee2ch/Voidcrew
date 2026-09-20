@@ -36,6 +36,9 @@
 	dir = 1
 	},
 /area/shuttle/voidcrew/ship_nanobead/hall)
+"ayP" = (
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "aKV" = (
 /obj/effect/turf_decal/trimline/neutral/filled/line{
 	dir = 1
@@ -342,10 +345,9 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/duct,
 /turf/open/floor/iron/textured_large,
-/area/shuttle/voidcrew/ship_nanobead/biomedical_north)
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "gZP" = (
 /obj/machinery/power/apc/auto_name/directional/west,
-/obj/machinery/power/rtg,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange/visible,
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -353,8 +355,12 @@
 	dir = 8
 	},
 /obj/machinery/light/directional/west,
+/obj/machinery/power/rtg/advanced,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/ship_nanobead/maint)
+"hdx" = (
+/turf/closed/wall/mineral/titanium/interior,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "hHh" = (
 /turf/closed/wall/mineral/titanium/interior,
 /area/shuttle/voidcrew/ship_nanobead/bridge)
@@ -504,6 +510,9 @@
 	dir = 1
 	},
 /area/shuttle/voidcrew/ship_nanobead/hall)
+"mQi" = (
+/turf/closed/wall/mineral/titanium,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "mTl" = (
 /obj/machinery/door/firedoor,
 /obj/machinery/door/airlock/titanium/glass{
@@ -564,7 +573,7 @@
 	key = "Biomedical_South"
 	},
 /turf/closed/wall/mineral/titanium/nodiagonal,
-/area/shuttle/voidcrew/ship_nanobead/biomedical_north)
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "oxI" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -761,6 +770,10 @@
 "tPU" = (
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/ship_nanobead/services_north)
+"tRZ" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle,
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/ship_nanobead/biomedical_south)
 "tYU" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -1095,12 +1108,12 @@ kAU
 qje
 dPd
 qje
-kAU
-kAU
-kAU
-kAU
-nHe
-nHe
+hdx
+hdx
+hdx
+hdx
+mQi
+mQi
 kxb
 kxb
 "}
@@ -1116,13 +1129,13 @@ kAU
 gCW
 xbN
 dlZ
-kAU
-xVJ
-xVJ
-xVJ
-xVJ
+hdx
+ayP
+ayP
+ayP
+ayP
 ohd
-nHe
+mQi
 kxb
 "}
 (9,1,1) = {"
@@ -1137,13 +1150,13 @@ jHE
 wAm
 rkI
 ahI
-jHE
-xVJ
-xVJ
-xVJ
-xVJ
-xVJ
-jHE
+tRZ
+ayP
+ayP
+ayP
+ayP
+ayP
+tRZ
 kxb
 "}
 (10,1,1) = {"
@@ -1159,12 +1172,12 @@ aiq
 rkI
 cfI
 gYl
-xVJ
-xVJ
-xVJ
-xVJ
-xVJ
-nHe
+ayP
+ayP
+ayP
+ayP
+ayP
+mQi
 kxb
 "}
 (11,1,1) = {"
@@ -1179,13 +1192,13 @@ jHE
 lFG
 rkI
 uou
-jHE
-xVJ
-xVJ
-xVJ
-xVJ
-xVJ
-jHE
+tRZ
+ayP
+ayP
+ayP
+ayP
+ayP
+tRZ
 kxb
 "}
 (12,1,1) = {"
@@ -1200,14 +1213,14 @@ kAU
 nLi
 rkI
 gkk
-kAU
-kAU
-kAU
-jHE
-kAU
-kAU
-nHe
-nHe
+hdx
+hdx
+hdx
+tRZ
+hdx
+hdx
+mQi
+mQi
 "}
 (13,1,1) = {"
 ahq

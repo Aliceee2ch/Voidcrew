@@ -1333,6 +1333,7 @@
 	return throw_at(target, range, speed, thrower, spin, diagonals_first, callback, force, gentle)
 
 ///If this returns FALSE then callback will not be called.
+// VOIDCREW EDIT START - PR #405: Stop orphaning thrownthing datums on re-throw.
 /atom/movable/proc/throw_at(atom/target, range, speed, mob/thrower, spin = TRUE, diagonals_first = FALSE, datum/callback/callback, force = MOVE_FORCE_STRONG, gentle = FALSE, quickstart = TRUE, throw_datum_typepath = /datum/thrownthing)
 	. = FALSE
 
@@ -1429,6 +1430,7 @@
 	if (quickstart)
 		thrown_thing.tick()
 
+// VOIDCREW EDIT END
 /atom/movable/proc/handle_buckled_mob_movement(newloc, direct, glide_size_override)
 	for(var/mob/living/buckled_mob as anything in buckled_mobs)
 		if(!buckled_mob.Move(newloc, direct, glide_size_override)) //If a mob buckled to us can't make the same move as us

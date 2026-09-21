@@ -280,7 +280,7 @@
 #include "security_officer_distribution.dm"
 #include "serving_tray.dm"
 #include "shuttle_cling_lifecycle.dm"
-#include "shuttle_cling_rethrow.dm"
+#include "../../../voidcrew/modules/unit_tests/shuttle_cling_rethrow.dm" // VOIDCREW EDIT ADDITION
 #include "shuttle_load_ownership.dm"
 #include "simple_animal_freeze.dm"
 #include "siunit.dm"
@@ -318,7 +318,7 @@
 #include "tail_wag.dm"
 #include "teleporters.dm"
 #include "throw_cleanup.dm"
-#include "throw_rethrow.dm"
+#include "../../../voidcrew/modules/unit_tests/throw_rethrow.dm" // VOIDCREW EDIT ADDITION
 #include "text.dm"
 #include "tgui_create_message.dm"
 #include "timer_sanity.dm"

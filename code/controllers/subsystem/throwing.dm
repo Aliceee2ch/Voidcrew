@@ -1,10 +1,6 @@
 #define MAX_THROWING_DIST 1280 // 5 z-levels on default width
 #define MAX_TICKS_TO_MAKE_UP 3 //how many missed ticks will we attempt to make up for this run.
 
-/// VOIDCREW: number of /datum/thrownthing instances currently alive (created and not yet destroyed).
-/// Compared against length(SSthrowing.processing) this exposes throws that outlived their queue entry.
-GLOBAL_VAR_INIT(thrownthing_alive, 0)
-
 SUBSYSTEM_DEF(throwing)
 	name = "Throwing"
 	priority = FIRE_PRIORITY_THROWING
@@ -15,11 +11,14 @@ SUBSYSTEM_DEF(throwing)
 	var/list/currentrun
 	var/list/processing = list()
 
+// VOIDCREW EDIT START - PR #405: Stop orphaning thrownthing datums on re-throw.
 /datum/controller/subsystem/throwing/stat_entry(msg)
 	msg = "P:[length(processing)] A:[GLOB.thrownthing_alive]"
 	return ..()
 
 
+// VOIDCREW EDIT END
+// VOIDCREW EDIT START - PR #405: Stop orphaning thrownthing datums on re-throw.
 /datum/controller/subsystem/throwing/fire(resumed = 0)
 	if (!resumed)
 		src.currentrun = processing.Copy()
@@ -46,6 +45,7 @@ SUBSYSTEM_DEF(throwing)
 
 	currentrun = null
 
+// VOIDCREW EDIT END
 /datum/thrownthing
 	///Defines the atom that has been thrown (Objects and Mobs, mostly.)
 	var/atom/movable/thrownthing
@@ -98,6 +98,7 @@ SUBSYSTEM_DEF(throwing)
 	/// If our thrownthing has been blocked
 	var/blocked = FALSE
 
+// VOIDCREW EDIT START - PR #405: Stop orphaning thrownthing datums on re-throw.
 /datum/thrownthing/New(thrownthing, target, init_dir, maxrange, speed, thrower, diagonals_first, force, gentle, callback, target_zone)
 	. = ..()
 	GLOB.thrownthing_alive++
@@ -118,6 +119,8 @@ SUBSYSTEM_DEF(throwing)
 	src.callback = callback
 	src.target_zone = target_zone
 
+// VOIDCREW EDIT END
+// VOIDCREW EDIT START - PR #405: Stop orphaning thrownthing datums on re-throw.
 /datum/thrownthing/Destroy()
 	GLOB.thrownthing_alive--
 	// Only release what still belongs to this throw. A newer throw_at() on the same atom
@@ -137,6 +140,7 @@ SUBSYSTEM_DEF(throwing)
 	return ..()
 
 ///Defines the datum behavior on the thrownthing's qdeletion event.
+// VOIDCREW EDIT END
 /datum/thrownthing/proc/on_thrownthing_qdel(atom/movable/source, force)
 	SIGNAL_HANDLER
 
@@ -148,6 +152,7 @@ SUBSYSTEM_DEF(throwing)
 	if(isnull(.))
 		thrower = null
 
+// VOIDCREW EDIT START - PR #405: Stop orphaning thrownthing datums on re-throw.
 /datum/thrownthing/proc/tick()
 	var/atom/movable/AM = thrownthing
 	if (!isturf(AM.loc) || !AM.throwing)
@@ -222,6 +227,8 @@ SUBSYSTEM_DEF(throwing)
 			finalize()
 			return
 
+// VOIDCREW EDIT END
+// VOIDCREW EDIT START - PR #405: Stop orphaning thrownthing datums on re-throw.
 /datum/thrownthing/proc/finalize(hit = FALSE, target=null)
 	set waitfor = FALSE
 	//done throwing, either because it hit something or it finished moving
@@ -275,3 +282,4 @@ SUBSYSTEM_DEF(throwing)
 
 #undef MAX_THROWING_DIST
 #undef MAX_TICKS_TO_MAKE_UP
+// VOIDCREW EDIT END

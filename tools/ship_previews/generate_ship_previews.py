@@ -19,7 +19,8 @@ nothing. We repair that here:
     is translucent so the grille stays visible)
 
 Outputs (commit these):
-    voidcrew/modules/ship_upgrades/previews/*.preview.json
+    voidcrew/modules/ship_upgrades/previews/hulls/*.preview.json
+    voidcrew/modules/ship_upgrades/previews/modules/**/*.preview.json
     voidcrew/modules/ship_upgrades/previews/*.png
 
 Run from the repo root after editing modular hulls or modules:
@@ -39,7 +40,6 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from urllib.parse import quote
 
 from PIL import Image
 
@@ -518,29 +518,67 @@ def module_geometry(dmm: Dmm) -> dict:
     return {"width": dmm.width, "height": dmm.height, "connector": [cx, cy]}
 
 
+def metadata_path(output: Path, group: str, key: str) -> Path:
+    if group == "modules":
+        if not key.endswith(".dmm"):
+            raise ValueError(f"Expected a module map filename: {key}")
+        key = key.removesuffix(".dmm")
+    parts = key.split("/")
+    if any(not part or part in (".", "..") or part != part.strip()
+           or part.endswith(".") or any(c in part for c in '<>:"\\|?*\0')
+           or any(ord(c) < 32 for c in part) for part in parts):
+        raise ValueError(f"Invalid preview metadata key: {key}")
+    path = output / group / (key + ".preview.json")
+    for parent in (path, *path.parents):
+        if parent == output:
+            break
+        if parent.is_symlink() or getattr(parent, "is_junction", lambda: False)():
+            raise ValueError(f"Preview metadata must not contain links: {parent}")
+    return path
+
+
+def preview_metadata_files(output: Path):
+    yield from output.glob("*.preview.json")
+
+    def collect(folder):
+        if folder.is_symlink() or getattr(folder, "is_junction", lambda: False)():
+            raise ValueError(f"Preview metadata must not contain links: {folder}")
+        if not folder.exists():
+            return
+        for path in folder.iterdir():
+            if path.is_dir() or path.is_symlink():
+                yield from collect(path)
+            elif path.name.endswith(".preview.json"):
+                yield path
+
+    for group in ("hulls", "modules"):
+        yield from collect(output / group)
+
+
 def write_preview_metadata(manifest: dict, output: Path) -> None:
     """Keep unrelated hull/module changes in separate, deterministic files."""
     files = {}
-    for group, prefix in (("hulls", "hull"), ("modules", "module")):
+    for group in ("hulls", "modules"):
         for key, entry in manifest[group].items():
-            name = f"{prefix}.{quote(key, safe='')}.preview.json"
+            path = metadata_path(output, group, key)
             document = {"tile_px": manifest["tile_px"], "hulls": {}, "modules": {}}
             document[group][key] = entry
-            files[name] = (json.dumps(document, indent=1, sort_keys=True) + "\n").encode("utf-8")
+            files[path] = (json.dumps(document, indent=1, sort_keys=True) + "\n").encode("utf-8")
     if not files:
         raise RuntimeError("No ship preview metadata generated")
     output.mkdir(parents=True, exist_ok=True)
-    for name, data in files.items():
-        path = output / name
+    previous = list(preview_metadata_files(output))
+    for path, data in files.items():
         if path.exists() and path.read_bytes() == data:
             continue
-        with tempfile.NamedTemporaryFile(dir=output, delete=False) as temporary:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
             temporary.write(data)
         os.replace(temporary.name, path)
     # This namespace belongs to the generator. Retire deleted/renamed entries
     # and the old combined index only after all current entries were written.
-    for path in output.glob("*.preview.json"):
-        if path.name not in files:
+    for path in previous:
+        if path not in files:
             path.unlink()
     (output / "manifest.json").unlink(missing_ok=True)
 

@@ -69,7 +69,7 @@ class ModuleDiscoveryTests(unittest.TestCase):
                     contextlib.redirect_stdout(io.StringIO()):
                 previews.main()
             manifest = {"hulls": {}, "modules": {}}
-            for path in output.glob("*.preview.json"):
+            for path in output.rglob("*.preview.json"):
                 document = json.loads(path.read_text())
                 for group in manifest:
                     manifest[group].update(document[group])
@@ -94,24 +94,34 @@ class MetadataTests(unittest.TestCase):
             }, "modules": {"alpha/room.dmm": {"themes": {"blue": {"png": "room_blue.png"}}}}}
             (output / "manifest.json").write_text(json.dumps(manifest))
             previews.write_preview_metadata(manifest, output)
-            before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in output.iterdir()}
+            before = {p.relative_to(output).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns) for p in output.rglob("*.preview.json")}
             manifest["hulls"]["alpha"]["src_md5"] = "new"
             previews.write_preview_metadata(manifest, output)
-            changed = {p.name for p in output.iterdir() if before[p.name] != (p.read_bytes(), p.stat().st_mtime_ns)}
-            self.assertEqual(changed, {"hull.alpha.preview.json"})
-            self.assertIn("module.alpha%2Froom.dmm.preview.json", before)
+            changed = {p.relative_to(output).as_posix() for p in output.rglob("*.preview.json") if before[p.relative_to(output).as_posix()] != (p.read_bytes(), p.stat().st_mtime_ns)}
+            self.assertEqual(changed, {"hulls/alpha.preview.json"})
+            self.assertIn("modules/alpha/room.preview.json", before)
             del manifest["hulls"]["alpha"]
             previews.write_preview_metadata(manifest, output)
-            self.assertFalse((output / "hull.alpha.preview.json").exists())
+            self.assertFalse((output / "hulls/alpha.preview.json").exists())
             self.assertFalse((output / "manifest.json").exists())
 
-    def test_module_path_encoding_is_unambiguous(self):
+    def test_nested_module_paths_and_flat_migration(self):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder)
-            keys = ["a/b.dmm", "a_b.dmm", "a%2Fb.dmm"]
+            keys = ["a/b.dmm", "a_b.dmm", "other/workshop/b.dmm"]
             manifest = {"tile_px": 32, "hulls": {}, "modules": {key: {} for key in keys}}
+            (output / "module.a%2Fb.dmm.preview.json").write_text("old metadata")
             previews.write_preview_metadata(manifest, output)
-            self.assertEqual(len(list(output.iterdir())), len(keys))
+            self.assertEqual({p.relative_to(output).as_posix() for p in output.rglob("*.preview.json")}, {
+                "modules/a/b.preview.json", "modules/a_b.preview.json", "modules/other/workshop/b.preview.json"})
+
+    def test_unsafe_keys_cannot_escape_metadata_directory(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            for key in ("../outside.dmm", "/outside.dmm", "C:/outside.dmm", "a/../../outside.dmm", "a\\outside.dmm"):
+                with self.subTest(key=key), self.assertRaises(ValueError):
+                    previews.write_preview_metadata({"tile_px": 32, "hulls": {}, "modules": {key: {}}}, output)
+            self.assertFalse(list(output.iterdir()))
 
 
 def map_with_window(window_path):

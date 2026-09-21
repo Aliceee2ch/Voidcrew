@@ -23,9 +23,15 @@ GLOBAL_LIST(ship_preview_manifest)
 	GLOB.ship_preview_manifest = load_ship_preview_metadata(SHIP_PREVIEW_DIR)
 	return GLOB.ship_preview_manifest
 
-/proc/load_ship_preview_metadata(directory)
-	var/list/manifest = list("tile_px" = 32, "hulls" = list(), "modules" = list())
+/proc/load_ship_preview_metadata(directory, list/manifest)
+	var/is_root = isnull(manifest)
+	if(is_root)
+		manifest = list("tile_px" = 32, "hulls" = list(), "modules" = list())
 	for(var/filename in flist(directory))
+		if(endswith(filename, "/"))
+			if(!is_root || filename in list("hulls/", "modules/"))
+				load_ship_preview_metadata("[directory][filename]", manifest)
+			continue
 		if(!endswith(filename, ".preview.json"))
 			continue
 		var/list/parsed = json_decode(file2text("[directory][filename]"))

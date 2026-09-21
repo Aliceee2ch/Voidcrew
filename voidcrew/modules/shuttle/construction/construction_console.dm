@@ -974,6 +974,8 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 	var/theme
 	/// Bitflags for console upgrades (RTD, RPD, RLD, etc.)
 	var/console_upgrades = NONE
+	/// Consumed disks to return when the console is dismantled with tools.
+	var/list/installed_upgrade_types = list()
 	/// Internal RTD for tiling (created when upgrade installed)
 	var/obj/item/construction/rtd/internal/internal_rtd
 	/// Internal RPD for piping (created when upgrade installed)
@@ -1028,6 +1030,14 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 	QDEL_NULL(internal_painter)
 	tray_connection_images.Cut()
 	return ..()
+
+/obj/machinery/computer/camera_advanced/base_construction/ship/on_deconstruction(disassembled)
+	. = ..()
+	if(!disassembled)
+		return
+	for(var/upgrade_type in installed_upgrade_types)
+		new upgrade_type(drop_location())
+	installed_upgrade_types.Cut()
 
 // ============================================
 // Build Speed Upgrades
@@ -1217,7 +1227,9 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 				if(!internal_rld.silo_mats)
 					internal_rld.silo_mats = internal_rld.AddComponent(/datum/component/remote_materials, FALSE, FALSE)
 				link_internal_device(internal_rld, internal_rld.silo_mats, linked_silo)
+		var/upgrade_type = tool.type
 		if(internal_rcd.install_upgrade(tool, user))
+			installed_upgrade_types += upgrade_type
 			balloon_alert(user, "upgrade installed")
 		return ITEM_INTERACT_SUCCESS
 
@@ -1227,7 +1239,11 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 			balloon_alert(user, "no RPD installed!")
 			return ITEM_INTERACT_FAILURE
 		// Use the RPD's own upgrade handling
-		return internal_rpd.interact_with_atom(tool, user)
+		var/upgrade_type = tool.type
+		. = internal_rpd.interact_with_atom(tool, user)
+		if(QDELETED(tool))
+			installed_upgrade_types += upgrade_type
+		return
 
 	// Handle ship construction console upgrades (RTD, RPD, RLD)
 	if(istype(tool, /obj/item/ship_construction_upgrade))
@@ -1281,6 +1297,7 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 
 		playsound(loc, 'sound/machines/click.ogg', 50, TRUE)
 		balloon_alert(user, "upgrade installed")
+		installed_upgrade_types += upgrade_disk.type
 		qdel(upgrade_disk)
 
 		// Refresh actions to add new upgrade actions

@@ -345,3 +345,59 @@
 		TEST_ASSERT(QDELETED(surface_mob) && QDELETED(surface_body), "[area_type]: cleanup stopped clearing ordinary planet mobs and corpses")
 		TEST_ASSERT(!QDELETED(neighbour_mob), "[area_type]: cleanup escaped the planet footprint")
 		TEST_ASSERT(!tracker.populated, "[area_type]: cleanup did not finish depopulating the planet")
+
+/// A player's body inside fauna needs the same protection as a body on the ground.
+/datum/unit_test/voidcrew_planet_mobs_held_players
+	var/mob/living/basic/mining/legion/legion
+	var/mob/living/carbon/human/consistent/consumed
+
+/datum/unit_test/voidcrew_planet_mobs_held_players/Destroy()
+	// Release the corpse before the fixture's Legion loses its AI controller.
+	if(!QDELETED(legion) && !QDELETED(consumed) && consumed.loc == legion)
+		consumed.forceMove(get_turf(legion))
+	legion = null
+	consumed = null
+	return ..()
+
+/datum/unit_test/voidcrew_planet_mobs_held_players/Run()
+	var/turf/surface = run_loc_floor_bottom_left
+	var/datum/map_footprint/footprint = allocate(/datum/map_footprint)
+	footprint.z_value = surface.z
+	footprint.set_rect(surface.x, surface.y, 4, 2)
+	var/datum/planet_mob_tracker/tracker = allocate(/datum/planet_mob_tracker)
+	tracker.surface_z = surface.z
+	tracker.footprint = footprint
+	TEST_ASSERT(!SSplanet_mobs.check_players(tracker), "The cleanup fixture must have no connected players")
+
+	legion = allocate(/mob/living/basic/mining/legion, surface)
+	consumed = allocate(/mob/living/carbon/human/consistent, surface)
+	consumed.mind_initialize()
+	legion.consume(consumed)
+	TEST_ASSERT_EQUAL(consumed.loc, legion, "Legion did not contain the actual player body")
+	TEST_ASSERT_EQUAL(consumed.stat, DEAD, "Legion fixture did not kill its host")
+	TEST_ASSERT_NOTNULL(consumed.mind, "Consumed body lost its player mind before cleanup")
+	TEST_ASSERT_NULL(legion.mind, "The outer Legion must not itself have a player mind")
+
+	// Protection must also work through intermediate containers, not only stored_mob.
+	var/mob/living/basic/carrier = allocate(/mob/living/basic, get_step(surface, EAST))
+	var/obj/item/storage/box/container = allocate(/obj/item/storage/box, carrier)
+	var/mob/living/carbon/human/consistent/nested_body = allocate(/mob/living/carbon/human/consistent, surface)
+	nested_body.mind_initialize()
+	nested_body.death()
+	nested_body.forceMove(container)
+	var/mob/living/basic/ordinary = allocate(/mob/living/basic, get_step(surface, NORTH))
+	var/mob/living/basic/corpse = allocate(/mob/living/basic, get_step(surface, NORTHEAST))
+	corpse.death()
+	var/mob/living/basic/mining/legion/empty_legion = allocate(/mob/living/basic/mining/legion, get_step(get_step(surface, EAST), EAST))
+
+	tracker.populated = TRUE
+	SSplanet_mobs.despawn_planet_mobs(tracker)
+	TEST_ASSERT(!QDELETED(consumed), "Planet cleanup deleted the player's consumed corpse")
+	TEST_ASSERT(!QDELETED(legion) && legion.stored_mob == consumed, "Planet cleanup destroyed a Legion holding a player")
+	TEST_ASSERT(!QDELETED(carrier) && !QDELETED(nested_body), "Planet cleanup deleted a player through an intermediate container")
+	TEST_ASSERT_EQUAL(nested_body.loc, container, "Planet cleanup moved the protected nested body")
+	TEST_ASSERT(QDELETED(ordinary) && QDELETED(corpse) && QDELETED(empty_legion), "Player protection stopped cleanup of ordinary fauna and corpses")
+	TEST_ASSERT_EQUAL(SSplanet_mobs.count_planet_mobs(tracker), 0, "Protected carriers counted against the managed fauna budget")
+	TEST_ASSERT(!tracker.populated, "Protected carriers prevented the planet's cleanup from completing")
+	legion.death()
+	TEST_ASSERT(!QDELETED(consumed) && isturf(consumed.loc), "Defeating the protected Legion did not release its player's corpse")

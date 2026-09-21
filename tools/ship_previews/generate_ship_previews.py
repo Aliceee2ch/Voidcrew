@@ -3,7 +3,7 @@
 
 Scans hull DMMs for /obj/modular_map_root/ship_upgrade slot markers and module
 DMMs for their /obj/modular_map_connector anchor, renders everything to PNG via
-dmm-tools, and writes a manifest.json describing the compositing geometry.
+dmm-tools, and writes one metadata file per hull or module.
 
 dmm-tools' icon-smoothing pass implements the pre-2020 corner system, so
 anything using modern bitmask smoothing (walls, carpets, tables) renders as
@@ -19,7 +19,7 @@ nothing. We repair that here:
     is translucent so the grille stays visible)
 
 Outputs (commit these):
-    voidcrew/modules/ship_upgrades/previews/manifest.json
+    voidcrew/modules/ship_upgrades/previews/*.preview.json
     voidcrew/modules/ship_upgrades/previews/*.png
 
 Run from the repo root after editing modular hulls or modules:
@@ -39,6 +39,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import quote
 
 from PIL import Image
 
@@ -517,6 +518,33 @@ def module_geometry(dmm: Dmm) -> dict:
     return {"width": dmm.width, "height": dmm.height, "connector": [cx, cy]}
 
 
+def write_preview_metadata(manifest: dict, output: Path) -> None:
+    """Keep unrelated hull/module changes in separate, deterministic files."""
+    files = {}
+    for group, prefix in (("hulls", "hull"), ("modules", "module")):
+        for key, entry in manifest[group].items():
+            name = f"{prefix}.{quote(key, safe='')}.preview.json"
+            document = {"tile_px": manifest["tile_px"], "hulls": {}, "modules": {}}
+            document[group][key] = entry
+            files[name] = (json.dumps(document, indent=1, sort_keys=True) + "\n").encode("utf-8")
+    if not files:
+        raise RuntimeError("No ship preview metadata generated")
+    output.mkdir(parents=True, exist_ok=True)
+    for name, data in files.items():
+        path = output / name
+        if path.exists() and path.read_bytes() == data:
+            continue
+        with tempfile.NamedTemporaryFile(dir=output, delete=False) as temporary:
+            temporary.write(data)
+        os.replace(temporary.name, path)
+    # This namespace belongs to the generator. Retire deleted/renamed entries
+    # and the old combined index only after all current entries were written.
+    for path in output.glob("*.preview.json"):
+        if path.name not in files:
+            path.unlink()
+    (output / "manifest.json").unlink(missing_ok=True)
+
+
 def main() -> None:
     dmm_tools = find_dmm_tools()
     tmp_dir = Path(tempfile.mkdtemp(prefix="ship_previews_"))
@@ -598,10 +626,9 @@ def main() -> None:
         print(f"module {rel_file}: {entry['width']}x{entry['height']}"
               + (f", themed: {list(themes)}" if themes else ""))
 
-    manifest_path = OUTPUT_DIR / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
+    write_preview_metadata(manifest, OUTPUT_DIR)
     shutil.rmtree(tmp_dir, ignore_errors=True)
-    print(f"\nwrote {manifest_path.relative_to(REPO_ROOT)} "
+    print(f"\nwrote preview metadata in {OUTPUT_DIR.relative_to(REPO_ROOT)} "
           f"({len(manifest['hulls'])} hulls, {len(manifest['modules'])} modules)")
 
 

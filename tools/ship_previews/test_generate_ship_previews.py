@@ -68,7 +68,12 @@ class ModuleDiscoveryTests(unittest.TestCase):
                     patch.object(previews, "render", side_effect=render), \
                     contextlib.redirect_stdout(io.StringIO()):
                 previews.main()
-            manifest = json.loads((output / "manifest.json").read_text())
+            manifest = {"hulls": {}, "modules": {}}
+            for path in output.glob("*.preview.json"):
+                document = json.loads(path.read_text())
+                for group in manifest:
+                    manifest[group].update(document[group])
+            self.assertFalse((output / "manifest.json").exists())
             self.assertCountEqual(rendered, names)
             engineering = manifest["modules"]["bogatyr/workshop/engineering_basic.dmm"]
             self.assertEqual(engineering["connector"], [1, 1])
@@ -77,6 +82,36 @@ class ModuleDiscoveryTests(unittest.TestCase):
             self.assertNotIn("png", surgery)
             self.assertEqual(set(surgery["themes"]), {"nightclub", "trashed"})
             self.assertEqual(len(list(output.glob("*.png"))), 5)
+
+
+class MetadataTests(unittest.TestCase):
+    def test_independent_edits_do_not_change_other_metadata(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            manifest = {"tile_px": 32, "hulls": {
+                "alpha": {"png": "alpha.png", "src_md5": "old"},
+                "beta": {"png": "beta.png", "src_md5": "same"},
+            }, "modules": {"alpha/room.dmm": {"themes": {"blue": {"png": "room_blue.png"}}}}}
+            (output / "manifest.json").write_text(json.dumps(manifest))
+            previews.write_preview_metadata(manifest, output)
+            before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in output.iterdir()}
+            manifest["hulls"]["alpha"]["src_md5"] = "new"
+            previews.write_preview_metadata(manifest, output)
+            changed = {p.name for p in output.iterdir() if before[p.name] != (p.read_bytes(), p.stat().st_mtime_ns)}
+            self.assertEqual(changed, {"hull.alpha.preview.json"})
+            self.assertIn("module.alpha%2Froom.dmm.preview.json", before)
+            del manifest["hulls"]["alpha"]
+            previews.write_preview_metadata(manifest, output)
+            self.assertFalse((output / "hull.alpha.preview.json").exists())
+            self.assertFalse((output / "manifest.json").exists())
+
+    def test_module_path_encoding_is_unambiguous(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            keys = ["a/b.dmm", "a_b.dmm", "a%2Fb.dmm"]
+            manifest = {"tile_px": 32, "hulls": {}, "modules": {key: {} for key in keys}}
+            previews.write_preview_metadata(manifest, output)
+            self.assertEqual(len(list(output.iterdir())), len(keys))
 
 
 def map_with_window(window_path):

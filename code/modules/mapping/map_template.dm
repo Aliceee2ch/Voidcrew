@@ -119,6 +119,7 @@
 		affected_turf.air_update_turf(TRUE, TRUE)
 		affected_turf.levelupdate()
 
+// VOIDCREW EDIT START - PR #406: Stop minting unused roundstart space levels and log every z-level mint.
 /datum/map_template/proc/load_new_z(secret = FALSE)
 	var/x = round((world.maxx - width) * 0.5) + 1
 	var/y = round((world.maxy - height) * 0.5) + 1
@@ -145,6 +146,7 @@
 
 	return level
 
+// VOIDCREW EDIT END
 /datum/map_template/proc/load(turf/T, centered = FALSE)
 	if(centered)
 		T = locate(T.x - round(width/2) , T.y - round(height/2) , T.z)

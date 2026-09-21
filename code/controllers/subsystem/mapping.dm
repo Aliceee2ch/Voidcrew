@@ -110,6 +110,7 @@ SUBSYSTEM_DEF(mapping)
 	current_map = load_map_config(error_if_missing = FALSE)
 #endif
 
+// VOIDCREW EDIT START - PR #406: Stop minting unused roundstart space levels and log every z-level mint.
 /datum/controller/subsystem/mapping/Initialize()
 	if(initialized)
 		return SS_INIT_SUCCESS
@@ -179,6 +180,7 @@ SUBSYSTEM_DEF(mapping)
 
 	return SS_INIT_SUCCESS
 
+// VOIDCREW EDIT END
 /datum/controller/subsystem/mapping/fire(resumed)
 	// Cache for sonic speed
 	var/list/unused_turfs = src.unused_turfs
@@ -474,6 +476,7 @@ Used by the AI doomsday and the self-destruct nuke.
 	loaded_lazy_templates = SSmapping.loaded_lazy_templates
 
 #define INIT_ANNOUNCE(X) to_chat(world, span_boldannounce("[X]"), MESSAGE_TYPE_DEBUG); log_world(X)
+// VOIDCREW EDIT START - PR #406: Stop minting unused roundstart space levels and log every z-level mint.
 /datum/controller/subsystem/mapping/proc/LoadGroup(list/errorList, name, path, files, list/traits, list/default_traits, silent = FALSE, height_autosetup = TRUE)
 	. = list()
 	var/start_time = REALTIMEOFDAY
@@ -533,6 +536,7 @@ Used by the AI doomsday and the self-destruct nuke.
 		INIT_ANNOUNCE("Loaded [name] in [(REALTIMEOFDAY - start_time)/10]s!")
 	return parsed_maps
 
+// VOIDCREW EDIT END
 /datum/controller/subsystem/mapping/proc/loadWorld()
 	//if any of these fail, something has gone horribly, HORRIBLY, wrong
 	var/list/FailedZs = list()
@@ -728,6 +732,7 @@ ADMIN_VERB(load_away_mission, R_FUN, "Load Away Mission", "Load a specific away 
 /// to mint a reservation z-level (permanent, ~49 MB). Free text, e.g. "transit for Goon-class
 /// 'Ishmael'" or "outpost hangar berth at Waystation Halcyon". Omit it and the mint is still
 /// logged, just without a name.
+// VOIDCREW EDIT START - PR #406: Stop minting unused roundstart space levels and log every z-level mint.
 /datum/controller/subsystem/mapping/proc/request_turf_block_reservation(
 	width,
 	height,
@@ -796,6 +801,7 @@ ADMIN_VERB(load_away_mission, R_FUN, "Load Away Mission", "Load a specific away 
 ///Sets up a z level as reserved
 ///This is not for wiping reserved levels, use wipe_reservations() for that.
 ///If this is called after SSatom init, it will call Initialize on all turfs on the passed z, as its name promises
+// VOIDCREW EDIT END
 /datum/controller/subsystem/mapping/proc/initialize_reserved_level(z)
 	UNTIL(!clearing_reserved_turfs) //regardless, lets add a check just in case.
 	clearing_reserved_turfs = TRUE //This operation will likely clear any existing reservations, so lets make sure nothing tries to make one while we're doing it.
@@ -917,6 +923,7 @@ ADMIN_VERB(load_away_mission, R_FUN, "Load Away Mission", "Load a specific away 
 		var/area/A = B
 		A.reg_in_areas_in_z()
 
+// VOIDCREW EDIT START - PR #406: Stop minting unused roundstart space levels and log every z-level mint.
 /datum/controller/subsystem/mapping/proc/get_isolated_ruin_z()
 	if(!isolated_ruins_z)
 		isolated_ruins_z = add_new_zlevel("Isolated Ruins/Reserved", list(ZTRAIT_RESERVED = TRUE, ZTRAIT_ISOLATED_RUINS = TRUE), mint_reason = "first isolated-ruin request (get_isolated_ruin_z)")
@@ -925,6 +932,7 @@ ADMIN_VERB(load_away_mission, R_FUN, "Load Away Mission", "Load a specific away 
 
 /// Takes a z level datum, and tells the mapping subsystem to manage it
 /// Also handles things like plane offset generation, and other things that happen on a z level to z level basis
+// VOIDCREW EDIT END
 /datum/controller/subsystem/mapping/proc/manage_z_level(datum/space_level/new_z, filled_with_space, contain_turfs = TRUE)
 	// First, add the z
 	z_list += new_z

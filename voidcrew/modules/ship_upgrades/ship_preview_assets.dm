@@ -29,7 +29,7 @@ GLOBAL_LIST(ship_preview_manifest)
 		manifest = list("tile_px" = 32, "hulls" = list(), "modules" = list())
 	for(var/filename in flist(directory))
 		if(endswith(filename, "/"))
-			if(!is_root || filename in list("hulls/", "modules/"))
+			if(!is_root || (filename in list("hulls/", "modules/")))
 				load_ship_preview_metadata("[directory][filename]", manifest)
 			continue
 		if(!endswith(filename, ".preview.json"))

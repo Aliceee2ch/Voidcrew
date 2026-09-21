@@ -231,6 +231,7 @@
 #include "monkey_business.dm"
 #include "mouse_bite_cable.dm"
 #include "movement_order_sanity.dm"
+#include "../../../voidcrew/modules/unit_tests/drift_vectors.dm" // VOIDCREW EDIT ADDITION
 #include "mutant_hands_consistency.dm"
 #include "mutant_organs.dm"
 #include "novaflower_burn.dm"

@@ -57,3 +57,8 @@
 #define OUTPOST_SHIELD_CHARGE_POWER (10 KILO WATTS)
 /// APC equipment-channel power draw while holding a charged/idle field (watts)
 #define OUTPOST_SHIELD_IDLE_POWER (1 KILO WATTS)
+
+/// Two simultaneous construction berths, allocated only while a ship visits.
+#define OUTPOST_SHIP_BAY_SLOTS 2
+#define OUTPOST_SHIP_BAY_COST 10000
+#define OUTPOST_DOCK_VARIANT_BAY "ship_bay"

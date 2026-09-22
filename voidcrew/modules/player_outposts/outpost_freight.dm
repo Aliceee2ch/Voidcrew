@@ -271,6 +271,9 @@
 	return TRUE
 
 /obj/structure/overmap/dynamic/player_outpost/get_floor_alcove(floor_id)
+	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
+		if(bay?.berth_number == floor_id)
+			return bay.alcove_turfs
 	if(floor_id == OUTPOST_MAX_BERTHS + 1)
 		return freight_berth?.alcove_turfs
 	return ..()

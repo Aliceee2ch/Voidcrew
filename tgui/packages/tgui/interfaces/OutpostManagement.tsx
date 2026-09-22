@@ -68,6 +68,18 @@ export type OutpostData = {
   research_ships: Vessel[];
   research_connections: ResearchConnection[];
   research_error: string | null;
+  ship_bay_installed: BooleanLike;
+  ship_bay_cost: number;
+  ship_bay_denial: string | null;
+  ship_bay_error: string | null;
+  ship_bays: {
+    ref: string;
+    number: number;
+    ship: string;
+    arrived: BooleanLike;
+    requested: BooleanLike;
+    approved: BooleanLike;
+  }[];
 };
 type Act = (action: string, params?: Record<string, unknown>) => unknown;
 type Props = { data: OutpostData; act: Act };
@@ -201,6 +213,55 @@ function Docking({ data, act }: Props) {
   ];
   return (
     <>
+      <div className="Outpost__section-label">Ship bays</div>
+      {data.ship_bay_installed ? (
+        <div className="Outpost__quiet">
+          {(data.ship_bays || []).length}/2 occupied. Select Ship Bay at the
+          helm.
+        </div>
+      ) : (
+        <div className="Outpost__row">
+          <span className="Outpost__grow">
+            Two construction bays: {data.ship_bay_cost} cr, 100 iron, 50 glass.
+          </span>
+          <Button
+            disabled={!!data.ship_bay_denial}
+            tooltip={
+              data.ship_bay_denial || 'Paid from the outpost treasury and silo'
+            }
+            onClick={() => act('install_ship_bay')}
+          >
+            Install
+          </Button>
+        </div>
+      )}
+      {!!data.ship_bay_error && (
+        <div className="Outpost__quiet">{data.ship_bay_error}</div>
+      )}
+      {(data.ship_bays || []).map((bay) => (
+        <div className="Outpost__row" key={bay.ref}>
+          <span className="Outpost__grow">
+            Bay {bay.number}: {bay.ship} {!bay.arrived && '(arriving)'}
+          </span>
+          {!!bay.requested && (
+            <Button
+              disabled={!data.can_spend || !data.can_manage}
+              tooltip="Allow this bay to use the outpost silo for this visit"
+              onClick={() => act('approve_bay_silo', { ref: bay.ref })}
+            >
+              Allow materials
+            </Button>
+          )}
+          {(!!bay.requested || !!bay.approved) && (
+            <Button
+              disabled={!data.can_spend || !data.can_manage}
+              onClick={() => act('revoke_bay_silo', { ref: bay.ref })}
+            >
+              {bay.approved ? 'Revoke materials' : 'Deny'}
+            </Button>
+          )}
+        </div>
+      ))}
       {groups.map(({ title, ships, kind }) => (
         <div key={kind}>
           <div className="Outpost__section-label">

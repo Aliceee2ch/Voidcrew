@@ -35,6 +35,11 @@ interface PortData {
 }
 
 interface Data {
+  bay?: {
+    silo: string | null;
+    requested: BooleanLike;
+    approved: BooleanLike;
+  };
   repairUnlocked: BooleanLike;
   repairEnabled: BooleanLike;
   repairStatus: string;
@@ -107,6 +112,35 @@ export const ShipConstructionConsole = () => {
     >
       <Window.Content scrollable>
         <Stack vertical fill>
+          {!!data.bay && (
+            <Stack.Item>
+              <Section title="Bay materials">
+                <Box mb={1}>{data.bay.silo || 'No silo connected'}</Box>
+                <Button
+                  disabled={!canOperate || isNotCrew}
+                  onClick={() => act('bay_ship_silo')}
+                >
+                  Use ship silo
+                </Button>
+                <Button
+                  disabled={!canOperate || isNotCrew || !!data.bay.requested}
+                  onClick={() =>
+                    act(
+                      data.bay?.approved
+                        ? 'bay_outpost_silo'
+                        : 'bay_request_silo',
+                    )
+                  }
+                >
+                  {data.bay.approved
+                    ? 'Use outpost silo'
+                    : data.bay.requested
+                      ? 'Materials requested'
+                      : 'Request outpost materials'}
+                </Button>
+              </Section>
+            </Stack.Item>
+          )}
           {/* Operation Status Message */}
           {!!lastMessage && (
             <Stack.Item>

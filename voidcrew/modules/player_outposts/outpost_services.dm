@@ -39,6 +39,9 @@
 /obj/structure/overmap/dynamic/player_outpost/proc/contains_service_turf(turf/location)
 	if(is_turf_buildable(location))
 		return TRUE
+	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
+		if(bay?.contains_service_turf(location))
+			return TRUE
 	if(freight_berth?.contains_service_turf(location))
 		return TRUE
 	for(var/datum/outpost_berth/berth as anything in berths)
@@ -129,6 +132,11 @@
 
 /obj/structure/overmap/dynamic/player_outpost/on_ship_undock_complete(obj/structure/overmap/ship/ship)
 	approved_ships -= ship
+	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
+		if(bay?.ship == ship)
+			bay.console?.disconnect_materials()
+			bay.release()
+			break
 	return ..()
 
 /datum/component/remote_materials/can_use_resource(check_hold = TRUE, alist/user_data)

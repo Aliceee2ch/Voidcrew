@@ -6,6 +6,8 @@ GLOBAL_LIST_EMPTY(outpost_research_relays)
 
 /obj/structure/overmap/dynamic/player_outpost/proc/process_home_services()
 	freight?.check_stalled()
+	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
+		bay?.reconcile_silo()
 	for(var/datum/outpost_research_link/link as anything in research_links.Copy())
 		link.reconcile()
 

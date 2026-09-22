@@ -78,6 +78,9 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	return "colony"
 
 /obj/structure/overmap/dynamic/player_outpost/contains_site_turf(turf/location)
+	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
+		if(bay?.contains_service_turf(location))
+			return TRUE
 	return ..() || freight_berth?.reservation?.contains_turf(location)
 
 /obj/structure/overmap/dynamic/player_outpost/Initialize(mapload)
@@ -86,6 +89,9 @@ GLOBAL_LIST_EMPTY(player_outposts)
 
 /obj/structure/overmap/dynamic/player_outpost/Destroy()
 	GLOB.player_outposts -= src
+	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths.Copy())
+		bay?.release(force = TRUE)
+	bay_berths.Cut()
 	QDEL_NULL(freight)
 	QDEL_NULL(freight_berth)
 	QDEL_LIST(cargo_cart)
@@ -95,6 +101,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	QDEL_NULL(current_advert)
 	approved_ships.Cut()
 	pending_dock_requests.Cut()
+	pending_dock_variants.Cut()
 	banned_ships.Cut()
 	if(management_console)
 		management_console.outpost = null
@@ -579,7 +586,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 /obj/structure/overmap/dynamic/player_outpost/has_ambient_gravity()
 	return TRUE
 
-/obj/structure/overmap/dynamic/player_outpost/ship_act(mob/user, obj/structure/overmap/ship/acting, obj/structure/overmap/ship/optional_partner)
+/obj/structure/overmap/dynamic/player_outpost/ship_act(mob/user, obj/structure/overmap/ship/acting, obj/structure/overmap/ship/optional_partner, dock_variant)
 	// dock() refuses interdicted ships only after a dock slot below is claimed
 	// and the ship is locked into ACTING - refuse up front instead
 	if(acting.is_interdicted)
@@ -592,8 +599,13 @@ GLOBAL_LIST_EMPTY(player_outposts)
 		to_chat(user, span_warning("The outpost's transponder isn't responding."))
 		return
 
+	if(dock_variant && (dock_variant != OUTPOST_DOCK_VARIANT_BAY || !ship_bay_installed || !has_hangar_elevator()))
+		to_chat(user, span_warning("Ship bay unavailable."))
+		return
 	var/denial = get_docking_denial(acting)
 	if(denial)
+		if(acting in pending_dock_requests)
+			pending_dock_variants[acting] = dock_variant
 		to_chat(user, span_warning(denial))
 		return
 
@@ -605,7 +617,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	var/obj/docking_port/stationary/dock_to_use = null
 	var/datum/outpost_berth/berth = null
 	// Port destinations are set by survey consoles
-	if(acting.shuttle.port_destinations)
+	if(acting.shuttle.port_destinations && !dock_variant)
 		dock_to_use = acting.shuttle.port_destinations
 	else
 		var/long_axis = max(acting.shuttle.width, acting.shuttle.height)
@@ -619,11 +631,11 @@ GLOBAL_LIST_EMPTY(player_outposts)
 		if(has_hangar_elevator())
 			// A placed hangar elevator upgrades docking to per-ship berths,
 			// exactly like the trader outposts (see outpost_hangar.dm)
-			berth = allocate_berth(acting)
+			berth = dock_variant == OUTPOST_DOCK_VARIANT_BAY ? allocate_ship_bay(acting) : allocate_berth(acting)
 			if(!berth)
 				acting.state = prev_state
 				concerned = FALSE
-				to_chat(user, span_notice("[name] traffic control: all hangar berths are occupied. Try again later."))
+				to_chat(user, span_notice("[name] traffic control: no [dock_variant ? "ship bay" : "hangar"] berth is available. Try again later."))
 				return
 			adjust_reserve_dock_to_shuttle(berth.dock, acting.shuttle)
 			dock_to_use = berth.dock
@@ -660,11 +672,13 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	// to the whole crew by ship_notify()
 	var/dock_result = acting.dock(src, dock_to_use)
 	if(dock_result)
+		berth?.release(force = TRUE)
+		acting.state = prev_state
 		to_chat(user, span_notice("[dock_result]"))
 	concerned = FALSE
 
 	if(optional_partner)
-		ship_act(user, optional_partner)
+		ship_act(user, optional_partner, dock_variant = dock_variant)
 
 /**
  * Access control. Returns a denial message, or null when the ship may dock.
@@ -697,15 +711,18 @@ GLOBAL_LIST_EMPTY(player_outposts)
 /obj/structure/overmap/dynamic/player_outpost/proc/approve_dock_request(obj/structure/overmap/ship/requester)
 	if(QDELETED(requester) || !(requester in pending_dock_requests))
 		return
+	var/dock_variant = pending_dock_variants[requester]
+	pending_dock_variants -= requester
 	pending_dock_requests -= requester
 	approved_ships[requester] = TRUE
 	requester.ship_notify("[name]: docking clearance granted.", "DOCKING", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 30)
 	// Continue the approach they requested, only while still waiting at this site.
 	if(loaded && get_turf(src) && requester.loc == loc && requester.state == OVERMAP_SHIP_FLYING && requester.is_still() && !requester.is_interdicted && !QDELETED(requester.shuttle))
-		requester.overmap_object_act(null, src)
+		requester.overmap_object_act(null, src, dock_variant = dock_variant)
 
 /// Owner denied a pending request
 /obj/structure/overmap/dynamic/player_outpost/proc/deny_dock_request(obj/structure/overmap/ship/requester)
+	pending_dock_variants -= requester
 	pending_dock_requests -= requester
 	requester.ship_notify("[name]: docking clearance denied.", "DOCKING", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 25)
 
@@ -714,6 +731,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	for(var/obj/structure/overmap/ship/requester in pending_dock_requests)
 		if(QDELETED(requester) || (world.time - pending_dock_requests[requester]) >= OUTPOST_DOCK_REQUEST_TIMEOUT)
 			pending_dock_requests -= requester
+			pending_dock_variants -= requester
 
 // ===== ABANDON / TRANSFER =====
 
@@ -732,6 +750,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	resident_mode = "closed"
 	resident_clearance.Cut()
 	revoke_research_links()
+	revoke_bay_materials()
 	freight?.cancel_pending()
 	founder_ckey = null
 	founder_name = null
@@ -739,6 +758,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	dock_mode = OUTPOST_DOCK_MODE_OPEN
 	authorized_builder_ckeys.Cut()
 	pending_dock_requests.Cut()
+	pending_dock_variants.Cut()
 	QDEL_NULL(current_advert)
 
 /**
@@ -753,6 +773,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	// An owner cannot retain command or spending by delegating authority to themselves
 	// before transferring the deed. Other residents retain their independent grants.
 	revoke_research_links()
+	revoke_bay_materials()
 	var/datum/mind/former_owner = founder_mind?.resolve()
 	stewards -= former_owner
 	treasurers -= former_owner

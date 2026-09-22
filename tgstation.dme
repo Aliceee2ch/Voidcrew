@@ -7233,6 +7233,7 @@
 #include "voidcrew\modules\player_outposts\outpost_management_ui.dm"
 #include "voidcrew\modules\player_outposts\outpost_shells.dm"
 #include "voidcrew\modules\player_outposts\outpost_shield.dm"
+#include "voidcrew\modules\player_outposts\outpost_ship_bay.dm"
 #include "voidcrew\modules\player_outposts\player_outpost.dm"
 #include "voidcrew\modules\player_outposts\outpost_services.dm"
 #include "voidcrew\modules\player_outposts\outpost_home_management.dm"

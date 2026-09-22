@@ -1863,12 +1863,15 @@
   * * user - Mob that started the action
   * * object - Overmap object to act on
   */
-/obj/structure/overmap/ship/proc/overmap_object_act(mob/user, obj/structure/overmap/object, obj/structure/overmap/ship/optional_partner)
+/obj/structure/overmap/ship/proc/overmap_object_act(mob/user, obj/structure/overmap/object, obj/structure/overmap/ship/optional_partner, dock_variant)
 	if(!is_still() || state != OVERMAP_SHIP_FLYING)
 		to_chat(user, "<span class='warning'>Ship must be still to interact!</span>")
 		return
 
-	INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap, ship_act), user, src, optional_partner)
+	if(istype(object, /obj/structure/overmap/dynamic/player_outpost))
+		INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap/dynamic/player_outpost, ship_act), user, src, optional_partner, dock_variant)
+	else
+		INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap, ship_act), user, src, optional_partner)
 
 // ===== INTERDICTION PROCS =====
 

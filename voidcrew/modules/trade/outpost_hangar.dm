@@ -219,10 +219,9 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
  * template is missing a required piece (bad map).
  */
 /datum/outpost_berth/proc/link_hangar_contents()
-	var/datum/map_template/outpost_hangar/hangar_template = GLOB.outpost_hangar_template
 	var/turf/top_right = locate(
-		hangar_bottom_left.x + hangar_template.width - 1,
-		hangar_bottom_left.y + hangar_template.height - 1,
+		hangar_bottom_left.x + reservation.width - 1,
+		hangar_bottom_left.y + reservation.height - 1,
 		hangar_bottom_left.z
 	)
 	if(!top_right)

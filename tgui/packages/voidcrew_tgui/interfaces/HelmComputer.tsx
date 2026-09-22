@@ -217,6 +217,7 @@ type DockOption = {
   /** REF() of the overmap object to dock with, or null for empty space. */
   ref: string | null;
   isEmpty: BooleanLike;
+  variant?: string;
 };
 
 type Data = {
@@ -3374,11 +3375,11 @@ const DockPickerMenu = (props: {
       ) : (
         options.map((option) => (
           <button
-            key={option.ref ?? 'empty'}
+            key={`${option.ref ?? 'empty'}:${option.variant ?? 'default'}`}
             type="button"
             className="Helm__menuItem"
             onClick={() => {
-              act('dock', option.ref ? { target: option.ref } : {});
+              act('dock', option.ref ? { target: option.ref, variant: option.variant } : {});
               onClose();
             }}
           >
@@ -4472,7 +4473,7 @@ const OpsRow = () => {
   const primaryDockOption = options[0];
   const dockName = primaryDockOption?.name ?? 'empty space';
   const runDock = (option?: DockOption) =>
-    act('dock', option?.ref ? { target: option.ref } : {});
+    act('dock', option?.ref ? { target: option.ref, variant: option.variant } : {});
 
   const undockDisabled =
     (state !== 'idle' && state !== 'undocking') ||

@@ -478,6 +478,9 @@
 				"ref" = REF(candidate),
 				"isEmpty" = FALSE,
 			))
+			var/obj/structure/overmap/dynamic/player_outpost/home = astype(candidate)
+			if(home?.ship_bay_installed && home.has_hangar_elevator())
+				dock_options += list(list("name" = "[home.name] - Ship Bay", "ref" = REF(home), "isEmpty" = FALSE, "variant" = OUTPOST_DOCK_VARIANT_BAY))
 	else
 		// Nebulas aren't a docking target. Concealment is the Cloak control's job,
 		// but sitting in one and being told only "empty space" reads as the console
@@ -1285,7 +1288,7 @@
 							playsound(src, 'sound/machines/terminal/terminal_error.ogg', 30)
 							return
 						current_ship.disengage_autopilot("docking", notify = FALSE)
-						current_ship.overmap_object_act(usr, dock_candidate)
+						current_ship.overmap_object_act(usr, dock_candidate, dock_variant = params["variant"])
 						return
 					current_ship.disengage_autopilot("docking", notify = FALSE)
 					// Only refusals come back as text; a dock that started is

@@ -15,6 +15,7 @@
 	var/turf/console_turf
 	var/advert_error
 	var/research_error
+	var/ship_bay_error
 
 /datum/player_outpost_management_ui/New(obj/structure/overmap/dynamic/player_outpost/target, mob/user, obj/machinery/computer/player_outpost_management/console, obj/item/organ/cyberimp/cyberware/registry_uplink/uplink)
 	outpost = target
@@ -150,6 +151,17 @@
 		connections += list(list("ref" = REF(link), "ship" = ship.name, "server" = server.name, "status" = link.status_text(), "approved" = link.ship_approved))
 	data["research_connections"] = connections
 	data["research_error"] = research_error
+	data["ship_bay_installed"] = outpost.ship_bay_installed
+	data["ship_bay_cost"] = OUTPOST_SHIP_BAY_COST
+	data["ship_bay_denial"] = outpost.ship_bay_install_denial(user)
+	data["ship_bay_error"] = ship_bay_error
+	var/list/bays = list()
+	for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
+		if(!bay)
+			continue
+		bay.reconcile_silo()
+		bays += list(list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
+	data["ship_bays"] = bays
 	return data
 
 /datum/player_outpost_management_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -171,6 +183,18 @@
 		return service_action(action, params, user)
 	. = TRUE
 	switch(action)
+		if("install_ship_bay")
+			ship_bay_error = outpost.install_ship_bay(user)
+		if("approve_bay_silo", "revoke_bay_silo")
+			if(!outpost.can_spend(user))
+				return
+			var/datum/outpost_berth/ship_bay/bay = locate(params["ref"]) in outpost.bay_berths
+			if(!bay)
+				return
+			if(action == "approve_bay_silo")
+				ship_bay_error = bay.approve_silo(user) ? null : "Material request is no longer available."
+			else
+				bay.revoke_silo()
 		if("invite_research")
 			research_error = null
 			var/obj/structure/overmap/ship/ship = locate(params["ship"]) in SSovermap.simulated_ships

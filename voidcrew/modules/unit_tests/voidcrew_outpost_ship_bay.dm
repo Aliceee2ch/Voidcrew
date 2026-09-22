@@ -1,0 +1,152 @@
+/// Real map load, payment boundary, visit permissions, and reservation teardown.
+/datum/unit_test/voidcrew_outpost_ship_bay
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_ship_bay/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
+	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.founder_ckey = "bayowner"
+	TEST_ASSERT(home.load_level(), "Could not load the bay test outpost")
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "bayowner")
+	var/mob/living/carbon/human/visitor = make_player(get_turf(home.management_console), "bayvisitor")
+	var/obj/machinery/ore_silo/home_silo = allocate(__IMPLIED_TYPE__, get_turf(home.construction_console))
+	home.construction_console.link_internal_device(home.construction_console.internal_rcd, home.construction_console.internal_rcd.silo_mats, home_silo)
+	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Unfunded installation succeeded")
+	home.treasury.adjust_money(10000, "Ship bay test") // Fork defines follow the test includes.
+	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Installation without materials succeeded")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 10000, "Missing materials still charged the treasury")
+	var/list/cost = home.ship_bay_material_cost()
+	for(var/material in cost)
+		home_silo.materials.insert_amount_mat(cost[material], material)
+	TEST_ASSERT_NOTNULL(home.install_ship_bay(visitor), "A visitor spent the outpost treasury")
+	TEST_ASSERT_NULL(home.install_ship_bay(owner), "A funded owner could not install the bays")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "Bay installation charged the wrong price")
+	TEST_ASSERT(!home_silo.materials.has_materials(cost), "Installation did not consume its materials")
+	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Repeated installation succeeded")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "Repeated installation charged again")
+
+	var/obj/structure/overmap/ship/ship = allocate(__IMPLIED_TYPE__)
+	visitor_port = new(run_loc_floor_bottom_left)
+	visitor_port.width = 1
+	visitor_port.height = 1
+	visitor_port.dwidth = 0
+	visitor_port.dheight = 0
+	visitor_port.current_ship = ship
+	ship.shuttle = visitor_port
+	SSovermap.simulated_ships |= ship
+	ship.ship_team = new /datum/team/voidcrew
+	ship.ship_team.add_member(visitor.mind)
+	var/datum/outpost_berth/ship_bay/bay = home.allocate_ship_bay(ship)
+	TEST_ASSERT_NOTNULL(bay, "Bay allocation failed")
+	TEST_ASSERT_NULL(home.allocate_ship_bay(ship), "One visit acquired two construction bays")
+	TEST_ASSERT_NOTNULL(bay.console, "Mapped bay console is missing")
+	TEST_ASSERT_EQUAL(bay.console.internal_rcd.matter, 0, "A fresh bay minted free RCD charge")
+	TEST_ASSERT_EQUAL(get_outpost_from_atom(bay.console), home, "Bay fixtures lost their outpost identity")
+	TEST_ASSERT(!bay.console.can_operate(), "Bay could operate before arrival")
+	TEST_ASSERT(!bay.console.is_crew_member(owner), "Outpost ownership granted control over a visiting ship")
+	TEST_ASSERT(!bay.console.can_link_silo(home_silo), "Outpost materials were available without approval")
+	var/floor_id = bay.berth_number
+	TEST_ASSERT_EQUAL(home.get_floor_alcove(floor_id), bay.alcove_turfs, "The elevator cannot reach the bay")
+
+	visitor_turf = get_turf(bay.dock)
+	original_visitor_area = get_area(visitor_turf)
+	visitor_area = new
+	visitor_turf.change_area(original_visitor_area, visitor_area)
+	visitor_port.forceMove(visitor_turf)
+	visitor_port.shuttle_areas = list()
+	visitor_port.shuttle_areas[visitor_area] = TRUE
+	visitor_area.shuttle_port = visitor_port
+	visitor_port.register()
+	ship.docked = home
+	ship.state = "idle"
+	var/obj/machinery/ore_silo/ship_silo = allocate(__IMPLIED_TYPE__, visitor_turf)
+	bay.on_ship_docked(ship)
+	TEST_ASSERT(bay.console.can_operate(), "The arrived ship could not use its bay")
+	TEST_ASSERT_EQUAL(bay.console.get_linked_silo(), ship_silo, "Arrival did not link the visiting ship's silo")
+	TEST_ASSERT(!bay.request_silo(owner), "A non-crew member requested materials for a visiting ship")
+	TEST_ASSERT(bay.request_silo(visitor), "Crew could not request outpost materials")
+	TEST_ASSERT(!bay.approve_silo(visitor), "The visitor approved its own spending request")
+	TEST_ASSERT(bay.approve_silo(owner), "The owner could not approve a current request")
+	TEST_ASSERT_EQUAL(bay.console.get_linked_silo(), home_silo, "Approval did not connect the selected outpost silo")
+	for(var/material in cost)
+		home_silo.materials.insert_amount_mat(cost[material], material)
+	var/obj/machinery/computer/camera_advanced/base_construction/ship/bay/console = bay.console
+	var/obj/item/construction/rcd/internal/ship/rcd = console.internal_rcd
+	TEST_ASSERT(rcd.useResource(0, visitor), "An authorized zero-cost action was treated as a failed payment")
+	TEST_ASSERT(console.internal_rtd.use_tile_materials(visitor), "Approved tiling could not consume materials")
+	TEST_ASSERT(console.internal_rld.use_wall_light_materials(visitor), "Approved lighting could not consume materials")
+	// A stale component must reject use immediately, before the periodic cleanup.
+	ship.state = "undocking"
+	TEST_ASSERT(!rcd.useResource(0, visitor), "A zero-cost action bypassed revoked material access")
+	TEST_ASSERT(!rcd.check_materials(list(/datum/material/iron = 1), visitor), "Departure retained RCD access to the outpost silo")
+	TEST_ASSERT(!console.internal_rtd.use_tile_materials(visitor), "Departure allowed free tiling after the silo refused payment")
+	TEST_ASSERT(!console.internal_rld.use_wall_light_materials(visitor), "Departure allowed free lights after the silo refused payment")
+	ship.state = "idle"
+	home.founder_ckey = "replacementowner"
+	TEST_ASSERT(!console.can_link_silo(home_silo), "A new owner inherited the previous owner's material approval")
+	bay.reconcile_silo()
+	TEST_ASSERT_NULL(bay.approved_silo, "Invalid material approval survived reconciliation")
+	TEST_ASSERT_EQUAL(console.get_linked_silo(), ship_silo, "Revocation did not return the console to ship materials")
+
+	// A person left on the shore side must survive the reservation being released.
+	owner.forceMove(bay.alcove_turfs[1])
+	visitor_turf.change_area(visitor_area, original_visitor_area)
+	visitor_turf = null
+	visitor_port.forceMove(run_loc_floor_bottom_left)
+	ship_silo.forceMove(run_loc_floor_bottom_left)
+	ship.docked = null
+	ship.state = "flying"
+	var/datum/turf_reservation/reserved = bay.reservation
+	home.on_ship_undock_complete(ship)
+	TEST_ASSERT(QDELETED(bay), "Departure leaked its bay datum")
+	TEST_ASSERT(QDELETED(reserved), "Departure leaked its turf reservation")
+	TEST_ASSERT(QDELETED(console), "Departure left a usable construction console")
+	TEST_ASSERT(get_turf(owner) in home.lobby_alcove_turfs, "Bay teardown did not evacuate the occupant")
+	TEST_ASSERT_NULL(home.get_floor_alcove(floor_id), "A departed bay remained an elevator destination")
+	var/datum/outpost_berth/ship_bay/replacement = home.allocate_ship_bay(ship)
+	TEST_ASSERT_NOTNULL(replacement, "The released slot could not be reused")
+	TEST_ASSERT_NOTEQUAL(replacement.berth_number, floor_id, "An old elevator ride could enter a different visit")
+	TEST_ASSERT_NULL(replacement.approved_silo, "A new visit inherited material access")
+	reserved = replacement.reservation
+	replacement.check_arrival()
+	TEST_ASSERT(QDELETED(replacement) && QDELETED(reserved), "An aborted arrival leaked a bay")
+
+/// Keep the capacity/deletion test independent of payment and construction failures.
+/datum/unit_test/voidcrew_outpost_ship_bay_capacity
+	var/list/ports = list()
+
+/datum/unit_test/voidcrew_outpost_ship_bay_capacity/Destroy()
+	for(var/obj/docking_port/mobile/voidcrew/port as anything in ports)
+		if(!QDELETED(port))
+			if(port.current_ship)
+				port.current_ship.shuttle = null
+			port.current_ship = null
+			qdel(port, force = TRUE)
+	return ..()
+
+/datum/unit_test/voidcrew_outpost_ship_bay_capacity/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
+	home.ship_bay_installed = TRUE
+	home.bay_berths.len = 2
+	var/list/visitors = list()
+	for(var/i in 1 to 3)
+		var/obj/structure/overmap/ship/ship = allocate(__IMPLIED_TYPE__)
+		var/obj/docking_port/mobile/voidcrew/port = new(run_loc_floor_bottom_left)
+		ports += port
+		ship.shuttle = port
+		port.current_ship = ship
+		visitors += ship
+	var/datum/outpost_berth/ship_bay/first = home.allocate_ship_bay(visitors[1])
+	var/datum/outpost_berth/ship_bay/second = home.allocate_ship_bay(visitors[2])
+	TEST_ASSERT(first && second, "Two different ships could not reserve both bays")
+	TEST_ASSERT_NULL(home.allocate_ship_bay(visitors[3]), "A third ship bypassed bay capacity")
+	var/datum/turf_reservation/first_reservation = first.reservation
+	var/obj/structure/overmap/ship/deleted_ship = visitors[1]
+	// Leave port disposal to the fixture, but exercise the actual ship-deletion signal.
+	deleted_ship.shuttle = null
+	qdel(deleted_ship)
+	TEST_ASSERT(QDELETED(first) && QDELETED(first_reservation), "Deleting a visiting ship leaked its bay")
+	TEST_ASSERT_NULL(home.bay_berths[1], "Ship deletion retained its slot")
+	var/datum/turf_reservation/second_reservation = second.reservation
+	qdel(home)
+	TEST_ASSERT(QDELETED(second) && QDELETED(second_reservation), "Deleting the outpost leaked its other bay")

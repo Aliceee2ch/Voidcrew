@@ -122,9 +122,16 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/outpost_elevator, 32)
 				"your_ship" = is_yours,
 			))
 		var/obj/structure/overmap/dynamic/player_outpost/home = astype(outpost)
-		for(var/datum/outpost_berth/ship_bay/bay as anything in home?.bay_berths)
-			if(bay && length(bay.alcove_turfs))
-				floors += list(list("id" = bay.berth_number, "name" = "Ship Bay [bay.bay_number]: [bay.ship?.name || "reserved"]", "occupied" = TRUE, "your_ship" = !!(bay.ship?.ship_team in user?.mind?.ship_teams)))
+		if(home?.ship_bay_installed)
+			for(var/i in 1 to length(home.bay_berths))
+				var/datum/outpost_berth/ship_bay/bay = home.bay_berths[i]
+				floors += list(list(
+					// Negative IDs are display-only vacancies, never visit destinations.
+					"id" = bay ? bay.berth_number : -i - 1,
+					"name" = "Ship Bay [i]: [bay ? (bay.ship?.name || "reserved") : "vacant"]",
+					"occupied" = bay && length(bay.alcove_turfs) > 0,
+					"your_ship" = !!(bay?.ship?.ship_team in user?.mind?.ship_teams),
+				))
 		if(home?.freight_berth)
 			floors += list(list("id" = OUTPOST_MAX_BERTHS + 1, "name" = "Freight Receiving", "occupied" = TRUE, "your_ship" = FALSE))
 	data["floors"] = floors

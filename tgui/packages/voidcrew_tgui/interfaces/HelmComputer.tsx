@@ -218,6 +218,8 @@ type DockOption = {
   ref: string | null;
   isEmpty: BooleanLike;
   variant?: string;
+  /** Short action label when the contact's name is already displayed. */
+  label?: string;
 };
 
 type Data = {
@@ -3238,12 +3240,24 @@ const ContactMenu = (props: {
   }
 
   if (contact?.dist === 0 && contact.target) {
+    const variants = (data.dockOptions ?? []).filter(
+      (option) => option.ref === contact.target && option.variant,
+    );
     items.push({
-      label: 'Interact',
+      label: variants.length ? 'Dock at hangar' : 'Interact',
       hint: 'Shares our position',
       disabled: locked,
       onClick: () => act('act_overmap', { ship_to_act: contact.target }),
     });
+    for (const option of variants) {
+      items.push({
+        label: option.label ?? option.name,
+        hint: 'Dock for ship construction',
+        disabled: locked || state !== 'flying',
+        onClick: () =>
+          act('dock', { target: option.ref, variant: option.variant }),
+      });
+    }
   }
 
   const blocked =
@@ -3885,6 +3899,7 @@ const ContactList = () => {
                    */}
                   {selected === key && !locked && (
                     <div className="Helm__rowActions">
+                      <DockVariantButtons target={contact.target} />
                       {contact.dist > 0 && (
                         <button
                           type="button"
@@ -3964,12 +3979,40 @@ const AtLocation = () => {
             }
             onClick={() => act('act_overmap', { ship_to_act: object.ref })}
           >
-            Interact
+            {(data.dockOptions ?? []).some(
+              (option) => option.ref === object.ref && option.variant,
+            )
+              ? 'Dock at hangar'
+              : 'Interact'}
           </button>
+          <DockVariantButtons target={object.ref} />
         </div>
       ))}
     </>
   );
+};
+
+/** Keep alternate berths reachable from the contact controls as well as Dock. */
+const DockVariantButtons = (props: { target?: string | null }) => {
+  const { act, data } = useBackend<Data>();
+  const locked = useLocked();
+  return (data.dockOptions ?? [])
+    .filter((option) => option.ref === props.target && option.variant)
+    .map((option) => (
+      <button
+        key={`${option.ref}:${option.variant}`}
+        type="button"
+        className="Helm__btn"
+        disabled={locked || data.state !== 'flying'}
+        title="Dock for ship construction"
+        onClick={(event) => {
+          event.stopPropagation();
+          act('dock', { target: option.ref, variant: option.variant });
+        }}
+      >
+        {option.label ?? option.name}
+      </button>
+    ));
 };
 
 const Comms = () => {

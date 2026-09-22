@@ -2,6 +2,15 @@
 /datum/unit_test/voidcrew_outpost_ship_bay
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
+/// Exercise the same destination list players see, including unused installed bays.
+/datum/unit_test/voidcrew_outpost_ship_bay/proc/bay_floors(obj/machinery/outpost_elevator/panel, mob/user)
+	var/list/data = panel.ui_data(user)
+	var/list/result = list()
+	for(var/list/floor as anything in data["floors"])
+		if(findtext(floor["name"], "Ship Bay ") == 1)
+			result += list(floor)
+	return result
+
 /datum/unit_test/voidcrew_outpost_ship_bay/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
 	home.shell_template = allocate(/datum/map_template/player_outpost/small)
@@ -9,6 +18,10 @@
 	TEST_ASSERT(home.load_level(), "Could not load the bay test outpost")
 	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "bayowner")
 	var/mob/living/carbon/human/visitor = make_player(get_turf(home.management_console), "bayvisitor")
+	var/obj/machinery/outpost_elevator/panel = allocate(__IMPLIED_TYPE__, get_turf(owner))
+	panel.outpost = home
+	panel.is_lobby = TRUE
+	TEST_ASSERT_EQUAL(length(bay_floors(panel, owner)), 0, "An uninstalled ship bay appeared in the elevator")
 	var/obj/machinery/ore_silo/home_silo = allocate(__IMPLIED_TYPE__, get_turf(home.construction_console))
 	home.construction_console.link_internal_device(home.construction_console.internal_rcd, home.construction_console.internal_rcd.silo_mats, home_silo)
 	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Unfunded installation succeeded")
@@ -24,6 +37,11 @@
 	TEST_ASSERT(!home_silo.materials.has_materials(cost), "Installation did not consume its materials")
 	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Repeated installation succeeded")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "Repeated installation charged again")
+	var/list/floors = bay_floors(panel, owner)
+	TEST_ASSERT_EQUAL(length(floors), 2, "Installed empty bays were invisible in the elevator")
+	for(var/list/floor as anything in floors)
+		TEST_ASSERT(!floor["occupied"], "An empty bay offered an elevator ride")
+		TEST_ASSERT_NULL(home.get_floor_alcove(floor["id"]), "A vacancy ID resolved to a real floor")
 
 	var/obj/structure/overmap/ship/ship = allocate(__IMPLIED_TYPE__)
 	visitor_port = new(run_loc_floor_bottom_left)
@@ -47,6 +65,10 @@
 	TEST_ASSERT(!bay.console.can_link_silo(home_silo), "Outpost materials were available without approval")
 	var/floor_id = bay.berth_number
 	TEST_ASSERT_EQUAL(home.get_floor_alcove(floor_id), bay.alcove_turfs, "The elevator cannot reach the bay")
+	floors = bay_floors(panel, visitor)
+	var/list/active_floor = floors[1]
+	TEST_ASSERT_EQUAL(active_floor["id"], floor_id, "The elevator did not replace the vacancy with the visit's floor")
+	TEST_ASSERT(active_floor["occupied"] && active_floor["your_ship"], "The active bay was not reachable and identified for its crew")
 
 	visitor_turf = get_turf(bay.dock)
 	original_visitor_area = get_area(visitor_turf)
@@ -103,6 +125,11 @@
 	TEST_ASSERT(QDELETED(console), "Departure left a usable construction console")
 	TEST_ASSERT(get_turf(owner) in home.lobby_alcove_turfs, "Bay teardown did not evacuate the occupant")
 	TEST_ASSERT_NULL(home.get_floor_alcove(floor_id), "A departed bay remained an elevator destination")
+	floors = bay_floors(panel, owner)
+	active_floor = floors[1]
+	TEST_ASSERT_EQUAL(length(floors), 2, "Departure hid the installed bay slots")
+	TEST_ASSERT(!active_floor["occupied"], "Departure left the bay's elevator button enabled")
+	TEST_ASSERT_NOTEQUAL(active_floor["id"], floor_id, "Departure retained a stale visit ID")
 	var/datum/outpost_berth/ship_bay/replacement = home.allocate_ship_bay(ship)
 	TEST_ASSERT_NOTNULL(replacement, "The released slot could not be reused")
 	TEST_ASSERT_NOTEQUAL(replacement.berth_number, floor_id, "An old elevator ride could enter a different visit")

@@ -480,7 +480,7 @@
 			))
 			var/obj/structure/overmap/dynamic/player_outpost/home = astype(candidate)
 			if(home?.ship_bay_installed && home.has_hangar_elevator())
-				dock_options += list(list("name" = "[home.name] - Ship Bay", "ref" = REF(home), "isEmpty" = FALSE, "variant" = OUTPOST_DOCK_VARIANT_BAY))
+				dock_options += list(list("name" = "[home.name] - Ship Bay", "ref" = REF(home), "isEmpty" = FALSE, "variant" = OUTPOST_DOCK_VARIANT_BAY, "label" = "Dock at ship bay"))
 	else
 		// Nebulas aren't a docking target. Concealment is the Cloak control's job,
 		// but sitting in one and being told only "empty space" reads as the console

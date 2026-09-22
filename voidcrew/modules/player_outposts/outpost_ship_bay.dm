@@ -11,14 +11,37 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	/// Never reuse an elevator destination while an old ride could still be pending.
 	var/next_bay_floor_id = OUTPOST_MAX_BERTHS + 2
 	var/list/pending_dock_variants = list()
+	/// Service storage can be selected without connecting a construction tool.
+	var/datum/weakref/service_silo
 
 /obj/structure/overmap/dynamic/player_outpost/proc/ship_bay_material_cost()
 	return list(/datum/material/iron = 100 * SHEET_MATERIAL_AMOUNT, /datum/material/glass = 50 * SHEET_MATERIAL_AMOUNT)
 
-/// Resolve the construction console's selected silo, never a visiting vessel's store.
+/// Prefer an explicit selection, then the existing construction link, then the only local silo.
 /obj/structure/overmap/dynamic/player_outpost/proc/ship_bay_silo()
+	var/obj/machinery/ore_silo/selected = service_silo?.resolve()
+	if(!QDELETED(selected) && get_outpost_from_atom(selected) == src)
+		return selected
 	var/obj/machinery/ore_silo/silo = construction_console?.get_linked_silo()
-	return !QDELETED(silo) && get_outpost_from_atom(silo) == src ? silo : null
+	if(!QDELETED(silo) && get_outpost_from_atom(silo) == src)
+		return silo
+	var/list/available = service_silos()
+	return length(available) == 1 ? available[1] : null
+
+/obj/structure/overmap/dynamic/player_outpost/proc/service_silos()
+	var/list/available = list()
+	for(var/obj/machinery/ore_silo/silo as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/ore_silo))
+		if(!QDELETED(silo) && get_outpost_from_atom(silo) == src)
+			available += silo
+	return available
+
+/obj/structure/overmap/dynamic/player_outpost/proc/select_service_silo(mob/user, obj/machinery/ore_silo/silo)
+	if(!is_current_treasury_user(user) || QDELETED(silo) || get_outpost_from_atom(silo) != src)
+		return FALSE
+	service_silo = WEAKREF(silo)
+	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
+		bay?.reconcile_silo()
+	return TRUE
 
 /obj/structure/overmap/dynamic/player_outpost/proc/ship_bay_install_denial(mob/user)
 	if(!is_current_management_user(user) || !can_spend(user))
@@ -31,7 +54,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		return "Insufficient outpost funds."
 	var/obj/machinery/ore_silo/silo = ship_bay_silo()
 	if(!silo)
-		return "Link the outpost construction console to an outpost silo."
+		return "Select an outpost material silo in Docking."
 	if(!silo.materials?.has_materials(ship_bay_material_cost()))
 		return "The outpost silo needs 100 iron sheets and 50 glass sheets."
 	return null
@@ -257,7 +280,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(get_ship_from_atom(silo) == current_ship)
 		return TRUE
 	var/obj/structure/overmap/dynamic/player_outpost/home = berth.outpost
-	return home.founder_ckey && home.founder_ckey == berth.silo_owner_ckey && berth.approved_silo?.resolve() == silo && get_outpost_from_atom(silo) == home
+	return home.founder_ckey && home.founder_ckey == berth.silo_owner_ckey && berth.approved_silo?.resolve() == silo && home.ship_bay_silo() == silo && get_outpost_from_atom(silo) == home
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/multitool_act(mob/living/user, obj/item/multitool/tool)
 	if(!can_operate() || !is_crew_member(user))

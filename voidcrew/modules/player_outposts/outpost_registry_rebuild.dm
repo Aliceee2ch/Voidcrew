@@ -24,6 +24,7 @@
 	if(error || working)
 		return FALSE
 	// Claim both ends before waiting for the shared shuttle loader.
+	notice = null
 	working = TRUE
 	snapshot.busy = TRUE
 	var/obj/structure/overmap/ship/original = snapshot.source_ship?.resolve()

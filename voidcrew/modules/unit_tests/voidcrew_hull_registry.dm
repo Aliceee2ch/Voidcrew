@@ -1,10 +1,11 @@
 /// Confirmations exercise the real save transaction without a connected client.
 /datum/hull_registry_ui/registry_test
 	var/datum/callback/during_confirmation
+	var/accept_save = TRUE
 
 /datum/hull_registry_ui/registry_test/confirm_save(mob/user, prompt_text)
 	during_confirmation?.Invoke()
-	return TRUE
+	return accept_save
 
 /// Refuse allocation after the real preview load to exercise transaction rollback.
 /obj/structure/overmap/dynamic/player_outpost/registry_test
@@ -34,6 +35,13 @@
 /datum/unit_test/voidcrew_hull_registry/proc/revoke(datum/outpost_berth/ship_bay/bay)
 	bay.revoke_silo()
 
+/datum/unit_test/voidcrew_hull_registry/proc/change_price(obj/structure/overmap/dynamic/player_outpost/home, mob/user)
+	home.set_hull_registry_fee(user, 1500)
+
+/datum/unit_test/voidcrew_hull_registry/proc/hold_materials(datum/outpost_berth/ship_bay/bay)
+	var/datum/component/remote_materials/materials = bay.console.internal_rcd.silo_mats
+	materials.silo.holds[materials] = TRUE
+
 /datum/unit_test/voidcrew_hull_registry/proc/count_hull(obj/docking_port/mobile/port)
 	var/list/counts = list()
 	for(var/turf/tile as anything in port.return_turfs())
@@ -62,6 +70,12 @@
 	original.enlist_crewmember(captain)
 	original.claimed_captain = captain.mind
 	original.enlist_crewmember(visitor)
+	original.ship_account.account_balance = 20000
+	TEST_ASSERT(!home.set_hull_registry_fee(visitor, 10), "A visitor changed registry pricing")
+	TEST_ASSERT(!home.set_hull_registry_fee(captain, -1), "Negative pricing was accepted")
+	TEST_ASSERT(!home.set_hull_registry_fee(captain, 0.5), "Fractional pricing was accepted")
+	TEST_ASSERT(!home.set_hull_registry_fee(captain, 5001), "Excessive pricing was accepted")
+	TEST_ASSERT(home.set_hull_registry_fee(captain, 1000), "The owner could not set registry pricing")
 	var/datum/outpost_berth/ship_bay/bay = home.allocate_ship_bay(original)
 	TEST_ASSERT_NOTNULL(bay, "Could not allocate the source bay")
 	adjust_reserve_dock_to_shuttle(bay.dock, original.shuttle)
@@ -73,8 +87,8 @@
 	original.state = "idle"
 	bay.on_ship_docked(original)
 	TEST_ASSERT(bay.is_ship_present(), "The real source hull did not land in the bay")
-	var/obj/machinery/ore_silo/silo = allocate(__IMPLIED_TYPE__, get_turf(home.construction_console))
-	home.construction_console.link_internal_device(home.construction_console.internal_rcd, home.construction_console.internal_rcd.silo_mats, silo)
+	var/obj/machinery/ore_silo/silo = home.ship_bay_silo()
+	TEST_ASSERT_NOTNULL(silo, "The mapped outpost silo was not discovered without a construction link")
 	silo.materials.insert_amount_mat(1000000, /datum/material/iron)
 	silo.materials.insert_amount_mat(1000000, /datum/material/glass)
 	TEST_ASSERT(bay.request_silo(captain) && bay.approve_silo(captain), "Could not approve the test materials")
@@ -94,24 +108,58 @@
 	var/room_count = length(panel.quote.rooms)
 	var/list/cost = panel.quote.material_cost.Copy()
 	var/before_iron = silo.materials.get_material_amount(/datum/material/iron)
+	var/before_money = original.ship_account.account_balance
+	var/before_treasury = home.treasury.account_balance
+	panel.accept_save = FALSE
+	TEST_ASSERT(!panel.save_quote(captain), "Cancelling confirmation still registered the hull")
+	TEST_ASSERT_EQUAL(original.ship_account.account_balance, before_money, "Cancellation charged credits")
+	TEST_ASSERT_EQUAL(silo.materials.get_material_amount(/datum/material/iron), before_iron, "Cancellation consumed materials")
+	panel.accept_save = TRUE
+	panel.during_confirmation = CALLBACK(src, PROC_REF(change_price), home, captain)
+	TEST_ASSERT(!panel.save_quote(captain), "A price change during confirmation was accepted")
+	TEST_ASSERT_EQUAL(original.ship_account.account_balance, before_money, "A changed price charged credits")
+	TEST_ASSERT_EQUAL(silo.materials.get_material_amount(/datum/material/iron), before_iron, "A changed price consumed materials")
+	panel.during_confirmation = null
+	TEST_ASSERT(panel.prepare_save(captain, bay), "Could not quote the new price")
+	panel.during_confirmation = CALLBACK(src, PROC_REF(hold_materials), bay)
+	TEST_ASSERT(!panel.save_quote(captain), "A silo hold during confirmation was bypassed")
+	TEST_ASSERT_EQUAL(original.ship_account.account_balance, before_money, "A silo hold charged credits")
+	silo.holds.Cut()
 	panel.during_confirmation = CALLBACK(src, PROC_REF(revoke), bay)
 	TEST_ASSERT(!panel.save_quote(captain), "Revocation during confirmation still charged the silo")
 	TEST_ASSERT_EQUAL(silo.materials.get_material_amount(/datum/material/iron), before_iron, "A refused save consumed material")
 	TEST_ASSERT_EQUAL(length(home.hull_registry), 0, "A refused save created a registration")
+	TEST_ASSERT_EQUAL(original.ship_account.account_balance, before_money, "A refused save charged credits")
 	panel.during_confirmation = null
 	TEST_ASSERT(bay.request_silo(captain) && bay.approve_silo(captain), "Could not reapprove materials")
 	TEST_ASSERT(panel.prepare_save(captain, bay), "Could not refresh the quote")
 	silo.materials.use_amount_mat(before_iron, /datum/material/iron)
 	TEST_ASSERT(!panel.save_quote(captain), "An unaffordable save was accepted")
 	TEST_ASSERT_EQUAL(length(home.hull_registry), 0, "An unaffordable save created a registration")
+	TEST_ASSERT_EQUAL(original.ship_account.account_balance, before_money, "Missing materials charged credits")
 	silo.materials.insert_amount_mat(before_iron, /datum/material/iron)
+	original.ship_account.account_balance = 0
+	TEST_ASSERT(!panel.save_quote(captain), "Insufficient ship funds were accepted")
+	TEST_ASSERT_EQUAL(silo.materials.get_material_amount(/datum/material/iron), before_iron, "Missing credits consumed materials")
+	original.ship_account.account_balance = before_money
+	var/datum/hull_registry_ui/registry_test/other_panel = allocate(__IMPLIED_TYPE__, home, home.management_console, captain)
+	TEST_ASSERT(other_panel.prepare_save(captain, bay), "Could not prepare the concurrent quote")
 	TEST_ASSERT(panel.save_quote(captain), "Could not save the paid hull: [panel.error]")
 	TEST_ASSERT_EQUAL(before_iron - silo.materials.get_material_amount(/datum/material/iron), cost[/datum/material/iron], "Save charged the wrong material amount")
+	TEST_ASSERT_EQUAL(before_money - original.ship_account.account_balance, 1500, "Save charged the wrong credit amount")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance - before_treasury, 1500, "Registration fee did not reach the outpost treasury")
+	TEST_ASSERT(!other_panel.save_quote(captain), "A stale concurrent quote overwrote a newly paid registration")
+	TEST_ASSERT_EQUAL(before_money - original.ship_account.account_balance, 1500, "A stale concurrent quote charged again")
 	var/datum/hull_blueprint/snapshot = home.hull_registry[1]
 	TEST_ASSERT(!panel.save_quote(captain), "A repeated Save reused the paid quote")
 	TEST_ASSERT(panel.prepare_save(captain, bay) && panel.save_quote(captain), "Could not replace a registration")
 	TEST_ASSERT_EQUAL(length(home.hull_registry), 1, "Replacing a registration created a second recovery")
 	TEST_ASSERT(QDELETED(snapshot), "Replaced registration was not deleted")
+	TEST_ASSERT_EQUAL(before_money - original.ship_account.account_balance, 3000, "Replacement did not charge exactly once")
+	TEST_ASSERT(home.set_hull_registry_fee(captain, 0), "A zero-credit fee was refused")
+	TEST_ASSERT(panel.prepare_save(captain, bay) && panel.save_quote(captain), "A materials-only quote with an explicitly waived fee failed")
+	TEST_ASSERT_EQUAL(before_money - original.ship_account.account_balance, 3000, "A waived fee still charged credits")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance - before_treasury, 3000, "The treasury received an incorrect total")
 	snapshot = home.hull_registry[1]
 	TEST_ASSERT_NOTNULL(panel.rebuild_denial(captain, snapshot), "A crewed original permitted a second hull")
 	TEST_ASSERT_NOTNULL(panel.rebuild_denial(visitor, snapshot), "A non-captain could recover another captain's hull")

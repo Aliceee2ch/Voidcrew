@@ -1,5 +1,12 @@
 import { type ReactNode, useState } from 'react';
-import { Button, Dropdown, Icon, Input, TextArea } from 'tgui-core/components';
+import {
+  Button,
+  Dropdown,
+  Icon,
+  Input,
+  NumberInput,
+  TextArea,
+} from 'tgui-core/components';
 import type { BooleanLike } from 'tgui-core/react';
 import { resolveAsset } from '../assets';
 import { useBackend } from '../backend';
@@ -45,6 +52,13 @@ export type OutpostData = {
   can_claim: BooleanLike;
   can_manage: BooleanLike;
   can_spend: BooleanLike;
+  can_set_prices: BooleanLike;
+  hull_registry_fee: number;
+  hull_registry_fee_max: number;
+  treasury_balance: number;
+  service_silo: string | null;
+  service_silos: Vessel[];
+  ship_bay_materials: { name: string; sheets: number; available: number }[];
   raidable: BooleanLike;
   dock_mode: string;
   rename_cooldown: number;
@@ -215,6 +229,19 @@ function Docking({ data, act }: Props) {
   return (
     <>
       <div className="Outpost__section-label">Ship bays</div>
+      <div className="Outpost__field-label">Outpost material source</div>
+      <Dropdown
+        width="100%"
+        disabled={!data.can_set_prices || !data.service_silos?.length}
+        selected={data.service_silo || ''}
+        options={(data.service_silos || []).map((silo) => ({
+          value: silo.ref,
+          displayText: silo.name,
+        }))}
+        placeholder="No outpost silo selected"
+        onSelected={(ref) => act('select_service_silo', { ref })}
+      />
+      <div className="Outpost__quiet">Treasury: {data.treasury_balance} cr</div>
       {!!data.can_use_registry && (
         <Button icon="floppy-disk" onClick={() => act('hull_registry')}>
           Hull registry
@@ -243,6 +270,17 @@ function Docking({ data, act }: Props) {
       )}
       {!!data.ship_bay_error && (
         <div className="Outpost__quiet">{data.ship_bay_error}</div>
+      )}
+      {!data.ship_bay_installed && (
+        <div className="Outpost__quiet">
+          {(data.ship_bay_materials || []).map((material) => (
+            <div key={material.name}>
+              {material.name}: {Math.floor(material.available)} /{' '}
+              {material.sheets} sheets
+            </div>
+          ))}
+          {!!data.ship_bay_denial && <div>{data.ship_bay_denial}</div>}
+        </div>
       )}
       {(data.ship_bays || []).map((bay) => (
         <div className="Outpost__row" key={bay.ref}>
@@ -745,6 +783,31 @@ function Ownership({ data, act }: Props) {
   );
 }
 
+function Pricing({ data, act }: Props) {
+  return (
+    <>
+      <div className="Outpost__section-label">Hull registry</div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Hull registration fee</span>
+        <NumberInput
+          value={data.hull_registry_fee}
+          minValue={0}
+          maxValue={data.hull_registry_fee_max}
+          step={100}
+          unit="cr"
+          width="110px"
+          disabled={!data.can_set_prices}
+          onChange={(amount) => act('set_registry_fee', { amount })}
+        />
+      </div>
+      <div className="Outpost__quiet">
+        Ship account to outpost treasury. Materials charged separately. Rebuild
+        prepaid.
+      </div>
+    </>
+  );
+}
+
 export function OutpostManagementPanel({ data, act }: Props) {
   const [tab, setTab] = useState('docking');
   const tabs = [
@@ -752,6 +815,7 @@ export function OutpostManagementPanel({ data, act }: Props) {
     { id: 'residents', title: 'Residents', icon: 'users' },
     { id: 'access', title: 'Access', icon: 'id-card' },
     { id: 'research', title: 'Research', icon: 'flask' },
+    { id: 'pricing', title: 'Pricing', icon: 'coins' },
   ];
   return (
     <div className="Outpost">
@@ -803,6 +867,8 @@ export function OutpostManagementPanel({ data, act }: Props) {
                 <Residents data={data} act={act} />
               ) : tab === 'research' ? (
                 <Research data={data} act={act} />
+              ) : tab === 'pricing' ? (
+                <Pricing data={data} act={act} />
               ) : (
                 <Access data={data} act={act} />
               )}

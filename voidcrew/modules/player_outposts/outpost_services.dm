@@ -66,6 +66,9 @@
 /obj/structure/overmap/dynamic/player_outpost/proc/can_spend(mob/user)
 	return founder_ckey && (is_owner(user) || (user?.mind && user.mind in treasurers))
 
+/obj/structure/overmap/dynamic/player_outpost/proc/is_current_treasury_user(mob/living/user)
+	return istype(user) && user.mind?.current == user && can_spend(user) && (!is_owner(user) || is_current_management_user(user))
+
 /obj/structure/overmap/dynamic/player_outpost/proc/ensure_home_services()
 	if(!treasury)
 		treasury = new("[name] Treasury", player_account = FALSE)

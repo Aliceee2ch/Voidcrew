@@ -1,5 +1,16 @@
 /obj/structure/overmap/dynamic/player_outpost
 	var/list/datum/hull_blueprint/hull_registry = list()
+	var/hull_registry_fee = OUTPOST_REGISTRY_DEFAULT_FEE
+	var/hull_registry_price_revision = 0
+
+/obj/structure/overmap/dynamic/player_outpost/proc/set_hull_registry_fee(mob/user, amount)
+	if(!is_current_treasury_user(user) || !isnum(amount) || amount < 0 || amount > OUTPOST_REGISTRY_MAX_FEE || amount != round(amount))
+		return FALSE
+	if(hull_registry_fee != amount)
+		hull_registry_fee = amount
+		hull_registry_price_revision++
+		log_game("[key_name(user)] set [name]'s hull registry fee to [amount] credits.")
+	return TRUE
 
 /obj/structure/overmap/ship
 	var/datum/weakref/hull_registration
@@ -44,7 +55,14 @@
 	var/datum/hull_blueprint/quote
 	var/datum/weakref/quoted_silo
 	var/datum/weakref/quoted_bay
+	var/datum/weakref/quoted_account
+	var/datum/weakref/quoted_treasury
+	var/datum/weakref/quoted_registration
+	var/quoted_owner
+	var/quoted_fee
+	var/quoted_price_revision
 	var/error
+	var/notice
 	var/working = FALSE
 
 /datum/hull_registry_ui/New(obj/structure/overmap/dynamic/player_outpost/home, obj/machinery/computer/host, mob/user)
@@ -116,7 +134,11 @@
 		return "This outpost's hull registry is full."
 	var/obj/machinery/ore_silo/silo = bay.console?.get_linked_silo()
 	if(!silo || !bay.console.can_link_silo(silo))
-		return "Connect the bay console to an authorized material silo."
+		return "Select ship materials or request outpost materials."
+	if(bay.console.internal_rcd.silo_mats.on_hold())
+		return "The selected silo has suspended bay material access."
+	if(QDELETED(ship.ship_account) || QDELETED(outpost.treasury))
+		return "The ship or outpost bank account is unavailable."
 	return null
 
 /datum/hull_registry_ui/proc/prepare_save(mob/living/user, datum/outpost_berth/ship_bay/bay)
@@ -124,6 +146,7 @@
 	if(error || working)
 		return FALSE
 	working = TRUE
+	notice = null
 	QDEL_NULL(quote)
 	var/datum/hull_blueprint/snapshot = new
 	error = snapshot.capture(bay.ship, user)
@@ -136,8 +159,36 @@
 	quote = snapshot
 	quoted_silo = WEAKREF(bay.console.get_linked_silo())
 	quoted_bay = WEAKREF(bay)
+	quoted_account = WEAKREF(bay.ship.ship_account)
+	quoted_treasury = WEAKREF(outpost.treasury)
+	quoted_registration = bay.ship.hull_registration
+	quoted_owner = outpost.founder_ckey
+	quoted_fee = outpost.hull_registry_fee
+	quoted_price_revision = outpost.hull_registry_price_revision
 	working = FALSE
 	return TRUE
+
+/// Shared by the invoice and transaction; rechecked after captain confirmation.
+/datum/hull_registry_ui/proc/quote_denial(mob/living/user)
+	if(QDELETED(quote))
+		return "Prepare a quote first."
+	var/datum/outpost_berth/ship_bay/bay = quoted_bay?.resolve()
+	var/denial = save_denial(user, bay)
+	if(denial)
+		return denial
+	var/obj/structure/overmap/ship/ship = quote.source_ship.resolve()
+	var/obj/machinery/ore_silo/silo = quoted_silo?.resolve()
+	if(bay.ship != ship || quote.captain_ckey != user.ckey || silo != bay.console.get_linked_silo() || !bay.console.can_link_silo(silo))
+		return "The ship or material source changed. Prepare a new quote."
+	if(quoted_owner != outpost.founder_ckey || quoted_price_revision != outpost.hull_registry_price_revision || quoted_fee != outpost.hull_registry_fee || quoted_account?.resolve() != ship.ship_account || quoted_treasury?.resolve() != outpost.treasury)
+		return "The price or payment account changed. Prepare a new quote."
+	if(quoted_registration != ship.hull_registration)
+		return "The ship's registration changed. Prepare a new quote."
+	if(!silo.materials?.has_materials(quote.material_cost))
+		return "The selected silo has insufficient materials."
+	if(!ship.ship_account.has_money(quoted_fee))
+		return "The ship account has insufficient credits."
+	return null
 
 /datum/hull_registry_ui/proc/confirm_save(mob/user, prompt_text)
 	return tgui_alert(user, prompt_text, "Save hull", list("Save", "Cancel")) == "Save"
@@ -145,32 +196,35 @@
 /datum/hull_registry_ui/proc/save_quote(mob/living/user)
 	if(working || !quote)
 		return FALSE
+	error = quote_denial(user)
+	if(error)
+		return FALSE
 	var/datum/hull_blueprint/snapshot = quote
 	working = TRUE
 	var/list/prices = registry_material_data(snapshot.material_cost)
 	var/list/price_text = list()
 	for(var/list/material as anything in prices)
 		price_text += "[material["sheets"]] [material["name"]] sheets"
-	var/accepted = confirm_save(user, "Save [snapshot.ship_name]'s hull for [price_text.Join(", ")]? This replaces its previous registration. Includes infrastructure, but no helm, other machinery, supplies or fuel. One free rebuild after the original is lost or abandoned.")
+	var/accepted = confirm_save(user, "Pay [quoted_fee] credits from the ship account to [outpost.name], plus [price_text.Join(", ")] from the selected silo? This saves [snapshot.ship_name]'s hull and replaces its previous registration. One prepaid rebuild; no helm, other machinery, supplies or fuel.")
 	if(QDELETED(src))
 		return FALSE
 	working = FALSE
 	if(!accepted || quote != snapshot || QDELETED(snapshot))
 		return FALSE
-	var/datum/outpost_berth/ship_bay/bay = quoted_bay?.resolve()
-	error = save_denial(user, bay)
+	error = quote_denial(user)
 	if(error)
 		return FALSE
 	var/obj/structure/overmap/ship/ship = snapshot.source_ship.resolve()
 	var/obj/machinery/ore_silo/silo = quoted_silo?.resolve()
-	if(bay.ship != ship || snapshot.captain_ckey != user.ckey || silo != bay.console.get_linked_silo() || !bay.console.can_link_silo(silo))
-		error = "The ship or material permission changed. Prepare a new quote."
-		return FALSE
-	if(!silo.materials?.has_materials(snapshot.material_cost))
-		error = "The selected silo has insufficient materials."
-		return FALSE
+	var/datum/outpost_berth/ship_bay/bay = quoted_bay.resolve()
 	// No yields between the final checks, payment and replacing the registration.
+	if(quoted_fee && !ship.ship_account.adjust_money(-quoted_fee, "Hull registration at [outpost.name], approved by [user.ckey]"))
+		error = "The ship account payment was declined."
+		return FALSE
 	silo.materials.use_materials(snapshot.material_cost)
+	silo.silo_log(bay.console, "register", -1, snapshot.ship_name, snapshot.material_cost, ID_DATA(user))
+	if(quoted_fee)
+		outpost.treasury.adjust_money(quoted_fee, "Hull registration: [ship.name], approved by [user.ckey]")
 	var/datum/hull_blueprint/previous = ship.hull_registration?.resolve()
 	if(previous)
 		qdel(previous)
@@ -178,14 +232,15 @@
 	outpost.hull_registry += snapshot
 	ship.hull_registration = WEAKREF(snapshot)
 	quote = null
-	log_game("[key_name(user)] registered the hull of [ship.name] at [outpost.name] for [json_encode(snapshot.material_cost)].")
+	notice = "[snapshot.ship_name] registered. One prepaid rebuild available."
+	log_game("[key_name(user)] registered the hull of [ship.name] at [outpost.name] for [quoted_fee] credits and [json_encode(snapshot.material_cost)].")
 	return TRUE
 
-/proc/registry_material_data(list/cost)
+/proc/registry_material_data(list/cost, obj/machinery/ore_silo/silo)
 	var/list/result = list()
 	for(var/material_type in cost)
 		var/datum/material/material = GET_MATERIAL_REF(material_type)
-		result += list(list("name" = material.name, "sheets" = cost[material_type] / SHEET_MATERIAL_AMOUNT))
+		result += list(list("name" = material.name, "sheets" = cost[material_type] / SHEET_MATERIAL_AMOUNT, "available" = (silo?.materials?.get_material_amount(material_type) || 0) / SHEET_MATERIAL_AMOUNT))
 	return result
 
 /datum/hull_registry_ui/ui_data(mob/user)
@@ -193,7 +248,9 @@
 	for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
 		if(!bay?.ship?.is_ship_captain(user))
 			continue
-		bays += list(list("ref" = REF(bay), "name" = bay.ship.name, "denial" = save_denial(user, bay)))
+		bay.reconcile_silo()
+		var/obj/machinery/ore_silo/silo = bay.console?.get_linked_silo()
+		bays += list(list("ref" = REF(bay), "name" = bay.ship.name, "number" = bay.bay_number, "denial" = save_denial(user, bay), "silo" = silo && bay.console.can_link_silo(silo) ? silo.name : null, "outpost_materials" = !!silo && get_outpost_from_atom(silo) == outpost, "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
 	var/list/blueprints = list()
 	for(var/datum/hull_blueprint/snapshot as anything in outpost.hull_registry)
 		if(snapshot.captain_ckey != user.ckey)
@@ -205,8 +262,17 @@
 		"blueprints" = blueprints,
 		"working" = working,
 		"error" = error,
-		"quote" = quote ? list("name" = quote.ship_name, "cost" = registry_material_data(quote.material_cost)) : null,
+		"notice" = notice,
+		"fee" = outpost.hull_registry_fee,
+		"quote" = quote_data(user),
 	)
+
+/datum/hull_registry_ui/proc/quote_data(mob/user)
+	if(!quote)
+		return null
+	var/obj/machinery/ore_silo/silo = quoted_silo?.resolve()
+	var/datum/bank_account/account = quoted_account?.resolve()
+	return list("name" = quote.ship_name, "cost" = registry_material_data(quote.material_cost, silo), "silo" = silo?.name, "outpost_materials" = !!silo && get_outpost_from_atom(silo) == outpost, "fee" = quoted_fee, "balance" = account?.account_balance || 0, "denial" = quote_denial(user), "replaces" = !!quoted_registration?.resolve())
 
 /datum/hull_registry_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
@@ -216,6 +282,25 @@
 	if(working || !istype(user) || ui.user != user || ui.src_object != src || ui_status(user, state) != UI_INTERACTIVE)
 		return
 	switch(action)
+		if("ship_materials", "outpost_materials")
+			var/datum/outpost_berth/ship_bay/bay = locate(params["ref"]) in outpost.bay_berths
+			if(!bay?.is_ship_present() || !bay.ship.is_ship_captain(user))
+				return FALSE
+			bay.reconcile_silo()
+			QDEL_NULL(quote)
+			error = null
+			notice = null
+			if(action == "ship_materials")
+				if(!bay.console.use_ship_silo())
+					error = "No material silo found aboard this ship."
+			else if(bay.approved_silo)
+				bay.console.link_materials(bay.approved_silo.resolve())
+			else if(bay.request_silo(user))
+				// An owner with treasury access can approve their own request here.
+				if(!bay.approve_silo(user))
+					notice = "Outpost materials requested. Awaiting treasury approval."
+			else
+				error = "No outpost silo selected. Check Outpost Management > Docking."
 		if("quote")
 			var/datum/outpost_berth/ship_bay/bay = locate(params["ref"]) in outpost.bay_berths
 			prepare_save(user, bay)

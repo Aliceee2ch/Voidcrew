@@ -66,7 +66,7 @@
 	if(QDELETED(console) || get_turf(console) != console_turf || get_outpost_from_atom(console) != outpost)
 		return UI_CLOSE
 	var/physical_status = console.ui_status(user, console.ui_state(user))
-	return min(physical_status, isliving(user) && (outpost.is_current_management_user(user) || outpost.can_claim(user) || (outpost.ship_bay_installed && user.ckey)) ? UI_INTERACTIVE : UI_UPDATE)
+	return min(physical_status, isliving(user) && (outpost.is_current_management_user(user) || outpost.is_current_treasury_user(user) || outpost.can_claim(user) || (outpost.ship_bay_installed && user.ckey)) ? UI_INTERACTIVE : UI_UPDATE)
 
 /datum/player_outpost_management_ui/ui_close(mob/user)
 	if(!QDELETED(src))
@@ -88,6 +88,18 @@
 	data["can_claim"] = !!console_ref && outpost.can_claim(user)
 	data["can_manage"] = outpost.is_current_management_user(user)
 	data["can_spend"] = outpost.can_spend(user)
+	data["can_set_prices"] = outpost.is_current_treasury_user(user)
+	data["hull_registry_fee"] = outpost.hull_registry_fee
+	data["hull_registry_fee_max"] = OUTPOST_REGISTRY_MAX_FEE
+	data["treasury_balance"] = outpost.treasury?.account_balance || 0
+	var/obj/machinery/ore_silo/selected_silo = outpost.ship_bay_silo()
+	data["service_silo"] = selected_silo ? REF(selected_silo) : null
+	var/list/silos = list()
+	for(var/obj/machinery/ore_silo/silo as anything in outpost.service_silos())
+		var/area/silo_area = get_area(silo)
+		silos += list(list("ref" = REF(silo), "name" = "[silo.name] ([silo_area.name], [silo.x], [silo.y])"))
+	data["service_silos"] = silos
+	data["ship_bay_materials"] = registry_material_data(outpost.ship_bay_material_cost(), selected_silo)
 	data["raidable"] = outpost.raidable
 	data["dock_mode"] = outpost.dock_mode
 	data["rename_cooldown"] = COOLDOWN_TIMELEFT(outpost, rename_cooldown) / 10
@@ -179,6 +191,14 @@
 	if(action == "hull_registry")
 		var/obj/machinery/computer/player_outpost_management/console = console_ref?.resolve()
 		console?.open_hull_registry(user)
+		return TRUE
+	if(action == "set_registry_fee")
+		var/amount = params["amount"]
+		outpost.set_hull_registry_fee(user, istext(amount) ? text2num(amount) : amount)
+		return TRUE
+	if(action == "select_service_silo")
+		var/obj/machinery/ore_silo/silo = locate(params["ref"]) in outpost.service_silos()
+		outpost.select_service_silo(user, silo)
 		return TRUE
 	if(!outpost.is_current_management_user(user))
 		return

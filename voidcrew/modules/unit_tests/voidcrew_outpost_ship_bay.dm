@@ -22,8 +22,14 @@
 	panel.outpost = home
 	panel.is_lobby = TRUE
 	TEST_ASSERT_EQUAL(length(bay_floors(panel, owner)), 0, "An uninstalled ship bay appeared in the elevator")
-	var/obj/machinery/ore_silo/home_silo = allocate(__IMPLIED_TYPE__, get_turf(home.construction_console))
-	home.construction_console.link_internal_device(home.construction_console.internal_rcd, home.construction_console.internal_rcd.silo_mats, home_silo)
+	var/obj/machinery/ore_silo/home_silo = home.ship_bay_silo()
+	TEST_ASSERT_NOTNULL(home_silo, "The mapped outpost silo required a construction console link")
+	var/obj/machinery/ore_silo/second_silo = allocate(__IMPLIED_TYPE__, get_turf(home.construction_console))
+	TEST_ASSERT_NULL(home.ship_bay_silo(), "Multiple silos were silently selected")
+	TEST_ASSERT(!home.select_service_silo(visitor, home_silo), "A visitor selected outpost storage")
+	TEST_ASSERT(home.select_service_silo(owner, home_silo), "The owner could not select outpost storage")
+	TEST_ASSERT_EQUAL(home.ship_bay_silo(), home_silo, "Selected storage was ignored")
+	qdel(second_silo)
 	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Unfunded installation succeeded")
 	home.treasury.adjust_money(10000, "Ship bay test") // Fork defines follow the test includes.
 	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Installation without materials succeeded")

@@ -53,12 +53,13 @@ $muted: #969588;
 .Outpost__panel--directory { padding: 0; }
 .Outpost__tabs {
   display: flex;
+  flex-wrap: wrap;
   flex: 0 0 auto;
   padding: 9px 10px;
   gap: 5px;
   border-bottom: 1px solid rgba($amber, 0.22);
   background: rgba(0, 0, 0, 0.28);
-  > .Button { flex: 1; justify-content: center; }
+  > .Button { flex: 1 0 auto; justify-content: center; }
 }
 
 .Outpost__directory-scroll, .Outpost__registry-scroll {
@@ -106,6 +107,7 @@ $muted: #969588;
   > .Icon { color: $ice; }
 }
 .Outpost__grow, .Outpost__person { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.Outpost__row > .Button, .Outpost__row > .NumberInput { flex-shrink: 0; }
 .Outpost__person {
   display: flex;
   flex-direction: column;

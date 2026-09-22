@@ -218,6 +218,8 @@
 
 /// Converts an NPC ship to player control
 /obj/machinery/computer/helm/proc/claim_npc_ship(obj/structure/overmap/ship/npc/npc_ship, mob/living/claimer)
+	if(npc_ship?.retired_by_registry || npc_ship?.registry_rebuilding)
+		return FALSE
 	if(!istype(npc_ship))
 		return FALSE
 
@@ -343,6 +345,7 @@
 	// Keep an open console's lock current when crew membership or ownership changes.
 	data["isNotCrew"] = !is_crew_member(user)
 	data["isAbandoned"] = current_ship.abandoned
+	data["isRetired"] = current_ship.retired_by_registry || current_ship.registry_rebuilding
 
 	data["integrity"] = current_ship.get_integrity_percent()
 	data["overhealth"] = current_ship.get_overhealth_percent()

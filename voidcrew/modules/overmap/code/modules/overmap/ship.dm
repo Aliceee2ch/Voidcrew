@@ -1379,6 +1379,9 @@
  * * claimer - The mob claiming the ship
  */
 /obj/structure/overmap/ship/proc/claim_abandoned_ship(mob/living/claimer)
+	if(retired_by_registry || registry_rebuilding)
+		to_chat(claimer, span_warning("This hull is retired or being replaced by its registry."))
+		return FALSE
 	if(!abandoned)
 		return FALSE
 	if(!claimer?.mind)

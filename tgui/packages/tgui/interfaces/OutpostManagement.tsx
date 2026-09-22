@@ -69,6 +69,7 @@ export type OutpostData = {
   research_connections: ResearchConnection[];
   research_error: string | null;
   ship_bay_installed: BooleanLike;
+  can_use_registry: BooleanLike;
   ship_bay_cost: number;
   ship_bay_denial: string | null;
   ship_bay_error: string | null;
@@ -214,6 +215,11 @@ function Docking({ data, act }: Props) {
   return (
     <>
       <div className="Outpost__section-label">Ship bays</div>
+      {!!data.can_use_registry && (
+        <Button icon="floppy-disk" onClick={() => act('hull_registry')}>
+          Hull registry
+        </Button>
+      )}
       {data.ship_bay_installed ? (
         <div className="Outpost__quiet">
           {(data.ship_bays || []).length}/2 occupied. Select Ship Bay at the

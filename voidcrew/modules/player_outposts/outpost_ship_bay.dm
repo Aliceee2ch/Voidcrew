@@ -228,6 +228,9 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	return
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/Destroy()
+	var/list/closing_registry_panels = registry_panels
+	registry_panels = list()
+	QDEL_LIST(closing_registry_panels)
 	disconnect_materials()
 	if(berth?.console == src)
 		berth.console = null
@@ -292,6 +295,10 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	.["bay"] = list("silo" = silo && can_link_silo(silo) ? silo.name : null, "requested" = !!berth?.silo_requested_at, "approved" = !!berth?.approved_silo)
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	if(action == "hull_registry")
+		if(ui.user == usr && ui.src_object == src && ui_status(usr, state) == UI_INTERACTIVE)
+			open_hull_registry(usr)
+		return TRUE
 	if(action in list("bay_request_silo", "bay_ship_silo", "bay_outpost_silo"))
 		if(ui.user != usr || ui.src_object != src || !is_crew_member(usr) || !can_operate() || ui_status(usr, state) != UI_INTERACTIVE)
 			return TRUE

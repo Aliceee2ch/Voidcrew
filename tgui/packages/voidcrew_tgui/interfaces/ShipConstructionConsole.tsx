@@ -115,6 +115,13 @@ export const ShipConstructionConsole = () => {
           {!!data.bay && (
             <Stack.Item>
               <Section title="Bay materials">
+                <Button
+                  icon="floppy-disk"
+                  disabled={!canOperate || isNotCrew}
+                  onClick={() => act('hull_registry')}
+                >
+                  Hull registry
+                </Button>
                 <Box mb={1}>{data.bay.silo || 'No silo connected'}</Box>
                 <Button
                   disabled={!canOperate || isNotCrew}

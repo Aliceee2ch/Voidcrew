@@ -213,6 +213,12 @@ SUBSYSTEM_DEF(overmap)
 	for(var/obj/structure/overmap/ship/ship as anything in simulated_ships.Copy())
 		if(QDELETED(ship))
 			continue
+		// Paid recovery retires the original even when it was parked at an outpost.
+		// The teardown itself still protects players physically aboard the wreck.
+		if(ship.retired_by_registry)
+			if(!despawned_one)
+				despawned_one = ship.despawn_derelict()
+			continue
 		if(ship.has_active_crew())
 			ship.crewless_since = 0
 			ship.site_dead_since = 0
@@ -1289,6 +1295,9 @@ SUBSYSTEM_DEF(overmap)
 #ifdef UNIT_TESTS
 	var/list/remaining_templates = subtypesof(/datum/map_template/shuttle/voidcrew)
 	for(var/templates in remaining_templates)
+		// Commissioned/registered hulls are supplied at runtime, not map files.
+		if(ispath(templates, /datum/map_template/shuttle/voidcrew/commissioned))
+			continue
 		var/obj/structure/overmap/ship/loaded_ship = SSshuttle.create_ship(templates)
 		if(!initial_ship && loaded_ship)
 			initial_ship = loaded_ship

@@ -66,7 +66,7 @@
 	if(QDELETED(console) || get_turf(console) != console_turf || get_outpost_from_atom(console) != outpost)
 		return UI_CLOSE
 	var/physical_status = console.ui_status(user, console.ui_state(user))
-	return min(physical_status, isliving(user) && (outpost.is_current_management_user(user) || outpost.can_claim(user)) ? UI_INTERACTIVE : UI_UPDATE)
+	return min(physical_status, isliving(user) && (outpost.is_current_management_user(user) || outpost.can_claim(user) || (outpost.ship_bay_installed && user.ckey)) ? UI_INTERACTIVE : UI_UPDATE)
 
 /datum/player_outpost_management_ui/ui_close(mob/user)
 	if(!QDELETED(src))
@@ -152,6 +152,7 @@
 	data["research_connections"] = connections
 	data["research_error"] = research_error
 	data["ship_bay_installed"] = outpost.ship_bay_installed
+	data["can_use_registry"] = !!console_ref && outpost.ship_bay_installed
 	data["ship_bay_cost"] = OUTPOST_SHIP_BAY_COST
 	data["ship_bay_denial"] = outpost.ship_bay_install_denial(user)
 	data["ship_bay_error"] = ship_bay_error
@@ -174,6 +175,10 @@
 	if(action == "claim")
 		if(console_ref && outpost.can_claim(user))
 			outpost.transfer_ownership(user, user)
+		return TRUE
+	if(action == "hull_registry")
+		var/obj/machinery/computer/player_outpost_management/console = console_ref?.resolve()
+		console?.open_hull_registry(user)
 		return TRUE
 	if(!outpost.is_current_management_user(user))
 		return

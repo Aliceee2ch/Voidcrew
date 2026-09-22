@@ -62,3 +62,8 @@
 #define OUTPOST_SHIP_BAY_SLOTS 2
 #define OUTPOST_SHIP_BAY_COST 10000
 #define OUTPOST_DOCK_VARIANT_BAY "ship_bay"
+
+/// Round-local, prepaid hull recovery. A ship has at most one current registration.
+#define OUTPOST_MAX_BLUEPRINTS 12
+#define OUTPOST_REGISTRY_MAX_TEXT (1024 * 1024)
+#define OUTPOST_REGISTRY_MATERIAL_FRACTION 0.25

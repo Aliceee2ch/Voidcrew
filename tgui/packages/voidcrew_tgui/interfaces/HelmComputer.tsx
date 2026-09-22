@@ -226,6 +226,7 @@ type Data = {
   isViewer: BooleanLike;
   isNotCrew: BooleanLike;
   isAbandoned: BooleanLike;
+  isRetired: BooleanLike;
   shipInfo: { name: string; class: string; mass: number };
   chart: {
     size: number;
@@ -4749,16 +4750,20 @@ const AbandonedOverlay = () => {
   return (
     <div className="Helm__overlay Helm--prompt">
       <div className="Helm__overlayBox">
-        <div className="Helm__overlayTitle">Vessel abandoned</div>
+        <div className="Helm__overlayTitle">
+          {data.isRetired ? 'Hull retired' : 'Vessel abandoned'}
+        </div>
         <div className="Helm__overlayDesc">
-          No command authorization is registered to this ship. Claiming it makes
-          you its commanding officer.
+          {data.isRetired
+            ? 'This hull has been retired or reserved for replacement by its registry.'
+            : 'No command authorization is registered to this ship. Claiming it makes you its commanding officer.'}
         </div>
         <div className="Helm__overlayActions">
           <button
             type="button"
             className="Helm__btn"
             onClick={() => act('claim_abandoned')}
+            disabled={!!data.isRetired}
           >
             Claim this ship
           </button>

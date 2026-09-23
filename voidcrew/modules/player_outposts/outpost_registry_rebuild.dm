@@ -8,8 +8,15 @@
 	if(snapshot.busy && !allow_busy)
 		return "This hull is already being rebuilt."
 	var/obj/structure/overmap/ship/original = snapshot.source_ship?.resolve()
-	if(original && (!original.abandoned || original.retired_by_registry || (original.registry_rebuilding && !allow_busy)))
-		return "The original hull must be lost or abandoned."
+	if(original)
+		if(original.retired_by_registry)
+			return "The original hull has already been replaced."
+		if(original.registry_rebuilding && !allow_busy)
+			return "Recovery is already in progress."
+		// A deleted physical hull can leave an overmap record behind. Its crew
+		// roster alone must not prevent recovery of a ship that no longer exists.
+		if(!QDELETED(original.shuttle) && !original.abandoned)
+			return "The original hull must be lost or abandoned."
 	if(!allow_busy)
 		var/free_bay = FALSE
 		for(var/i in 1 to length(outpost.bay_berths))
@@ -158,7 +165,10 @@
 		var/balance = original.ship_account?.account_balance
 		if(balance > 0 && original.ship_account.adjust_money(-balance, "Hull registry recovery"))
 			vessel.ship_account.adjust_money(balance, "Recovered ship account")
-		original.abandoned_at = world.time - SHIP_DERELICT_DESPAWN_TIME
+		if(QDELETED(original.shuttle))
+			qdel(original)
+		else
+			original.abandoned_at = world.time - SHIP_DERELICT_DESPAWN_TIME
 	committed = TRUE
 	// Consume the registration only after a real, crew-owned hull occupies its bay.
 	template.blueprint = null

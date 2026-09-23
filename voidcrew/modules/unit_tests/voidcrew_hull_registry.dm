@@ -20,10 +20,25 @@
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 	var/list/obj/structure/overmap/ship/test_ships = list()
 	var/destroy_original = FALSE
+	var/delete_via_admin = FALSE
+	var/escape_on_delete = FALSE
+	var/orphaned_original = FALSE
 
 /// Recovery must also work after the hull and the captain's original body are gone.
 /datum/unit_test/voidcrew_hull_registry/lost
 	destroy_original = TRUE
+
+/// Use the same post-confirmation deletion path as Shuttle Manipulator.
+/datum/unit_test/voidcrew_hull_registry/admin_deleted
+	destroy_original = TRUE
+	delete_via_admin = TRUE
+
+/datum/unit_test/voidcrew_hull_registry/admin_deleted/escaped
+	escape_on_delete = TRUE
+
+/// Existing hull-less records must not require the captain to abandon a ghost ship.
+/datum/unit_test/voidcrew_hull_registry/missing_hull
+	orphaned_original = TRUE
 
 /datum/unit_test/voidcrew_hull_registry/Destroy()
 	// Dispose ships before their host reservations, just as normal departures do.
@@ -172,17 +187,44 @@
 	original.forceMove(get_turf(home))
 	original.state = "flying"
 	home.on_ship_undock_complete(original)
-	original.abandon_ship(crash = FALSE)
-	TEST_ASSERT_NULL(panel.rebuild_denial(captain, snapshot), "The registered captain cannot recover an abandoned hull")
+	TEST_ASSERT_NULL(home.bay_berths[1], "Departure retained the old bay")
 	var/old_balance = original.ship_account.account_balance
+	if(orphaned_original)
+		// Reproduce the old admin deletion's resulting state without its known
+		// unexpected-port-deletion stack trace polluting this regression case.
+		var/obj/docking_port/mobile/old_port = original.detach_shuttle()
+		old_port.jumpToNullSpace()
+		TEST_ASSERT(!QDELETED(original) && !original.abandoned && !original.shuttle, "The orphan fixture still has a hull or was abandoned")
+		TEST_ASSERT_NULL(panel.rebuild_denial(captain, snapshot), "A hull-less overmap record blocks recovery")
+		original.retired_by_registry = TRUE
+		TEST_ASSERT_NOTNULL(panel.rebuild_denial(captain, snapshot), "A retired hull-less record bypassed duplicate protection")
+		original.retired_by_registry = FALSE
+		original.registry_rebuilding = TRUE
+		TEST_ASSERT_NOTNULL(panel.rebuild_denial(captain, snapshot), "A hull-less record bypassed concurrent recovery protection")
+		original.registry_rebuilding = FALSE
+	else if(!destroy_original)
+		original.abandon_ship(crash = FALSE)
+		TEST_ASSERT_NULL(panel.rebuild_denial(captain, snapshot), "The registered captain cannot recover an abandoned hull")
 	if(destroy_original)
-		qdel(original)
+		if(delete_via_admin)
+			var/obj/docking_port/mobile/old_port = original.shuttle
+			TEST_ASSERT(old_port.admin_delete_shuttle(escape = escape_on_delete), "The admin deletion was refused")
+			TEST_ASSERT(QDELETED(old_port) && QDELETED(original), "Admin deletion left the hull or overmap ship alive")
+			TEST_ASSERT(!(original in SSovermap.simulated_ships), "Admin deletion retained its fleet entry")
+		else
+			qdel(original)
+		TEST_ASSERT(snapshot in home.hull_registry, "Deleting the original consumed its paid registration")
 		old_balance = 0
 		qdel(panel)
 		captain.key = null
 		captain = make_player(terminal_turf, "registrycaptain")
 		panel = allocate(__IMPLIED_TYPE__, home, home.management_console, captain)
 		TEST_ASSERT_NULL(panel.rebuild_denial(captain, snapshot), "A new body with the saved captain's key cannot recover a destroyed hull")
+	var/list/recovery_data = panel.ui_data(captain)
+	TEST_ASSERT_EQUAL(length(recovery_data["bays"]), 0, "Recovery requires an already-loaded ship bay")
+	TEST_ASSERT_EQUAL(length(recovery_data["blueprints"]), 1, "The terminal lost the captain's saved hull")
+	var/list/saved_hull = recovery_data["blueprints"][1]
+	TEST_ASSERT_NULL(saved_hull["denial"], "The recovery button remains disabled after losing the original")
 	var/before_recovery_iron = silo.materials.get_material_amount(/datum/material/iron)
 	if(!destroy_original)
 		home.refuse_bay = TRUE
@@ -203,7 +245,9 @@
 	TEST_ASSERT(rebuilt_bay.is_ship_present(), "Recovered ship is not physically docked")
 	TEST_ASSERT(rebuilt.is_ship_captain(captain), "Recovered captain lacks command")
 	TEST_ASSERT_EQUAL(rebuilt.ship_account.account_balance, old_balance, "Recovery minted money or lost the original account")
-	if(!destroy_original)
+	if(orphaned_original)
+		TEST_ASSERT(QDELETED(original), "Recovery retained the hull-less overmap record")
+	else if(!destroy_original)
 		TEST_ASSERT_EQUAL(original.ship_account.account_balance, 0, "The original kept its transferred balance")
 		TEST_ASSERT(original.retired_by_registry, "The original hull was not retired")
 		TEST_ASSERT(!original.claim_abandoned_ship(visitor), "A retired hull can still be claimed")

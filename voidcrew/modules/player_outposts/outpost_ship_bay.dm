@@ -36,7 +36,13 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	return available
 
 /obj/structure/overmap/dynamic/player_outpost/proc/select_service_silo(mob/user, obj/machinery/ore_silo/silo)
-	if(!is_current_treasury_user(user) || QDELETED(silo) || get_outpost_from_atom(silo) != src)
+	if(!is_current_treasury_user(user))
+		return FALSE
+	return link_service_silo(silo)
+
+/// Permission is checked by the player panel or the admin manipulator before calling.
+/obj/structure/overmap/dynamic/player_outpost/proc/link_service_silo(obj/machinery/ore_silo/silo)
+	if(QDELETED(silo) || get_outpost_from_atom(silo) != src)
 		return FALSE
 	service_silo = WEAKREF(silo)
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
@@ -46,10 +52,9 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 /obj/structure/overmap/dynamic/player_outpost/proc/ship_bay_install_denial(mob/user)
 	if(!is_current_management_user(user) || !can_spend(user))
 		return "Management and treasury access required."
-	if(ship_bay_installed)
-		return "Ship bay already installed."
-	if(!loaded || !has_hangar_elevator())
-		return "An operational outpost elevator is required."
+	var/denial = ship_bay_setup_denial()
+	if(denial)
+		return denial
 	if(!treasury || treasury.account_balance < OUTPOST_SHIP_BAY_COST)
 		return "Insufficient outpost funds."
 	var/obj/machinery/ore_silo/silo = ship_bay_silo()
@@ -57,6 +62,24 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		return "Select an outpost material silo in Docking."
 	if(!silo.materials?.has_materials(ship_bay_material_cost()))
 		return "The outpost silo needs 100 iron sheets and 50 glass sheets."
+	return null
+
+/// Structural requirements shared by paid installation and administrative grants.
+/obj/structure/overmap/dynamic/player_outpost/proc/ship_bay_setup_denial()
+	if(ship_bay_installed)
+		return "Ship bay already installed."
+	if(loading || !loaded || !has_hangar_elevator())
+		return "An operational outpost elevator is required."
+	return null
+
+/// Caller authorizes and, for normal installation, charges before enabling the slots.
+/obj/structure/overmap/dynamic/player_outpost/proc/enable_ship_bays()
+	var/denial = ship_bay_setup_denial()
+	if(denial)
+		return denial
+	ship_bay_installed = TRUE
+	bay_berths.len = OUTPOST_SHIP_BAY_SLOTS
+	refresh_elevator_uis()
 	return null
 
 /// No prompts or map loading between validation and payment.
@@ -68,8 +91,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(!treasury.adjust_money(-OUTPOST_SHIP_BAY_COST, "Ship bay installation by [user.ckey]"))
 		return "Insufficient outpost funds."
 	silo.materials.use_materials(ship_bay_material_cost())
-	ship_bay_installed = TRUE
-	bay_berths.len = OUTPOST_SHIP_BAY_SLOTS
+	enable_ship_bays()
 	log_game("[key_name(user)] installed ship bays at [src].")
 	return null
 
@@ -168,8 +190,9 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(arrival_watchdog)
 		deltimer(arrival_watchdog)
 		arrival_watchdog = null
-	console?.use_ship_silo()
-	ship.ship_notify("Docked at [outpost.name], Ship Bay [bay_number]. The construction console is beside the south elevator. Bay equipment draws from your ship's silo; request outpost materials at the console if needed.", "SHIP BAY", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+	if(!console?.use_outpost_silo())
+		console?.use_ship_silo()
+	ship.ship_notify("Docked at [outpost.name], Ship Bay [bay_number]. The construction console is beside the south elevator. Bay equipment connects automatically to your outpost's silo, or your ship's silo when visiting. Choose the material source at the console.", "SHIP BAY", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 
 /datum/outpost_berth/ship_bay/proc/is_ship_present()
 	return !QDELETED(outpost) && !QDELETED(ship) && !QDELETED(ship.shuttle) && ship.docked == outpost && ship.state == OVERMAP_SHIP_IDLE && dock?.get_docked() == ship.shuttle
@@ -180,6 +203,9 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost
 	if(!home.founder_ckey || !home.ship_bay_silo())
 		return FALSE
+	if(console.use_outpost_silo())
+		silo_requested_at = null
+		return TRUE
 	if(!silo_requested_at)
 		silo_requested_at = world.time || 1
 		home.notify_owner("[ship.name] requests outpost materials in Ship Bay [bay_number]. Review the request in Docking.", "SHIP BAY")
@@ -190,13 +216,22 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost
 	if(!is_ship_present() || !home.is_current_management_user(user) || !home.can_spend(user) || !silo_requested_at)
 		return FALSE
+	return grant_silo(user)
+
+/// Called after owner approval or an authenticated administrative override.
+/datum/outpost_berth/ship_bay/proc/grant_silo(mob/user)
+	var/obj/structure/overmap/dynamic/player_outpost/home = outpost
+	if(!is_ship_present() || !home.founder_ckey || QDELETED(console))
+		return FALSE
 	var/obj/machinery/ore_silo/silo = home.ship_bay_silo()
 	if(!silo)
 		return FALSE
 	approved_silo = WEAKREF(silo)
 	silo_owner_ckey = home.founder_ckey
 	silo_requested_at = null
-	console.link_materials(silo)
+	if(!console.link_materials(silo))
+		revoke_silo()
+		return FALSE
 	log_game("[key_name(user)] approved outpost silo access for [ship] at [home] Ship Bay [bay_number].")
 	return TRUE
 
@@ -212,8 +247,17 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(silo_requested_at && world.time - silo_requested_at >= OUTPOST_DOCK_REQUEST_TIMEOUT)
 		silo_requested_at = null
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost
-	if(approved_silo && (!is_ship_present() || home.founder_ckey != silo_owner_ckey || !console?.can_link_silo(approved_silo.resolve())))
+	if(approved_silo && (!is_ship_present() || home.founder_ckey != silo_owner_ckey || home.ship_bay_silo() != approved_silo.resolve() || !console?.can_link_silo(approved_silo.resolve())))
 		revoke_silo()
+	// Automatic owner access is checked on every tool use too. Never retain a
+	// stale connection after ownership, crew membership or the selected silo changes.
+	var/obj/machinery/ore_silo/linked = console?.get_linked_silo()
+	if(linked && !console.can_link_silo(linked))
+		console.disconnect_materials()
+		if(!console.use_outpost_silo())
+			console.use_ship_silo()
+	if(silo_requested_at && home?.is_owner_crew_ship(ship))
+		silo_requested_at = null
 
 /// A shore-side console exclusively bound to this visit, even before the ship lands.
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay
@@ -280,7 +324,9 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(get_ship_from_atom(silo) == current_ship)
 		return TRUE
 	var/obj/structure/overmap/dynamic/player_outpost/home = berth.outpost
-	return home.founder_ckey && home.founder_ckey == berth.silo_owner_ckey && berth.approved_silo?.resolve() == silo && home.ship_bay_silo() == silo && get_outpost_from_atom(silo) == home
+	if(!home.founder_ckey || home.ship_bay_silo() != silo || get_outpost_from_atom(silo) != home)
+		return FALSE
+	return home.is_owner_crew_ship(current_ship) || (home.founder_ckey == berth.silo_owner_ckey && berth.approved_silo?.resolve() == silo)
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/multitool_act(mob/living/user, obj/item/multitool/tool)
 	if(!can_operate() || !is_crew_member(user))
@@ -302,6 +348,11 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	link_internal_device(internal_rld, internal_rld.silo_mats, silo)
 	return TRUE
 
+/// Owners use their selected outpost storage directly; visitors need a current grant.
+/obj/machinery/computer/camera_advanced/base_construction/ship/bay/proc/use_outpost_silo()
+	var/obj/structure/overmap/dynamic/player_outpost/home = berth?.outpost
+	return link_materials(home?.ship_bay_silo())
+
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/proc/use_ship_silo()
 	if(!can_operate())
 		return FALSE
@@ -315,7 +366,13 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	berth?.reconcile_silo()
 	. = ..()
 	var/obj/machinery/ore_silo/silo = get_linked_silo()
-	.["bay"] = list("silo" = silo && can_link_silo(silo) ? silo.name : null, "requested" = !!berth?.silo_requested_at, "approved" = !!berth?.approved_silo)
+	var/obj/structure/overmap/dynamic/player_outpost/home = berth?.outpost
+	.["bay"] = list(
+		"silo" = silo && can_link_silo(silo) ? silo.name : null,
+		"outpost_materials" = !!silo && get_outpost_from_atom(silo) == home,
+		"requested" = !!berth?.silo_requested_at,
+		"available" = can_link_silo(home?.ship_bay_silo()),
+	)
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(action == "hull_registry")
@@ -328,12 +385,12 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		switch(action)
 			if("bay_request_silo")
 				last_operation_success = berth.request_silo(usr)
-				last_operation_message = last_operation_success ? "Outpost materials requested." : "No outpost silo is available."
+				last_operation_message = last_operation_success ? (berth.silo_requested_at ? "Outpost materials requested." : "Using outpost materials.") : "No outpost silo is available."
 			if("bay_ship_silo")
 				last_operation_success = use_ship_silo()
 				last_operation_message = last_operation_success ? "Using ship materials." : "No silo found aboard this ship."
 			if("bay_outpost_silo")
-				last_operation_success = link_materials(berth.approved_silo?.resolve())
-				last_operation_message = last_operation_success ? "Using approved outpost materials." : "Outpost access unavailable."
+				last_operation_success = use_outpost_silo()
+				last_operation_message = last_operation_success ? "Using outpost materials." : "Outpost access unavailable."
 		return TRUE
 	return ..()

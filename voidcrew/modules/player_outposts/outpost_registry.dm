@@ -250,7 +250,7 @@
 			continue
 		bay.reconcile_silo()
 		var/obj/machinery/ore_silo/silo = bay.console?.get_linked_silo()
-		bays += list(list("ref" = REF(bay), "name" = bay.ship.name, "number" = bay.bay_number, "denial" = save_denial(user, bay), "silo" = silo && bay.console.can_link_silo(silo) ? silo.name : null, "outpost_materials" = !!silo && get_outpost_from_atom(silo) == outpost, "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
+		bays += list(list("ref" = REF(bay), "name" = bay.ship.name, "number" = bay.bay_number, "denial" = save_denial(user, bay), "silo" = silo && bay.console.can_link_silo(silo) ? silo.name : null, "outpost_materials" = !!silo && get_outpost_from_atom(silo) == outpost, "requested" = !!bay.silo_requested_at, "available" = bay.console?.can_link_silo(outpost.ship_bay_silo())))
 	var/list/blueprints = list()
 	for(var/datum/hull_blueprint/snapshot as anything in outpost.hull_registry)
 		if(snapshot.captain_ckey != user.ckey)
@@ -293,8 +293,8 @@
 			if(action == "ship_materials")
 				if(!bay.console.use_ship_silo())
 					error = "No material silo found aboard this ship."
-			else if(bay.approved_silo)
-				bay.console.link_materials(bay.approved_silo.resolve())
+			else if(bay.console.use_outpost_silo())
+				notice = "Using outpost materials."
 			else if(bay.request_silo(user))
 				// An owner with treasury access can approve their own request here.
 				if(!bay.approve_silo(user))

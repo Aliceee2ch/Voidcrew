@@ -22,7 +22,7 @@ type Data = {
     silo: string | null;
     outpost_materials: BooleanLike;
     requested: BooleanLike;
-    approved: BooleanLike;
+    available: BooleanLike;
   })[];
   blueprints: (Entry & { width: number; height: number })[];
   quote: {
@@ -86,10 +86,12 @@ export const HullRegistry = () => {
                 </Button>
                 <Button
                   selected={!!bay.outpost_materials}
-                  disabled={!!data.working || !!bay.requested}
+                  disabled={
+                    !!data.working || (!!bay.requested && !bay.available)
+                  }
                   onClick={() => act('outpost_materials', { ref: bay.ref })}
                 >
-                  {bay.approved
+                  {bay.available
                     ? 'Outpost materials'
                     : bay.requested
                       ? 'Awaiting approval'

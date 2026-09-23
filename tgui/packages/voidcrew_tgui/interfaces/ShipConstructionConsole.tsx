@@ -38,7 +38,8 @@ interface Data {
   bay?: {
     silo: string | null;
     requested: BooleanLike;
-    approved: BooleanLike;
+    available: BooleanLike;
+    outpost_materials: BooleanLike;
   };
   repairUnlocked: BooleanLike;
   repairEnabled: BooleanLike;
@@ -130,22 +131,28 @@ export const ShipConstructionConsole = () => {
                   {data.bay.silo || 'No silo connected'}
                 </Box>
                 <Button
+                  selected={!!data.bay.silo && !data.bay.outpost_materials}
                   disabled={!canOperate || isNotCrew}
                   onClick={() => act('bay_ship_silo')}
                 >
                   Use ship silo
                 </Button>
                 <Button
-                  disabled={!canOperate || isNotCrew || !!data.bay.requested}
+                  selected={!!data.bay.outpost_materials}
+                  disabled={
+                    !canOperate ||
+                    isNotCrew ||
+                    (!!data.bay.requested && !data.bay.available)
+                  }
                   onClick={() =>
                     act(
-                      data.bay?.approved
+                      data.bay?.available
                         ? 'bay_outpost_silo'
                         : 'bay_request_silo',
                     )
                   }
                 >
-                  {data.bay.approved
+                  {data.bay.available
                     ? 'Use outpost silo'
                     : data.bay.requested
                       ? 'Materials requested'

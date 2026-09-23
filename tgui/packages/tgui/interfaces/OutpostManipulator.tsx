@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Dropdown,
   Icon,
   LabeledList,
   NoticeBox,
@@ -29,6 +30,28 @@ type Resident = {
   treasurer: BooleanLike;
 };
 
+type ShipBayData = {
+  installed: BooleanLike;
+  capacity: number;
+  install_denial: string | null;
+  remove_denial: string | null;
+  saved_hulls: number;
+  silo: string | null;
+  silos: { ref: string; name: string }[];
+  slots: {
+    number: number;
+    ref: string | null;
+    status: string;
+    ship?: string;
+    can_jump?: BooleanLike;
+    silo?: string | null;
+    requested?: BooleanLike;
+    approved?: BooleanLike;
+    owner_crew?: BooleanLike;
+    grant_denial?: string | null;
+  }[];
+};
+
 type SelectedOutpost = {
   ref: string;
   name: string;
@@ -43,6 +66,7 @@ type SelectedOutpost = {
   freight_error: string;
   research_connection: string;
   residents: Resident[];
+  ship_bays: ShipBayData;
 };
 
 export type Data = {
@@ -171,7 +195,7 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
   };
 
   return (
-    <Stack vertical fill>
+    <Stack vertical>
       <Stack.Item>
         <Section title={selected.name}>
           <LabeledList>
@@ -244,6 +268,10 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
             </Button>
           </Stack>
         </Section>
+      </Stack.Item>
+
+      <Stack.Item>
+        <ShipBays data={selected.ship_bays} busy={busy} act={mutate} />
       </Stack.Item>
 
       <Stack.Item>
@@ -332,8 +360,8 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
         </Section>
       </Stack.Item>
 
-      <Stack.Item grow>
-        <Section title="Residents" fill scrollable>
+      <Stack.Item>
+        <Section title="Residents">
           <Stack align="center" mb={1}>
             <Stack.Item grow>
               <Box color="label">
@@ -430,3 +458,121 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
     </Stack>
   );
 };
+
+const ShipBays = ({
+  data,
+  busy,
+  act,
+}: {
+  data: ShipBayData;
+  busy: boolean;
+  act: DetailsProps['act'];
+}) => (
+  <Section
+    title="Ship Bays"
+    buttons={
+      data.installed ? (
+        <Button
+          icon="trash"
+          color="bad"
+          disabled={busy || !!data.remove_denial}
+          tooltip={data.remove_denial}
+          onClick={() => act('remove_bays')}
+        >
+          Remove Upgrade
+        </Button>
+      ) : (
+        <Button
+          icon="plus"
+          color="good"
+          disabled={busy || !!data.install_denial}
+          tooltip={data.install_denial}
+          onClick={() => act('install_bays')}
+        >
+          Install {data.capacity} Bays (Free)
+        </Button>
+      )
+    }
+  >
+    <Box mb={1}>
+      {data.installed ? `${data.capacity} bays installed` : 'Not installed'}
+      {' / '}
+      {data.saved_hulls} saved hulls
+    </Box>
+    <Box color="label" mb={1}>
+      Bay interiors are created when a ship arrives.
+    </Box>
+    {!!(data.installed ? data.remove_denial : data.install_denial) && (
+      <Box color="label" mb={1}>
+        {data.installed ? data.remove_denial : data.install_denial}
+      </Box>
+    )}
+    <LabeledList>
+      <LabeledList.Item label="Outpost silo">
+        <Dropdown
+          width="100%"
+          disabled={busy || data.silos.length === 0}
+          selected={data.silo || ''}
+          placeholder="No outpost silo selected"
+          options={data.silos.map((silo) => ({
+            value: silo.ref,
+            displayText: silo.name,
+          }))}
+          onSelected={(ref) => act('bay_select_silo', { ref })}
+        />
+      </LabeledList.Item>
+    </LabeledList>
+    {data.slots.map((bay) => (
+      <Box key={bay.number} mt={2}>
+        <Box bold mb={0.5} style={{ overflowWrap: 'anywhere' }}>
+          Bay {bay.number}: {bay.ship || bay.status}
+        </Box>
+        {!!bay.ref && (
+          <>
+            <Box color="label" mb={1}>
+              {bay.status} / {bay.silo || 'No linked materials'}
+              {bay.owner_crew
+                ? ' / Owner crew access'
+                : bay.approved
+                  ? ' / Outpost materials approved'
+                  : bay.requested
+                    ? ' / Materials requested'
+                    : ''}
+            </Box>
+            <Stack wrap>
+              <Button
+                icon="location-crosshairs"
+                disabled={busy || !bay.can_jump}
+                onClick={() => act('bay_jump', { ref: bay.ref })}
+              >
+                Jump
+              </Button>
+              <Button
+                icon="code"
+                disabled={busy}
+                onClick={() => act('bay_vv', { ref: bay.ref })}
+              >
+                Inspect Bay
+              </Button>
+              <Button
+                icon="boxes-stacked"
+                disabled={busy || !!bay.grant_denial || !!bay.approved}
+                tooltip={bay.grant_denial}
+                onClick={() => act('bay_grant_materials', { ref: bay.ref })}
+              >
+                Grant Materials
+              </Button>
+              <Button
+                icon="ban"
+                disabled={busy || (!bay.approved && !bay.requested)}
+                onClick={() => act('bay_revoke_materials', { ref: bay.ref })}
+              >
+                Revoke Materials
+              </Button>
+            </Stack>
+          </>
+        )}
+      </Box>
+    ))}
+  </Section>
+);

@@ -76,6 +76,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		"resident_active" = selected.active_resident_count(), "residents" = people,
 		"freight_state" = freight_state,
 		"freight_error" = selected.freight?.last_error, "research_connection" = selected.research_connection_summary(),
+		"ship_bays" = ship_bay_data(selected),
 	)
 	return data
 
@@ -185,6 +186,9 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 
 /datum/outpost_manipulator/proc/manage_outpost(obj/structure/overmap/dynamic/player_outpost/home, mob/user, action, list/params)
 	if(!valid_selection(home, user))
+		return
+	if(action in list("install_bays", "remove_bays", "bay_jump", "bay_vv", "bay_grant_materials", "bay_revoke_materials", "bay_select_silo"))
+		manage_ship_bays(home, user, action, params)
 		return
 	switch(action)
 		if("jump", "jump_overmap")

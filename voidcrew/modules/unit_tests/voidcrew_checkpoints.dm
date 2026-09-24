@@ -138,6 +138,23 @@
 /datum/unit_test/voidcrew_checkpoints/proc/breathes_ambient(datum/pipeline/network)
 	return FALSE
 
+/// Rebuilt engines are refuelled to full: a fueled thruster's heater holds gas_capacity moles.
+/datum/unit_test/voidcrew_checkpoints/proc/engine_is_full(obj/machinery/power/shuttle_engine/ship/engine)
+	if(istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled))
+		var/obj/machinery/power/shuttle_engine/ship/fueled/thruster = engine
+		var/obj/machinery/atmospherics/components/unary/shuttle/heater/heater = thruster.attached_heater?.resolve()
+		return heater && engine.return_fuel() >= heater.gas_capacity * 0.99
+	if(istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid))
+		return engine.return_fuel_cap() && engine.return_fuel() >= engine.return_fuel_cap() * 0.99
+	return TRUE
+
+/// Restocked air and plasma tanks share their gas with the pipes they feed.
+/datum/unit_test/voidcrew_checkpoints/proc/fed_by_restocked_tank(datum/pipeline/network)
+	for(var/obj/machinery/atmospherics/components/tank/supply in network.other_atmos_machines)
+		if(is_type_in_typecache(supply, GLOB.outpost_checkpoint_restocked))
+			return TRUE
+	return FALSE
+
 /// Batteries are charged as each machine lands. Directly placed cases are checked before any
 /// of that charge can be used. The source batteries were emptied or removed before saving.
 /datum/unit_test/voidcrew_checkpoints/proc/battery_floor()
@@ -475,7 +492,10 @@
 		for(var/obj/machinery/ore_silo/restored_silo in tile)
 			TEST_ASSERT_EQUAL(restored_silo.materials.get_material_amount(/datum/material/iron), 0, "Recovery copied silo materials")
 		for(var/obj/structure/reagent_dispensers/dispenser in tile)
-			TEST_ASSERT(!dispenser.reagents?.total_volume, "Recovery refilled [dispenser] with [dispenser.reagents?.total_volume] units")
+			if(is_type_in_typecache(dispenser, GLOB.outpost_checkpoint_restocked))
+				TEST_ASSERT(dispenser.reagents?.total_volume >= dispenser.reagents?.maximum_volume, "[dispenser] came back [dispenser.reagents?.total_volume]/[dispenser.reagents?.maximum_volume], not full")
+			else
+				TEST_ASSERT(!dispenser.reagents?.total_volume, "Recovery refilled [dispenser] with [dispenser.reagents?.total_volume] units")
 		for(var/obj/structure/bedsheetbin/bin in tile)
 			TEST_ASSERT_EQUAL(bin.amount, 0, "Recovery restocked a bedsheet bin")
 		for(var/obj/machinery/vending/vendor in tile)
@@ -483,11 +503,14 @@
 				TEST_ASSERT_EQUAL(product.amount, 0, "Recovery restocked a vendor")
 		for(var/obj/machinery/atmospherics/machine in tile)
 			for(var/datum/pipeline/network as anything in machine.return_pipenets())
-				if(network && breathes_ambient(network))
+				if(network && (breathes_ambient(network) || fed_by_restocked_tank(network)))
 					continue
 				TEST_ASSERT(!network?.air?.total_moles(), "Rebuilt pipe network at [machine] ([machine.type]) contains [network?.air?.total_moles()] moles of free gas")
 		for(var/obj/machinery/atmospherics/components/tank/stored_tank in tile)
-			TEST_ASSERT(!stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) was refilled with [stored_tank.air_contents?.total_moles()] moles")
+			if(is_type_in_typecache(stored_tank, GLOB.outpost_checkpoint_restocked))
+				TEST_ASSERT(stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) came back empty")
+			else
+				TEST_ASSERT(!stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) was refilled with [stored_tank.air_contents?.total_moles()] moles")
 	TEST_ASSERT(length(rebuilt.helm_consoles), "Recovered ship has no connected helm")
 	var/obj/machinery/cryopod/spawn_pod = locate() in rebuilt.shuttle.spawn_points
 	TEST_ASSERT(spawn_pod && (get_area(spawn_pod) in rebuilt.shuttle.shuttle_areas), "Recovered ship has no cryopod spawn point")
@@ -497,10 +520,8 @@
 	rebuilt.refresh_engines()
 	var/thrust = 0
 	for(var/obj/machinery/power/shuttle_engine/ship/engine in rebuilt.shuttle.engine_list)
-		if(istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid))
-			TEST_ASSERT(engine.return_fuel() > 0, "Liquid engine has no fuel")
-		if(istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled))
-			TEST_ASSERT(engine.return_fuel() > 0, "Gas engine has no fuel")
+		if(istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid) || istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled))
+			TEST_ASSERT(engine_is_full(engine), "[engine] came back with [engine.return_fuel()] fuel, not full")
 		thrust += engine.burn_engine(100, rebuilt.mass, 1)
 	TEST_ASSERT(thrust > 0, "Recovered engines cannot produce thrust")
 	var/obj/docking_port/stationary/transit/recovery_transit = SSshuttle.generate_transit_dock(rebuilt.shuttle)

@@ -48,6 +48,19 @@
 /datum/ship_checkpoint_ui/proc/create_rebuild_job(mob/living/user, datum/ship_checkpoint/snapshot)
 	return new /datum/checkpoint_construction(src, snapshot, user)
 
+/// Basics a rebuilt ship keeps as they load, full: breathable air and engine plasma tanks,
+/// welding fuel and water tanks, and plumbing water. Every other supply is scrubbed.
+GLOBAL_LIST_INIT(outpost_checkpoint_restocked, typecacheof(list(
+	/obj/machinery/atmospherics/components/tank/air,
+	/obj/machinery/atmospherics/components/tank/oxygen,
+	/obj/machinery/atmospherics/components/tank/nitrogen,
+	/obj/machinery/atmospherics/components/tank/plasma,
+	/obj/structure/reagent_dispensers/fueltank,
+	/obj/structure/reagent_dispensers/watertank,
+	/obj/machinery/shower,
+	/obj/structure/sink,
+)))
+
 /datum/checkpoint_construction/proc/clear_stock(obj/docking_port/mobile/voidcrew/source_port)
 	for(var/turf/tile as anything in source_port.return_turfs())
 		if(!(get_area(tile) in source_port.shuttle_areas))
@@ -55,8 +68,8 @@
 		for(var/atom/movable/object as anything in tile.get_all_contents())
 			if(QDELETED(object))
 				continue
-			// Plumbing keeps its water; every other reagent holder is stock.
-			if(!istype(object, /obj/machinery/shower) && !istype(object, /obj/structure/sink))
+			var/restocked = is_type_in_typecache(object, GLOB.outpost_checkpoint_restocked)
+			if(!restocked)
 				object.reagents?.clear_reagents()
 			if(isitem(object) && is_machine_fitting(object))
 				continue
@@ -70,7 +83,7 @@
 				var/obj/machinery/atmospherics/machine = object
 				for(var/datum/pipeline/network as anything in machine.return_pipenets())
 					network?.air?.gases.Cut()
-				if(istype(machine, /obj/machinery/atmospherics/components))
+				if(!restocked && istype(machine, /obj/machinery/atmospherics/components))
 					var/obj/machinery/atmospherics/components/component = machine
 					for(var/datum/gas_mixture/mix as anything in component.airs)
 						mix?.gases.Cut()
@@ -80,7 +93,10 @@
 						stored = list(stored)
 					for(var/datum/gas_mixture/mix as anything in stored)
 						mix?.gases.Cut()
-			// Stock kept in counters rather than as items.
+			// Stock kept outside contents or in counters rather than as items.
+			if(istype(object, /obj/structure/closet/crate/critter))
+				var/obj/structure/closet/crate/critter/crate = object
+				QDEL_NULL(crate.tank)
 			if(istype(object, /obj/structure/tank_dispenser))
 				var/obj/structure/tank_dispenser/dispenser = object
 				dispenser.oxygentanks = 0

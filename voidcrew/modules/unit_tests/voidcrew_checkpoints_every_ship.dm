@@ -103,8 +103,9 @@
 	var/list/unfuelled = list()
 	for(var/obj/machinery/power/shuttle_engine/ship/engine in rebuilt.shuttle.engine_list)
 		engines++
-		if((istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled) || istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid)) && engine.return_fuel() <= 0)
+		if((istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled) || istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid)) && !engine_is_full(engine))
 			unfuelled["[engine.type]"]++
+			TEST_FAIL("[template_type]: [engine.type] came back with [engine.return_fuel()] fuel, not full")
 	var/list/summary = list("rebuilt, [engines] engine(s)")
 	if(length(unfuelled))
 		summary += "NO FUEL: [list_counts(unfuelled)]"
@@ -149,20 +150,20 @@
 				continue
 			. += "free item [item.type] in [item.loc?.type]"
 		for(var/obj/object in tile)
-			// Engine fuel is restocked on purpose; plumbing keeps its water.
-			if(object.reagents?.total_volume && !istype(object, /obj/machinery/shower) && !istype(object, /obj/structure/sink) && !istype(object, /obj/machinery/power/shuttle_engine))
+			// Engine fuel and the basics (fuel and water tanks, plumbing) are restocked on purpose.
+			if(object.reagents?.total_volume && !is_type_in_typecache(object, GLOB.outpost_checkpoint_restocked) && !istype(object, /obj/machinery/power/shuttle_engine))
 				. += "[object.type] holds [object.reagents.total_volume] units of reagents"
 			var/datum/component/material_container/materials = object.GetComponent(/datum/component/material_container)
 			if(materials?.total_amount())
 				. += "[object.type] holds [materials.total_amount()] units of materials"
-			if(istype(object, /obj/machinery/atmospherics/components/tank))
+			if(istype(object, /obj/machinery/atmospherics/components/tank) && !is_type_in_typecache(object, GLOB.outpost_checkpoint_restocked))
 				var/obj/machinery/atmospherics/components/tank/stored = object
 				if(stored.air_contents?.total_moles())
 					. += "[object.type] holds [stored.air_contents.total_moles()] moles"
 			if(istype(object, /obj/machinery/atmospherics))
 				var/obj/machinery/atmospherics/machine = object
 				for(var/datum/pipeline/network as anything in machine.return_pipenets())
-					if(network?.air?.total_moles())
+					if(network?.air?.total_moles() && !fed_by_restocked_tank(network))
 						. += "pipe network at [object.type] holds [network.air.total_moles()] moles"
 			if(istype(object, /obj/machinery/vending))
 				var/obj/machinery/vending/vendor = object

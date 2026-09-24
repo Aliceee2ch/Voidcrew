@@ -838,10 +838,13 @@
 	vessel.update_flight_parallax()
 	port.checkpoint_construction = FALSE
 	SEND_SIGNAL(port, COMSIG_VOIDCREW_SHIP_LOADED)
-	// Registration linked the helms before a ship record existed.
+	// Registration linked the helms before a ship record existed. Fueled thrusters find their
+	// heater lazily, and a thruster placed before its heater would otherwise report no fuel.
 	for(var/area/room as anything in port.shuttle_areas)
 		for(var/obj/machinery/computer/helm/helm in room)
 			helm.attempt_ship_connection()
+		for(var/obj/machinery/power/shuttle_engine/ship/fueled/thruster in room)
+			thruster.set_heater()
 	if(captain && vessel.enlist_crewmember(captain))
 		vessel.claimed_captain = captain.mind
 		grant_captain_management(captain, vessel)

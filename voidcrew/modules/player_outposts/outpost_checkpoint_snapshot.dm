@@ -29,6 +29,9 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 	/obj/machinery/computer/ship_checkpoint,
 	// Made by its turret.
 	/obj/machinery/porta_turret_cover,
+	// Never rebuilt: user decision, 2026-09-24.
+	/obj/machinery/syndicatebomb,
+	/obj/machinery/power/supermatter_crystal,
 	/obj/structure/disposalholder,
 	/obj/structure/spawner,
 	/obj/structure/alien,
@@ -99,14 +102,13 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 		if(istype(machine, /obj/machinery/power))
 			keys += "cable_layer"
 	if(istype(object, /obj/structure/closet))
-		// Restore storage shells without loot/spawner subtype initialization (some
-		// emergency closets randomly delete or replace themselves even on reload).
-		saved_type = /obj/structure/closet
+		// Closets keep their own type, so they look the same; their stock is never generated
+		// (below) and anything they spawn is scrubbed on load. Emergency closets are the
+		// exception: they can delete or replace themselves as they initialize.
+		if(istype(object, /obj/structure/closet/emcloset))
+			saved_type = /obj/structure/closet
 		if(istype(object, /obj/structure/closet/crate))
-			saved_type = /obj/structure/closet/crate
 			keys += list("lid_icon", "lid_icon_state")
-		else if(istype(object, /obj/structure/closet/secure_closet))
-			saved_type = /obj/structure/closet/secure_closet
 		keys += list("icon", "icon_door", "base_icon_state", "enable_door_overlay", "has_opened_overlay", "has_closed_overlay", "wall_mounted", "horizontal", "locked", "req_one_access")
 		// Closet stock is otherwise generated lazily on first opening.
 		properties += "contents_initialized = 1"

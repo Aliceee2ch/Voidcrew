@@ -4,12 +4,13 @@
 
 /// Construct the ordinary machine, not a stocked/map/event subtype. Infrastructure
 /// without a circuit retains its existing, explicitly supported hull representation.
+/// What this machine is rebuilt as: its board's product when it has one, else itself.
 /obj/machinery/proc/checkpoint_type()
+	if(is_type_in_typecache(src, GLOB.outpost_checkpoint_excluded))
+		return null
 	if(anchored && istype(circuit) && ispath(circuit.build_path, /obj/machinery))
 		return circuit.build_path
-	if(is_type_in_typecache(src, GLOB.outpost_checkpoint_infrastructure))
-		return type
-	return null
+	return type
 
 /obj/machinery/computer/helm/viewscreen/checkpoint_type()
 	return type

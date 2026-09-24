@@ -1,5 +1,7 @@
 /// A registry snapshot deliberately serializes a small set of construction data.
 /// It never calls admin-export hooks (silos emit stock) or turf get_save_vars (air).
+
+/// Ship wiring, plumbing and doors: rebuilt in the Systems stage, before other machinery.
 GLOBAL_LIST_INIT(outpost_checkpoint_infrastructure, typecacheof(list(
 	/obj/machinery/door,
 	/obj/machinery/atmospherics,
@@ -12,43 +14,41 @@ GLOBAL_LIST_INIT(outpost_checkpoint_infrastructure, typecacheof(list(
 	/obj/machinery/button,
 	/obj/machinery/camera,
 	/obj/machinery/power/shuttle_engine,
-	// The ship's spawn point. Without it nobody can join the rebuilt ship.
-	/obj/machinery/cryopod,
-	// Fixtures without circuit boards. Anything they hold is scrubbed like any other stock.
-	/obj/machinery/shower,
 	/obj/machinery/light_switch,
-	/obj/machinery/requests_console,
-	/obj/machinery/iv_drip,
-	/obj/machinery/defibrillator_mount,
+	// A meter lands with its pipe, or it cannot find one and drops itself as an item.
+	/obj/machinery/meter,
 )))
 
-/// Furniture and hull fittings, rather than biological/event/resource spawners.
-GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
-	/obj/structure/window,
-	/obj/structure/grille,
-	/obj/structure/table,
-	/obj/structure/rack,
-	/obj/structure/closet,
-	/obj/structure/chair,
-	/obj/structure/bed,
-	/obj/structure/cable,
-	/obj/structure/disposalpipe,
-	/obj/structure/lattice,
-	/obj/structure/railing,
-	/obj/structure/falsewall,
-	/obj/structure/sign,
-	/obj/structure/fans,
-	/obj/structure/curtain,
-	/obj/structure/dresser,
-	/obj/structure/toilet,
-	/obj/structure/sink,
-	/obj/structure/mirror,
-	/obj/structure/filingcabinet,
-	/obj/structure/bedsheetbin,
-	/obj/structure/extinguisher_cabinet,
-	// Saved empty: the stock scrub drains their reagents.
-	/obj/structure/reagent_dispensers,
+/**
+ * Everything built into a hull is saved except these: movable gas stock, and things that make
+ * creatures or resources. Whatever a saved object holds is scrubbed on load (see clear_stock()),
+ * so new fixtures need no entry here unless they invent supplies some other way.
+ */
+GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
+	/obj/machinery/portable_atmospherics,
+	/obj/machinery/computer/ship_checkpoint,
+	// Made by its turret.
+	/obj/machinery/porta_turret_cover,
+	/obj/structure/disposalholder,
+	/obj/structure/spawner,
+	/obj/structure/alien,
+	/obj/structure/spider,
+	/obj/structure/blob,
+	/obj/structure/flora,
+	/obj/structure/geyser,
+	/obj/structure/ore_vent,
+	/obj/structure/holosign,
+	/obj/structure/trap,
 )))
+
+/// Whether a checkpoint keeps this object. Machinery also needs a type to rebuild as.
+/proc/outpost_checkpoint_saves(obj/object)
+	if(object.flags_1 & HOLOGRAM_1 || is_type_in_typecache(object, GLOB.outpost_checkpoint_excluded))
+		return FALSE
+	if(ismachinery(object))
+		var/obj/machinery/machine = object
+		return !!machine.checkpoint_type()
+	return isstructure(object)
 
 /datum/ship_checkpoint
 	var/obj/structure/overmap/dynamic/player_outpost/outpost
@@ -82,12 +82,7 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 
 /// Ports are handled separately and cannot carry NPC types.
 /datum/ship_checkpoint/proc/includes_object(obj/object)
-	if(istype(object, /obj/structure/disposalholder) || object.flags_1 & HOLOGRAM_1)
-		return FALSE
-	if(ismachinery(object))
-		var/obj/machinery/machine = object
-		return !!machine.checkpoint_type()
-	return is_type_in_typecache(object, GLOB.outpost_checkpoint_structures) || is_type_in_typecache(object, GLOB.outpost_checkpoint_infrastructure)
+	return outpost_checkpoint_saves(object)
 
 /// Preserve placement and construction settings; inventories are never serialized.
 /datum/ship_checkpoint/proc/atom_text(atom/object)
@@ -124,6 +119,8 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 		keys += list("anchored", "req_access", "id_tag")
 	if(istype(object, /obj/machinery/atmospherics))
 		keys += list("piping_layer", "pipe_color")
+	if(istype(object, /obj/machinery/duct))
+		keys += list("duct_layer", "duct_color", "connects")
 	for(var/key in keys)
 		var/value = object.vars[key]
 		// Always encode direction: an oriented source must survive a round trip.

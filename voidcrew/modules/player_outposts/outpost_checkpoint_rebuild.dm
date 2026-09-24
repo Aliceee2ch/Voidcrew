@@ -80,6 +80,16 @@
 						stored = list(stored)
 					for(var/datum/gas_mixture/mix as anything in stored)
 						mix?.gases.Cut()
+			// Stock kept in counters rather than as items.
+			if(istype(object, /obj/structure/tank_dispenser))
+				var/obj/structure/tank_dispenser/dispenser = object
+				dispenser.oxygentanks = 0
+				dispenser.plasmatanks = 0
+				dispenser.update_appearance()
+			if(istype(object, /obj/machinery/power/port_gen/pacman))
+				var/obj/machinery/power/port_gen/pacman/generator = object
+				generator.sheets = 0
+				generator.sheet_left = 0
 			if(istype(object, /obj/structure/bedsheetbin))
 				var/obj/structure/bedsheetbin/bin = object
 				bin.amount = 0

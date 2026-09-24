@@ -86,7 +86,7 @@
 				var/obj/machinery/machine = object
 				if(machine.checkpoint_type())
 					counts["[machine.checkpoint_type()]"]++
-			else if(is_type_in_typecache(object, GLOB.outpost_checkpoint_structures))
+			else if(outpost_checkpoint_saves(object))
 				// Storage shells intentionally omit the original loot-spawner subtype.
 				counts[istype(object, /obj/structure/closet) ? "closet:[object.name]" : "[object.type]"]++
 	return counts
@@ -255,7 +255,7 @@
 			if(!machine.checkpoint_type())
 				dropped["[machine.type]"]++
 		for(var/obj/structure/fitting in tile)
-			if(!is_type_in_typecache(fitting, GLOB.outpost_checkpoint_structures) && !is_type_in_typecache(fitting, GLOB.outpost_checkpoint_infrastructure))
+			if(!outpost_checkpoint_saves(fitting))
 				dropped["[fitting.type]"]++
 	var/list/dropped_text = list()
 	for(var/type_name in dropped)

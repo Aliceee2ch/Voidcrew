@@ -2,16 +2,21 @@
 /datum/ship_checkpoint_ui/registry_test
 	var/datum/callback/during_confirmation
 	var/accept_save = TRUE
+	/// Most cases place visits directly; one lets the real drones work.
+	var/manual_jobs = TRUE
 
 /datum/ship_checkpoint_ui/registry_test/confirm_save(mob/user, prompt_text)
 	during_confirmation?.Invoke()
 	return accept_save
 
-/// Refuse allocation after the real preview load to exercise transaction rollback.
+/datum/ship_checkpoint_ui/registry_test/create_rebuild_job(mob/living/user, datum/ship_checkpoint/snapshot)
+	return new /datum/checkpoint_construction(src, snapshot, user, manual_jobs)
+
+/// Refuse the bay reservation to exercise a rebuild refused before anything loads.
 /obj/structure/overmap/dynamic/player_outpost/registry_test
 	var/refuse_bay = FALSE
 
-/obj/structure/overmap/dynamic/player_outpost/registry_test/allocate_ship_bay(obj/structure/overmap/ship/visitor, datum/rebuild_owner)
+/obj/structure/overmap/dynamic/player_outpost/registry_test/reserve_rebuild_bay(datum/owner)
 	if(refuse_bay)
 		return null
 	return ..()
@@ -23,6 +28,12 @@
 	var/delete_via_admin = FALSE
 	var/escape_on_delete = FALSE
 	var/orphaned_original = FALSE
+	/// Hull census changes the case made on purpose, applied before the final comparison.
+	var/list/count_adjustments = list()
+	/// Place visits directly; the drone case lets the real controller work.
+	var/manual_jobs = TRUE
+	var/obj/machinery/computer/ship_checkpoint/terminal
+	var/turf/terminal_turf
 
 /// Recovery must also work after the hull and the captain's original body are gone.
 /datum/unit_test/voidcrew_checkpoints/lost
@@ -39,6 +50,20 @@
 /// Existing hull-less records must not require the captain to abandon a ghost ship.
 /datum/unit_test/voidcrew_checkpoints/missing_hull
 	orphaned_original = TRUE
+
+/// Piece by piece: visibility, the reserved bay, single-pass placement and interruptions.
+/datum/unit_test/voidcrew_checkpoints/staged
+
+/// The bay is lost after the first pieces exist.
+/datum/unit_test/voidcrew_checkpoints/terminated
+
+/// The real controller and drones, rather than directly placed visits.
+/datum/unit_test/voidcrew_checkpoints/drones
+	manual_jobs = FALSE
+
+/// The captain never returns for the finished hull.
+/datum/unit_test/voidcrew_checkpoints/unclaimed
+	var/datum/bank_account/personal
 
 /datum/unit_test/voidcrew_checkpoints/Destroy()
 	// Dispose ships before their host reservations, just as normal departures do.
@@ -66,18 +91,74 @@
 				counts[istype(object, /obj/structure/closet) ? "closet:[object.name]" : "[object.type]"]++
 	return counts
 
+/// Every turf of the permanent bay interior.
+/datum/unit_test/voidcrew_checkpoints/proc/bay_turfs(datum/outpost_berth/ship_bay/bay)
+	return CORNER_BLOCK(bay.reservation.bottom_left_turfs[1], bay.reservation.width, bay.reservation.height)
+
+/datum/unit_test/voidcrew_checkpoints/proc/count_bay_ship_tiles(datum/outpost_berth/ship_bay/bay)
+	. = 0
+	for(var/turf/tile as anything in bay_turfs(bay))
+		if(istype(tile.loc, /area/shuttle))
+			.++
+
+/datum/unit_test/voidcrew_checkpoints/proc/count_bay_machines(datum/outpost_berth/ship_bay/bay)
+	. = 0
+	for(var/turf/tile as anything in bay_turfs(bay))
+		if(!istype(tile.loc, /area/shuttle))
+			continue
+		for(var/obj/machinery/machine in tile)
+			if(machine.checkpoint_type())
+				.++
+
+/datum/unit_test/voidcrew_checkpoints/proc/count_bay_walls(datum/outpost_berth/ship_bay/bay)
+	. = 0
+	for(var/turf/tile as anything in bay_turfs(bay))
+		if(istype(tile.loc, /area/shuttle) && iswallturf(tile))
+			.++
+
+/// Neither a reservation nor a physical move may put another ship into a bay under construction.
+/datum/unit_test/voidcrew_checkpoints/proc/check_bay_refuses_visitors(obj/structure/overmap/dynamic/player_outpost/home, datum/outpost_berth/ship_bay/bay, when)
+	var/obj/structure/overmap/ship/intruder = allocate(/obj/structure/overmap/ship)
+	var/obj/docking_port/mobile/voidcrew/intruder_port = new(run_loc_floor_bottom_left)
+	intruder.shuttle = intruder_port
+	intruder_port.current_ship = intruder
+	TEST_ASSERT_NULL(home.allocate_ship_bay(intruder), "Another ship reserved the bay [when]")
+	TEST_ASSERT_NULL(home.available_ship_bay(), "The bay was offered to visitors [when]")
+	TEST_ASSERT_EQUAL(intruder_port.canDock(bay.dock), SHUTTLE_SOMEONE_ELSE_DOCKED, "Another ship could target the bay [when]")
+	TEST_ASSERT_EQUAL(intruder_port.initiate_docking(bay.dock, force = TRUE), DOCKING_BLOCKED, "Another ship landed in the bay [when]")
+	intruder_port.current_ship = null
+	intruder.shuttle = null
+	qdel(intruder_port, force = TRUE)
+
+/// Called just before the reconstruction starts, while the captain is at the console.
+/datum/unit_test/voidcrew_checkpoints/proc/prepare_captain(mob/living/carbon/human/captain)
+	return
+
+/// Directly placed cases are checked the moment they finish, before any outlet can draw hangar air.
+/datum/unit_test/voidcrew_checkpoints/proc/breathes_ambient(datum/pipeline/network)
+	return FALSE
+
+/// Batteries are charged as each machine lands. Directly placed cases are checked before any
+/// of that charge can be used. The source batteries were emptied or removed before saving.
+/datum/unit_test/voidcrew_checkpoints/proc/battery_floor()
+	return 0.99
+
+/// The ordinary cases place every visit directly, in build order.
+/datum/unit_test/voidcrew_checkpoints/proc/build_hull(datum/checkpoint_construction/job, obj/structure/overmap/dynamic/player_outpost/registry_test/home, datum/outpost_berth/ship_bay/bay, mob/living/carbon/human/captain, obj/structure/overmap/ship/original, datum/ship_checkpoint_ui/registry_test/panel, datum/ship_checkpoint/snapshot)
+	job.fast_forward()
+	return captain
+
 /datum/unit_test/voidcrew_checkpoints/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(__IMPLIED_TYPE__)
 	home.shell_template = allocate(/datum/map_template/player_outpost/small)
 	home.founder_ckey = "registrycaptain"
 	TEST_ASSERT(home.load_level(), "The registry outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The permanent recovery bay did not load")
-	var/obj/machinery/computer/ship_checkpoint/terminal
 	for(var/obj/machinery/computer/ship_checkpoint/candidate as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/ship_checkpoint))
 		if(get_outpost_from_atom(candidate) == home)
 			terminal = candidate
 	TEST_ASSERT_NOTNULL(terminal, "The primary deck has no dedicated checkpoint console")
-	var/turf/terminal_turf = get_turf(terminal)
+	terminal_turf = get_turf(terminal)
 	var/mob/living/carbon/human/captain = make_player(terminal_turf, "registrycaptain")
 	var/mob/living/carbon/human/visitor = make_player(terminal_turf, "registryvisitor")
 	var/obj/structure/overmap/ship/original = SSshuttle.create_ship(/datum/map_template/shuttle/voidcrew/box)
@@ -89,6 +170,10 @@
 	original.ship_account.account_balance = 40000
 	var/datum/outpost_berth/ship_bay/bay = home.allocate_ship_bay(original)
 	TEST_ASSERT_NOTNULL(bay, "Could not allocate the source bay")
+	// What the bay floor looks like before any hull lands on it.
+	var/list/bay_floor = list()
+	for(var/turf/tile as anything in bay_turfs(bay))
+		bay_floor[tile] = list(tile.type, tile.loc)
 	adjust_reserve_dock_to_shuttle(bay.dock, original.shuttle)
 	original.shuttle.mode = SHUTTLE_PREARRIVAL
 	original.shuttle.initiate_docking(bay.dock)
@@ -145,6 +230,11 @@
 			removed_smes_cells = TRUE
 			bank.RefreshParts()
 	var/datum/ship_checkpoint_ui/registry_test/panel = allocate(__IMPLIED_TYPE__, home, terminal, captain)
+	panel.open_bay_view()
+	var/first_view = panel.bay_view.assigned_map
+	TEST_ASSERT(get_turf(bay.dock) in panel.bay_view.vis_contents, "The checkpoint console's bay view does not show the landing pad")
+	panel.open_bay_view()
+	TEST_ASSERT(panel.bay_view.assigned_map != first_view, "A reopened bay view reused its map key")
 	TEST_ASSERT_NOTNULL(panel.save_denial(visitor, bay), "A non-captain could register the hull")
 	TEST_ASSERT(panel.prepare_save(captain, bay), "Could not prepare a real hull: [panel.error]")
 	TEST_ASSERT(!findtext(panel.quote.tgm, "/obj/item"), "The snapshot includes items")
@@ -156,6 +246,21 @@
 	qdel(parsed)
 	rustg_file_write(panel.quote.tgm, "data/registry-source-hull.dmm")
 	var/list/before_counts = count_hull(original.shuttle)
+	TEST_ASSERT(before_counts["[/obj/machinery/cryopod]"], "The source hull has no cryopod to recover")
+	var/list/dropped = list()
+	for(var/turf/tile as anything in original.shuttle.return_turfs())
+		if(!(get_area(tile) in original.shuttle.shuttle_areas))
+			continue
+		for(var/obj/machinery/machine in tile)
+			if(!machine.checkpoint_type())
+				dropped["[machine.type]"]++
+		for(var/obj/structure/fitting in tile)
+			if(!is_type_in_typecache(fitting, GLOB.outpost_checkpoint_structures) && !is_type_in_typecache(fitting, GLOB.outpost_checkpoint_infrastructure))
+				dropped["[fitting.type]"]++
+	var/list/dropped_text = list()
+	for(var/type_name in dropped)
+		dropped_text += "[type_name] x[dropped[type_name]]"
+	log_test("Machinery and structures a checkpoint of this hull leaves out: [length(dropped_text) ? dropped_text.Join(", ") : "none"]")
 	var/room_count = length(panel.quote.rooms)
 	var/before_iron = silo.materials.get_material_amount(/datum/material/iron)
 	var/before_money = original.ship_account.account_balance
@@ -249,36 +354,78 @@
 	var/before_recovery_iron = silo.materials.get_material_amount(/datum/material/iron)
 	if(!destroy_original)
 		home.refuse_bay = TRUE
-		TEST_ASSERT(!panel.rebuild(captain, snapshot), "A failed bay allocation reported a successful rebuild")
-		TEST_ASSERT(snapshot in home.checkpoints, "A failed rebuild consumed the registration")
-		TEST_ASSERT(!snapshot.busy && !original.checkpoint_rebuilding && !original.retired_by_checkpoint, "A failed rebuild left a recovery or retirement lock")
-		TEST_ASSERT_NULL(SSshuttle.preview_shuttle, "A failed rebuild leaked its preview ship")
-		TEST_ASSERT_NULL(SSshuttle.preview_reservation, "A failed rebuild leaked its preview reservation")
-		TEST_ASSERT_NULL(SSshuttle.active_template_load, "A failed rebuild locked the shuttle loader")
-		TEST_ASSERT_EQUAL(original.ship_account.account_balance, old_balance, "A failed rebuild changed the original balance")
-		TEST_ASSERT(bay.is_available(), "Failed recovery retained the bay reservation")
+		TEST_ASSERT(!panel.rebuild(captain, snapshot), "A refused bay reservation reported a started rebuild")
+		TEST_ASSERT(snapshot in home.checkpoints, "A refused rebuild consumed the registration")
+		TEST_ASSERT(!snapshot.busy && !original.checkpoint_rebuilding && !original.retired_by_checkpoint, "A refused rebuild left a recovery or retirement lock")
+		TEST_ASSERT_NULL(SSshuttle.preview_shuttle, "A refused rebuild leaked its preview ship")
+		TEST_ASSERT_NULL(SSshuttle.preview_reservation, "A refused rebuild leaked its preview reservation")
+		TEST_ASSERT_NULL(SSshuttle.active_template_load, "A refused rebuild locked the shuttle loader")
+		TEST_ASSERT_EQUAL(original.ship_account.account_balance, old_balance, "A refused rebuild changed the original balance")
+		TEST_ASSERT(bay.is_available(), "A refused rebuild retained the bay reservation")
+		TEST_ASSERT_EQUAL(length(home.checkpoint_jobs), 0, "A refused rebuild left a job behind")
 		home.refuse_bay = FALSE
+	if(!destroy_original && !orphaned_original)
+		// A hull back in service before the first piece stops the job with nothing built.
+		TEST_ASSERT(panel.rebuild(captain, snapshot), "Could not start a reconstruction: [panel.error]")
+		var/datum/checkpoint_construction/stopped = home.checkpoint_jobs[1]
+		var/obj/docking_port/mobile/voidcrew/stopped_copy = stopped.port
+		original.abandoned = FALSE
+		stopped.fast_forward(1)
+		original.abandoned = TRUE
+		TEST_ASSERT(QDELETED(stopped) && !length(home.checkpoint_jobs), "A refused commitment left its job running")
+		TEST_ASSERT(QDELETED(stopped_copy), "A refused commitment leaked its hidden copy")
+		TEST_ASSERT((snapshot in home.checkpoints) && !snapshot.busy, "A rebuild stopped before its first piece consumed the checkpoint")
+		TEST_ASSERT(!original.checkpoint_rebuilding && !original.retired_by_checkpoint, "A stopped rebuild kept a lock on the original")
+		TEST_ASSERT(bay.is_available() && !bay.dock.get_docked(), "A stopped rebuild kept the bay")
+		TEST_ASSERT_EQUAL(count_bay_ship_tiles(bay), 0, "A stopped rebuild left pieces in the bay")
+		TEST_ASSERT_EQUAL(original.ship_account.account_balance, old_balance, "A stopped rebuild moved the original balance")
+		TEST_ASSERT_NULL(SSshuttle.active_template_load, "A stopped rebuild locked the shuttle loader")
+	panel.manual_jobs = manual_jobs
+	prepare_captain(captain)
 	TEST_ASSERT(panel.rebuild(captain, snapshot), "Rebuild failed: [panel.error]")
+	TEST_ASSERT_EQUAL(length(home.checkpoint_jobs), 1, "Reconstruction did not create exactly one job")
+	var/datum/checkpoint_construction/job = home.checkpoint_jobs[1]
+	TEST_ASSERT_NULL(SSshuttle.preview_shuttle, "Reconstruction held the shared shuttle preview")
+	TEST_ASSERT_NULL(SSshuttle.active_template_load, "Reconstruction held the shared shuttle loader")
+	TEST_ASSERT(snapshot in home.checkpoints, "The checkpoint was consumed before the first piece")
+	TEST_ASSERT(!bay.is_available(), "The bay was released while reconstruction owned it")
+	TEST_ASSERT_EQUAL(count_bay_ship_tiles(bay), 0, "The hull appeared before construction started")
+	TEST_ASSERT_EQUAL(length(job.markers), length(job.hull_indices), "Warning markers do not cover the hull footprint")
+	TEST_ASSERT(!panel.rebuild(captain, snapshot), "A second click started another reconstruction")
+	var/obj/docking_port/mobile/voidcrew/built_port = job.port
+	captain = build_hull(job, home, bay, captain, original, panel, snapshot)
+	if(!captain)
+		return
+	TEST_ASSERT(QDELETED(job), "Reconstruction did not finish")
 	TEST_ASSERT_EQUAL(silo.materials.get_material_amount(/datum/material/iron), before_recovery_iron, "Rebuilding charged materials a second time")
 	var/datum/outpost_berth/ship_bay/rebuilt_bay = home.bay_berths[1]
 	TEST_ASSERT_EQUAL(rebuilt_bay, bay, "Recovery replaced the permanent bay")
 	TEST_ASSERT_NULL(bay.rebuild_owner, "Successful recovery retained the build reservation")
 	var/obj/structure/overmap/ship/rebuilt = rebuilt_bay.ship
 	test_ships += rebuilt
+	TEST_ASSERT_EQUAL(rebuilt.shuttle, built_port, "The rebuilt ship record does not own the hull that was built")
 	TEST_ASSERT(rebuilt_bay.is_ship_present(), "Recovered ship is not physically docked")
 	TEST_ASSERT(rebuilt.is_ship_captain(captain), "Recovered captain lacks command")
 	TEST_ASSERT_EQUAL(rebuilt.ship_account.account_balance, old_balance, "Recovery minted money or lost the original account")
 	if(orphaned_original)
 		TEST_ASSERT(QDELETED(original), "Recovery retained the hull-less overmap record")
-	else if(!destroy_original)
+	else if(!destroy_original && !QDELETED(original))
+		// A build that takes real time can outlast the retired hull: the derelict sweep removes it.
 		TEST_ASSERT_EQUAL(original.ship_account.account_balance, 0, "The original kept its transferred balance")
 		TEST_ASSERT(original.retired_by_checkpoint, "The original hull was not retired")
 		TEST_ASSERT(!original.claim_abandoned_ship(visitor), "A retired hull can still be claimed")
 	TEST_ASSERT_EQUAL(length(home.checkpoints), 0, "Successful recovery did not consume the registration")
 	TEST_ASSERT(QDELETED(snapshot), "Consumed snapshot leaked")
 	TEST_ASSERT(!panel.rebuild(captain, snapshot), "The consumed registration rebuilt twice")
+	TEST_ASSERT_EQUAL(length(home.checkpoint_jobs), 0, "A finished reconstruction stayed listed")
 	TEST_ASSERT_EQUAL(length(hull_owned_areas(rebuilt.shuttle)), room_count, "Recovery claimed padding or lost a room")
+	for(var/area/room as anything in rebuilt.shuttle.shuttle_areas)
+		for(var/z_level in 1 to length(room.turfs_by_zlevel))
+			if(z_level != rebuilt.shuttle.z)
+				TEST_ASSERT(!length(room.get_turfs_by_zlevel(z_level)), "[room] kept hidden construction tiles on z [z_level]")
 	var/list/after_counts = count_hull(rebuilt.shuttle)
+	for(var/type_name in count_adjustments)
+		before_counts[type_name] += count_adjustments[type_name]
 	for(var/type_name in (before_counts | after_counts))
 		if(after_counts[type_name] != before_counts[type_name])
 			TEST_FAIL("Hull infrastructure changed for [type_name]: expected [before_counts[type_name]], got [after_counts[type_name]]")
@@ -306,14 +453,16 @@
 				continue
 			TEST_FAIL("Rebuilt checkpoint contains a free item: [item.type], loc=[item.loc?.type], deleted=[QDELETED(item)]")
 		for(var/obj/machinery/power/apc/controller in tile)
-			TEST_ASSERT(controller.cell?.charge > controller.cell?.maxcharge * 0.99, "APC did not recover with a charged battery")
+			TEST_ASSERT(controller.cell?.charge > controller.cell?.maxcharge * battery_floor(), "APC did not recover with a charged battery: [controller.cell?.charge]/[controller.cell?.maxcharge]")
 		for(var/obj/machinery/power/smes/bank in tile)
 			var/capacity = 0
 			var/stored = 0
 			for(var/obj/item/stock_parts/power_store/battery in bank.component_parts)
 				capacity += battery.maxcharge
 				stored += battery.charge
-			TEST_ASSERT(capacity > 0 && stored > capacity * 0.99, "SMES did not recover charged batteries: [stored]/[capacity]")
+			TEST_ASSERT(capacity > 0 && stored > capacity * battery_floor(), "SMES did not recover charged batteries: [stored]/[capacity]")
+			if(bank.terminal?.powernet && bank.powernet)
+				TEST_ASSERT(bank.terminal.powernet != bank.powernet, "[bank] was rebuilt charging from its own output network")
 		for(var/obj/machinery/autolathe/restored_lathe in tile)
 			if(restored_lathe.name == "updated checkpoint fixture")
 				TEST_ASSERT_EQUAL(restored_lathe.total_part_rating(/datum/stock_part/matter_bin), expected_bin_rating, "Recovery lost fitted upgrades")
@@ -325,13 +474,23 @@
 			TEST_ASSERT_NULL(restored_builder.internal_painter.ink, "Construction console recovered a toner cartridge")
 		for(var/obj/machinery/ore_silo/restored_silo in tile)
 			TEST_ASSERT_EQUAL(restored_silo.materials.get_material_amount(/datum/material/iron), 0, "Recovery copied silo materials")
+		for(var/obj/structure/reagent_dispensers/dispenser in tile)
+			TEST_ASSERT(!dispenser.reagents?.total_volume, "Recovery refilled [dispenser] with [dispenser.reagents?.total_volume] units")
+		for(var/obj/structure/bedsheetbin/bin in tile)
+			TEST_ASSERT_EQUAL(bin.amount, 0, "Recovery restocked a bedsheet bin")
 		for(var/obj/machinery/vending/vendor in tile)
 			for(var/datum/data/vending_product/product as anything in vendor.product_records + vendor.hidden_records + vendor.coin_records)
 				TEST_ASSERT_EQUAL(product.amount, 0, "Recovery restocked a vendor")
 		for(var/obj/machinery/atmospherics/machine in tile)
 			for(var/datum/pipeline/network as anything in machine.return_pipenets())
-				TEST_ASSERT(!network?.air?.total_moles(), "Rebuilt pipe network contains free gas")
+				if(network && breathes_ambient(network))
+					continue
+				TEST_ASSERT(!network?.air?.total_moles(), "Rebuilt pipe network at [machine] ([machine.type]) contains [network?.air?.total_moles()] moles of free gas")
+		for(var/obj/machinery/atmospherics/components/tank/stored_tank in tile)
+			TEST_ASSERT(!stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) was refilled with [stored_tank.air_contents?.total_moles()] moles")
 	TEST_ASSERT(length(rebuilt.helm_consoles), "Recovered ship has no connected helm")
+	var/obj/machinery/cryopod/spawn_pod = locate() in rebuilt.shuttle.spawn_points
+	TEST_ASSERT(spawn_pod && (get_area(spawn_pod) in rebuilt.shuttle.shuttle_areas), "Recovered ship has no cryopod spawn point")
 	for(var/obj/machinery/computer/helm/helm as anything in rebuilt.helm_consoles)
 		TEST_ASSERT_EQUAL(helm.current_ship, rebuilt, "Helm remained attached to the old ship")
 		TEST_ASSERT(helm.powered(), "Recovered helm is unpowered")
@@ -356,3 +515,200 @@
 	TEST_ASSERT_EQUAL(home.bay_berths[1], rebuilt_bay, "Recovered ship departure replaced the permanent bay")
 	TEST_ASSERT(!QDELETED(rebuilt_bay.reservation) && rebuilt_bay.is_available(), "Recovered ship departure unloaded or retained its bay reservation")
 	TEST_ASSERT_EQUAL(home.get_floor_alcove(rebuilt_bay.berth_number), rebuilt_bay.alcove_turfs, "Recovered ship departure removed elevator access")
+	// The staged hull must leave exactly the floor it was built on.
+	var/stranded = 0
+	for(var/turf/tile as anything in bay_floor)
+		var/list/floor = bay_floor[tile]
+		if(tile.type != floor[1] || tile.loc != floor[2] || isshuttleturf(tile))
+			stranded++
+	TEST_ASSERT_EQUAL(stranded, 0, "The recovered hull left [stranded] tile(s) of itself in the bay after departure")
+
+/datum/unit_test/voidcrew_checkpoints/staged/build_hull(datum/checkpoint_construction/job, obj/structure/overmap/dynamic/player_outpost/registry_test/home, datum/outpost_berth/ship_bay/bay, mob/living/carbon/human/captain, obj/structure/overmap/ship/original, datum/ship_checkpoint_ui/registry_test/panel, datum/ship_checkpoint/snapshot)
+	check_bay_refuses_visitors(home, bay, "before the first piece")
+	TEST_ASSERT_EQUAL(job.state, "marking", "Reconstruction skipped its survey markers")
+	// The first visit consumes the checkpoint and moves the frame, then places one tile.
+	job.fast_forward(1)
+	TEST_ASSERT(job.committed, "The first piece was placed without consuming the checkpoint")
+	TEST_ASSERT(QDELETED(snapshot) && !length(home.checkpoints), "The first piece did not consume the checkpoint")
+	TEST_ASSERT(original.retired_by_checkpoint, "The first piece did not retire the original hull")
+	TEST_ASSERT_EQUAL(bay.dock.get_docked(), job.port, "The hull frame did not take the bay")
+	TEST_ASSERT(job.port in SSshuttle.mobile_docking_ports, "The hull frame was not registered")
+	TEST_ASSERT_EQUAL(count_bay_ship_tiles(bay), 1, "The first visit placed more than one tile")
+	TEST_ASSERT_EQUAL(count_bay_machines(bay), 0, "Machinery appeared with the first deck tile")
+	var/datum/checkpoint_visit/first = job.completed_visits[1]
+	var/area/first_room = get_area(job.bay_turfs[first.index])
+	var/list/room_lighting = list(first_room.base_lighting_color, first_room.base_lighting_alpha)
+	TEST_ASSERT(first_room.base_lighting_alpha >= 110, "The new deck was not floodlit: [first_room.base_lighting_alpha]")
+	var/list/original_lighting = job.lit_rooms[first_room]
+	TEST_ASSERT(!job.execute_visit(first), "A completed visit ran twice")
+	TEST_ASSERT_EQUAL(job.visits_done, 1, "Replaying a visit counted it again")
+	TEST_ASSERT(!panel.rebuild(captain, snapshot), "The consumed checkpoint started another reconstruction")
+	check_bay_refuses_visitors(home, bay, "during construction")
+	var/highest_stage = 1
+	var/turf/broken_wall
+	var/broken_wall_type
+	var/lathe_removed = FALSE
+	var/interrupted = FALSE
+	while(job.state == "building")
+		var/stage_before = job.stage
+		job.fast_forward(1)
+		if(QDELETED(job) || job.state != "building")
+			break
+		var/datum/checkpoint_visit/latest = job.completed_visits[length(job.completed_visits)]
+		TEST_ASSERT(latest.stage >= highest_stage, "A stage [latest.stage] piece was placed after stage [highest_stage] began")
+		highest_stage = max(highest_stage, latest.stage)
+		if(job.stage == stage_before)
+			continue
+		switch(job.stage)
+			if(2) // Hull: every deck tile down, and nothing standing on it yet.
+				TEST_ASSERT_EQUAL(count_bay_walls(bay), 0, "Walls went up before the deck was finished")
+				TEST_ASSERT_EQUAL(count_bay_machines(bay), 0, "Machinery appeared during the deck stage")
+			if(3) // Systems: the hull is up. Break one finished wall; it must stay broken.
+				TEST_ASSERT(count_bay_walls(bay) > 0, "The hull stage placed no walls")
+				for(var/turf/closed/wall/wall in bay_turfs(bay))
+					if(istype(wall.loc, /area/shuttle))
+						broken_wall = wall
+						break
+				TEST_ASSERT_NOTNULL(broken_wall, "No finished wall to damage")
+				broken_wall_type = broken_wall.type
+				var/turf/scraped = broken_wall.ScrapeAway()
+				count_adjustments["[broken_wall_type]"] -= 1
+				count_adjustments["[scraped.type]"] += 1
+			if(4) // Machinery: only infrastructure exists so far.
+				TEST_ASSERT_EQUAL(count_bay_machines(bay), count_bay_infrastructure(bay), "Ordinary machinery appeared before its stage")
+			if(5) // Fittings: remove a finished machine and interrupt the job part way.
+				for(var/turf/tile as anything in bay_turfs(bay))
+					for(var/obj/machinery/autolathe/fixture in tile)
+						if(fixture.name == "updated checkpoint fixture")
+							qdel(fixture)
+							lathe_removed = TRUE
+				count_adjustments["[/obj/machinery/autolathe]"] -= 1
+				TEST_ASSERT(lathe_removed, "The upgraded fixture was never placed")
+				// Losing the console, its panel and the captain must not stop or restart the job.
+				qdel(panel)
+				qdel(terminal)
+				captain.key = null
+				qdel(job)
+				TEST_ASSERT(!QDELETED(job), "An ordinary deletion stopped a reconstruction that had pieces")
+				interrupted = TRUE
+	TEST_ASSERT(interrupted, "The interruption point was never reached")
+	TEST_ASSERT_EQUAL(job.state, "commissioning", "The finished hull did not wait for its absent captain")
+	TEST_ASSERT(original_lighting && room_lighting[2] != original_lighting[2], "The floodlit room recorded no lighting to restore")
+	TEST_ASSERT(first_room.base_lighting_alpha == original_lighting[2] && first_room.base_lighting_color == original_lighting[1], "The finished hull kept the construction floodlights")
+	TEST_ASSERT_EQUAL(job.status_line(), "Awaiting captain", "The waiting job reported the wrong status")
+	TEST_ASSERT(IS_WEAKREF_OF(job, bay.rebuild_owner), "The finished hull released its bay before commissioning")
+	check_bay_refuses_visitors(home, bay, "while waiting for the captain")
+	TEST_ASSERT_EQUAL(job.visits_done, job.visit_total, "Some visits never ran")
+	var/visits = job.visits_done
+	TEST_ASSERT(!job.try_commission(), "The hull was handed over with no captain present")
+	// The captain returns in a new body; the finished hull goes to them without new pieces.
+	captain = make_player(get_turf(home.management_console), "registrycaptain")
+	TEST_ASSERT(job.try_commission(), "The returning captain could not take command")
+	TEST_ASSERT_EQUAL(job.visits_done, visits, "Commissioning placed more pieces")
+	TEST_ASSERT(!iswallturf(broken_wall), "A broken wall was rebuilt")
+	for(var/turf/tile as anything in bay_turfs(bay))
+		for(var/obj/machinery/autolathe/fixture in tile)
+			TEST_ASSERT(fixture.name != "updated checkpoint fixture", "A removed machine was rebuilt")
+	return captain
+
+/datum/unit_test/voidcrew_checkpoints/proc/count_bay_infrastructure(datum/outpost_berth/ship_bay/bay)
+	. = 0
+	for(var/turf/tile as anything in bay_turfs(bay))
+		if(!istype(tile.loc, /area/shuttle))
+			continue
+		for(var/obj/machinery/machine in tile)
+			if(machine.checkpoint_type() && (is_type_in_typecache(machine, GLOB.outpost_checkpoint_infrastructure) || istype(machine, /obj/machinery/power/smes)))
+				.++
+
+/datum/unit_test/voidcrew_checkpoints/terminated/build_hull(datum/checkpoint_construction/job, obj/structure/overmap/dynamic/player_outpost/registry_test/home, datum/outpost_berth/ship_bay/bay, mob/living/carbon/human/captain, obj/structure/overmap/ship/original, datum/ship_checkpoint_ui/registry_test/panel, datum/ship_checkpoint/snapshot)
+	job.fast_forward(40)
+	TEST_ASSERT(job.committed && count_bay_ship_tiles(bay) > 0, "No pieces were placed before the bay was lost")
+	var/datum/checkpoint_visit/placed = job.completed_visits[1]
+	var/mob/living/carbon/human/bystander = make_player(job.bay_turfs[placed.index], "registrybystander")
+	var/obj/docking_port/mobile/voidcrew/partial_port = job.port
+	var/datum/turf_reservation/hidden_copy = job.source_reservation
+	var/held = job.held_balance
+	TEST_ASSERT(held > 0, "Commitment did not hold the original's account balance")
+	qdel(bay)
+	TEST_ASSERT(QDELETED(job), "Reconstruction outlived its bay")
+	TEST_ASSERT(QDELETED(partial_port) && !(partial_port in SSshuttle.mobile_docking_ports), "The partial hull left a registered port behind")
+	TEST_ASSERT(QDELETED(hidden_copy), "The hidden copy outlived its job")
+	TEST_ASSERT(!length(home.checkpoints), "Losing the bay restored a consumed checkpoint")
+	TEST_ASSERT(!original.retired_by_checkpoint && !original.checkpoint_rebuilding, "The original stayed replaced after its replacement was destroyed")
+	TEST_ASSERT_EQUAL(original.ship_account.account_balance, held, "The original's balance was not returned")
+	TEST_ASSERT(bystander.stat != DEAD && (get_turf(bystander) in home.get_floor_alcove(0)), "A player on the partial hull was not evacuated")
+	return null
+
+/datum/unit_test/voidcrew_checkpoints/drones/build_hull(datum/checkpoint_construction/job, obj/structure/overmap/dynamic/player_outpost/registry_test/home, datum/outpost_berth/ship_bay/bay, mob/living/carbon/human/captain, obj/structure/overmap/ship/original, datum/ship_checkpoint_ui/registry_test/panel, datum/ship_checkpoint/snapshot)
+	TEST_ASSERT(length(job.drones) >= 8, "Reconstruction started with [length(job.drones)] drones")
+	var/list/obj/effect/checkpoint_build_drone/fleet = job.drones.Copy()
+	var/list/cradles = list()
+	for(var/obj/effect/checkpoint_build_drone/drone as anything in fleet)
+		var/obj/structure/checkpoint_drone_bay/cradle = drone.cradle_ref?.resolve()
+		TEST_ASSERT(cradle && get_turf(drone) == get_turf(cradle), "A drone did not launch from a drone bay")
+		cradles |= cradle
+	TEST_ASSERT_EQUAL(length(cradles), 4, "Drones did not use all four corner drone bays")
+	var/started_at = world.time
+	var/deadline = world.time + 30 SECONDS
+	while(!QDELETED(job) && job.visits_done < 40 && world.time < deadline)
+		sleep(1)
+	TEST_ASSERT(!QDELETED(job) && job.committed, "The drones never consumed the checkpoint")
+	TEST_ASSERT(job.visits_done >= 40, "The drones placed [job.visits_done] visits in 30 seconds")
+	TEST_ASSERT(count_bay_ship_tiles(bay) > 0 && count_bay_ship_tiles(bay) < length(job.hull_indices), "The drone build was not partial part way through")
+	// Let the real controller finish and hand over on its own.
+	var/total_visits = job.visit_total
+	deadline = world.time + 5 MINUTES
+	while(!QDELETED(job) && world.time < deadline)
+		sleep(5)
+	TEST_ASSERT(QDELETED(job), "The drones did not finish [total_visits] visits within five minutes")
+	log_test("Drone reconstruction placed [total_visits] visits in [(world.time - started_at) / 10] seconds, including the survey.")
+	// Released drones fly back to their own bays and dock there.
+	deadline = world.time + 30 SECONDS
+	var/docked = FALSE
+	while(!docked && world.time < deadline)
+		docked = TRUE
+		for(var/obj/effect/checkpoint_build_drone/drone as anything in fleet)
+			if(!QDELETED(drone))
+				docked = FALSE
+				TEST_ASSERT(drone.returning_until, "A drone outlived the job without being sent home")
+		if(!docked)
+			sleep(2)
+	TEST_ASSERT(docked, "Drones did not return to their drone bays after the build")
+	return captain
+
+/// The grid is live from the Systems stage on, so the rest of the build runs on the SMES.
+/// A Box drew about 4% of it by handover.
+/datum/unit_test/voidcrew_checkpoints/drones/battery_floor()
+	return 0.9
+
+/// An open outlet on an unfinished hull equalises with the hangar during a real-time build.
+/datum/unit_test/voidcrew_checkpoints/drones/breathes_ambient(datum/pipeline/network)
+	for(var/obj/machinery/atmospherics/components/unary/passive_vent/outlet in network.other_atmos_machines)
+		return TRUE
+	return FALSE
+
+/datum/unit_test/voidcrew_checkpoints/unclaimed/prepare_captain(mob/living/carbon/human/captain)
+	var/obj/item/card/id/id = allocate(/obj/item/card/id)
+	personal = allocate(/datum/bank_account, "Checkpoint captain", null, 1, FALSE)
+	id.registered_account = personal
+	TEST_ASSERT(captain.put_in_active_hand(id), "The captain could not hold their ID")
+
+/datum/unit_test/voidcrew_checkpoints/unclaimed/build_hull(datum/checkpoint_construction/job, obj/structure/overmap/dynamic/player_outpost/registry_test/home, datum/outpost_berth/ship_bay/bay, mob/living/carbon/human/captain, obj/structure/overmap/ship/original, datum/ship_checkpoint_ui/registry_test/panel, datum/ship_checkpoint/snapshot)
+	var/before_personal = personal.account_balance
+	captain.key = null
+	job.fast_forward()
+	TEST_ASSERT_EQUAL(job.state, "commissioning", "The finished hull did not wait for its captain")
+	var/held = job.held_balance
+	TEST_ASSERT(held > 0, "Commitment did not hold the original's balance")
+	// The wait runs out with nobody to take command.
+	job.captain_wait_until = world.time
+	TEST_ASSERT(job.try_commission(), "The unclaimed hull was never handed over")
+	TEST_ASSERT(QDELETED(job), "The unclaimed reconstruction did not finish")
+	var/obj/structure/overmap/ship/rebuilt = bay.ship
+	TEST_ASSERT_NOTNULL(rebuilt, "The unclaimed hull did not take the bay")
+	test_ships += rebuilt
+	TEST_ASSERT_NULL(bay.rebuild_owner, "The unclaimed hull kept the build reservation")
+	TEST_ASSERT(rebuilt.abandoned, "The unclaimed hull cannot be claimed at its helm")
+	TEST_ASSERT_EQUAL(rebuilt.ship_account.account_balance, 0, "The old ship's money went to whoever claims the hull")
+	TEST_ASSERT_EQUAL(personal.account_balance - before_personal, held, "The old ship's money did not return to its captain")
+	return null

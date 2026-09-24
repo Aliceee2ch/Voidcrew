@@ -77,6 +77,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		"freight_state" = freight_state,
 		"freight_error" = selected.freight?.last_error, "research_connection" = selected.research_connection_summary(),
 		"ship_bays" = ship_bay_data(selected),
+		"checkpoints" = checkpoint_admin_data(selected),
 	)
 	return data
 
@@ -189,6 +190,9 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		return
 	if(action in list("install_bays", "remove_bays", "bay_jump", "bay_vv", "bay_grant_materials", "bay_revoke_materials", "bay_select_silo"))
 		manage_ship_bays(home, user, action, params)
+		return
+	if(action in list("checkpoint_save", "checkpoint_rebuild_docked", "checkpoint_rebuild", "checkpoint_delete", "bay_remove_ship", "rebuild_rush", "rebuild_hand_over", "rebuild_stop"))
+		manage_checkpoints(home, user, action, params)
 		return
 	switch(action)
 		if("jump", "jump_overmap")

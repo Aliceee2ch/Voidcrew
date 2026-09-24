@@ -250,6 +250,7 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 /// Restore distinct player-built rooms before machines initialize their APC links.
 /// A plain TGM load otherwise merges rooms sharing one /area type.
 /datum/map_template/shuttle/voidcrew/commissioned/checkpoint/initTemplateBounds(list/bounds)
+	mark_phase("read")
 	var/list/replaced_areas = list()
 	for(var/list/room_data as anything in blueprint.rooms)
 		var/area/room_type = room_data["type"]
@@ -263,4 +264,8 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 	for(var/area/old_room as anything in replaced_areas)
 		if(!old_room.has_contained_turfs())
 			qdel(old_room)
-	return ..()
+	if(spread_load)
+		return init_bounds_spread(bounds)
+	mark_phase("rooms")
+	. = ..()
+	mark_phase("init_bounds")

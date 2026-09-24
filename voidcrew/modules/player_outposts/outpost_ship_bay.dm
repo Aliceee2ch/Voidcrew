@@ -2,7 +2,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 
 /datum/map_template/outpost_hangar/ship_bay
 	name = "Outpost Ship Bay"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_ship_bay.dmm"
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_ship_bay_greasepit.dmm"
 
 /obj/structure/overmap/dynamic/player_outpost
 	var/ship_bay_installed = FALSE

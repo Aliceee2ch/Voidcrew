@@ -35,20 +35,6 @@
 	},
 /turf/open/floor/iron/white,
 /area/shuttle/voidcrew/squab/laboratory)
-"ayo" = (
-/obj/effect/turf_decal/siding/thinplating/dark{
-	layer = 2.041
-	},
-/obj/effect/turf_decal/trimline/dark_blue/line{
-	dir = 2;
-	color = "#32426b"
-	},
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/structure/cable,
-/turf/open/floor/iron/dark,
-/area/shuttle/voidcrew/squab/bridge)
 "aBa" = (
 /obj/machinery/door/poddoor/shutters{
 	id = "squab_caplock"
@@ -2673,6 +2659,19 @@
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
 /area/shuttle/voidcrew/squab/cargo_entrance)
+"snF" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	layer = 2.041
+	},
+/obj/effect/turf_decal/trimline/dark_blue/line{
+	dir = 2;
+	color = "#32426b"
+	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/structure/cable,
+/turf/open/floor/iron/dark,
+/area/shuttle/voidcrew/squab/bridge)
 "sol" = (
 /obj/structure/railing{
 	dir = 8;
@@ -3809,7 +3808,7 @@ quT
 psE
 hBJ
 jCK
-ayo
+snF
 cfb
 mYz
 gMg

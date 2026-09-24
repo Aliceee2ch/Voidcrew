@@ -42,6 +42,8 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 	/obj/structure/ore_vent,
 	/obj/structure/holosign,
 	/obj/structure/trap,
+	// Made of the spear and head it holds; clear_stock() takes those and it falls apart.
+	/obj/structure/headpike,
 )))
 
 /// Whether a checkpoint keeps this object. Machinery also needs a type to rebuild as.

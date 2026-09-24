@@ -3,19 +3,47 @@
 	var/obj/structure/overmap/ship/loading_ship
 	/// The only operation allowed to mutate the subsystem-wide template preview.
 	var/datum/shuttle_template_load/active_template_load
+	/// Ordinary callers (purchases, NPC ships, freight) currently waiting for the loader.
+	/// Background loads step aside for them.
+	var/template_load_waiters = 0
+	/// Background loads (checkpoint rebuilds) waiting for the loader, first come first served.
+	var/list/background_template_waiters = list()
 
 /// Shared by nested operations belonging to one serialized template load.
 /datum/shuttle_template_load
 	var/obj/structure/overmap/ship/previous_loading_ship
 	var/previous_air_can_fire
 
-/// A timeout refuses the waiter without changing the active owner's state.
-/datum/controller/subsystem/shuttle/proc/acquire_template_load(wait_timeout = null)
+/**
+ * A timeout refuses the waiter without changing the active owner's state.
+ *
+ * background: queued behind every ordinary waiter and served in arrival order. Used by work
+ * nobody is standing at a console for, so it can never hold up a purchase by more than the
+ * one load already running.
+ * keep_waiting: checked every tick while waiting; a false result withdraws the request.
+ */
+/datum/controller/subsystem/shuttle/proc/acquire_template_load(wait_timeout = null, background = FALSE, datum/callback/keep_waiting = null)
 	var/deadline = isnum(wait_timeout) ? world.time + max(0, wait_timeout) : null
-	while(shuttle_loading)
-		if(isnum(deadline) && world.time >= deadline)
+	var/list/ticket
+	if(background)
+		ticket = list()
+		background_template_waiters += list(ticket)
+	var/counted = FALSE
+	while(shuttle_loading || (background && (template_load_waiters || background_template_waiters[1] != ticket)))
+		if(!background && !counted)
+			counted = TRUE
+			template_load_waiters++
+		if((isnum(deadline) && world.time >= deadline) || (keep_waiting && !keep_waiting.Invoke()))
+			if(counted)
+				template_load_waiters--
+			if(ticket)
+				background_template_waiters -= list(ticket)
 			return null
 		stoplag(1)
+	if(counted)
+		template_load_waiters--
+	if(ticket)
+		background_template_waiters -= list(ticket)
 
 	var/datum/shuttle_template_load/load_owner = new
 	load_owner.previous_loading_ship = loading_ship
@@ -34,10 +62,10 @@
 	return TRUE
 
 /// Own the preview across every yield, including nested ship/template operations.
-/datum/controller/subsystem/shuttle/proc/run_template_load(datum/callback/operation, datum/shuttle_template_load/load_owner, wait_timeout = null)
+/datum/controller/subsystem/shuttle/proc/run_template_load(datum/callback/operation, datum/shuttle_template_load/load_owner, wait_timeout = null, background = FALSE, datum/callback/keep_waiting = null)
 	var/acquired_owner = !load_owner
 	if(acquired_owner)
-		load_owner = acquire_template_load(wait_timeout)
+		load_owner = acquire_template_load(wait_timeout, background, keep_waiting)
 	if(!load_owner)
 		return FALSE
 	if(active_template_load != load_owner)

@@ -90,6 +90,10 @@
 	var/rushed = FALSE
 	/// Ship room -> its own base lighting, list(colour, alpha), while floodlit for the build.
 	var/list/lit_rooms = list()
+	/// Waiting for the shared shuttle loader. The bay stays reserved meanwhile.
+	var/queued = FALSE
+	/// world.time the shared loader was granted, for status and testing.
+	var/load_started_at
 
 /// leave_original: an admin copy of a hull that is still in service. It is not retired and
 /// keeps its money; the checkpoint is still consumed.
@@ -170,8 +174,12 @@
 	if(!bay)
 		error = "The ship bay is occupied or reserved."
 		return FALSE
-	// The shared loader is held only for the load itself, never for the build.
-	var/loaded = SSshuttle.run_template_load(CALLBACK(src, PROC_REF(load_source)), wait_timeout = 30 SECONDS)
+	// The shared loader is held only for the load itself, never for the build. A rebuild waits
+	// its turn behind purchases and earlier rebuilds, keeping its bay, rather than giving up.
+	queued = TRUE
+	update_bay_status()
+	var/loaded = SSshuttle.run_template_load(CALLBACK(src, PROC_REF(load_source)), background = TRUE, keep_waiting = CALLBACK(src, PROC_REF(still_queued)))
+	queued = FALSE
 	if(QDELETED(src) || state != CHECKPOINT_BUILD_PREPARING)
 		return FALSE
 	if(!loaded || !plan())
@@ -182,8 +190,11 @@
 
 /// Runs while this job owns SSshuttle's template load. Every reference is rechecked after it yields.
 /datum/checkpoint_construction/proc/load_source(datum/shuttle_template_load/load_owner)
+	queued = FALSE
 	if(QDELETED(src) || state != CHECKPOINT_BUILD_PREPARING)
 		return FALSE
+	load_started_at = world.time
+	update_bay_status()
 	error = build_denial()
 	if(error)
 		return FALSE
@@ -208,14 +219,16 @@
 	error = build_denial()
 	if(error)
 		return FALSE
-	// Initialization may stock lockers or engine tanks even though no items were saved.
-	clear_stock(port)
-	var/mob/living/operator = operator_ref?.resolve()
+	// Atmos stays paused while this job holds the loader, so the copy can be frozen tile by tile
+	// across ticks. The copy is still exactly as loaded here.
 	for(var/turf/tile as anything in port.return_turfs())
+		if(TICK_CHECK)
+			stoplag()
+			// Only this job can end it early; it then discards the copy itself.
+			if(!source_still_loading())
+				return FALSE
 		if(!(get_area(tile) in port.shuttle_areas))
 			continue
-		for(var/obj/machinery/machine in tile)
-			restore_machine(machine, operator)
 		// The copy loses its windows and doors long before its floors. Frozen, it cannot
 		// vent, trip firelocks or blow unplaced fittings off their tiles.
 		tile.blocks_air = TRUE
@@ -224,7 +237,28 @@
 		for(var/obj/machinery/door/door in tile)
 			door.req_access = null
 			door.req_one_access = null
+	template.mark_phase("freeze")
+	// Scrubbing and restoring stay in one tick: a machine processed in between would run with
+	// its stock gone and its parts not yet restored (an APC without its cell, for one).
+	// Initialization may stock lockers or engine tanks even though no items were saved.
+	clear_stock(port)
+	var/mob/living/operator = operator_ref?.resolve()
+	for(var/turf/tile as anything in port.return_turfs())
+		if(!(get_area(tile) in port.shuttle_areas))
+			continue
+		for(var/obj/machinery/machine in tile)
+			restore_machine(machine, operator)
+	template.mark_phase("scrub_and_restore")
 	return TRUE
+
+/// Whether a queued job still wants the shared loader. Anything that ended it already
+/// released its bay and kept its checkpoint.
+/datum/checkpoint_construction/proc/still_queued()
+	return !QDELETED(src) && state == CHECKPOINT_BUILD_PREPARING
+
+/// Rechecked after every pause while the hidden copy is prepared.
+/datum/checkpoint_construction/proc/source_still_loading()
+	return !QDELETED(src) && state == CHECKPOINT_BUILD_PREPARING && !QDELETED(port) && !QDELETED(source_reservation)
 
 /// Shared checks before any piece exists.
 /datum/checkpoint_construction/proc/build_denial()
@@ -1057,7 +1091,7 @@
 /datum/checkpoint_construction/proc/status_line()
 	switch(state)
 		if(CHECKPOINT_BUILD_PREPARING)
-			return "Preparing"
+			return queued ? "Waiting for the shipyard" : "Preparing"
 		if(CHECKPOINT_BUILD_MARKING)
 			return "Marking construction area"
 		if(CHECKPOINT_BUILD_BUILDING)
@@ -1074,6 +1108,8 @@
 		return "Rebuilding [progress_percent()]%"
 	if(state == CHECKPOINT_BUILD_COMMISSIONING)
 		return "Commissioning"
+	if(state == CHECKPOINT_BUILD_PREPARING && queued)
+		return "Queued"
 	return "Rebuilding"
 
 /datum/checkpoint_construction/proc/rebuild_ui_data()

@@ -7433,6 +7433,7 @@
 #include "voidcrew\objects\structures\icemoon\cave_entrance.dm"
 #include "voidcrew\turfs\cult_ship.dm"
 #include "voidcrew\turfs\dollhouse.dm"
+#include "voidcrew\turfs\hull_terrain.dm"
 #include "voidcrew\turfs\closed\minerals.dm"
 #include "voidcrew\turfs\open\asteroid.dm"
 #include "voidcrew\turfs\open\lava.dm"

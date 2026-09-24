@@ -554,7 +554,7 @@
 /area/shuttle/voidcrew/ship_nanobead/biomedical_north)
 "nje" = (
 /obj/structure/grille,
-/turf/template_noop,
+/turf/open/floor/plating/airless,
 /area/shuttle/voidcrew/ship_nanobead/maint)
 "nHe" = (
 /turf/closed/wall/mineral/titanium,

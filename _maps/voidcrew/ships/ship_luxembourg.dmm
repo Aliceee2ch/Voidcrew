@@ -377,7 +377,7 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/luxembourg/medbay)
 "ie" = (
-/turf/closed/wall/r_wall/syndicate/nodiagonal,
+/turf/closed/wall/r_wall/plastitanium/syndicate/nodiagonal,
 /area/shuttle/voidcrew/luxembourg/dormitories)
 "ig" = (
 /obj/structure/table,
@@ -1055,7 +1055,7 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/luxembourg/cargo)
 "CP" = (
-/turf/closed/wall/r_wall/syndicate/nodiagonal,
+/turf/closed/wall/r_wall/plastitanium/syndicate/nodiagonal,
 /area/shuttle/voidcrew/luxembourg/cargo)
 "Db" = (
 /obj/structure/table,
@@ -1577,7 +1577,7 @@
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/luxembourg/cargo)
 "VR" = (
-/turf/closed/wall/r_wall/syndicate/nodiagonal,
+/turf/closed/wall/r_wall/plastitanium/syndicate/nodiagonal,
 /area/shuttle/voidcrew/luxembourg/engineering)
 "VZ" = (
 /obj/machinery/power/terminal{

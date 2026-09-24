@@ -1953,6 +1953,16 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/squab/cargobay)
+"lOb" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	layer = 2.041
+	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/effect/turf_decal/trimline/white/line,
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/squab/bridge)
 "lPE" = (
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
 	dir = 8
@@ -2605,17 +2615,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
-/area/shuttle/voidcrew/squab/bridge)
-"rQY" = (
-/obj/effect/turf_decal/siding/thinplating/dark{
-	layer = 2.041
-	},
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/effect/turf_decal/trimline/white/line,
-/obj/structure/cable,
-/turf/open/floor/iron,
 /area/shuttle/voidcrew/squab/bridge)
 "rXU" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -3825,7 +3824,7 @@ cdx
 jWi
 qsS
 ina
-rQY
+lOb
 pQo
 eul
 kXe

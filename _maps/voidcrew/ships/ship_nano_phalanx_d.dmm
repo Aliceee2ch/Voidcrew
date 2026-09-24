@@ -800,6 +800,14 @@
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/hallway/central/d)
+"lC" = (
+/obj/structure/window/reinforced/plasma/spawner/directional/east,
+/obj/structure/window/reinforced/plasma/spawner,
+/obj/machinery/atmospherics/components/unary/shuttle/heater/tank{
+	dir = 4
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/phalanx/engineering/d)
 "lD" = (
 /obj/machinery/power/smes/engineering,
 /obj/structure/cable,
@@ -2129,11 +2137,6 @@
 "CH" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
-"CK" = (
-/obj/structure/window/reinforced/plasma/spawner/directional/east,
-/obj/structure/window/reinforced/plasma/spawner,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/engineering/d)
 "CO" = (
@@ -3635,6 +3638,11 @@
 	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/engineering/d)
+"VG" = (
+/obj/machinery/atmospherics/pipe/smart/simple/orange/visible,
+/obj/structure/cable,
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/phalanx/engineering/d)
 "VJ" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/visible,
 /obj/machinery/power/apc/auto_name/directional/south,
@@ -4136,7 +4144,7 @@ tB
 zO
 tN
 tN
-CK
+lC
 tB
 Ab
 Xl
@@ -4168,7 +4176,7 @@ MC
 FQ
 uH
 AQ
-FQ
+VG
 MC
 FQ
 FQ

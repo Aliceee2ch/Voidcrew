@@ -656,11 +656,6 @@
 	},
 /turf/open/floor/carpet,
 /area/shuttle/voidcrew/phalanx/hallway/central/b)
-"gG" = (
-/obj/structure/window/reinforced/plasma/spawner/directional/east,
-/obj/structure/window/reinforced/plasma/spawner,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/b)
 "gH" = (
 /obj/machinery/door/poddoor{
 	id = "phalanx_public_shutters"
@@ -1157,6 +1152,11 @@
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/engineering/b)
+"mA" = (
+/obj/machinery/atmospherics/pipe/smart/simple/orange/visible,
+/obj/structure/cable,
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/phalanx/engineering/b)
 "mQ" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -1628,6 +1628,14 @@
 	},
 /turf/open/floor/carpet,
 /area/shuttle/voidcrew/phalanx/cafeteria/b)
+"sG" = (
+/obj/structure/window/reinforced/plasma/spawner/directional/east,
+/obj/structure/window/reinforced/plasma/spawner,
+/obj/machinery/atmospherics/components/unary/shuttle/heater/tank{
+	dir = 4
+	},
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/phalanx/engineering/b)
 "sK" = (
 /obj/machinery/door/airlock/highsecurity{
 	name = "Armory"
@@ -4479,7 +4487,7 @@ HP
 dJ
 SB
 SB
-gG
+sG
 HP
 iU
 wk
@@ -4511,7 +4519,7 @@ fr
 Op
 Pt
 oM
-Op
+mA
 fr
 Op
 Op

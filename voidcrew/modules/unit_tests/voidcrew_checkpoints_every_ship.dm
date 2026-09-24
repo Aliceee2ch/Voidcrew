@@ -68,7 +68,13 @@
 				var/obj/machinery/machine = object
 				if(machine.checkpoint_type() == machine.type && !istype(machine.circuit) && !is_type_in_typecache(machine, GLOB.outpost_checkpoint_infrastructure))
 					without_board["[machine.type]"] = TRUE
-	TEST_ASSERT(delete_in_transit(home, original), "[template_type]: the original could not be removed")
+	settle_networks()
+	var/list/before_plumbing = plumbing_state(original.shuttle)
+	var/list/before_atmos = atmos_problems(original.shuttle)
+	// Lose the original away from the bay, as a real one is. Deleting it on the pad would leave
+	// what its fittings drop on deletion (duct stacks, crate tanks) under the rebuilt hull.
+	if(!leave_bay(original, home, template_type))
+		return "the original could not leave the bay"
 	log_world("EVERY_SHIP rebuild [template_type]")
 	var/datum/checkpoint_construction/job = new(null, snapshot, captain, TRUE)
 	if(!job.prepare())
@@ -87,6 +93,15 @@
 		if(before_counts[type_name] != after_counts[type_name])
 			TEST_FAIL("[template_type]: [type_name] expected [before_counts[type_name]], rebuilt [after_counts[type_name]]")
 	log_world("EVERY_SHIP check [template_type]")
+	settle_networks()
+	// The rebuild must leave pipes and ducts joined up exactly as well as the original had them.
+	var/list/after_plumbing = plumbing_state(rebuilt.shuttle)
+	for(var/key in (before_plumbing | after_plumbing))
+		if(before_plumbing[key] != after_plumbing[key])
+			TEST_FAIL("[template_type]: plumbing [key] was [before_plumbing[key] || 0], rebuilt [after_plumbing[key] || 0]")
+	var/list/after_atmos = atmos_problems(rebuilt.shuttle)
+	if(length(after_atmos) > length(before_atmos))
+		TEST_FAIL("[template_type]: the rebuild broke pipe connections ([length(before_atmos)] problems before, [length(after_atmos)] after): [after_atmos.Join("; ")]")
 	for(var/problem in stock_problems(rebuilt.shuttle))
 		TEST_FAIL("[template_type]: [problem]")
 	var/engines = 0
@@ -106,23 +121,9 @@
 		for(var/type_name in without_board)
 			names += type_name
 		summary += "saved without a board: [names.Join(", ")]"
-	delete_in_transit(home, rebuilt)
+	leave_bay(rebuilt, home, template_type)
 	return summary.Join("; ")
 
-/// Lose a hull away from the bay, as a real one is. Deleting it on the pad would leave what its
-/// fittings drop on deletion (duct stacks, crate tanks) under the next hull built there.
-/datum/unit_test/voidcrew_checkpoints/every_ship/proc/delete_in_transit(obj/structure/overmap/dynamic/player_outpost/home, obj/structure/overmap/ship/ship)
-	var/obj/docking_port/stationary/transit/transit = ship.shuttle.assigned_transit || SSshuttle.generate_transit_dock(ship.shuttle)
-	ship.shuttle.mode = SHUTTLE_PREARRIVAL
-	var/result = ship.shuttle.initiate_docking(transit)
-	ship.shuttle.mode = SHUTTLE_IDLE
-	if(result != DOCKING_SUCCESS)
-		return FALSE
-	ship.docked = null
-	ship.forceMove(get_turf(home))
-	ship.state = "flying"
-	home.on_ship_undock_complete(ship)
-	return ship.shuttle.admin_delete_shuttle()
 
 /datum/unit_test/voidcrew_checkpoints/every_ship/proc/list_counts(list/counts)
 	var/list/parts = list()
@@ -176,3 +177,81 @@
 					if(product.amount)
 						. += "[object.type] stocks [product.amount] [product.name]"
 						break
+
+/// Sends a ship to transit and deletes it there, so nothing its fittings drop lands in the bay.
+/datum/unit_test/voidcrew_checkpoints/every_ship/proc/leave_bay(obj/structure/overmap/ship/ship, obj/structure/overmap/dynamic/player_outpost/registry_test/home, template_type)
+	var/obj/docking_port/stationary/transit/transit = ship.shuttle.assigned_transit || SSshuttle.generate_transit_dock(ship.shuttle)
+	ship.shuttle.mode = SHUTTLE_PREARRIVAL
+	var/left = ship.shuttle.initiate_docking(transit)
+	ship.shuttle.mode = SHUTTLE_IDLE
+	if(left != DOCKING_SUCCESS)
+		TEST_FAIL("[template_type]: [ship] could not leave the bay ([left])")
+		return FALSE
+	ship.docked = null
+	ship.forceMove(get_turf(home))
+	ship.state = "flying"
+	home.on_ship_undock_complete(ship)
+	if(!ship.shuttle.admin_delete_shuttle())
+		TEST_FAIL("[template_type]: [ship] could not be removed")
+		return FALSE
+	return TRUE
+
+/// Lets atmospherics finish rebuilding pipe networks, and ducts their queued connections.
+/datum/unit_test/voidcrew_checkpoints/every_ship/proc/settle_networks()
+	var/deadline = world.time + 10 SECONDS
+	while((length(SSair.rebuild_queue) || length(SSair.expansion_queue)) && world.time < deadline)
+		sleep(1)
+	sleep(2)
+
+/// How the hull's ducts and plumbed machines are joined up.
+/datum/unit_test/voidcrew_checkpoints/every_ship/proc/plumbing_state(obj/docking_port/mobile/port)
+	var/list/state = list()
+	var/list/datum/ductnet/nets = list()
+	for(var/turf/tile as anything in port.return_turfs())
+		if(!(get_area(tile) in port.shuttle_areas))
+			continue
+		for(var/obj/machinery/duct/duct in tile)
+			state["ducts"]++
+			if(duct.duct)
+				nets |= duct.duct
+			else
+				state["ducts outside any network"]++
+		for(var/obj/machinery/machine in tile)
+			for(var/datum/component/plumbing/plumber as anything in machine.GetComponents(/datum/component/plumbing))
+				state["plumbed machines"]++
+				if(!plumber.active)
+					state["inactive plumbed machines"]++
+				for(var/direction in plumber.ducts)
+					state["machine connections"]++
+					nets |= plumber.ducts[direction]
+	if(length(nets))
+		state["duct networks"] = length(nets)
+	return state
+
+/// Every one-way pipe link, and every connected port or pipe left without a network.
+/datum/unit_test/voidcrew_checkpoints/every_ship/proc/atmos_problems(obj/docking_port/mobile/port)
+	var/list/problems = list()
+	for(var/turf/tile as anything in port.return_turfs())
+		if(!(get_area(tile) in port.shuttle_areas))
+			continue
+		for(var/obj/machinery/machine in tile)
+			for(var/obj/machinery/atmospherics/connector as anything in machine.checkpoint_atmos_parts())
+				if(connector.loc != tile)
+					problems += "[machine.type] at [COORD(machine)] lost its pipe connector to [COORD(connector)]"
+		for(var/obj/machinery/atmospherics/device in tile)
+			for(var/obj/machinery/atmospherics/node as anything in device.nodes)
+				if(node && !(device in node.nodes))
+					problems += "[device.type] at [COORD(device)] links one way to [node.type] at [COORD(node)]"
+			if(istype(device, /obj/machinery/atmospherics/components))
+				var/obj/machinery/atmospherics/components/component = device
+				for(var/i in 1 to component.device_type)
+					if(!component.nodes[i])
+						continue
+					var/datum/pipeline/net = component.parents[i]
+					if(!net || !(component.airs[i] in net.other_airs))
+						problems += "[device.type] at [COORD(device)] port [i] has no network"
+			else if(istype(device, /obj/machinery/atmospherics/pipe))
+				var/obj/machinery/atmospherics/pipe/pipe = device
+				if(!pipe.parent || !(pipe in pipe.parent.members))
+					problems += "[device.type] at [COORD(device)] has no network"
+	return problems

@@ -305,9 +305,13 @@
 		// that machine is already on its tile as it relinks.
 		var/list/obj/machinery/machines_first = list()
 		var/list/atom/movable/everything_else = list()
+		// Pipe connectors a machine made for itself travel with it, not as pieces of their own.
+		var/list/obj/machinery/atmospherics/riders = list()
+		for(var/obj/machinery/machine in source.contents)
+			riders |= machine.checkpoint_atmos_parts()
 		for(var/atom/movable/thing as anything in source.contents)
 			// Some fittings delete or replace themselves after loading; WEAKREF() of one is null.
-			if(thing.loc != source || thing == port || QDELETED(thing))
+			if(thing.loc != source || thing == port || QDELETED(thing) || (thing in riders))
 				continue
 			if(ismachinery(thing))
 				machines_first += thing
@@ -685,16 +689,36 @@
 	var/obj/machinery/power/power_machine = piece
 	if(istype(power_machine))
 		power_machine.disconnect_from_network()
+	var/obj/machinery/duct/duct = piece
+	if(istype(duct))
+		detach_duct(duct)
 	if(istype(piece, /obj/machinery/atmospherics))
 		detach_atmos(piece)
+	// A machine's own pipe connector (a cryo cell's) is carried by the machine when it moves.
+	var/list/obj/machinery/atmospherics/riders = list()
+	if(ismachinery(piece))
+		var/obj/machinery/machine = piece
+		riders = machine.checkpoint_atmos_parts()
+	for(var/obj/machinery/atmospherics/rider as anything in riders)
+		detach_atmos(rider)
+		rider.beforeShuttleMove(target, rotation, MOVE_AREA | MOVE_TURF | MOVE_CONTENTS, port)
 	piece.beforeShuttleMove(target, rotation, MOVE_AREA | MOVE_TURF | MOVE_CONTENTS, port)
 	if(!piece.onShuttleMove(target, source, movement_force, move_dir, null, port) || piece.loc != target)
 		return FALSE
+	// Riders turn first: their machine's own after-move hook may then line them up with it.
+	for(var/obj/machinery/atmospherics/rider as anything in riders)
+		if(rider.loc != target)
+			rider.abstract_move(target)
+		rider.afterShuttleMove(source, movement_force, source_dir, port.preferred_direction, move_dir, rotation)
 	piece.afterShuttleMove(source, movement_force, source_dir, port.preferred_direction, move_dir, rotation)
 	if(istype(piece, /obj/machinery/atmospherics))
 		attach_atmos(piece, source)
+	else if(istype(duct))
+		attach_duct(duct, source)
 	else
 		piece.lateShuttleMove(source, movement_force, move_dir)
+	for(var/obj/machinery/atmospherics/rider as anything in riders)
+		attach_atmos(rider, source)
 	if(istype(power_machine))
 		power_machine.connect_to_network()
 	if(ismachinery(piece))
@@ -710,12 +734,22 @@
 	var/list/obj/machinery/atmospherics/left_behind = list()
 	for(var/obj/machinery/atmospherics/node as anything in device.nodes)
 		if(node)
-			left_behind += node
+			left_behind |= node
+	// A neighbour can hold a link the device does not return (stacked or mismatched pipes in
+	// the saved layout). Left alone it would reach into the bay once the device is there.
+	var/list/turf/nearby_turfs = list(get_turf(device))
+	for(var/direction in GLOB.cardinals)
+		nearby_turfs += get_step(device, direction)
+	for(var/turf/nearby as anything in nearby_turfs)
+		for(var/obj/machinery/atmospherics/other in nearby)
+			if(other != device && (device in other.nodes))
+				left_behind |= other
 	if(istype(device, /obj/machinery/atmospherics/components))
 		var/obj/machinery/atmospherics/components/component = device
 		component.disconnect_nodes()
 	else
-		for(var/i in 1 to device.device_type)
+		// Not device_type: a layer manifold keeps a variable node list and has no fixed count.
+		for(var/i in 1 to length(device.nodes))
 			var/obj/machinery/atmospherics/node = device.nodes[i]
 			if(!node)
 				continue
@@ -724,6 +758,8 @@
 			device.nodes[i] = null
 		device.destroy_network()
 	for(var/obj/machinery/atmospherics/node as anything in left_behind)
+		if(device in node.nodes)
+			node.disconnect(device)
 		SSair.add_to_rebuild_queue(node)
 
 /**
@@ -736,13 +772,51 @@
 	if(device.pipe_vision_img)
 		device.pipe_vision_img.loc = device.loc
 	device.atmos_init()
+	var/list/obj/machinery/atmospherics/neighbours = list()
 	for(var/obj/machinery/atmospherics/node as anything in device.nodes)
-		if(!node)
-			continue
+		if(node)
+			neighbours |= node
+	for(var/obj/machinery/atmospherics/node as anything in neighbours)
 		node.atmos_init()
-		node.destroy_network()
+		if(!(device in node.nodes))
+			// The neighbour will not take the link back (its port is already used). A one-way
+			// link makes the rebuild runtime and leaves this port without a gas mix.
+			device.disconnect(node)
+			continue
+		if(istype(node, /obj/machinery/atmospherics/components))
+			// The port facing us was built into a network of its own while it had nothing to
+			// join. Release it, or the old network lingers once ours takes the port.
+			var/obj/machinery/atmospherics/components/component = node
+			var/port_index = component.nodes.Find(device)
+			var/datum/pipeline/lonely = component.parents[port_index]
+			if(lonely)
+				component.nullify_pipenet(lonely)
+		else
+			node.destroy_network()
 		SSair.add_to_rebuild_queue(node)
 	SSair.add_to_rebuild_queue(device)
+
+/**
+ * Plumbing ducts remember their neighbours, and their lateShuttleMove() treats one that is
+ * not beside them yet as lost. Tile by tile that is true of every neighbour until the last
+ * arrives, so a duct whose neighbours all landed first never looks around again. Leave the
+ * hidden copy's ductnet cleanly instead; attach_duct() connects to whatever is in the bay.
+ */
+/datum/checkpoint_construction/proc/detach_duct(obj/machinery/duct/duct)
+	if(duct.duct)
+		duct.duct.remove_duct(duct)
+	for(var/obj/machinery/duct/other in duct.neighbours)
+		other.neighbours -= duct
+		other.generate_connects()
+	duct.neighbours = list()
+
+/// Joins the bay's ducts and plumbed machines, as a newly laid duct would.
+/datum/checkpoint_construction/proc/attach_duct(obj/machinery/duct/duct, turf/source)
+	SEND_SIGNAL(duct, COMSIG_ATOM_LATE_SHUTTLE_MOVE, source, movement_force, move_dir)
+	// A dumb duct's connects are its saved, rotated shape; a smart one works them out again.
+	if(!duct.dumb)
+		duct.reset_connects()
+	duct.attempt_connect()
 
 /// New decks join the ship's unpowered rooms, so they would lose the hangar's ambient light.
 /// Each room borrows it until the build ends.

@@ -123,6 +123,11 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 		keys += list("anchored", "req_access", "id_tag")
 	if(istype(object, /obj/machinery/atmospherics))
 		keys += list("piping_layer", "pipe_color")
+	// Which side each port faces: a flipped filter or mixer, and the ports opened on a tank.
+	if(istype(object, /obj/machinery/atmospherics/components/trinary))
+		keys += "flipped"
+	if(istype(object, /obj/machinery/atmospherics/components/tank))
+		keys += "open_ports"
 	if(istype(object, /obj/machinery/duct))
 		keys += list("duct_layer", "duct_color", "connects")
 	for(var/key in keys)

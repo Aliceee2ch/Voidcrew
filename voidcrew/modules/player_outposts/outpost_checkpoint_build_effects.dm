@@ -12,6 +12,22 @@
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 
+/// Launch cradle in a ship bay corner. Yard drones leave from it and return to it.
+/obj/structure/checkpoint_drone_bay
+	name = "drone bay"
+	desc = "A launch cradle for the outpost's construction drones."
+	icon = 'icons/obj/machines/drone_dispenser.dmi'
+	icon_state = "on"
+	anchored = TRUE
+	density = TRUE
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
+
+/obj/structure/checkpoint_drone_bay/proc/launch()
+	flick("make", src)
+
+/obj/structure/checkpoint_drone_bay/proc/receive()
+	flick("recharge", src)
+
 /// Cosmetic yard drone. The construction job decides what is placed and when.
 /obj/effect/checkpoint_build_drone
 	name = "yard drone"
@@ -35,17 +51,46 @@
 	var/work_until = 0
 	var/obj/effect/constructing_effect/checkpoint/work_effect
 	var/datum/beam/work_beam
+	/// The drone bay this drone launched from, and returns to.
+	var/datum/weakref/cradle_ref
+	/// Set once the job lets the drone go; it then flies home on its own and docks.
+	var/returning_until = 0
 
-/obj/effect/checkpoint_build_drone/Initialize(mapload)
+/obj/effect/checkpoint_build_drone/Initialize(mapload, obj/structure/checkpoint_drone_bay/cradle)
 	. = ..()
+	if(cradle)
+		cradle_ref = WEAKREF(cradle)
 	animate(src, pixel_z = base_pixel_z + 3, time = 1.5 SECONDS, loop = -1, easing = SINE_EASING, flags = ANIMATION_PARALLEL)
 	animate(pixel_z = base_pixel_z, time = 1.5 SECONDS, easing = SINE_EASING)
 
 /// The visit stays referenced so the job can put it back in the queue.
 /obj/effect/checkpoint_build_drone/Destroy()
+	STOP_PROCESSING(SSfastprocess, src)
 	QDEL_NULL(work_beam)
 	QDEL_NULL(work_effect)
 	return ..()
+
+/obj/effect/checkpoint_build_drone/proc/home_turf()
+	var/obj/structure/checkpoint_drone_bay/cradle = cradle_ref?.resolve()
+	return cradle ? get_turf(cradle) : null
+
+/// Released by the job: fly back to the drone bay and dock, or give up after a while.
+/obj/effect/checkpoint_build_drone/proc/return_home()
+	finish_work()
+	returning_until = world.time + 30 SECONDS
+	START_PROCESSING(SSfastprocess, src)
+
+/obj/effect/checkpoint_build_drone/process(seconds_per_tick)
+	var/turf/home = home_turf()
+	if(!home || world.time > returning_until)
+		qdel(src)
+		return PROCESS_KILL
+	if(!fly_towards(home))
+		return
+	var/obj/structure/checkpoint_drone_bay/cradle = cradle_ref.resolve()
+	cradle.receive()
+	qdel(src)
+	return PROCESS_KILL
 
 /// Glides a few tiles towards the destination. Returns TRUE once alongside it.
 /obj/effect/checkpoint_build_drone/proc/fly_towards(turf/destination)

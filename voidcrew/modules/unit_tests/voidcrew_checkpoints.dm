@@ -609,6 +609,13 @@
 
 /datum/unit_test/voidcrew_checkpoints/drones/build_hull(datum/checkpoint_construction/job, obj/structure/overmap/dynamic/player_outpost/registry_test/home, datum/outpost_berth/ship_bay/bay, mob/living/carbon/human/captain, obj/structure/overmap/ship/original, datum/ship_checkpoint_ui/registry_test/panel, datum/ship_checkpoint/snapshot)
 	TEST_ASSERT(length(job.drones) >= 8, "Reconstruction started with [length(job.drones)] drones")
+	var/list/obj/effect/checkpoint_build_drone/fleet = job.drones.Copy()
+	var/list/cradles = list()
+	for(var/obj/effect/checkpoint_build_drone/drone as anything in fleet)
+		var/obj/structure/checkpoint_drone_bay/cradle = drone.cradle_ref?.resolve()
+		TEST_ASSERT(cradle && get_turf(drone) == get_turf(cradle), "A drone did not launch from a drone bay")
+		cradles |= cradle
+	TEST_ASSERT_EQUAL(length(cradles), 4, "Drones did not use all four corner drone bays")
 	var/started_at = world.time
 	var/deadline = world.time + 30 SECONDS
 	while(!QDELETED(job) && job.visits_done < 40 && world.time < deadline)
@@ -623,6 +630,18 @@
 		sleep(5)
 	TEST_ASSERT(QDELETED(job), "The drones did not finish [total_visits] visits within five minutes")
 	log_test("Drone reconstruction placed [total_visits] visits in [(world.time - started_at) / 10] seconds, including the survey.")
+	// Released drones fly back to their own bays and dock there.
+	deadline = world.time + 30 SECONDS
+	var/docked = FALSE
+	while(!docked && world.time < deadline)
+		docked = TRUE
+		for(var/obj/effect/checkpoint_build_drone/drone as anything in fleet)
+			if(!QDELETED(drone))
+				docked = FALSE
+				TEST_ASSERT(drone.returning_until, "A drone outlived the job without being sent home")
+		if(!docked)
+			sleep(2)
+	TEST_ASSERT(docked, "Drones did not return to their drone bays after the build")
 	return captain
 
 /// The grid is live from the Systems stage on, so the rest of the build runs on the SMES.

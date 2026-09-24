@@ -16,6 +16,7 @@
 			"requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo,
 			"owner_crew" = home.is_owner_crew_ship(bay.ship),
 			"grant_denial" = bay_material_denial(home, bay),
+			"can_remove_ship" = bay.is_ship_present(),
 		))
 	var/list/silos = list()
 	for(var/obj/machinery/ore_silo/silo as anything in home.service_silos())

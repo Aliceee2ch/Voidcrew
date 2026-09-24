@@ -3390,6 +3390,7 @@
 /obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
 	dir = 1
 	},
+/obj/structure/checkpoint_drone_bay,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "wt" = (
@@ -4363,7 +4364,7 @@
 /obj/effect/turf_decal/weather/dirt{
 	dir = 5
 	},
-/obj/structure/barrel,
+/obj/structure/checkpoint_drone_bay,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "DC" = (
@@ -5162,6 +5163,7 @@
 	dir = 10
 	},
 /obj/structure/sign/poster/contraband/random/directional/south,
+/obj/structure/checkpoint_drone_bay,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "Jf" = (
@@ -6209,7 +6211,7 @@
 /obj/effect/turf_decal/weather/dirt{
 	dir = 9
 	},
-/obj/structure/barrel/flaming,
+/obj/structure/checkpoint_drone_bay,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "Qs" = (

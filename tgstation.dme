@@ -7228,6 +7228,7 @@
 #include "voidcrew\modules\player_outposts\outpost_adverts.dm"
 #include "voidcrew\modules\player_outposts\outpost_admin.dm"
 #include "voidcrew\modules\player_outposts\outpost_admin_bays.dm"
+#include "voidcrew\modules\player_outposts\outpost_admin_checkpoints.dm"
 #include "voidcrew\modules\player_outposts\outpost_construction.dm"
 #include "voidcrew\modules\player_outposts\outpost_deed.dm"
 #include "voidcrew\modules\player_outposts\outpost_elevator_placement.dm"

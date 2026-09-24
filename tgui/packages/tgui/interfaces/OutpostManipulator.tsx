@@ -5,6 +5,7 @@ import {
   Icon,
   LabeledList,
   NoticeBox,
+  ProgressBar,
   Section,
   Stack,
   Table,
@@ -49,6 +50,29 @@ type ShipBayData = {
     approved?: BooleanLike;
     owner_crew?: BooleanLike;
     grant_denial?: string | null;
+    can_remove_ship?: BooleanLike;
+  }[];
+};
+
+type CheckpointAdminData = {
+  enabled: BooleanLike;
+  docked: string | null;
+  checkpoints: {
+    ref: string;
+    name: string;
+    owner: string;
+    size: string;
+    original: string;
+    rebuild_denial: string | null;
+  }[];
+  rebuilds: {
+    ref: string;
+    name: string;
+    owner: string;
+    status: string;
+    progress: number;
+    can_rush: BooleanLike;
+    can_hand_over: BooleanLike;
   }[];
 };
 
@@ -67,6 +91,7 @@ type SelectedOutpost = {
   research_connection: string;
   residents: Resident[];
   ship_bays: ShipBayData;
+  checkpoints: CheckpointAdminData;
 };
 
 export type Data = {
@@ -273,6 +298,16 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
       <Stack.Item>
         <ShipBays data={selected.ship_bays} busy={busy} act={mutate} />
       </Stack.Item>
+
+      {!!selected.checkpoints.enabled && (
+        <Stack.Item>
+          <CheckpointTools
+            data={selected.checkpoints}
+            busy={busy}
+            act={mutate}
+          />
+        </Stack.Item>
+      )}
 
       <Stack.Item>
         <Section title="Services">
@@ -569,10 +604,146 @@ const ShipBays = ({
               >
                 Revoke Materials
               </Button>
+              <Button
+                icon="trash"
+                color="bad"
+                disabled={busy || !bay.can_remove_ship}
+                tooltip="Delete the docked ship. Living people aboard move to the bay elevator."
+                onClick={() => act('bay_remove_ship', { ref: bay.ref })}
+              >
+                Remove Ship
+              </Button>
             </Stack>
           </>
         )}
       </Box>
     ))}
+  </Section>
+);
+
+const CheckpointTools = ({
+  data,
+  busy,
+  act,
+}: {
+  data: CheckpointAdminData;
+  busy: boolean;
+  act: DetailsProps['act'];
+}) => (
+  <Section title="Checkpoints (Admin)">
+    <Box color="label" mb={1}>
+      Free. No fees, captain rules or materials.
+    </Box>
+    <Stack wrap mb={1}>
+      <Button
+        icon="floppy-disk"
+        disabled={busy}
+        onClick={() => act('checkpoint_save')}
+      >
+        Save Checkpoint
+      </Button>
+      <Button
+        icon="rotate"
+        disabled={busy || !data.docked}
+        tooltip={
+          data.docked
+            ? `Save ${data.docked}, delete it and rebuild it`
+            : 'No ship is docked in the bay'
+        }
+        onClick={() => act('checkpoint_rebuild_docked')}
+      >
+        Rebuild Docked Ship
+      </Button>
+    </Stack>
+    {data.rebuilds.map((rebuild) => (
+      <Box key={rebuild.ref} mb={1}>
+        <Box bold style={{ overflowWrap: 'anywhere' }}>
+          {rebuild.name}
+        </Box>
+        <Box color="label">
+          {rebuild.status} / {rebuild.owner}
+        </Box>
+        <ProgressBar value={rebuild.progress / 100} my={0.5}>
+          {rebuild.progress}%
+        </ProgressBar>
+        <Stack wrap>
+          <Button
+            icon="forward-fast"
+            disabled={busy || !rebuild.can_rush}
+            onClick={() => act('rebuild_rush', { ref: rebuild.ref })}
+          >
+            Finish Now
+          </Button>
+          <Button
+            icon="handshake"
+            disabled={busy || !rebuild.can_hand_over}
+            onClick={() => act('rebuild_hand_over', { ref: rebuild.ref })}
+          >
+            Hand Over Now
+          </Button>
+          <Button
+            icon="stop"
+            color="bad"
+            disabled={busy}
+            onClick={() => act('rebuild_stop', { ref: rebuild.ref })}
+          >
+            Stop
+          </Button>
+        </Stack>
+      </Box>
+    ))}
+    {data.checkpoints.length === 0 ? (
+      <Box color="label">No saved checkpoints.</Box>
+    ) : (
+      <Table>
+        <Table.Row header>
+          <Table.Cell>Ship</Table.Cell>
+          <Table.Cell>Owner</Table.Cell>
+          <Table.Cell>Original</Table.Cell>
+          <Table.Cell collapsing>Actions</Table.Cell>
+        </Table.Row>
+        {data.checkpoints.map((checkpoint) => (
+          <Table.Row key={checkpoint.ref}>
+            <Table.Cell style={{ overflowWrap: 'anywhere' }}>
+              {checkpoint.name}
+              <Box color="label" fontSize="11px">
+                {checkpoint.size}
+              </Box>
+            </Table.Cell>
+            <Table.Cell>{checkpoint.owner}</Table.Cell>
+            <Table.Cell>{checkpoint.original}</Table.Cell>
+            <Table.Cell collapsing>
+              <Button
+                compact
+                icon="ship"
+                disabled={busy || !!checkpoint.rebuild_denial}
+                tooltip={
+                  checkpoint.rebuild_denial ||
+                  (checkpoint.original === 'In service'
+                    ? 'Builds an extra copy; the original is left alone'
+                    : undefined)
+                }
+                onClick={() =>
+                  act('checkpoint_rebuild', { ref: checkpoint.ref })
+                }
+              >
+                Rebuild
+              </Button>
+              <Button
+                compact
+                icon="trash"
+                color="bad"
+                disabled={busy}
+                onClick={() =>
+                  act('checkpoint_delete', { ref: checkpoint.ref })
+                }
+              >
+                Delete
+              </Button>
+            </Table.Cell>
+          </Table.Row>
+        ))}
+      </Table>
+    )}
   </Section>
 );

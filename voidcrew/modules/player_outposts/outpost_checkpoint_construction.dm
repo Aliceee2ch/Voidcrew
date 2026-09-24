@@ -77,7 +77,6 @@
 	var/obj/structure/overmap/ship/vessel
 	var/list/markers = list()
 	var/list/obj/effect/checkpoint_build_drone/drones = list()
-	var/turf/drone_home
 	var/next_phase_at = 0
 	var/last_progress_at = 0
 	var/captain_wait_until = 0
@@ -87,19 +86,25 @@
 	var/manual = FALSE
 	/// Set when drones stop making progress; remaining visits are then placed directly.
 	var/direct_placement = FALSE
+	/// Admin testing: direct placement with a larger per-tick budget.
+	var/rushed = FALSE
 
-/datum/checkpoint_construction/New(datum/ship_checkpoint_ui/terminal, datum/ship_checkpoint/blueprint, mob/living/user, manual_drive = FALSE)
-	panel_ref = WEAKREF(terminal)
+/// leave_original: an admin copy of a hull that is still in service. It is not retired and
+/// keeps its money; the checkpoint is still consumed.
+/datum/checkpoint_construction/New(datum/ship_checkpoint_ui/terminal, datum/ship_checkpoint/blueprint, mob/living/user, manual_drive = FALSE, leave_original = FALSE)
+	panel_ref = terminal ? WEAKREF(terminal) : null
 	operator_ref = WEAKREF(user)
 	snapshot = blueprint
 	home = blueprint.outpost
 	captain_ckey = blueprint.captain_ckey
 	ship_name = blueprint.ship_name
 	manual = manual_drive
-	var/obj/structure/overmap/ship/original = blueprint.source_ship?.resolve()
+	var/obj/structure/overmap/ship/original = leave_original ? null : blueprint.source_ship?.resolve()
 	if(original)
 		original_ref = WEAKREF(original)
-	var/datum/bank_account/personal = user?.get_bank_account()
+	// Refunds follow the checkpoint's owner, who is the operator unless an admin started it.
+	var/mob/living/owner = user?.ckey == captain_ckey ? user : get_mob_by_ckey(captain_ckey)
+	var/datum/bank_account/personal = istype(owner) ? owner.get_bank_account() : null
 	if(personal)
 		captain_account_ref = WEAKREF(personal)
 	// Claim the bay before any yield, so a second request cannot reserve it too.
@@ -298,7 +303,8 @@
 		var/list/obj/machinery/machines_first = list()
 		var/list/atom/movable/everything_else = list()
 		for(var/atom/movable/thing as anything in source.contents)
-			if(thing.loc != source || thing == port)
+			// Some fittings delete or replace themselves after loading; WEAKREF() of one is null.
+			if(thing.loc != source || thing == port || QDELETED(thing))
 				continue
 			if(ismachinery(thing))
 				machines_first += thing
@@ -401,7 +407,7 @@
 					abort(denial)
 					return PROCESS_KILL
 			if(direct_placement)
-				fast_forward(CHECKPOINT_BUILD_VISIT_BUDGET)
+				fast_forward(rushed ? CHECKPOINT_BUILD_RUSH_BUDGET : CHECKPOINT_BUILD_VISIT_BUDGET)
 				return
 			run_drones()
 			if(state == CHECKPOINT_BUILD_BUILDING && world.time - last_progress_at > CHECKPOINT_BUILD_STALL_TIME)
@@ -409,7 +415,6 @@
 				log_game("Checkpoint reconstruction of [ship_name] stalled; placing its remaining pieces directly.")
 				direct_placement = TRUE
 		if(CHECKPOINT_BUILD_COMMISSIONING)
-			recall_drones()
 			try_commission()
 		else
 			return PROCESS_KILL
@@ -422,12 +427,23 @@
 	advance_stage()
 	update_bay_status()
 
+/// Drones launch from the bay's corner drone bays, shared out evenly, each keeping its own.
 /datum/checkpoint_construction/proc/spawn_drones()
+	var/list/obj/structure/checkpoint_drone_bay/cradles = list()
+	var/turf/origin = bay.reservation.bottom_left_turfs[1]
+	var/turf/far_corner = locate(origin.x + bay.reservation.width - 1, origin.y + bay.reservation.height - 1, origin.z)
+	for(var/turf/tile as anything in block(origin, far_corner))
+		for(var/obj/structure/checkpoint_drone_bay/cradle in tile)
+			cradles += cradle
+	// Maps without drone bays launch from the bay console instead.
 	var/obj/machinery/computer/console = bay.console
-	drone_home = console ? get_turf(console) : (length(bay.alcove_turfs) ? bay.alcove_turfs[1] : get_turf(bay.dock))
+	var/turf/fallback = console ? get_turf(console) : (length(bay.alcove_turfs) ? bay.alcove_turfs[1] : get_turf(bay.dock))
 	var/count = clamp(CEILING(visit_total / CHECKPOINT_BUILD_VISITS_PER_DRONE, 1), CHECKPOINT_BUILD_MIN_DRONES, CHECKPOINT_BUILD_MAX_DRONES)
 	for(var/i in 1 to count)
-		drones += new /obj/effect/checkpoint_build_drone(drone_home)
+		var/obj/structure/checkpoint_drone_bay/cradle = length(cradles) ? cradles[(i - 1) % length(cradles) + 1] : null
+		drones += new /obj/effect/checkpoint_build_drone(cradle ? get_turf(cradle) : fallback, cradle)
+	for(var/obj/structure/checkpoint_drone_bay/cradle as anything in cradles)
+		cradle.launch()
 
 /// One bounded pass over the drones: travel, finish work, or take the next visit.
 /datum/checkpoint_construction/proc/run_drones()
@@ -464,8 +480,7 @@
 			next.drone = drone
 			drone.visit = next
 			drone.fly_towards(bay_turfs[next.index])
-		else
-			drone.fly_towards(drone_home)
+		// With nothing left in this stage, a drone waits where it is for the stragglers.
 	advance_stage()
 
 /datum/checkpoint_construction/proc/next_visit()
@@ -526,6 +541,27 @@
 		advance_stage()
 	return visits_done
 
+/// Admin testing: skips the survey and the drones. Visits still run once and in order, within a
+/// per-tick budget, so a large hull cannot stall the server.
+/datum/checkpoint_construction/proc/rush()
+	if(manual)
+		return FALSE
+	if(state == CHECKPOINT_BUILD_MARKING)
+		begin_building()
+	if(state != CHECKPOINT_BUILD_BUILDING)
+		return FALSE
+	direct_placement = TRUE
+	rushed = TRUE
+	return TRUE
+
+/// Admin testing: stops waiting for the captain. Hands over to them if they are here,
+/// otherwise leaves the hull claimable, exactly as an expired wait does.
+/datum/checkpoint_construction/proc/hand_over_now()
+	if(state != CHECKPOINT_BUILD_COMMISSIONING)
+		return FALSE
+	captain_wait_until = world.time
+	return try_commission()
+
 // ===== PLACEMENT =====
 
 /**
@@ -547,7 +583,7 @@
 	if(visit.hull)
 		place_hull(source, target)
 	for(var/datum/weakref/piece_ref as anything in visit.pieces)
-		var/atom/movable/piece = piece_ref.resolve()
+		var/atom/movable/piece = piece_ref?.resolve()
 		if(piece)
 			place_piece(piece, source, target)
 	report_progress()
@@ -708,7 +744,7 @@
 		if(!isspaceturf(source))
 			return source
 	for(var/datum/weakref/piece_ref as anything in visit.pieces)
-		var/atom/movable/piece = piece_ref.resolve()
+		var/atom/movable/piece = piece_ref?.resolve()
 		if(piece && !iseffect(piece) && piece.invisibility < INVISIBILITY_ABSTRACT)
 			return piece
 	return null
@@ -720,6 +756,8 @@
 	captain_wait_until = world.time + CHECKPOINT_BUILD_CAPTAIN_WAIT
 	// Every visit has run; nothing more is needed from the hidden copy.
 	discard_source()
+	// The drones go home now, whenever the captain turns up.
+	clear_site_effects()
 	update_bay_status()
 	try_commission()
 
@@ -923,7 +961,7 @@
 /datum/checkpoint_construction/proc/remove_visit_pieces(datum/checkpoint_visit/visit)
 	var/turf/target = bay_turfs[visit.index]
 	for(var/datum/weakref/piece_ref as anything in visit.pieces)
-		var/atom/movable/piece = piece_ref.resolve()
+		var/atom/movable/piece = piece_ref?.resolve()
 		// Only what this job placed and is still standing where it was put.
 		if(piece && get_turf(piece) == target)
 			qdel(piece)
@@ -1048,22 +1086,24 @@
 	if(marker)
 		qdel(marker)
 
+/// Removes the markers and lets the drones go. They fly back to their drone bays on their
+/// own, unless the bay itself is going away.
 /datum/checkpoint_construction/proc/clear_site_effects()
 	for(var/turf/marked as anything in markers)
 		qdel(markers[marked])
 	markers.Cut()
+	var/site_remains = !QDELETED(bay) && !QDELETED(home)
 	for(var/obj/effect/checkpoint_build_drone/drone as anything in drones)
 		if(drone?.visit)
 			drone.visit.drone = null
 			drone.visit = null
-		if(!QDELETED(drone))
+		if(QDELETED(drone))
+			continue
+		if(site_remains)
+			drone.return_home()
+		else
 			qdel(drone)
 	drones.Cut()
-
-/datum/checkpoint_construction/proc/recall_drones()
-	for(var/obj/effect/checkpoint_build_drone/drone as anything in drones)
-		if(!QDELETED(drone) && drone_home)
-			drone.fly_towards(drone_home)
 
 /obj/docking_port/mobile/voidcrew
 	/// Set while a staged rebuild owns this port and its ship record does not exist yet.

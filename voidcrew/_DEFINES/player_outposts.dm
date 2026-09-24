@@ -101,6 +101,8 @@
 #define CHECKPOINT_BUILD_VISITS_PER_DRONE 100
 /// Upper bound on tile visits completed in one controller tick, across all drones.
 #define CHECKPOINT_BUILD_VISIT_BUDGET 8
+/// Visits per tick when an admin rushes a build (a few seconds for a Box-class hull).
+#define CHECKPOINT_BUILD_RUSH_BUDGET 40
 /// A build that stops advancing for this long is finished with the pieces it has.
 #define CHECKPOINT_BUILD_STALL_TIME (1 MINUTES)
 /// How long a finished hull waits for its captain before being left claimable.

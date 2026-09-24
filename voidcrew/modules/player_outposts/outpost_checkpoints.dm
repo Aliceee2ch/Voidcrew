@@ -49,8 +49,13 @@
 
 /// One checkpoint per captain at this outpost, even when updating from a new ship.
 /obj/structure/overmap/dynamic/player_outpost/proc/checkpoint_for(mob/user)
+	return checkpoint_for_ckey(user?.ckey)
+
+/obj/structure/overmap/dynamic/player_outpost/proc/checkpoint_for_ckey(owner_ckey)
+	if(!owner_ckey)
+		return null
 	for(var/datum/ship_checkpoint/snapshot as anything in checkpoints)
-		if(snapshot.captain_ckey == user.ckey)
+		if(snapshot.captain_ckey == owner_ckey)
 			return snapshot
 
 /datum/ship_checkpoint_ui

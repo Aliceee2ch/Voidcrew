@@ -118,11 +118,18 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 			properties += "[key] = [encoded]"
 	return "[saved_type]{\n\t[properties.Join(";\n\t")]\n\t}"
 
-/// Capture only this port's owned tiles, including its docking tile and hull holes.
+/// A captain saves their own ship.
 /datum/ship_checkpoint/proc/capture(obj/structure/overmap/ship/ship, mob/living/captain)
-	var/obj/docking_port/mobile/voidcrew/port = ship?.shuttle
-	if(QDELETED(port) || !ship.is_ship_captain(captain) || !captain.ckey)
+	if(QDELETED(ship?.shuttle) || !ship.is_ship_captain(captain) || !captain.ckey)
 		return "Only the ship's captain can save a checkpoint."
+	return capture_hull(ship, captain.ckey)
+
+/// Capture only this port's owned tiles, including its docking tile and hull holes. The
+/// caller decides who may save the ship and who owns the checkpoint.
+/datum/ship_checkpoint/proc/capture_hull(obj/structure/overmap/ship/ship, owner_ckey)
+	var/obj/docking_port/mobile/voidcrew/port = ship?.shuttle
+	if(QDELETED(port) || !owner_ckey)
+		return "The source hull is no longer available."
 	if(port.z_levels_above || port.z_levels_below)
 		return "Checkpoints currently support single-level ships only."
 	var/list/bounds = port.return_coords()
@@ -192,7 +199,7 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 	if(!valid)
 		return "The hull design could not be read back. No payment was taken."
 	source_ship = WEAKREF(ship)
-	captain_ckey = captain.ckey
+	captain_ckey = owner_ckey
 	ship_name = ship.name
 	saved_at = world.time
 	return null

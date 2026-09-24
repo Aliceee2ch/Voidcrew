@@ -115,18 +115,7 @@ export const ShipConstructionConsole = () => {
         <Stack vertical>
           {!!data.bay && (
             <Stack.Item>
-              <Section
-                title="Bay materials"
-                buttons={
-                  <Button
-                    icon="floppy-disk"
-                    disabled={!canOperate || isNotCrew}
-                    onClick={() => act('hull_registry')}
-                  >
-                    Hull registry
-                  </Button>
-                }
-              >
+              <Section title="Bay materials">
                 <Box mb={1} style={{ overflowWrap: 'anywhere' }}>
                   {data.bay.silo || 'No silo connected'}
                 </Box>

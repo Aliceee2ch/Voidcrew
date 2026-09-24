@@ -215,7 +215,7 @@ SUBSYSTEM_DEF(overmap)
 			continue
 		// Paid recovery retires the original even when it was parked at an outpost.
 		// The teardown itself still protects players physically aboard the wreck.
-		if(ship.retired_by_registry)
+		if(ship.retired_by_checkpoint)
 			if(!despawned_one)
 				despawned_one = ship.despawn_derelict()
 			continue

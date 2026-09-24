@@ -295,9 +295,6 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	return
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/Destroy()
-	var/list/closing_registry_panels = registry_panels
-	registry_panels = list()
-	QDEL_LIST(closing_registry_panels)
 	disconnect_materials()
 	if(berth?.console == src)
 		berth.console = null
@@ -375,10 +372,6 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	)
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
-	if(action == "hull_registry")
-		if(ui.user == usr && ui.src_object == src && ui_status(usr, state) == UI_INTERACTIVE)
-			open_hull_registry(usr)
-		return TRUE
 	if(action in list("bay_request_silo", "bay_ship_silo", "bay_outpost_silo"))
 		if(ui.user != usr || ui.src_object != src || !is_crew_member(usr) || !can_operate() || ui_status(usr, state) != UI_INTERACTIVE)
 			return TRUE
@@ -394,3 +387,11 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 				last_operation_message = last_operation_success ? "Using outpost materials." : "Outpost access unavailable."
 		return TRUE
 	return ..()
+
+/// Material invoice shared by the ship-bay installation and construction UI.
+/proc/outpost_material_data(list/cost, obj/machinery/ore_silo/silo)
+	var/list/result = list()
+	for(var/material_type in cost)
+		var/datum/material/material = GET_MATERIAL_REF(material_type)
+		result += list(list("name" = material.name, "sheets" = cost[material_type] / SHEET_MATERIAL_AMOUNT, "available" = (silo?.materials?.get_material_amount(material_type) || 0) / SHEET_MATERIAL_AMOUNT))
+	return result

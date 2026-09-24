@@ -34,9 +34,6 @@
 		outpost.management_console = src
 
 /obj/machinery/computer/player_outpost_management/Destroy()
-	var/list/closing_registry_panels = registry_panels
-	registry_panels = list()
-	QDEL_LIST(closing_registry_panels)
 	var/list/closing_panels = panels
 	panels = list()
 	QDEL_LIST(closing_panels)

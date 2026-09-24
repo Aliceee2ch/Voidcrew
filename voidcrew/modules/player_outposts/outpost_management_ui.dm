@@ -89,8 +89,6 @@
 	data["can_manage"] = outpost.is_current_management_user(user)
 	data["can_spend"] = outpost.can_spend(user)
 	data["can_set_prices"] = outpost.is_current_treasury_user(user)
-	data["hull_registry_fee"] = outpost.hull_registry_fee
-	data["hull_registry_fee_max"] = OUTPOST_REGISTRY_MAX_FEE
 	data["treasury_balance"] = outpost.treasury?.account_balance || 0
 	var/obj/machinery/ore_silo/selected_silo = outpost.ship_bay_silo()
 	data["service_silo"] = selected_silo ? REF(selected_silo) : null
@@ -99,7 +97,7 @@
 		var/area/silo_area = get_area(silo)
 		silos += list(list("ref" = REF(silo), "name" = "[silo.name] ([silo_area.name], [silo.x], [silo.y])"))
 	data["service_silos"] = silos
-	data["ship_bay_materials"] = registry_material_data(outpost.ship_bay_material_cost(), selected_silo)
+	data["ship_bay_materials"] = outpost_material_data(outpost.ship_bay_material_cost(), selected_silo)
 	data["raidable"] = outpost.raidable
 	data["dock_mode"] = outpost.dock_mode
 	data["rename_cooldown"] = COOLDOWN_TIMELEFT(outpost, rename_cooldown) / 10
@@ -164,7 +162,6 @@
 	data["research_connections"] = connections
 	data["research_error"] = research_error
 	data["ship_bay_installed"] = outpost.ship_bay_installed
-	data["can_use_registry"] = !!console_ref && outpost.ship_bay_installed
 	data["ship_bay_cost"] = OUTPOST_SHIP_BAY_COST
 	data["ship_bay_denial"] = outpost.ship_bay_install_denial(user)
 	data["ship_bay_error"] = ship_bay_error
@@ -187,14 +184,6 @@
 	if(action == "claim")
 		if(console_ref && outpost.can_claim(user))
 			outpost.transfer_ownership(user, user)
-		return TRUE
-	if(action == "hull_registry")
-		var/obj/machinery/computer/player_outpost_management/console = console_ref?.resolve()
-		console?.open_hull_registry(user)
-		return TRUE
-	if(action == "set_registry_fee")
-		var/amount = params["amount"]
-		outpost.set_hull_registry_fee(user, istext(amount) ? text2num(amount) : amount)
 		return TRUE
 	if(action == "select_service_silo")
 		var/obj/machinery/ore_silo/silo = locate(params["ref"]) in outpost.service_silos()

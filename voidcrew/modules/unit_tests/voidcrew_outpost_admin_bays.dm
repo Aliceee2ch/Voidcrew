@@ -56,9 +56,9 @@
 	var/list/first_slot = data["slots"][1]
 	TEST_ASSERT_EQUAL(first_slot["status"], "Available", "An empty bay is incorrectly marked occupied")
 
-	var/datum/hull_blueprint/snapshot = allocate(__IMPLIED_TYPE__)
+	var/datum/ship_checkpoint/snapshot = allocate(__IMPLIED_TYPE__)
 	snapshot.outpost = home
-	home.hull_registry += snapshot
+	home.checkpoints += snapshot
 	panel.manage_outpost(home, operator, "remove_bays", list())
 	TEST_ASSERT(home.ship_bay_installed, "Admin removal stranded a paid hull registration")
 	qdel(snapshot)

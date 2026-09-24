@@ -32,7 +32,7 @@
 		"installed" = home.ship_bay_installed, "capacity" = OUTPOST_SHIP_BAY_SLOTS,
 		"install_denial" = home.ship_bay_setup_denial(), "remove_denial" = bay_removal_denial(home),
 		"slots" = slots, "silos" = silos, "silo" = selected_silo ? REF(selected_silo) : null,
-		"saved_hulls" = length(home.hull_registry),
+		"saved_checkpoints" = length(home.checkpoints),
 	)
 
 /datum/outpost_manipulator/proc/bay_material_denial(obj/structure/overmap/dynamic/player_outpost/home, datum/outpost_berth/ship_bay/bay)
@@ -50,8 +50,8 @@
 /datum/outpost_manipulator/proc/bay_removal_denial(obj/structure/overmap/dynamic/player_outpost/home)
 	if(!home.ship_bay_installed)
 		return "Ship bays are not installed."
-	if(length(home.hull_registry))
-		return "Saved hulls still depend on these bays."
+	if(length(home.checkpoints))
+		return "Saved checkpoints still depend on these bays."
 	for(var/datum/outpost_berth/ship_bay/bay as anything in home.bay_berths)
 		if(bay)
 			return "Undock visiting ships and wait for all bay reservations to clear."

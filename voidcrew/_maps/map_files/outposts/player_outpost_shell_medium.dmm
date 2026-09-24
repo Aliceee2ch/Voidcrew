@@ -185,6 +185,12 @@
 	},
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost)
+"f" = (
+/obj/machinery/computer/ship_checkpoint{
+	dir = 2
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost)
 
 (1,1,1) = {"
 e
@@ -376,7 +382,7 @@ j
 j
 j
 U
-N
+f
 N
 N
 N

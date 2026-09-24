@@ -1,12 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import {
-  Button,
-  Dropdown,
-  Icon,
-  Input,
-  NumberInput,
-  TextArea,
-} from 'tgui-core/components';
+import { Button, Dropdown, Icon, Input, TextArea } from 'tgui-core/components';
 import type { BooleanLike } from 'tgui-core/react';
 import { resolveAsset } from '../assets';
 import { useBackend } from '../backend';
@@ -53,8 +46,6 @@ export type OutpostData = {
   can_manage: BooleanLike;
   can_spend: BooleanLike;
   can_set_prices: BooleanLike;
-  hull_registry_fee: number;
-  hull_registry_fee_max: number;
   treasury_balance: number;
   service_silo: string | null;
   service_silos: Vessel[];
@@ -83,7 +74,6 @@ export type OutpostData = {
   research_connections: ResearchConnection[];
   research_error: string | null;
   ship_bay_installed: BooleanLike;
-  can_use_registry: BooleanLike;
   ship_bay_cost: number;
   ship_bay_denial: string | null;
   ship_bay_error: string | null;
@@ -242,11 +232,6 @@ function Docking({ data, act }: Props) {
         onSelected={(ref) => act('select_service_silo', { ref })}
       />
       <div className="Outpost__quiet">Treasury: {data.treasury_balance} cr</div>
-      {!!data.can_use_registry && (
-        <Button icon="floppy-disk" onClick={() => act('hull_registry')}>
-          Hull registry
-        </Button>
-      )}
       {data.ship_bay_installed ? (
         <div className="Outpost__quiet">
           {(data.ship_bays || []).length}/2 occupied. Select Ship Bay at the
@@ -783,31 +768,6 @@ function Ownership({ data, act }: Props) {
   );
 }
 
-function Pricing({ data, act }: Props) {
-  return (
-    <>
-      <div className="Outpost__section-label">Hull registry</div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Hull registration fee</span>
-        <NumberInput
-          value={data.hull_registry_fee}
-          minValue={0}
-          maxValue={data.hull_registry_fee_max}
-          step={100}
-          unit="cr"
-          width="110px"
-          disabled={!data.can_set_prices}
-          onChange={(amount) => act('set_registry_fee', { amount })}
-        />
-      </div>
-      <div className="Outpost__quiet">
-        Ship account to outpost treasury. Materials charged separately. Rebuild
-        prepaid.
-      </div>
-    </>
-  );
-}
-
 export function OutpostManagementPanel({ data, act }: Props) {
   const [tab, setTab] = useState('docking');
   const tabs = [
@@ -815,7 +775,6 @@ export function OutpostManagementPanel({ data, act }: Props) {
     { id: 'residents', title: 'Residents', icon: 'users' },
     { id: 'access', title: 'Access', icon: 'id-card' },
     { id: 'research', title: 'Research', icon: 'flask' },
-    { id: 'pricing', title: 'Pricing', icon: 'coins' },
   ];
   return (
     <div className="Outpost">
@@ -867,8 +826,6 @@ export function OutpostManagementPanel({ data, act }: Props) {
                 <Residents data={data} act={act} />
               ) : tab === 'research' ? (
                 <Research data={data} act={act} />
-              ) : tab === 'pricing' ? (
-                <Pricing data={data} act={act} />
               ) : (
                 <Access data={data} act={act} />
               )}

@@ -35,7 +35,7 @@ type ShipBayData = {
   capacity: number;
   install_denial: string | null;
   remove_denial: string | null;
-  saved_hulls: number;
+  saved_checkpoints: number;
   silo: string | null;
   silos: { ref: string; name: string }[];
   slots: {
@@ -497,7 +497,7 @@ const ShipBays = ({
     <Box mb={1}>
       {data.installed ? `${data.capacity} bays installed` : 'Not installed'}
       {' / '}
-      {data.saved_hulls} saved hulls
+      {data.saved_checkpoints} saved checkpoints
     </Box>
     <Box color="label" mb={1}>
       Bay interiors are created when a ship arrives.

@@ -64,18 +64,19 @@
 	catalog_desc = "No prefab at all: an empty sector, a survey pad, and a crate holding the registry console boards. Bring your own everything."
 	mappath = "voidcrew/_maps/map_files/outposts/player_outpost_shell_nothing.dmm"
 
-/// The bare claim's entire inheritance: the two registry console boards.
+/// The bare claim's entire inheritance: the outpost console boards.
 /// Everything else (frames, materials, the silo, air) is the owner's problem.
 /obj/structure/closet/crate/player_outpost_start
 	name = "colonial registry claim crate"
-	desc = "The colonial registry's idea of a starter kit: the circuit boards for an outpost's management and construction consoles, and a packing slip wishing you luck."
+	desc = "The colonial registry's idea of a starter kit: the circuit boards for an outpost's management, construction and checkpoint consoles, and a packing slip wishing you luck."
 
 /obj/structure/closet/crate/player_outpost_start/PopulateContents()
 	. = ..()
 	new /obj/item/circuitboard/computer/player_outpost_management(src)
 	new /obj/item/circuitboard/computer/player_outpost_construction(src)
+	new /obj/item/circuitboard/computer/ship_checkpoint(src)
 	new /obj/item/paper/fluff/player_outpost_claim(src)
 
 /obj/item/paper/fluff/player_outpost_claim
 	name = "packing slip"
-	default_raw_text = "CONTENTS: outpost management console board (1), outpost construction console board (1). The Colonial Registry congratulates you on your new claim and reminds you that unimproved sectors carry no warranty, atmosphere, or floor. Good luck."
+	default_raw_text = "CONTENTS: outpost management console board (1), outpost construction console board (1), checkpoint console board (1). The Colonial Registry congratulates you on your new claim and reminds you that unimproved sectors carry no warranty, atmosphere, or floor. Good luck."

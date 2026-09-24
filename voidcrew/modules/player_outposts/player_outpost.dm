@@ -88,8 +88,8 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	GLOB.player_outposts += src
 
 /obj/structure/overmap/dynamic/player_outpost/Destroy()
-	var/list/retired_registrations = hull_registry
-	hull_registry = list()
+	var/list/retired_registrations = checkpoints
+	checkpoints = list()
 	QDEL_LIST(retired_registrations)
 	GLOB.player_outposts -= src
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths.Copy())

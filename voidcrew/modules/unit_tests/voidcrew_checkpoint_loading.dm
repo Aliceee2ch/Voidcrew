@@ -44,6 +44,8 @@
 	var/datum/map_template/shuttle/voidcrew/commissioned/checkpoint/template
 	var/load_summary
 	var/pipe_caps = 0
+	/// Air on the hull, compared as a total: tiles next to each other trade gas while loading.
+	var/total_moles = 0
 
 /datum/checkpoint_loaded_copy/Destroy()
 	if(!QDELETED(port))
@@ -153,6 +155,9 @@
 			var/spread_line = i <= length(spread_lines) ? spread_lines[i] : "(none)"
 			if(stock_line != spread_line)
 				differences += "stock [stock_line]\n  spread [spread_line]"
+		var/moles_scale = max(stock.total_moles, spread.total_moles, 1)
+		if(abs(stock.total_moles - spread.total_moles) > moles_scale * 0.01)
+			differences += "hull air: stock [round(stock.total_moles, 0.1)] moles, spread [round(spread.total_moles, 0.1)] moles"
 		if(stock.pipe_caps != spread.pipe_caps)
 			. += " (pipe cap visuals: stock [stock.pipe_caps], spread [spread.pipe_caps])"
 		if(length(differences))
@@ -213,13 +218,17 @@
 		if(!area_ids[room])
 			area_ids[room] = length(area_ids) + 1
 		var/datum/gas_mixture/air = tile.return_air()
-		lines += "[local] [tile.type] [room.type]#[area_ids[room]] blocks_air [tile.blocks_air] baseturfs [tile.baseturfs ? (islist(tile.baseturfs) ? jointext(tile.baseturfs, "+") : "[tile.baseturfs]") : "none"] moles [air ? round(air.total_moles(), 0.01) : "none"] light [!!tile.lighting_object]"
+		copy.total_moles += air?.total_moles()
+		lines += "[local] [tile.type] [room.type]#[area_ids[room]] blocks_air [tile.blocks_air] baseturfs [tile.baseturfs ? (islist(tile.baseturfs) ? jointext(tile.baseturfs, "+") : "[tile.baseturfs]") : "none"] air [air ? "yes" : "none"] light [!!tile.lighting_object]"
 		var/list/things = list()
 		for(var/atom/movable/thing as anything in tile.get_all_contents() - tile)
 			// Stored items are stock the rebuild scrubs, and some are rolled at random on
 			// Initialize (maintenance loot, gun casing facings). Pipe caps are a visual whose
 			// presence depends on the order neighbours were redrawn; counted separately.
 			if(thing.loc != tile && isitem(thing))
+				continue
+			// Mobs are scrubbed like stock, and some spawn at random (vendor pests, pets).
+			if(ismob(thing))
 				continue
 			if(istype(thing, /obj/effect/overlay/cap_visual))
 				copy.pipe_caps++

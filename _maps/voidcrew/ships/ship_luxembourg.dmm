@@ -655,6 +655,14 @@
 /obj/structure/window/reinforced/plasma/spawner/directional/north,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/luxembourg/engineering)
+"qh" = (
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/machinery/atmospherics/components/unary/shuttle/heater/tank{
+	dir = 1
+	},
+/obj/structure/window/reinforced/plasma/spawner/directional/north,
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/luxembourg/engineering)
 "qP" = (
 /obj/machinery/door/airlock/external,
 /obj/effect/mapping_helpers/airlock/cyclelink_helper{
@@ -1911,7 +1919,7 @@ Ka
 Hy
 sq
 vx
-qg
+qh
 iR
 hd
 "}

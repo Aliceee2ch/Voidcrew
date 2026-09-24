@@ -736,6 +736,7 @@
 	for(var/obj/machinery/atmospherics/rider as anything in riders)
 		detach_atmos(rider)
 		rider.beforeShuttleMove(target, rotation, MOVE_AREA | MOVE_TURF | MOVE_CONTENTS, port)
+	var/list/merge_groups = detach_mergers(piece)
 	piece.beforeShuttleMove(target, rotation, MOVE_AREA | MOVE_TURF | MOVE_CONTENTS, port)
 	if(!piece.onShuttleMove(target, source, movement_force, move_dir, null, port) || piece.loc != target)
 		return FALSE
@@ -755,9 +756,47 @@
 		attach_atmos(rider, source)
 	if(istype(power_machine))
 		power_machine.connect_to_network()
+	attach_mergers(piece, merge_groups)
+	// Smoothing is worked out from neighbours, and most of this piece's arrive after it.
+	if(piece.smoothing_flags & USES_SMOOTHING)
+		QUEUE_SMOOTH(piece)
+		QUEUE_SMOOTH_NEIGHBORS(piece)
 	if(ismachinery(piece))
 		provision_machine(piece)
 	return TRUE
+
+/**
+ * Firelocks and stationary tanks share state with the like atoms beside them through a
+ * /datum/merger. A whole-ship move carries a group at once; one tile at a time, a moved member
+ * would stay listed in a group whose other members are still in the hidden copy, and the
+ * group's next refresh drops it without a group of its own. Leave the group before moving, the
+ * way the group itself hands a leaving member its share.
+ * Returns merger id -> list(allowed types, the group left behind).
+ */
+/datum/checkpoint_construction/proc/detach_mergers(atom/movable/piece)
+	var/list/rejoin = list()
+	for(var/id in piece.mergers?.Copy())
+		var/datum/merger/group = piece.mergers[id]
+		group.RemoveMember(piece)
+		if(!length(group.members))
+			rejoin[id] = list(group.merged_typecache, null)
+			qdel(group)
+			continue
+		rejoin[id] = list(group.merged_typecache, group)
+		// Handlers (tanks splitting their shared air) act on members leaving through a refresh.
+		SEND_SIGNAL(group, COMSIG_MERGER_REFRESH_COMPLETE, list(piece), list())
+	return rejoin
+
+/// Joins the like atoms already in the bay, or starts a group of its own.
+/datum/checkpoint_construction/proc/attach_mergers(atom/movable/piece, list/rejoin)
+	for(var/id in rejoin)
+		var/list/typecache = rejoin[id][1]
+		var/datum/merger/left_behind = rejoin[id][2]
+		// Now that the piece is gone, the group finds out whether it only held two halves together.
+		if(left_behind && !QDELETED(left_behind))
+			left_behind.Refresh()
+		if(!QDELETED(piece))
+			piece.GetMergeGroup(id, typecache)
 
 /**
  * A whole-ship move keeps every pipe beside its neighbours. One tile at a time does not, and

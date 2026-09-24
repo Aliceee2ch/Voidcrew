@@ -21,6 +21,9 @@
 	/// Null means the whole rectangle. The loader ignores it: module maps already use
 	/// template_noop tiles outside the room.
 	var/footprint
+	/// TRUE when the hull around this marker is still being read, so the hull's own
+	/// initialization pass will cover the module too. See /datum/map_template/map_module/ship_upgrade.
+	var/defer_to_hull = FALSE
 
 /**
  * Override Initialize to capture the ship reference BEFORE the async load_map call
@@ -29,6 +32,11 @@
 /obj/modular_map_root/ship_upgrade/Initialize(mapload)
 	// Capture the ship reference NOW, before parent's INVOKE_ASYNC schedules load_map
 	cached_ship = SSshuttle.loading_ship
+	// Markers initialize immediately, while the map reader is still placing the hull. An
+	// uninitialized turf under us means that read is in progress and its template will
+	// initialize everything, us included - it waits for this marker before it does.
+	var/turf/home = get_turf(src)
+	defer_to_hull = home && !(home.flags_1 & INITIALIZED_1)
 	return ..()
 
 /**
@@ -98,7 +106,8 @@
 		qdel(src, force = TRUE)
 		return
 
-	var/datum/map_template/map_module/map = new()
+	var/datum/map_template/map_module/ship_upgrade/map = new()
+	map.root = src
 	map.load(spawn_area, FALSE, mapfile)
 
 	qdel(src, force = TRUE)
@@ -113,3 +122,20 @@
 		return "[base_file]_[theme].dmm"
 	var/base_name = copytext(base_file, 1, extension_pos)
 	return "[base_name]_[theme].dmm"
+
+/**
+ * A ship upgrade module's map. Read like any module, but when the hull around it is still
+ * being read, its atoms are left for the hull's initialization pass
+ * (/datum/map_template/shuttle/voidcrew/initTemplateBounds), which waits for every module
+ * first. Initializing the module on its own let the two passes interleave: the map reader
+ * sleeps between chunks, so the hull or the module could reach atoms of the other that had
+ * not run Initialize() yet.
+ */
+/datum/map_template/map_module/ship_upgrade
+	/// The marker this module was loaded from
+	var/obj/modular_map_root/ship_upgrade/root
+
+/datum/map_template/map_module/ship_upgrade/initTemplateBounds(list/bounds)
+	if(root?.defer_to_hull)
+		return
+	return ..()

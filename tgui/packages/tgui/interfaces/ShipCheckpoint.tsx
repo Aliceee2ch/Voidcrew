@@ -3,6 +3,7 @@ import {
   Button,
   LabeledList,
   NoticeBox,
+  ProgressBar,
   Section,
 } from 'tgui-core/components';
 import type { BooleanLike } from 'tgui-core/react';
@@ -31,17 +32,41 @@ type Data = {
     height: number;
     denial: string | null;
   }[];
+  rebuilds: {
+    ref: string;
+    name: string;
+    status: string;
+    progress: number;
+  }[];
 };
 
 export const ShipCheckpoint = () => {
   const { data, act } = useBackend<Data>();
   const cost = data.has_checkpoint ? data.update_cost : data.save_cost;
+  const rebuilds = data.rebuilds || [];
   return (
     <Window width={560} height={600} title={`${data.outpost} Checkpoints`}>
       <Window.Content scrollable>
         {!!data.error && <NoticeBox danger>{data.error}</NoticeBox>}
         {!!data.notice && <NoticeBox success>{data.notice}</NoticeBox>}
         {!!data.working && <NoticeBox>Processing checkpoint...</NoticeBox>}
+        {rebuilds.length > 0 && (
+          <Section title="Reconstruction">
+            {rebuilds.map((rebuild) => (
+              <Box key={rebuild.ref} mb={1}>
+                <Box bold style={{ overflowWrap: 'anywhere' }}>
+                  {rebuild.name}
+                </Box>
+                <Box color="label" mb={1}>
+                  {rebuild.status}
+                </Box>
+                <ProgressBar value={rebuild.progress / 100}>
+                  {rebuild.progress}%
+                </ProgressBar>
+              </Box>
+            ))}
+          </Section>
+        )}
         <Section title="Ship checkpoints">
           <LabeledList>
             <LabeledList.Item label="Save / update">

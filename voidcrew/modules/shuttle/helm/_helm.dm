@@ -877,7 +877,10 @@
 
 	var/obj/structure/overmap/ship/ship = get_ship_from_atom(src)
 	if(!ship && last_resort)
-		stack_trace("Failed to connect a helm to its ship, this is almost certainly a bug!")
+		// An outpost's staged rebuild has no ship record until it is commissioned.
+		var/obj/docking_port/mobile/voidcrew/port = SSshuttle.get_containing_shuttle(src)
+		if(!istype(port) || !port.checkpoint_construction)
+			stack_trace("Failed to connect a helm to its ship, this is almost certainly a bug!")
 
 	set_current_ship(ship)
 	return !!current_ship

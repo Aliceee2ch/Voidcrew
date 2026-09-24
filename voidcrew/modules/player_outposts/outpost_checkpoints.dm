@@ -229,10 +229,15 @@
 		if(snapshot.captain_ckey != user.ckey)
 			continue
 		blueprints += list(list("ref" = REF(snapshot), "name" = snapshot.ship_name, "width" = snapshot.width, "height" = snapshot.height, "denial" = rebuild_denial(user, snapshot)))
+	var/list/rebuilds = list()
+	for(var/datum/checkpoint_construction/job as anything in outpost.checkpoint_jobs)
+		if(job.captain_ckey == user.ckey)
+			rebuilds += list(job.rebuild_ui_data())
 	return list(
 		"outpost" = outpost.name,
 		"bays" = bays,
 		"blueprints" = blueprints,
+		"rebuilds" = rebuilds,
 		"working" = working,
 		"error" = error,
 		"notice" = notice,

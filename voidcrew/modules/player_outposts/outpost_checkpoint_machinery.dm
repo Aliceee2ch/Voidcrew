@@ -41,7 +41,7 @@
 	return data
 
 /// Restore parts before RefreshParts calculates capacity, speed and efficiency.
-/datum/checkpoint_rebuild/proc/restore_machine(obj/machinery/machine)
+/datum/checkpoint_construction/proc/restore_machine(obj/machinery/machine, mob/living/operator)
 	if(!machine.checkpoint_load_id || machine.checkpoint_load_id > length(snapshot.machines))
 		return
 	var/list/data = snapshot.machines[machine.checkpoint_load_id]
@@ -91,7 +91,7 @@
 			if(!ispath(upgrade_type, /obj/item/ship_construction_upgrade) && !ispath(upgrade_type, /obj/item/rcd_upgrade) && !ispath(upgrade_type, /obj/item/rpd_upgrade))
 				continue
 			var/obj/item/disk = new upgrade_type(builder)
-			builder.item_interaction(captain, disk)
+			builder.item_interaction(operator, disk)
 			if(!QDELETED(disk))
 				qdel(disk)
 		if(builder.internal_painter)
@@ -105,7 +105,7 @@
 
 /// Construction components and built-in radios are fittings, not cargo. Their
 /// contents are still visited separately, so a component cannot smuggle stock.
-/datum/checkpoint_rebuild/proc/is_machine_fitting(obj/item/item)
+/datum/checkpoint_construction/proc/is_machine_fitting(obj/item/item)
 	if(ismachinery(item.loc))
 		var/obj/machinery/machine = item.loc
 		if(istype(machine, /obj/machinery/computer/camera_advanced/base_construction/ship))
@@ -115,13 +115,14 @@
 		return (item in machine.component_parts) || item == machine.circuit || istype(item, /obj/item/radio)
 	return istype(item, /obj/item/encryptionkey) && istype(item.loc, /obj/item/radio) && ismachinery(item.loc.loc)
 
-/// Top off at handover, after loading and docking have finished consuming power.
-/datum/checkpoint_rebuild/proc/provision_machine(obj/machinery/machine)
+/// Top off as each machine is placed; the hidden copy may have drawn power while it waited.
+/datum/checkpoint_construction/proc/provision_machine(obj/machinery/machine)
 	for(var/obj/item/stock_parts/power_store/battery in machine.component_parts)
 		battery.charge = battery.maxcharge
 	if(istype(machine, /obj/machinery/power/apc))
 		var/obj/machinery/power/apc/controller = machine
-		controller.cell.charge = controller.cell.maxcharge
+		if(controller.cell)
+			controller.cell.charge = controller.cell.maxcharge
 		controller.update()
 	if(istype(machine, /obj/machinery/atmospherics/components/unary/shuttle/heater))
 		var/obj/machinery/atmospherics/components/unary/shuttle/heater/heater = machine

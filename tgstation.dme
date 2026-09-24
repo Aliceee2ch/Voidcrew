@@ -7244,6 +7244,8 @@
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_machinery.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_rebuild.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_snapshot.dm"
+#include "voidcrew\modules\player_outposts\outpost_checkpoint_build_effects.dm"
+#include "voidcrew\modules\player_outposts\outpost_checkpoint_construction.dm"
 #include "voidcrew\modules\player_outposts\outpost_research.dm"
 #include "voidcrew\modules\player_outposts\outpost_relay.dm"
 #include "voidcrew\modules\player_outposts\outpost_residents.dm"

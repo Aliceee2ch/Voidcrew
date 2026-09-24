@@ -186,7 +186,8 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(!reservation)
 		return "Preparing"
 	if(rebuild_owner)
-		return "Rebuilding"
+		var/datum/checkpoint_construction/job = rebuild_owner.resolve()
+		return istype(job) ? job.bay_status() : "Rebuilding"
 	if(is_ship_present())
 		return "Docked"
 	if(release_pending || ship?.state == OVERMAP_SHIP_UNDOCKING)
@@ -225,6 +226,20 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(release_pending || !ship)
 		release()
 	update_status()
+
+/// A staged rebuild has already landed its hull here; hand the bay to its new ship record.
+/datum/outpost_berth/ship_bay/proc/complete_rebuild(obj/structure/overmap/ship/rebuilt, datum/owner)
+	if(QDELETED(src) || !IS_WEAKREF_OF(owner, rebuild_owner) || ship || QDELETED(rebuilt) || QDELETED(rebuilt.shuttle) || dock?.get_docked() != rebuilt.shuttle)
+		return FALSE
+	ship = rebuilt
+	arrived = TRUE
+	release_retries = 0
+	RegisterSignal(ship, COMSIG_VOIDCREW_SHIP_DOCKED, PROC_REF(on_ship_docked))
+	RegisterSignal(ship, COMSIG_QDELETING, PROC_REF(on_ship_deleted))
+	rebuild_owner = null
+	console?.attempt_ship_connection()
+	update_status()
+	return TRUE
 
 /// Departure releases the visitor, never the outpost's permanent turf reservation.
 /datum/outpost_berth/ship_bay/release(force = FALSE)

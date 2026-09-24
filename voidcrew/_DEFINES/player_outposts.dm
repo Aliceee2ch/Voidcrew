@@ -68,3 +68,40 @@
 #define OUTPOST_CHECKPOINT_MAX_TEXT (1024 * 1024)
 #define OUTPOST_CHECKPOINT_SAVE_COST 10000
 #define OUTPOST_CHECKPOINT_UPDATE_COST 5000
+
+// ===== STAGED CHECKPOINT RECONSTRUCTION (see outpost_checkpoint_construction.dm) =====
+/// The saved ship is loaded and waiting for its survey markers.
+#define CHECKPOINT_BUILD_PREPARING "preparing"
+/// Warning markers are down; no recoverable piece exists yet.
+#define CHECKPOINT_BUILD_MARKING "marking"
+/// Pieces are being placed one visit at a time.
+#define CHECKPOINT_BUILD_BUILDING "building"
+/// Every visit has run; the hull is waiting for its captain and handover.
+#define CHECKPOINT_BUILD_COMMISSIONING "commissioning"
+#define CHECKPOINT_BUILD_COMPLETE "complete"
+#define CHECKPOINT_BUILD_FAILED "failed"
+
+/// Build stages, in order. Each stage finishes before the next begins.
+#define CHECKPOINT_STAGE_DECK 1
+#define CHECKPOINT_STAGE_HULL 2
+#define CHECKPOINT_STAGE_SYSTEMS 3
+#define CHECKPOINT_STAGE_MACHINERY 4
+#define CHECKPOINT_STAGE_FITTINGS 5
+#define CHECKPOINT_STAGE_COUNT 5
+
+/// How long the survey markers show before the first drone starts work.
+#define CHECKPOINT_BUILD_SURVEY_TIME (4 SECONDS)
+/// Time a drone spends on one tile before its pieces appear.
+#define CHECKPOINT_BUILD_WORK_TIME (0.4 SECONDS)
+#define CHECKPOINT_BUILD_MIN_DRONES 8
+#define CHECKPOINT_BUILD_MAX_DRONES 16
+/// Tiles a drone crosses per controller tick (SSfastprocess, 0.2 seconds).
+#define CHECKPOINT_DRONE_TILES_PER_TICK 3
+/// Roughly one extra drone per this many visits, between the limits above.
+#define CHECKPOINT_BUILD_VISITS_PER_DRONE 100
+/// Upper bound on tile visits completed in one controller tick, across all drones.
+#define CHECKPOINT_BUILD_VISIT_BUDGET 8
+/// A build that stops advancing for this long is finished with the pieces it has.
+#define CHECKPOINT_BUILD_STALL_TIME (1 MINUTES)
+/// How long a finished hull waits for its captain before being left claimable.
+#define CHECKPOINT_BUILD_CAPTAIN_WAIT (10 MINUTES)

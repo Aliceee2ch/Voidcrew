@@ -103,6 +103,9 @@
 #define CHECKPOINT_BUILD_VISIT_BUDGET 8
 /// Visits per tick when an admin rushes a build (a few seconds for a Box-class hull).
 #define CHECKPOINT_BUILD_RUSH_BUDGET 40
+/// Ambient light on a hull while it is built, matching the hangar floodlights.
+#define CHECKPOINT_BUILD_FLOODLIGHT_ALPHA 110
+#define CHECKPOINT_BUILD_FLOODLIGHT_COLOR "#d5e3ff"
 /// A build that stops advancing for this long is finished with the pieces it has.
 #define CHECKPOINT_BUILD_STALL_TIME (1 MINUTES)
 /// How long a finished hull waits for its captain before being left claimable.

@@ -1032,6 +1032,7 @@
 /obj/effect/turf_decal/tile/brown/fourcorners{
 	dir = 2
 	},
+/obj/structure/filingcabinet/chestdrawer,
 /turf/open/indestructible/dark,
 /area/voidcrew/outpost_hangar)
 "fV" = (
@@ -1511,6 +1512,10 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/tile/brown/fourcorners{
 	dir = 2
+	},
+/obj/structure/chair/office{
+	anchored = 1;
+	dir = 1
 	},
 /turf/open/indestructible/dark,
 /area/voidcrew/outpost_hangar)
@@ -3564,7 +3569,9 @@
 /obj/effect/turf_decal/tile/brown/fourcorners{
 	dir = 2
 	},
-/obj/structure/filingcabinet/chestdrawer,
+/obj/machinery/computer/ship_checkpoint{
+	dir = 2
+	},
 /turf/open/indestructible/dark,
 /area/voidcrew/outpost_hangar)
 "xM" = (

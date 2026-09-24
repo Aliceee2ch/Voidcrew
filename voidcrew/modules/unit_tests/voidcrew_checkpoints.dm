@@ -230,6 +230,11 @@
 			removed_smes_cells = TRUE
 			bank.RefreshParts()
 	var/datum/ship_checkpoint_ui/registry_test/panel = allocate(__IMPLIED_TYPE__, home, terminal, captain)
+	panel.open_bay_view()
+	var/first_view = panel.bay_view.assigned_map
+	TEST_ASSERT(get_turf(bay.dock) in panel.bay_view.vis_contents, "The checkpoint console's bay view does not show the landing pad")
+	panel.open_bay_view()
+	TEST_ASSERT(panel.bay_view.assigned_map != first_view, "A reopened bay view reused its map key")
 	TEST_ASSERT_NOTNULL(panel.save_denial(visitor, bay), "A non-captain could register the hull")
 	TEST_ASSERT(panel.prepare_save(captain, bay), "Could not prepare a real hull: [panel.error]")
 	TEST_ASSERT(!findtext(panel.quote.tgm, "/obj/item"), "The snapshot includes items")
@@ -241,6 +246,21 @@
 	qdel(parsed)
 	rustg_file_write(panel.quote.tgm, "data/registry-source-hull.dmm")
 	var/list/before_counts = count_hull(original.shuttle)
+	TEST_ASSERT(before_counts["[/obj/machinery/cryopod]"], "The source hull has no cryopod to recover")
+	var/list/dropped = list()
+	for(var/turf/tile as anything in original.shuttle.return_turfs())
+		if(!(get_area(tile) in original.shuttle.shuttle_areas))
+			continue
+		for(var/obj/machinery/machine in tile)
+			if(!machine.checkpoint_type())
+				dropped["[machine.type]"]++
+		for(var/obj/structure/fitting in tile)
+			if(!is_type_in_typecache(fitting, GLOB.outpost_checkpoint_structures) && !is_type_in_typecache(fitting, GLOB.outpost_checkpoint_infrastructure))
+				dropped["[fitting.type]"]++
+	var/list/dropped_text = list()
+	for(var/type_name in dropped)
+		dropped_text += "[type_name] x[dropped[type_name]]"
+	log_test("Machinery and structures a checkpoint of this hull leaves out: [length(dropped_text) ? dropped_text.Join(", ") : "none"]")
 	var/room_count = length(panel.quote.rooms)
 	var/before_iron = silo.materials.get_material_amount(/datum/material/iron)
 	var/before_money = original.ship_account.account_balance
@@ -454,6 +474,10 @@
 			TEST_ASSERT_NULL(restored_builder.internal_painter.ink, "Construction console recovered a toner cartridge")
 		for(var/obj/machinery/ore_silo/restored_silo in tile)
 			TEST_ASSERT_EQUAL(restored_silo.materials.get_material_amount(/datum/material/iron), 0, "Recovery copied silo materials")
+		for(var/obj/structure/reagent_dispensers/dispenser in tile)
+			TEST_ASSERT(!dispenser.reagents?.total_volume, "Recovery refilled [dispenser] with [dispenser.reagents?.total_volume] units")
+		for(var/obj/structure/bedsheetbin/bin in tile)
+			TEST_ASSERT_EQUAL(bin.amount, 0, "Recovery restocked a bedsheet bin")
 		for(var/obj/machinery/vending/vendor in tile)
 			for(var/datum/data/vending_product/product as anything in vendor.product_records + vendor.hidden_records + vendor.coin_records)
 				TEST_ASSERT_EQUAL(product.amount, 0, "Recovery restocked a vendor")
@@ -465,6 +489,8 @@
 		for(var/obj/machinery/atmospherics/components/tank/stored_tank in tile)
 			TEST_ASSERT(!stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) was refilled with [stored_tank.air_contents?.total_moles()] moles")
 	TEST_ASSERT(length(rebuilt.helm_consoles), "Recovered ship has no connected helm")
+	var/obj/machinery/cryopod/spawn_pod = locate() in rebuilt.shuttle.spawn_points
+	TEST_ASSERT(spawn_pod && (get_area(spawn_pod) in rebuilt.shuttle.shuttle_areas), "Recovered ship has no cryopod spawn point")
 	for(var/obj/machinery/computer/helm/helm as anything in rebuilt.helm_consoles)
 		TEST_ASSERT_EQUAL(helm.current_ship, rebuilt, "Helm remained attached to the old ship")
 		TEST_ASSERT(helm.powered(), "Recovered helm is unpowered")
@@ -510,6 +536,10 @@
 	TEST_ASSERT_EQUAL(count_bay_ship_tiles(bay), 1, "The first visit placed more than one tile")
 	TEST_ASSERT_EQUAL(count_bay_machines(bay), 0, "Machinery appeared with the first deck tile")
 	var/datum/checkpoint_visit/first = job.completed_visits[1]
+	var/area/first_room = get_area(job.bay_turfs[first.index])
+	var/list/room_lighting = list(first_room.base_lighting_color, first_room.base_lighting_alpha)
+	TEST_ASSERT(first_room.base_lighting_alpha >= 110, "The new deck was not floodlit: [first_room.base_lighting_alpha]")
+	var/list/original_lighting = job.lit_rooms[first_room]
 	TEST_ASSERT(!job.execute_visit(first), "A completed visit ran twice")
 	TEST_ASSERT_EQUAL(job.visits_done, 1, "Replaying a visit counted it again")
 	TEST_ASSERT(!panel.rebuild(captain, snapshot), "The consumed checkpoint started another reconstruction")
@@ -563,6 +593,8 @@
 				interrupted = TRUE
 	TEST_ASSERT(interrupted, "The interruption point was never reached")
 	TEST_ASSERT_EQUAL(job.state, "commissioning", "The finished hull did not wait for its absent captain")
+	TEST_ASSERT(original_lighting && room_lighting[2] != original_lighting[2], "The floodlit room recorded no lighting to restore")
+	TEST_ASSERT(first_room.base_lighting_alpha == original_lighting[2] && first_room.base_lighting_color == original_lighting[1], "The finished hull kept the construction floodlights")
 	TEST_ASSERT_EQUAL(job.status_line(), "Awaiting captain", "The waiting job reported the wrong status")
 	TEST_ASSERT(IS_WEAKREF_OF(job, bay.rebuild_owner), "The finished hull released its bay before commissioning")
 	check_bay_refuses_visitors(home, bay, "while waiting for the captain")

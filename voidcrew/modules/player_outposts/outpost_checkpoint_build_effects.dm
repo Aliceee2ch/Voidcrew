@@ -28,6 +28,18 @@
 /obj/structure/checkpoint_drone_bay/proc/receive()
 	flick("recharge", src)
 
+/// What a working yard drone sounds like: welding, wrenching, screwing and cutting.
+GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
+	'sound/items/tools/welder.ogg',
+	'sound/items/tools/welder2.ogg',
+	'sound/items/tools/ratchet.ogg',
+	'sound/items/tools/ratchet_fast.ogg',
+	'sound/items/tools/screwdriver.ogg',
+	'sound/items/tools/screwdriver2.ogg',
+	'sound/items/tools/screwdriver_operating.ogg',
+	'sound/items/tools/wirecutter.ogg',
+))
+
 /// Cosmetic yard drone. The construction job decides what is placed and when.
 /obj/effect/checkpoint_build_drone
 	name = "yard drone"
@@ -121,11 +133,14 @@
 	work_effect = new(target, CHECKPOINT_BUILD_WORK_TIME, preview)
 	if(get_turf(src) != target)
 		work_beam = Beam(work_effect, icon_state = "rped_upgrade", time = CHECKPOINT_BUILD_WORK_TIME + 1, maxdistance = 3)
-	if(prob(15))
-		playsound(target, 'sound/machines/click.ogg', 20, TRUE, pressure_affected = FALSE)
+	// Many drones work at once; a share of them is enough to fill the bay with noise.
+	if(prob(40))
+		playsound(target, pick(GLOB.checkpoint_drone_tool_sounds), 20, TRUE, pressure_affected = FALSE)
 
 /// Clears the drone before its visit is placed, so a failed placement cannot strand it.
 /obj/effect/checkpoint_build_drone/proc/finish_work()
+	if(work_until && !QDELETED(work_effect) && prob(35))
+		playsound(work_effect, 'sound/items/deconstruct.ogg', 25, TRUE, pressure_affected = FALSE)
 	work_until = 0
 	visit = null
 	QDEL_NULL(work_beam)

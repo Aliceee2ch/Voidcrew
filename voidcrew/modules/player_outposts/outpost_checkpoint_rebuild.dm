@@ -55,7 +55,9 @@
 		for(var/atom/movable/object as anything in tile.get_all_contents())
 			if(QDELETED(object))
 				continue
-			object.reagents?.clear_reagents()
+			// Plumbing keeps its water; every other reagent holder is stock.
+			if(!istype(object, /obj/machinery/shower) && !istype(object, /obj/structure/sink))
+				object.reagents?.clear_reagents()
 			if(isitem(object) && is_machine_fitting(object))
 				continue
 			if(isitem(object) || ismob(object) || istype(object, /obj/structure/disposalholder))
@@ -78,6 +80,13 @@
 						stored = list(stored)
 					for(var/datum/gas_mixture/mix as anything in stored)
 						mix?.gases.Cut()
+			if(istype(object, /obj/structure/bedsheetbin))
+				var/obj/structure/bedsheetbin/bin = object
+				bin.amount = 0
+				bin.update_appearance()
+			if(istype(object, /obj/structure/filingcabinet/medical))
+				var/obj/structure/filingcabinet/medical/records = object
+				records.virgin = FALSE
 			if(istype(object, /obj/machinery/disposal))
 				var/obj/machinery/disposal/disposal = object
 				disposal.air_contents?.gases.Cut()

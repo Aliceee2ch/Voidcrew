@@ -88,6 +88,8 @@
 	var/direct_placement = FALSE
 	/// Admin testing: direct placement with a larger per-tick budget.
 	var/rushed = FALSE
+	/// Ship room -> its own base lighting, list(colour, alpha), while floodlit for the build.
+	var/list/lit_rooms = list()
 
 /// leave_original: an admin copy of a hull that is still in service. It is not retired and
 /// keeps its money; the checkpoint is still consumed.
@@ -129,6 +131,7 @@
 		abort("Reconstruction was cancelled.", delete_job = FALSE)
 	STOP_PROCESSING(SSfastprocess, src)
 	clear_site_effects()
+	restore_room_lighting()
 	if(home)
 		home.checkpoint_jobs -= src
 		UnregisterSignal(home, COMSIG_QDELETING)
@@ -370,6 +373,8 @@
 		return CHECKPOINT_STAGE_DECK
 	if(istype(thing, /obj/structure/grille) || istype(thing, /obj/structure/window) || istype(thing, /obj/structure/falsewall) || istype(thing, /obj/machinery/door))
 		return CHECKPOINT_STAGE_HULL
+	if(istype(thing, /obj/machinery/cryopod) || istype(thing, /obj/machinery/shower) || istype(thing, /obj/machinery/iv_drip) || istype(thing, /obj/machinery/defibrillator_mount))
+		return CHECKPOINT_STAGE_MACHINERY
 	if(istype(thing, /obj/structure/cable) || istype(thing, /obj/structure/disposalpipe) || istype(thing, /obj/machinery/power/smes) || is_type_in_typecache(thing, GLOB.outpost_checkpoint_infrastructure))
 		return CHECKPOINT_STAGE_SYSTEMS
 	if(ismachinery(thing))
@@ -659,6 +664,7 @@
 		target.change_area(site_area, room)
 		port.underlying_areas_by_turf[target] = site_area
 		placed_hull_tiles[target] = site_area
+		floodlight_room(room, site_area)
 	if(!(move_mode & MOVE_TURF))
 		return
 	source.TransferComponents(target)
@@ -738,6 +744,23 @@
 		SSair.add_to_rebuild_queue(node)
 	SSair.add_to_rebuild_queue(device)
 
+/// New decks join the ship's unpowered rooms, so they would lose the hangar's ambient light.
+/// Each room borrows it until the build ends.
+/datum/checkpoint_construction/proc/floodlight_room(area/room, area/site_area)
+	if(lit_rooms[room])
+		return
+	lit_rooms[room] = list(room.base_lighting_color, room.base_lighting_alpha)
+	var/alpha = max(site_area.base_lighting_alpha, CHECKPOINT_BUILD_FLOODLIGHT_ALPHA)
+	room.set_base_lighting(site_area.base_lighting_alpha ? site_area.base_lighting_color : CHECKPOINT_BUILD_FLOODLIGHT_COLOR, alpha)
+
+/datum/checkpoint_construction/proc/restore_room_lighting()
+	for(var/area/room as anything in lit_rooms)
+		if(QDELETED(room))
+			continue
+		var/list/original = lit_rooms[room]
+		room.set_base_lighting(original[1], original[2])
+	lit_rooms.Cut()
+
 /datum/checkpoint_construction/proc/visit_preview(datum/checkpoint_visit/visit)
 	if(visit.hull)
 		var/turf/source = source_turfs[visit.index]
@@ -756,8 +779,9 @@
 	captain_wait_until = world.time + CHECKPOINT_BUILD_CAPTAIN_WAIT
 	// Every visit has run; nothing more is needed from the hidden copy.
 	discard_source()
-	// The drones go home now, whenever the captain turns up.
+	// The drones go home and the floodlights go off now, whenever the captain turns up.
 	clear_site_effects()
+	restore_room_lighting()
 	update_bay_status()
 	try_commission()
 

@@ -72,6 +72,10 @@
 	var/error
 	var/notice
 	var/working = FALSE
+	/// Live view of the ship bay pad. A new one is made for every open (see open_bay_view()).
+	var/atom/movable/screen/map_view/camera/bay_view
+	/// The pad rectangle the view currently shows, so it is only rebuilt when that changes.
+	var/list/bay_view_bounds
 
 /datum/ship_checkpoint_ui/New(obj/structure/overmap/dynamic/player_outpost/home, obj/machinery/computer/host, mob/user)
 	outpost = home
@@ -90,6 +94,7 @@
 		UnregisterSignal(outpost, COMSIG_QDELETING)
 	outpost = null
 	QDEL_NULL(quote)
+	QDEL_NULL(bay_view)
 	return ..()
 
 /datum/ship_checkpoint_ui/proc/on_outpost_deleted()
@@ -113,11 +118,49 @@
 /datum/ship_checkpoint_ui/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
+		open_bay_view()
 		ui = new(user, src, "ShipCheckpoint", "[outpost.name] Checkpoints")
 		ui.open()
 
 /datum/ship_checkpoint_ui/ui_close(mob/user)
 	qdel(src)
+
+GLOBAL_VAR_INIT(checkpoint_bay_view_serial, 0)
+
+/// tgui map controls cannot be reused across opens, so every open gets a fresh view with a
+/// never-repeated key. The client asks for it to be registered once its control exists.
+/datum/ship_checkpoint_ui/proc/open_bay_view()
+	QDEL_NULL(bay_view)
+	bay_view_bounds = null
+	bay_view = new
+	// Map keys must start and end with a letter.
+	bay_view.generate_view("checkpointbay[++GLOB.checkpoint_bay_view_serial]view")
+	bay_view.clear_with_screen = FALSE
+	bay_view.cam_background.clear_with_screen = FALSE
+	refresh_bay_view()
+
+/// Shows the bay's landing rectangle with a small margin, or static without a bay.
+/datum/ship_checkpoint_ui/proc/refresh_bay_view()
+	if(!bay_view)
+		return
+	var/datum/outpost_berth/ship_bay/bay = LAZYACCESS(outpost?.bay_berths, 1)
+	if(QDELETED(bay?.dock) || !bay.reservation)
+		bay_view_bounds = null
+		bay_view.show_camera_static()
+		return
+	var/list/coords = bay.dock.return_coords()
+	var/turf/origin = bay.reservation.bottom_left_turfs[1]
+	var/list/bounds = list(
+		max(min(coords[1], coords[3]) - 2, origin.x),
+		max(min(coords[2], coords[4]) - 2, origin.y),
+		min(max(coords[1], coords[3]) + 2, origin.x + bay.reservation.width - 1),
+		min(max(coords[2], coords[4]) + 2, origin.y + bay.reservation.height - 1),
+	)
+	if(bay_view_bounds ~= bounds)
+		return
+	bay_view_bounds = bounds
+	var/list/turfs = block(locate(bounds[1], bounds[2], origin.z), locate(bounds[3], bounds[4], origin.z))
+	bay_view.show_camera(turfs, bounds[3] - bounds[1] + 1, bounds[4] - bounds[2] + 1)
 
 /// Only a physically present, captain-owned bay can supply a snapshot or payment.
 /datum/ship_checkpoint_ui/proc/save_denial(mob/living/user, datum/outpost_berth/ship_bay/bay)
@@ -238,8 +281,10 @@
 	for(var/datum/checkpoint_construction/job as anything in outpost.checkpoint_jobs)
 		if(job.captain_ckey == user.ckey)
 			rebuilds += list(job.rebuild_ui_data())
+	refresh_bay_view()
 	return list(
 		"outpost" = outpost.name,
+		"bay_view" = bay_view?.assigned_map,
 		"bays" = bays,
 		"blueprints" = blueprints,
 		"rebuilds" = rebuilds,
@@ -256,7 +301,14 @@
 	if(.)
 		return
 	var/mob/living/user = usr
-	if(working || !istype(user) || ui.user != user || ui.src_object != src || ui_status(user, state) != UI_INTERACTIVE)
+	if(!istype(user) || ui.user != user || ui.src_object != src || ui_status(user, state) != UI_INTERACTIVE)
+		return
+	if(action == "bay_view_mounted")
+		// Register into the control the client has just created, never before it exists.
+		if(bay_view && params["map"] == bay_view.assigned_map && user.client)
+			bay_view.display_to_client(user.client)
+		return FALSE
+	if(working)
 		return
 	switch(action)
 		if("save", "update")

@@ -68,17 +68,7 @@
 				var/obj/machinery/machine = object
 				if(machine.checkpoint_type() == machine.type && !istype(machine.circuit) && !is_type_in_typecache(machine, GLOB.outpost_checkpoint_infrastructure))
 					without_board["[machine.type]"] = TRUE
-	// Lose the original away from the bay, as a real one is. Deleting it on the pad would leave
-	// what its fittings drop on deletion (duct stacks, crate tanks) under the rebuilt hull.
-	var/obj/docking_port/stationary/transit/transit = original.shuttle.assigned_transit || SSshuttle.generate_transit_dock(original.shuttle)
-	original.shuttle.mode = SHUTTLE_PREARRIVAL
-	TEST_ASSERT_EQUAL(original.shuttle.initiate_docking(transit), DOCKING_SUCCESS, "[template_type]: the original could not leave the bay")
-	original.shuttle.mode = SHUTTLE_IDLE
-	original.docked = null
-	original.forceMove(get_turf(home))
-	original.state = "flying"
-	home.on_ship_undock_complete(original)
-	TEST_ASSERT(original.shuttle.admin_delete_shuttle(), "[template_type]: the original could not be removed")
+	TEST_ASSERT(delete_in_transit(home, original), "[template_type]: the original could not be removed")
 	log_world("EVERY_SHIP rebuild [template_type]")
 	var/datum/checkpoint_construction/job = new(null, snapshot, captain, TRUE)
 	if(!job.prepare())
@@ -116,8 +106,23 @@
 		for(var/type_name in without_board)
 			names += type_name
 		summary += "saved without a board: [names.Join(", ")]"
-	rebuilt.shuttle.admin_delete_shuttle()
+	delete_in_transit(home, rebuilt)
 	return summary.Join("; ")
+
+/// Lose a hull away from the bay, as a real one is. Deleting it on the pad would leave what its
+/// fittings drop on deletion (duct stacks, crate tanks) under the next hull built there.
+/datum/unit_test/voidcrew_checkpoints/every_ship/proc/delete_in_transit(obj/structure/overmap/dynamic/player_outpost/home, obj/structure/overmap/ship/ship)
+	var/obj/docking_port/stationary/transit/transit = ship.shuttle.assigned_transit || SSshuttle.generate_transit_dock(ship.shuttle)
+	ship.shuttle.mode = SHUTTLE_PREARRIVAL
+	var/result = ship.shuttle.initiate_docking(transit)
+	ship.shuttle.mode = SHUTTLE_IDLE
+	if(result != DOCKING_SUCCESS)
+		return FALSE
+	ship.docked = null
+	ship.forceMove(get_turf(home))
+	ship.state = "flying"
+	home.on_ship_undock_complete(ship)
+	return ship.shuttle.admin_delete_shuttle()
 
 /datum/unit_test/voidcrew_checkpoints/every_ship/proc/list_counts(list/counts)
 	var/list/parts = list()

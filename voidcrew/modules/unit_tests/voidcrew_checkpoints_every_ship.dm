@@ -21,8 +21,8 @@
 	log_test("Checkpoint round trip of every ship class:\n[report.Join("\n")]")
 
 /// Returns a one-line summary; problems that break the no-free-supplies rule fail the test.
-/datum/unit_test/voidcrew_checkpoints/every_ship/proc/check_ship(obj/structure/overmap/dynamic/player_outpost/registry_test/home, mob/living/carbon/human/captain, template_type)
-	var/obj/structure/overmap/ship/original = SSshuttle.create_ship(template_type)
+/datum/unit_test/voidcrew_checkpoints/every_ship/proc/check_ship(obj/structure/overmap/dynamic/player_outpost/registry_test/home, mob/living/carbon/human/captain, template_type, list/selections, datum/ship_theme/theme)
+	var/obj/structure/overmap/ship/original = SSshuttle.create_ship(template_type, selections, theme)
 	if(!original)
 		TEST_FAIL("[template_type] could not be spawned")
 		return "could not spawn"
@@ -255,3 +255,44 @@
 				if(!pipe.parent || !(pipe in pipe.parent.members))
 					problems += "[device.type] at [COORD(device)] has no network"
 	return problems
+
+/// Every theme of every modular hull, and within each theme every module it can take, so each
+/// themed module file is saved and rebuilt at least once. Slow: about one round trip per option.
+/datum/unit_test/voidcrew_checkpoints/every_ship/every_variant
+
+/datum/unit_test/voidcrew_checkpoints/every_ship/every_variant/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(__IMPLIED_TYPE__)
+	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.founder_ckey = "everyvariantfounder"
+	TEST_ASSERT(home.load_level(), "The outpost did not load")
+	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
+	var/mob/living/carbon/human/captain = make_player(run_loc_floor_bottom_left, "everyvariantcaptain")
+	var/list/report = list()
+	for(var/label in SSmapping.ship_purchase_list)
+		var/template_type = SSmapping.ship_purchase_list[label]
+		var/datum/map_template/shuttle/voidcrew/template_path = template_type
+		if(initial(template_path.abstract) == template_type || ispath(template_type, /datum/map_template/shuttle/voidcrew/commissioned))
+			continue
+		var/list/themes = get_themes_for_ship(template_type)
+		// A hull with modules but no themes still gets its modules covered, themeless.
+		var/list/theme_ids = length(themes) ? themes : list(null)
+		for(var/theme_id in theme_ids)
+			var/datum/ship_theme/theme = theme_id ? themes[theme_id] : null
+			var/list/by_slot = list()
+			var/list/modules = get_modules_for_ship_theme(template_type, theme_id)
+			for(var/module_id in modules)
+				var/datum/ship_upgrade_module/module = modules[module_id]
+				LAZYADD(by_slot[module.slot], module)
+			var/configurations = 1
+			for(var/slot_key in by_slot)
+				configurations = max(configurations, length(by_slot[slot_key]))
+			for(var/configuration in 1 to configurations)
+				var/list/selections = list()
+				for(var/slot_key in by_slot)
+					var/list/options = by_slot[slot_key]
+					selections[slot_key] = options[(configuration - 1) % length(options) + 1]
+				var/variant = "[template_type] theme [theme_id] #[configuration]"
+				log_world("EVERY_SHIP begin [variant]")
+				report += "[variant]: [check_ship(home, captain, template_type, selections, theme)]"
+				log_world("EVERY_SHIP end [variant]")
+	log_test("Checkpoint round trip of every theme and module:\n[report.Join("\n")]")

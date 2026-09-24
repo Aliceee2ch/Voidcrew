@@ -46,6 +46,29 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 	/obj/structure/headpike,
 )))
 
+/**
+ * Hull terrain a checkpoint cannot rebuild. Any other turf is saved as it is, so ship features
+ * such as pools, hot springs and dirt planters need no entry anywhere.
+ * - Mineable rock and asteroid ground hand out ore or sand on every rebuild.
+ * - Planetary atmosphere regenerates air forever wherever it is placed.
+ * - Lava, chasms and open space are hazards or multi-level holes, not hull.
+ */
+GLOBAL_LIST_INIT(outpost_checkpoint_refused_terrain, typecacheof(list(
+	/turf/closed/mineral,
+	/turf/open/misc/asteroid,
+	/turf/open/lava,
+	/turf/open/chasm,
+	/turf/open/openspace,
+)))
+
+/proc/checkpoint_refuses_terrain(turf/tile)
+	if(is_type_in_typecache(tile, GLOB.outpost_checkpoint_refused_terrain))
+		return TRUE
+	if(isopenturf(tile))
+		var/turf/open/open_tile = tile
+		return open_tile.planetary_atmos
+	return FALSE
+
 /// Whether a checkpoint keeps this object. Machinery also needs a type to rebuild as.
 /proc/outpost_checkpoint_saves(obj/object)
 	if(object.flags_1 & HOLOGRAM_1 || is_type_in_typecache(object, GLOB.outpost_checkpoint_excluded))
@@ -181,7 +204,7 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 			if(!(room in owned_areas))
 				atoms = list("/turf/template_noop", "/area/template_noop")
 			else
-				if(!isfloorturf(tile) && !iswallturf(tile) && !isspaceturf(tile))
+				if(checkpoint_refuses_terrain(tile))
 					return "Replace the hull's [tile.name] terrain with constructed flooring before saving a checkpoint."
 				var/room_id = area_ids[room]
 				if(!room_id)

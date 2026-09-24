@@ -93,6 +93,10 @@
 		if(before_counts[type_name] != after_counts[type_name])
 			TEST_FAIL("[template_type]: [type_name] expected [before_counts[type_name]], rebuilt [after_counts[type_name]]")
 	log_world("EVERY_SHIP check [template_type]")
+	// Pipe gas is judged at handover, before atmos runs: after that, siphons and outlets
+	// legitimately draw room and hangar air into their networks.
+	for(var/problem in pipe_gas_at_handover(rebuilt.shuttle))
+		TEST_FAIL("[template_type]: [problem]")
 	settle_networks()
 	// The rebuild must leave pipes and ducts joined up exactly as well as the original had them.
 	var/list/after_plumbing = plumbing_state(rebuilt.shuttle)
@@ -166,11 +170,6 @@
 				var/obj/machinery/atmospherics/components/tank/stored = object
 				if(stored.air_contents?.total_moles())
 					. += "[object.type] holds [stored.air_contents.total_moles()] moles"
-			if(istype(object, /obj/machinery/atmospherics))
-				var/obj/machinery/atmospherics/machine = object
-				for(var/datum/pipeline/network as anything in machine.return_pipenets())
-					if(network?.air?.total_moles() && !fed_by_restocked_tank(network))
-						. += "pipe network at [object.type] holds [network.air.total_moles()] moles"
 			if(istype(object, /obj/machinery/vending))
 				var/obj/machinery/vending/vendor = object
 				for(var/datum/data/vending_product/product as anything in vendor.product_records + vendor.hidden_records + vendor.coin_records)
@@ -296,3 +295,26 @@
 				report += "[variant]: [check_ship(home, captain, template_type, selections, theme)]"
 				log_world("EVERY_SHIP end [variant]")
 	log_test("Checkpoint round trip of every theme and module:\n[report.Join("\n")]")
+
+/// Gas anywhere in the rebuilt pipes the moment the hull is handed over. Restocked tanks keep
+/// their own gas; nothing has run yet to share it.
+/datum/unit_test/voidcrew_checkpoints/every_ship/proc/pipe_gas_at_handover(obj/docking_port/mobile/port)
+	. = list()
+	for(var/turf/tile as anything in port.return_turfs())
+		if(!(get_area(tile) in port.shuttle_areas))
+			continue
+		for(var/obj/machinery/atmospherics/machine in tile)
+			if(is_type_in_typecache(machine, GLOB.outpost_checkpoint_restocked))
+				continue
+			var/moles = 0
+			if(istype(machine, /obj/machinery/atmospherics/pipe))
+				var/obj/machinery/atmospherics/pipe/pipe = machine
+				moles += pipe.air_temporary?.total_moles()
+			if(istype(machine, /obj/machinery/atmospherics/components))
+				var/obj/machinery/atmospherics/components/component = machine
+				for(var/datum/gas_mixture/mix as anything in component.airs)
+					moles += mix?.total_moles()
+			for(var/datum/pipeline/network as anything in machine.return_pipenets())
+				moles += network?.air?.total_moles()
+			if(moles > 0)
+				. += "[machine.type] holds [moles] moles of gas at handover"

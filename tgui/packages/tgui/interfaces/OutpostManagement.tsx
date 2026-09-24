@@ -80,7 +80,8 @@ export type OutpostData = {
   ship_bays: {
     ref: string;
     number: number;
-    ship: string;
+    ship: string | null;
+    status: string;
     arrived: BooleanLike;
     requested: BooleanLike;
     approved: BooleanLike;
@@ -218,7 +219,7 @@ function Docking({ data, act }: Props) {
   ];
   return (
     <>
-      <div className="Outpost__section-label">Ship bays</div>
+      <div className="Outpost__section-label">Ship bay</div>
       <div className="Outpost__field-label">Outpost material source</div>
       <Dropdown
         width="100%"
@@ -234,13 +235,14 @@ function Docking({ data, act }: Props) {
       <div className="Outpost__quiet">Treasury: {data.treasury_balance} cr</div>
       {data.ship_bay_installed ? (
         <div className="Outpost__quiet">
-          {(data.ship_bays || []).length}/2 occupied. Select Ship Bay at the
-          helm.
+          Permanent bay installed. Select Ship Bay at the helm or visit by
+          elevator.
         </div>
       ) : (
         <div className="Outpost__row">
           <span className="Outpost__grow">
-            Two construction bays: {data.ship_bay_cost} cr, 100 iron, 50 glass.
+            One permanent construction bay: {data.ship_bay_cost} cr, 100 iron,
+            50 glass.
           </span>
           <Button
             disabled={!!data.ship_bay_denial}
@@ -270,7 +272,8 @@ function Docking({ data, act }: Props) {
       {(data.ship_bays || []).map((bay) => (
         <div className="Outpost__row" key={bay.ref}>
           <span className="Outpost__grow">
-            Bay {bay.number}: {bay.ship} {!bay.arrived && '(arriving)'}
+            Bay {bay.number}: {bay.ship || bay.status}{' '}
+            {!!bay.ship && `(${bay.status})`}
           </span>
           {!!bay.requested && (
             <Button

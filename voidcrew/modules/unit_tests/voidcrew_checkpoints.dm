@@ -11,7 +11,7 @@
 /obj/structure/overmap/dynamic/player_outpost/registry_test
 	var/refuse_bay = FALSE
 
-/obj/structure/overmap/dynamic/player_outpost/registry_test/allocate_ship_bay(obj/structure/overmap/ship/visitor)
+/obj/structure/overmap/dynamic/player_outpost/registry_test/allocate_ship_bay(obj/structure/overmap/ship/visitor, datum/rebuild_owner)
 	if(refuse_bay)
 		return null
 	return ..()
@@ -71,8 +71,7 @@
 	home.shell_template = allocate(/datum/map_template/player_outpost/small)
 	home.founder_ckey = "registrycaptain"
 	TEST_ASSERT(home.load_level(), "The registry outpost did not load")
-	home.ship_bay_installed = TRUE
-	home.bay_berths.len = 2
+	TEST_ASSERT_NULL(home.enable_ship_bays(), "The permanent recovery bay did not load")
 	var/obj/machinery/computer/ship_checkpoint/terminal
 	for(var/obj/machinery/computer/ship_checkpoint/candidate as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/ship_checkpoint))
 		if(get_outpost_from_atom(candidate) == home)
@@ -208,7 +207,8 @@
 	original.forceMove(get_turf(home))
 	original.state = "flying"
 	home.on_ship_undock_complete(original)
-	TEST_ASSERT_NULL(home.bay_berths[1], "Departure retained the old bay")
+	TEST_ASSERT_EQUAL(home.bay_berths[1], bay, "Departure replaced the permanent bay")
+	TEST_ASSERT(bay.is_available(), "Departure retained the old ship reservation")
 	var/old_balance = original.ship_account.account_balance
 	if(orphaned_original)
 		// Reproduce the old admin deletion's resulting state without its known
@@ -242,7 +242,7 @@
 		panel = allocate(__IMPLIED_TYPE__, home, terminal, captain)
 		TEST_ASSERT_NULL(panel.rebuild_denial(captain, snapshot), "A new body with the saved captain's key cannot recover a destroyed hull")
 	var/list/recovery_data = panel.ui_data(captain)
-	TEST_ASSERT_EQUAL(length(recovery_data["bays"]), 0, "Recovery requires an already-loaded ship bay")
+	TEST_ASSERT_EQUAL(length(recovery_data["bays"]), 0, "An empty permanent bay was offered as a docked ship")
 	TEST_ASSERT_EQUAL(length(recovery_data["blueprints"]), 1, "The terminal lost the captain's saved hull")
 	var/list/saved_hull = recovery_data["blueprints"][1]
 	TEST_ASSERT_NULL(saved_hull["denial"], "The recovery button remains disabled after losing the original")
@@ -256,11 +256,13 @@
 		TEST_ASSERT_NULL(SSshuttle.preview_reservation, "A failed rebuild leaked its preview reservation")
 		TEST_ASSERT_NULL(SSshuttle.active_template_load, "A failed rebuild locked the shuttle loader")
 		TEST_ASSERT_EQUAL(original.ship_account.account_balance, old_balance, "A failed rebuild changed the original balance")
+		TEST_ASSERT(bay.is_available(), "Failed recovery retained the bay reservation")
 		home.refuse_bay = FALSE
 	TEST_ASSERT(panel.rebuild(captain, snapshot), "Rebuild failed: [panel.error]")
 	TEST_ASSERT_EQUAL(silo.materials.get_material_amount(/datum/material/iron), before_recovery_iron, "Rebuilding charged materials a second time")
 	var/datum/outpost_berth/ship_bay/rebuilt_bay = home.bay_berths[1]
-	TEST_ASSERT_NOTNULL(rebuilt_bay, "Recovery did not allocate a bay")
+	TEST_ASSERT_EQUAL(rebuilt_bay, bay, "Recovery replaced the permanent bay")
+	TEST_ASSERT_NULL(bay.rebuild_owner, "Successful recovery retained the build reservation")
 	var/obj/structure/overmap/ship/rebuilt = rebuilt_bay.ship
 	test_ships += rebuilt
 	TEST_ASSERT(rebuilt_bay.is_ship_present(), "Recovered ship is not physically docked")
@@ -351,4 +353,6 @@
 	rebuilt.forceMove(get_turf(home))
 	rebuilt.state = "flying"
 	home.on_ship_undock_complete(rebuilt)
-	TEST_ASSERT(QDELETED(rebuilt_bay), "Recovered ship departure leaked its bay")
+	TEST_ASSERT_EQUAL(home.bay_berths[1], rebuilt_bay, "Recovered ship departure replaced the permanent bay")
+	TEST_ASSERT(!QDELETED(rebuilt_bay.reservation) && rebuilt_bay.is_available(), "Recovered ship departure unloaded or retained its bay reservation")
+	TEST_ASSERT_EQUAL(home.get_floor_alcove(rebuilt_bay.berth_number), rebuilt_bay.alcove_turfs, "Recovered ship departure removed elevator access")

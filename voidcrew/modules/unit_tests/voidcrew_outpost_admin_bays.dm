@@ -45,14 +45,14 @@
 	var/before_balance = home.treasury.account_balance
 	var/before_iron = home_silo.materials.get_material_amount(/datum/material/iron)
 	panel.manage_outpost(home, operator, "install_bays", list())
-	TEST_ASSERT(home.ship_bay_installed && length(home.bay_berths) == 2, "Admin grant did not enable the normal two slots")
+	TEST_ASSERT(home.ship_bay_installed && length(home.bay_berths) == 1, "Admin grant did not enable the single permanent bay")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, before_balance, "Admin installation charged credits")
 	TEST_ASSERT_EQUAL(home_silo.materials.get_material_amount(/datum/material/iron), before_iron, "Admin installation consumed materials")
 	TEST_ASSERT_EQUAL(length(panel.operations), 1, "Admin installation was not logged exactly once")
 	panel.manage_outpost(home, operator, "install_bays", list())
 	TEST_ASSERT_EQUAL(length(panel.operations), 1, "Repeated installation logged a second successful grant")
 	var/list/data = panel.ship_bay_data(home)
-	TEST_ASSERT_EQUAL(length(data["slots"]), 2, "The admin UI hides empty installed bays")
+	TEST_ASSERT_EQUAL(length(data["slots"]), 1, "The admin UI hides empty installed bays")
 	var/list/first_slot = data["slots"][1]
 	TEST_ASSERT_EQUAL(first_slot["status"], "Available", "An empty bay is incorrectly marked occupied")
 
@@ -141,11 +141,11 @@
 	ship.docked = null
 	ship.state = "flying"
 	home.on_ship_undock_complete(ship)
-	TEST_ASSERT(QDELETED(bay), "Admin-created bay bypassed normal departure cleanup")
+	TEST_ASSERT(!QDELETED(bay) && bay.is_available(), "Admin-created bay did not survive departure")
 	var/next_floor = home.next_bay_floor_id
 	panel.manage_outpost(home, operator, "remove_bays", list())
-	TEST_ASSERT(!home.ship_bay_installed && !length(home.bay_berths), "Empty bay upgrade was not removed")
+	TEST_ASSERT(!home.ship_bay_installed && !length(home.bay_berths) && QDELETED(bay), "Empty bay upgrade was not removed")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, before_balance, "Removing an admin grant minted a refund")
 	panel.manage_outpost(home, operator, "install_bays", list())
 	TEST_ASSERT(home.ship_bay_installed, "Removed bays could not be reinstalled")
-	TEST_ASSERT_EQUAL(home.next_bay_floor_id, next_floor, "Reinstallation reused a retired elevator destination")
+	TEST_ASSERT_EQUAL(home.next_bay_floor_id, next_floor + 1, "Reinstallation reused a retired elevator destination")

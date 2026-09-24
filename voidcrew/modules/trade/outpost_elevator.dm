@@ -128,7 +128,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/outpost_elevator, 32)
 				floors += list(list(
 					// Negative IDs are display-only vacancies, never visit destinations.
 					"id" = bay ? bay.berth_number : -i - 1,
-					"name" = "Ship Bay [i]: [bay ? (bay.ship?.name || "reserved") : "vacant"]",
+					"name" = "Ship Bay [i]: [bay ? (bay.ship?.name || bay.status_text()) : "preparing"]",
 					"occupied" = bay && length(bay.alcove_turfs) > 0,
 					"your_ship" = !!(bay?.ship?.ship_team in user?.mind?.ship_teams),
 				))

@@ -44,10 +44,10 @@
 	TEST_ASSERT_NOTNULL(home.install_ship_bay(owner), "Repeated installation succeeded")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "Repeated installation charged again")
 	var/list/floors = bay_floors(panel, owner)
-	TEST_ASSERT_EQUAL(length(floors), 2, "Installed empty bays were invisible in the elevator")
+	TEST_ASSERT_EQUAL(length(floors), 1, "Installed empty bays were invisible in the elevator")
 	for(var/list/floor as anything in floors)
-		TEST_ASSERT(!floor["occupied"], "An empty bay offered an elevator ride")
-		TEST_ASSERT_NULL(home.get_floor_alcove(floor["id"]), "A vacancy ID resolved to a real floor")
+		TEST_ASSERT(floor["occupied"], "The permanent empty bay cannot be visited")
+		TEST_ASSERT_NOTNULL(home.get_floor_alcove(floor["id"]), "The empty bay has no elevator destination")
 
 	var/obj/structure/overmap/ship/ship = allocate(__IMPLIED_TYPE__)
 	visitor_port = new(run_loc_floor_bottom_left)
@@ -147,7 +147,7 @@
 	bay.revoke_silo()
 	qdel(second_silo)
 
-	// A person left on the shore side must survive the reservation being released.
+	// Departure leaves the permanent floor, occupants and fixtures in place.
 	owner.forceMove(bay.alcove_turfs[1])
 	visitor_turf.change_area(visitor_area, original_visitor_area)
 	visitor_turf = null
@@ -157,26 +157,28 @@
 	ship.state = "flying"
 	var/datum/turf_reservation/reserved = bay.reservation
 	home.on_ship_undock_complete(ship)
-	TEST_ASSERT(QDELETED(bay), "Departure leaked its bay datum")
-	TEST_ASSERT(QDELETED(reserved), "Departure leaked its turf reservation")
-	TEST_ASSERT(QDELETED(console), "Departure left a usable construction console")
-	TEST_ASSERT(get_turf(owner) in home.lobby_alcove_turfs, "Bay teardown did not evacuate the occupant")
-	TEST_ASSERT_NULL(home.get_floor_alcove(floor_id), "A departed bay remained an elevator destination")
+	TEST_ASSERT(!QDELETED(bay) && !QDELETED(reserved) && !QDELETED(console), "Departure unloaded the permanent bay")
+	TEST_ASSERT_EQUAL(get_turf(owner), bay.alcove_turfs[1], "Departure displaced a shore-side occupant")
+	TEST_ASSERT_EQUAL(home.get_floor_alcove(floor_id), bay.alcove_turfs, "Departure removed the elevator destination")
+	TEST_ASSERT(bay.is_available(), "The physically departed ship retained its reservation")
+	TEST_ASSERT_NULL(console.current_ship, "The permanent console retained its departed ship")
+	TEST_ASSERT_NULL(console.get_linked_silo(), "The empty bay retained the visitor's material link")
 	floors = bay_floors(panel, owner)
 	active_floor = floors[1]
-	TEST_ASSERT_EQUAL(length(floors), 2, "Departure hid the installed bay slots")
-	TEST_ASSERT(!active_floor["occupied"], "Departure left the bay's elevator button enabled")
-	TEST_ASSERT_NOTEQUAL(active_floor["id"], floor_id, "Departure retained a stale visit ID")
+	TEST_ASSERT_EQUAL(length(floors), 1, "Departure changed bay capacity")
+	TEST_ASSERT(active_floor["occupied"], "Departure disabled the permanent floor")
+	TEST_ASSERT_EQUAL(active_floor["id"], floor_id, "Departure replaced the permanent elevator destination")
 	var/datum/outpost_berth/ship_bay/replacement = home.allocate_ship_bay(ship)
-	TEST_ASSERT_NOTNULL(replacement, "The released slot could not be reused")
-	TEST_ASSERT_NOTEQUAL(replacement.berth_number, floor_id, "An old elevator ride could enter a different visit")
+	TEST_ASSERT_EQUAL(replacement, bay, "A return visit replaced the bay")
+	TEST_ASSERT_EQUAL(replacement.reservation, reserved, "A return visit reloaded the bay map")
 	TEST_ASSERT_NULL(replacement.approved_silo, "A new visit inherited material access")
-	reserved = replacement.reservation
 	replacement.check_arrival()
-	TEST_ASSERT(QDELETED(replacement) && QDELETED(reserved), "An aborted arrival leaked a bay")
+	TEST_ASSERT(!QDELETED(bay) && bay.is_available(), "An aborted arrival removed or retained the permanent bay")
+	TEST_ASSERT_EQUAL(bay.dock.ship_bay, bay, "Releasing a visit removed docking protection")
 
 /// Keep the capacity/deletion test independent of payment and construction failures.
 /datum/unit_test/voidcrew_outpost_ship_bay_capacity
+	parent_type = /datum/unit_test/voidcrew_outpost_management
 	var/list/ports = list()
 
 /datum/unit_test/voidcrew_outpost_ship_bay_capacity/Destroy()
@@ -190,8 +192,9 @@
 
 /datum/unit_test/voidcrew_outpost_ship_bay_capacity/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
-	home.ship_bay_installed = TRUE
-	home.bay_berths.len = 2
+	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	TEST_ASSERT(home.load_level(), "Capacity test outpost did not load")
+	TEST_ASSERT_NULL(home.enable_ship_bays(), "Permanent bay installation failed")
 	var/list/visitors = list()
 	for(var/i in 1 to 3)
 		var/obj/structure/overmap/ship/ship = allocate(__IMPLIED_TYPE__)
@@ -201,16 +204,30 @@
 		port.current_ship = ship
 		visitors += ship
 	var/datum/outpost_berth/ship_bay/first = home.allocate_ship_bay(visitors[1])
-	var/datum/outpost_berth/ship_bay/second = home.allocate_ship_bay(visitors[2])
-	TEST_ASSERT(first && second, "Two different ships could not reserve both bays")
-	TEST_ASSERT_NULL(home.allocate_ship_bay(visitors[3]), "A third ship bypassed bay capacity")
+	TEST_ASSERT_NOTNULL(first, "The installed bay could not be reserved")
+	TEST_ASSERT_NULL(home.allocate_ship_bay(visitors[2]), "A second ship bypassed the single bay reservation")
+	var/obj/docking_port/mobile/voidcrew/intruder = ports[2]
+	TEST_ASSERT_EQUAL(intruder.canDock(first.dock), SHUTTLE_SOMEONE_ELSE_DOCKED, "Another ship can target the reserved bay")
+	TEST_ASSERT_EQUAL(intruder.initiate_docking(first.dock, force = TRUE), DOCKING_BLOCKED, "A forced move bypassed the bay reservation")
 	var/datum/turf_reservation/first_reservation = first.reservation
 	var/obj/structure/overmap/ship/deleted_ship = visitors[1]
-	// Leave port disposal to the fixture, but exercise the actual ship-deletion signal.
 	deleted_ship.shuttle = null
 	qdel(deleted_ship)
-	TEST_ASSERT(QDELETED(first) && QDELETED(first_reservation), "Deleting a visiting ship leaked its bay")
-	TEST_ASSERT_NULL(home.bay_berths[1], "Ship deletion retained its slot")
-	var/datum/turf_reservation/second_reservation = second.reservation
+	TEST_ASSERT(!QDELETED(first) && !QDELETED(first_reservation), "Deleting a visiting ship unloaded the permanent bay")
+	TEST_ASSERT(first.is_available(), "Deleted ship retained the bay reservation")
+	var/datum/job = allocate(/datum)
+	TEST_ASSERT_EQUAL(home.reserve_rebuild_bay(job), first, "A rebuild could not reserve an empty permanent bay")
+	for(var/i in 1 to 3)
+		first.check_arrival()
+		first.release(force = TRUE)
+	TEST_ASSERT(!first.is_available(), "Arrival timeout or visit cleanup released a rebuild reservation")
+	TEST_ASSERT_NULL(home.allocate_ship_bay(visitors[2]), "A visitor took the bay during reconstruction")
+	TEST_ASSERT_NULL(home.reserve_rebuild_bay(src), "A second rebuild took an occupied reservation")
+	TEST_ASSERT_EQUAL(intruder.initiate_docking(first.dock, force = TRUE), DOCKING_BLOCKED, "A visitor physically landed during reconstruction")
+	first.finish_rebuild(src)
+	TEST_ASSERT(!first.is_available(), "Another job unlocked the reconstruction bay")
+	first.finish_rebuild(job)
+	TEST_ASSERT(first.is_available(), "A completed empty job did not release its reservation")
+	TEST_ASSERT_EQUAL(home.allocate_ship_bay(visitors[2]), first, "The same permanent bay could not be reassigned")
 	qdel(home)
-	TEST_ASSERT(QDELETED(second) && QDELETED(second_reservation), "Deleting the outpost leaked its other bay")
+	TEST_ASSERT(QDELETED(first) && QDELETED(first_reservation), "Deleting the outpost leaked its permanent bay")

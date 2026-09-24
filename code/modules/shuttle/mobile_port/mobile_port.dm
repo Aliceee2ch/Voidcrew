@@ -288,6 +288,11 @@
 	if(!istype(stationary_dock))
 		return SHUTTLE_NOT_A_DOCKING_PORT
 
+	// VOIDCREW EDIT ADDITION START: permanent outpost bays require a reservation (player_outposts).
+	if(!stationary_dock.allows_ship_bay_docking(src))
+		return SHUTTLE_SOMEONE_ELSE_DOCKED
+	// VOIDCREW EDIT ADDITION END
+
 	if(stationary_dock.override_can_dock_checks)
 		return SHUTTLE_CAN_DOCK
 

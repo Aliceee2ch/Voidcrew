@@ -469,7 +469,7 @@ const ShipBays = ({
   act: DetailsProps['act'];
 }) => (
   <Section
-    title="Ship Bays"
+    title="Ship Bay"
     buttons={
       data.installed ? (
         <Button
@@ -489,18 +489,18 @@ const ShipBays = ({
           tooltip={data.install_denial}
           onClick={() => act('install_bays')}
         >
-          Install {data.capacity} Bays (Free)
+          Install Bay (Free)
         </Button>
       )
     }
   >
     <Box mb={1}>
-      {data.installed ? `${data.capacity} bays installed` : 'Not installed'}
+      {data.installed ? 'One permanent bay installed' : 'Not installed'}
       {' / '}
       {data.saved_checkpoints} saved checkpoints
     </Box>
     <Box color="label" mb={1}>
-      Bay interiors are created when a ship arrives.
+      The bay stays loaded between visits.
     </Box>
     {!!(data.installed ? data.remove_denial : data.install_denial) && (
       <Box color="label" mb={1}>

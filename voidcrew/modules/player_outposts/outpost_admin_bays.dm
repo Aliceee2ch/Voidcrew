@@ -7,13 +7,7 @@
 			slots += list(list("number" = number, "ref" = null, "status" = "Available"))
 			continue
 		bay.reconcile_silo()
-		var/status = "Reserved"
-		if(!bay.reservation)
-			status = "Preparing"
-		else if(bay.is_ship_present())
-			status = "Docked"
-		else if(bay.ship?.state == OVERMAP_SHIP_UNDOCKING)
-			status = "Departing"
+		var/status = bay.status_text()
 		var/obj/machinery/ore_silo/silo = bay.console?.get_linked_silo()
 		slots += list(list(
 			"number" = number, "ref" = REF(bay), "ship" = bay.ship?.name,
@@ -49,12 +43,12 @@
 /// Never disable recovery or truncate reservations belonging to an active visit.
 /datum/outpost_manipulator/proc/bay_removal_denial(obj/structure/overmap/dynamic/player_outpost/home)
 	if(!home.ship_bay_installed)
-		return "Ship bays are not installed."
+		return "The ship bay is not installed."
 	if(length(home.checkpoints))
-		return "Saved checkpoints still depend on these bays."
+		return "Saved checkpoints still depend on this bay."
 	for(var/datum/outpost_berth/ship_bay/bay as anything in home.bay_berths)
-		if(bay)
-			return "Undock visiting ships and wait for all bay reservations to clear."
+		if(bay && !bay.is_available())
+			return "Undock the ship and finish any checkpoint rebuild first."
 	for(var/obj/structure/overmap/ship/ship as anything in home.pending_dock_variants)
 		if(home.pending_dock_variants[ship] == OUTPOST_DOCK_VARIANT_BAY)
 			return "Resolve pending ship-bay docking requests first."
@@ -68,7 +62,7 @@
 		if("install_bays")
 			error = home.enable_ship_bays()
 			if(!error)
-				record(user, home, "install [OUTPOST_SHIP_BAY_SLOTS] ship bays without payment")
+				record(user, home, "install one permanent ship bay without payment")
 			return
 		if("remove_bays")
 			error = bay_removal_denial(home)
@@ -80,6 +74,9 @@
 			if(error)
 				return
 			home.ship_bay_installed = FALSE
+			for(var/datum/outpost_berth/ship_bay/removing as anything in home.bay_berths.Copy())
+				if(removing)
+					qdel(removing)
 			home.bay_berths.Cut()
 			home.refresh_elevator_uis()
 			record(user, home, "remove the empty ship-bay upgrade without refund")

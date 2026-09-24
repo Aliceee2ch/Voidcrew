@@ -6,7 +6,8 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 
 /obj/structure/overmap/dynamic/player_outpost
 	var/ship_bay_installed = FALSE
-	/// Separate from ordinary hangars; each visit owns its reservation and permissions.
+	var/ship_bay_installing = FALSE
+	/// A permanent interior, with an exclusive reservation for its current ship or rebuild.
 	var/list/datum/outpost_berth/ship_bay/bay_berths = list()
 	/// Never reuse an elevator destination while an old ride could still be pending.
 	var/next_bay_floor_id = OUTPOST_MAX_BERTHS + 2
@@ -66,62 +67,68 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 
 /// Structural requirements shared by paid installation and administrative grants.
 /obj/structure/overmap/dynamic/player_outpost/proc/ship_bay_setup_denial()
-	if(ship_bay_installed)
-		return "Ship bay already installed."
+	if(ship_bay_installed || ship_bay_installing)
+		return "Ship bay already installed or being prepared."
 	if(loading || !loaded || !has_hangar_elevator())
 		return "An operational outpost elevator is required."
 	return null
 
-/// Caller authorizes and, for normal installation, charges before enabling the slots.
+/// Load the permanent interior before granting the upgrade or taking payment.
 /obj/structure/overmap/dynamic/player_outpost/proc/enable_ship_bays()
 	var/denial = ship_bay_setup_denial()
 	if(denial)
 		return denial
+	ship_bay_installing = TRUE
+	var/datum/outpost_berth/ship_bay/bay = create_ship_bay()
+	ship_bay_installing = FALSE
+	if(QDELETED(src) || QDELETED(bay))
+		return "The ship bay could not be prepared."
 	ship_bay_installed = TRUE
-	bay_berths.len = OUTPOST_SHIP_BAY_SLOTS
 	refresh_elevator_uis()
 	return null
 
-/// No prompts or map loading between validation and payment.
 /obj/structure/overmap/dynamic/player_outpost/proc/install_ship_bay(mob/user)
 	var/denial = ship_bay_install_denial(user)
 	if(denial)
 		return denial
+	ship_bay_installing = TRUE
+	var/datum/outpost_berth/ship_bay/bay = create_ship_bay()
+	ship_bay_installing = FALSE
+	if(QDELETED(src) || QDELETED(bay))
+		return "The ship bay could not be prepared. No payment was taken."
+	// Loading yields: revalidate ownership, funds and the selected silo before paying.
+	denial = ship_bay_install_denial(user)
+	if(denial)
+		qdel(bay)
+		return denial
 	var/obj/machinery/ore_silo/silo = ship_bay_silo()
 	if(!treasury.adjust_money(-OUTPOST_SHIP_BAY_COST, "Ship bay installation by [user.ckey]"))
+		qdel(bay)
 		return "Insufficient outpost funds."
 	silo.materials.use_materials(ship_bay_material_cost())
-	enable_ship_bays()
-	log_game("[key_name(user)] installed ship bays at [src].")
+	ship_bay_installed = TRUE
+	refresh_elevator_uis()
+	log_game("[key_name(user)] installed a permanent ship bay at [src].")
 	return null
 
-/obj/structure/overmap/dynamic/player_outpost/proc/allocate_ship_bay(obj/structure/overmap/ship/visitor)
-	if(!ship_bay_installed || QDELETED(visitor) || QDELETED(visitor.shuttle))
+/// Only installation creates the interior; docking never replaces its map or fixtures.
+/obj/structure/overmap/dynamic/player_outpost/proc/create_ship_bay()
+	if(length(bay_berths) && bay_berths[1])
 		return null
-	var/slot = 0
-	for(var/i in 1 to length(bay_berths))
-		if(bay_berths[i]?.ship == visitor)
-			return null
-		if(!bay_berths[i] && !slot)
-			slot = i
-	if(!slot)
-		return null
-	// Claim the slot before the reservation and template loader can yield.
-	var/datum/outpost_berth/ship_bay/bay = new(src, next_bay_floor_id++, visitor)
-	bay.bay_number = slot
-	bay_berths[slot] = bay
+	var/datum/outpost_berth/ship_bay/bay = new(src, next_bay_floor_id++, null)
+	bay.bay_number = 1
+	bay_berths = list(bay)
 	if(!GLOB.outpost_ship_bay_template)
 		GLOB.outpost_ship_bay_template = new
 	var/datum/map_template/outpost_hangar/ship_bay/template = GLOB.outpost_ship_bay_template
-	var/datum/turf_reservation/reserved = SSmapping.request_turf_block_reservation(template.width, template.height, 1, requester = "ship bay for '[visitor.name]' at '[name]'")
+	var/datum/turf_reservation/reserved = SSmapping.request_turf_block_reservation(template.width, template.height, 1, requester = "permanent ship bay at '[name]'")
 	if(!reserved)
 		qdel(bay)
 		return null
-	// Keep the reservation local through loading: deleting the host must not wipe
-	// turfs underneath a suspended map loader. Transfer ownership after validation.
+	// Keep the reservation local until a yielding map load has finished.
 	var/turf/origin = reserved.bottom_left_turfs[1]
 	var/loaded_bay = template.load(origin)
-	if(!loaded_bay || QDELETED(src) || QDELETED(bay) || QDELETED(visitor) || QDELETED(visitor.shuttle))
+	if(!loaded_bay || QDELETED(src) || QDELETED(bay))
 		qdel(reserved)
 		if(!QDELETED(bay))
 			qdel(bay)
@@ -131,8 +138,25 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(!bay.link_hangar_contents())
 		qdel(bay)
 		return null
-	bay.setup_signals()
-	refresh_elevator_uis()
+	return bay
+
+/obj/structure/overmap/dynamic/player_outpost/proc/available_ship_bay()
+	var/datum/outpost_berth/ship_bay/bay = LAZYACCESS(bay_berths, 1)
+	return ship_bay_installed && bay?.is_available() ? bay : null
+
+/obj/structure/overmap/dynamic/player_outpost/proc/allocate_ship_bay(obj/structure/overmap/ship/visitor, datum/rebuild_owner)
+	var/datum/outpost_berth/ship_bay/bay = LAZYACCESS(bay_berths, 1)
+	if(!ship_bay_installed || QDELETED(visitor) || QDELETED(visitor.shuttle) || !bay?.assign_ship(visitor, rebuild_owner))
+		return null
+	return bay
+
+/// Claim the empty bay before waiting for a loader or placing any part of a ship.
+/obj/structure/overmap/dynamic/player_outpost/proc/reserve_rebuild_bay(datum/owner)
+	var/datum/outpost_berth/ship_bay/bay = available_ship_bay()
+	if(!bay || QDELETED(owner))
+		return null
+	bay.rebuild_owner = WEAKREF(owner)
+	bay.update_status()
 	return bay
 
 /obj/structure/overmap/dynamic/player_outpost/proc/revoke_bay_materials()
@@ -151,11 +175,112 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	var/silo_requested_at
 	var/datum/weakref/approved_silo
 	var/silo_owner_ckey
+	var/datum/weakref/rebuild_owner
+	var/release_pending = FALSE
+	var/release_timer
+
+/datum/outpost_berth/ship_bay/proc/is_available()
+	return !QDELETED(src) && !QDELETED(reservation) && !QDELETED(dock) && !ship && !rebuild_owner && !release_pending && !dock.get_docked()
+
+/datum/outpost_berth/ship_bay/proc/status_text()
+	if(!reservation)
+		return "Preparing"
+	if(rebuild_owner)
+		return "Rebuilding"
+	if(is_ship_present())
+		return "Docked"
+	if(release_pending || ship?.state == OVERMAP_SHIP_UNDOCKING)
+		return "Departing"
+	return is_available() ? "Available" : "Reserved"
+
+/datum/outpost_berth/ship_bay/proc/update_status()
+	for(var/obj/machinery/status_display/outpost_berth/sign as anything in status_signs)
+		sign.set_messages("SHIP BAY", ship?.name || status_text())
+	outpost?.refresh_elevator_uis()
+
+/datum/outpost_berth/ship_bay/proc/assign_ship(obj/structure/overmap/ship/visitor, datum/owner)
+	if(QDELETED(src) || QDELETED(reservation) || QDELETED(dock))
+		return FALSE
+	if(owner)
+		if(!IS_WEAKREF_OF(owner, rebuild_owner) || ship || dock?.get_docked())
+			return FALSE
+	else if(!is_available())
+		return FALSE
+	ship = visitor
+	arrived = FALSE
+	release_retries = 0
+	reset_reserve_dock_to_home(dock)
+	console?.attempt_ship_connection()
+	setup_signals()
+	if(rebuild_owner && arrival_watchdog)
+		deltimer(arrival_watchdog)
+		arrival_watchdog = null
+	update_status()
+	return TRUE
+
+/datum/outpost_berth/ship_bay/proc/finish_rebuild(datum/owner)
+	if(!IS_WEAKREF_OF(owner, rebuild_owner))
+		return
+	rebuild_owner = null
+	if(release_pending || !ship)
+		release()
+	update_status()
+
+/// Departure releases the visitor, never the outpost's permanent turf reservation.
+/datum/outpost_berth/ship_bay/release(force = FALSE)
+	if(QDELETED(src))
+		return
+	if(rebuild_owner)
+		return
+	release_pending = TRUE
+	if(dock?.get_docked())
+		if(!release_timer && release_retries++ < 10)
+			release_timer = addtimer(CALLBACK(src, PROC_REF(retry_release)), 1 SECONDS, TIMER_STOPPABLE)
+		return
+	if(arrival_watchdog)
+		deltimer(arrival_watchdog)
+		arrival_watchdog = null
+	if(ship)
+		UnregisterSignal(ship, list(COMSIG_VOIDCREW_SHIP_DOCKED, COMSIG_QDELETING))
+	ship = null
+	if(release_timer)
+		deltimer(release_timer)
+		release_timer = null
+	arrived = FALSE
+	release_pending = FALSE
+	release_retries = 0
+	revoke_silo()
+	if(console)
+		console.unset_machine()
+		console.clear_construction_queue()
+		console.clear_repair_journal(TRUE)
+		for(var/obj/structure/ship_repair_drone/drone as anything in console.repair_drones.Copy())
+			drone.unlink_console()
+		console.disconnect_materials()
+		console.current_ship = null
+	reset_reserve_dock_to_home(dock)
+	update_status()
+
+/datum/outpost_berth/ship_bay/proc/retry_release()
+	release_timer = null
+	if(release_pending)
+		release()
+
+/datum/outpost_berth/ship_bay/check_arrival()
+	if(rebuild_owner)
+		return
+	return ..()
 
 /datum/outpost_berth/ship_bay/Destroy()
+	if(release_timer)
+		deltimer(release_timer)
+		release_timer = null
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost
 	if(home && bay_number && LAZYACCESS(home.bay_berths, bay_number) == src)
 		home.bay_berths[bay_number] = null
+	rebuild_owner = null
+	if(dock)
+		dock.ship_bay = null
 	revoke_silo()
 	if(console)
 		console.disconnect_materials()
@@ -177,9 +302,10 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		return FALSE
 	console.berth = src
 	console.attempt_ship_connection()
-	dock.name = "[outpost.name] Ship Bay [bay_number]"
-	for(var/obj/machinery/status_display/outpost_berth/sign as anything in status_signs)
-		sign.set_messages("BAY [bay_number]", ship.name)
+	dock.name = "[outpost.name] Ship Bay"
+	dock.ship_bay = src
+	dock.mark_reserve_home()
+	update_status()
 	return TRUE
 
 /datum/outpost_berth/ship_bay/on_ship_docked(datum/source)
@@ -187,6 +313,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(QDELETED(ship) || dock?.get_docked() != ship.shuttle)
 		return
 	arrived = TRUE
+	update_status()
 	if(arrival_watchdog)
 		deltimer(arrival_watchdog)
 		arrival_watchdog = null
@@ -244,6 +371,8 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		console.use_ship_silo()
 
 /datum/outpost_berth/ship_bay/proc/reconcile_silo()
+	if(release_pending && !dock?.get_docked())
+		release()
 	if(silo_requested_at && world.time - silo_requested_at >= OUTPOST_DOCK_REQUEST_TIMEOUT)
 		silo_requested_at = null
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost
@@ -395,3 +524,10 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		var/datum/material/material = GET_MATERIAL_REF(material_type)
 		result += list(list("name" = material.name, "sheets" = cost[material_type] / SHEET_MATERIAL_AMOUNT, "available" = (silo?.materials?.get_material_amount(material_type) || 0) / SHEET_MATERIAL_AMOUNT))
 	return result
+
+/// Both the advertised docking check and the physical move enforce the reservation.
+/obj/docking_port/stationary
+	var/datum/outpost_berth/ship_bay/ship_bay
+
+/obj/docking_port/stationary/proc/allows_ship_bay_docking(obj/docking_port/mobile/visitor)
+	return !ship_bay || (!QDELETED(ship_bay.ship) && ship_bay.ship.shuttle == visitor)

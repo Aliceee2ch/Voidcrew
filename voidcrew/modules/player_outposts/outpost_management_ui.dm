@@ -170,7 +170,7 @@
 		if(!bay)
 			continue
 		bay.reconcile_silo()
-		bays += list(list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
+		bays += list(list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
 	data["ship_bays"] = bays
 	return data
 

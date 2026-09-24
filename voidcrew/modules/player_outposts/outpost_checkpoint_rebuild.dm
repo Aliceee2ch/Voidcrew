@@ -17,13 +17,8 @@
 		// roster alone must not prevent recovery of a ship that no longer exists.
 		if(!QDELETED(original.shuttle) && !original.abandoned)
 			return "The original hull must be lost or abandoned."
-	if(!allow_busy)
-		var/free_bay = FALSE
-		for(var/i in 1 to length(outpost.bay_berths))
-			if(!outpost.bay_berths[i])
-				free_bay = TRUE
-		if(!free_bay)
-			return "Both ship bays are occupied."
+	if(!allow_busy && !outpost.available_ship_bay())
+		return "The ship bay is occupied or reserved."
 	return null
 
 /datum/ship_checkpoint_ui/proc/rebuild(mob/living/user, datum/ship_checkpoint/snapshot)
@@ -38,7 +33,12 @@
 	if(original)
 		original.checkpoint_rebuilding = TRUE
 	var/datum/checkpoint_rebuild/operation = new(src, snapshot, user)
-	var/success = SSshuttle.run_template_load(CALLBACK(operation, TYPE_PROC_REF(/datum/checkpoint_rebuild, execute)), wait_timeout = 30 SECONDS)
+	operation.bay = outpost.reserve_rebuild_bay(operation)
+	var/success = FALSE
+	if(operation.bay)
+		success = SSshuttle.run_template_load(CALLBACK(operation, TYPE_PROC_REF(/datum/checkpoint_rebuild, execute)), wait_timeout = 30 SECONDS)
+	else
+		operation.error = "The ship bay is occupied or reserved."
 	if(!QDELETED(original))
 		original.checkpoint_rebuilding = FALSE
 	if(!QDELETED(snapshot))
@@ -68,6 +68,8 @@
 	home = blueprint.outpost
 
 /datum/checkpoint_rebuild/Destroy()
+	if(!QDELETED(bay))
+		bay.finish_rebuild(src)
 	panel = null
 	snapshot = null
 	captain = null
@@ -132,8 +134,8 @@
 			continue
 		for(var/obj/machinery/machine in tile)
 			restore_machine(machine)
-	bay = home.allocate_ship_bay(vessel)
-	if(QDELETED(bay) || QDELETED(panel) || QDELETED(snapshot) || QDELETED(vessel))
+	var/datum/outpost_berth/ship_bay/assigned = home.allocate_ship_bay(vessel, src)
+	if(assigned != bay || QDELETED(bay) || QDELETED(panel) || QDELETED(snapshot) || QDELETED(vessel))
 		error = "A ship bay is no longer available."
 		return FALSE
 	error = panel.rebuild_denial(captain, snapshot, allow_busy = TRUE)

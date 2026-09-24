@@ -693,6 +693,12 @@
 	var/area/site_area = target.loc
 	var/move_mode = room.beforeShuttleMove(port.shuttle_areas)
 	move_mode = source.fromShuttleMove(target, move_mode)
+	// A new tile keeps the hangar air already on its spot. Carrying the saved air would drop
+	// vacuum pockets (airless exterior plating) into a pressurised bay and blow people around.
+	var/datum/gas_mixture/bay_air
+	if(isopenturf(target))
+		var/turf/open/open_target = target
+		bay_air = open_target.air?.copy()
 	if(move_mode & MOVE_TURF)
 		// Bay grime is under the new deck. Players and whatever they brought stay put.
 		for(var/obj/effect/decal/cleanable/grime in target)
@@ -711,6 +717,10 @@
 		target.shuttleRotate(rotation)
 	SEND_SIGNAL(target, COMSIG_TURF_AFTER_SHUTTLE_MOVE, source)
 	target.lateShuttleMove(source)
+	if(bay_air && isopenturf(target))
+		var/turf/open/open_deck = target
+		open_deck.air?.copy_from(bay_air)
+		open_deck.air_update_turf(TRUE, FALSE)
 	// lateShuttleMove() reopened the hidden tile; keep the copy sealed.
 	source.blocks_air = TRUE
 	source.air_update_turf(TRUE, TRUE)

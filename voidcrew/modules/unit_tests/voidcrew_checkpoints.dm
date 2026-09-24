@@ -512,6 +512,10 @@
 			else
 				TEST_ASSERT(!stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) was refilled with [stored_tank.air_contents?.total_moles()] moles")
 	TEST_ASSERT(length(rebuilt.helm_consoles), "Recovered ship has no connected helm")
+	// Decks take the hangar's air as they land; an airless tile would be a vacuum pocket in the bay.
+	for(var/turf/open/deck in rebuilt.shuttle.return_turfs())
+		if((get_area(deck) in rebuilt.shuttle.shuttle_areas) && !deck.blocks_air && !isspaceturf(deck))
+			TEST_ASSERT(deck.air?.total_moles() > 0, "Rebuilt deck [deck.x],[deck.y] ([deck.type]) landed as a vacuum pocket in the bay")
 	var/obj/machinery/cryopod/spawn_pod = locate() in rebuilt.shuttle.spawn_points
 	TEST_ASSERT(spawn_pod && (get_area(spawn_pod) in rebuilt.shuttle.shuttle_areas), "Recovered ship has no cryopod spawn point")
 	for(var/obj/machinery/computer/helm/helm as anything in rebuilt.helm_consoles)

@@ -72,7 +72,7 @@ Clicking a prisoner asleep in bed shakes them awake, which they don't like. Clic
 
 ## Searches
 
-Unhappy prisoners hide things in their cells: a shiv under the mattress, or a bag of home-brewed pruno in the toilet tank. Scraping from a cell or bubbling from a toilet gives it away. Members can right-click a cell's bed with an empty hand to search the mattress, or right-click its toilet to search the tank. You can also lift the tank's lid with a crowbar (there is one on the office rack) and reach in. Searching an innocent prisoner's cell or patting them down for nothing upsets the yard.
+Unhappy prisoners hide things in their cells: a shiv under the mattress, or a bag of home-brewed pruno in the toilet tank. Scraping from a cell or bubbling from a toilet gives it away. Members can right-click a cell's bed with an empty hand to search the mattress. To search a toilet tank, lift its lid with a crowbar (there is one on the office rack), then click the tank with an empty hand. Searching an innocent prisoner's cell or patting them down for nothing upsets the yard.
 
 ## Mail
 

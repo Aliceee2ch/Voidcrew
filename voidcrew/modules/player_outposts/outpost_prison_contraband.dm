@@ -6,9 +6,9 @@
  * cell. A shiv stash makes the yard tenser and its owner quicker to riot, and is the shiv they
  * draw when they do (decision 8 unchanged: every rioter still has a shiv, and shivs only come out
  * in riots). Pruno cheers the drinker and makes them quarrelsome for a while. Members search a
- * cell's mattress or its toilet cistern by hand (a right click), lift the cistern lid with a
- * crowbar and reach in tg's way, or pat a prisoner down from the talk menu ("Search"); searching
- * costs the yard's goodwill either way. Numbers in voidcrew/_DEFINES/outpost_prison_contraband.dm.
+ * cell's mattress by hand (a right click), its toilet cistern by hand once the lid is off (tg's
+ * crowbar, then a click), or pat a prisoner down from the talk menu ("Search"); searching costs the
+ * yard's goodwill either way. Numbers in voidcrew/_DEFINES/outpost_prison_contraband.dm.
  *
  * Every stash is made where someone could have seen it: only while the prisoner's AI runs (someone
  * is on the level), with an emote and a sound, and it stops as soon as staff come into view. A shiv
@@ -317,7 +317,7 @@
 
 // ===== THE BEDS AND TOILETS =====
 
-/// Listens to every bed (right click: the mattress search) and toilet (right click: the cistern search; the cistern itself) inside the cells
+/// Listens to every bed (right click: the mattress search) and toilet (a click with the lid off: the cistern search; the cistern itself) inside the cells
 /datum/outpost_prison/proc/contraband_hook_fixtures()
 	for(var/key in contraband_hooked.Copy())
 		var/datum/weakref/known = contraband_hooked[key]
@@ -345,8 +345,14 @@
 
 /// A cell toilet's hooks: the hand search, and the watch on its cistern for the pruno leaving it
 /datum/outpost_prison/proc/contraband_hook_toilet(obj/structure/toilet/toilet)
+	if(QDELETED(toilet))
+		return FALSE
+	// A structure's hand click ends in interact(), which overwrites a signal's cancel and does nothing
+	// for a toilet. Without it, tg's attack_hand() stops when the search takes the click, and does
+	// everything else as before.
+	toilet.interaction_flags_atom &= ~INTERACT_ATOM_ATTACK_HAND
 	return contraband_hook(toilet, list(
-		(COMSIG_ATOM_ATTACK_HAND_SECONDARY) = PROC_REF(contraband_on_toilet_click),
+		(COMSIG_ATOM_ATTACK_HAND) = PROC_REF(contraband_on_toilet_click),
 		(COMSIG_ATOM_EXITED) = PROC_REF(contraband_on_cistern_exited),
 	))
 
@@ -399,12 +405,16 @@
 	return "empty"
 
 /**
- * A right click with an empty hand on a toilet inside a cell: members search the cistern. It takes
- * the click, so the toilet does not flush as well (a VOIDCREW EDIT in tg's toilet.dm).
+ * An empty-hand click on a toilet inside a cell with its cistern lid off (tg's crowbar step): members
+ * search the cistern, in place of tg's grab of one item, and visitors are refused, so nobody gets
+ * round the search's rules. With the lid on, or a swirlie going, the click is tg's own; so is the
+ * right click, the flush.
  */
 /datum/outpost_prison/proc/contraband_on_toilet_click(obj/structure/toilet/source, mob/user, list/modifiers)
 	SIGNAL_HANDLER
-	if(!isliving(user) || is_outpost_prisoner(user) || !cell_at(get_turf(source)))
+	if(!source.cistern_open || LAZYACCESS(modifiers, RIGHT_CLICK) || !isliving(user) || is_outpost_prisoner(user) || !cell_at(get_turf(source)))
+		return NONE
+	if(source.swirlie || isliving(user.pulling))
 		return NONE
 	if(!is_member(user))
 		source.balloon_alert(user, "members only")
@@ -417,7 +427,7 @@
 	return COMPONENT_CANCEL_ATTACK_CHAIN
 
 /**
- * A member searches a cell toilet's cistern for OUTPOST_CONTRABAND_SEARCH_TIME, lid on or off, and
+ * A member searches a cell toilet's cistern, its lid off, for OUTPOST_CONTRABAND_SEARCH_TIME, and
  * takes out everything in it. Prison contraband (the cell's pruno, a shiv, a razor blade or yeast)
  * is a find, as under the mattress; anything else is handed over, but the search counts as empty.
  * Returns "found", "empty", or null when nothing was searched. Sleeps.
@@ -426,13 +436,13 @@
 	if(QDELETED(user) || QDELETED(toilet) || !is_member(user) || DOING_INTERACTION_WITH_TARGET(user, toilet))
 		return null
 	var/datum/outpost_prison_cell/cell = cell_at(get_turf(toilet))
-	if(!cell || toilet.has_buckled_mobs())
+	if(!cell || !toilet.cistern_open || toilet.has_buckled_mobs())
 		return null
-	user.visible_message(span_notice("[user] lifts the lid off the cistern of [toilet] and feels around inside."), span_notice("You search the cistern."))
-	playsound(toilet, 'sound/effects/stonedoor_openclose.ogg', 30, TRUE)
+	user.visible_message(span_notice("[user] feels around inside the cistern of [toilet]."), span_notice("You search the cistern."))
+	playsound(toilet, SFX_RUSTLE, 40, TRUE)
 	if(!do_after(user, OUTPOST_CONTRABAND_SEARCH_TIME, target = toilet))
 		return null
-	if(QDELETED(src) || QDELETED(toilet) || QDELETED(user) || cell_at(get_turf(toilet)) != cell || toilet.has_buckled_mobs())
+	if(QDELETED(src) || QDELETED(toilet) || QDELETED(user) || cell_at(get_turf(toilet)) != cell || !toilet.cistern_open || toilet.has_buckled_mobs())
 		return null
 	var/obj/item/pruno = contraband_pruno(cell)
 	// Forgotten first, so the cistern watch does not count the pruno a second time
@@ -690,7 +700,7 @@
 		var/datum/weakref/known = contraband_hooked[key]
 		var/obj/thing = known?.resolve()
 		if(thing)
-			UnregisterSignal(thing, list(COMSIG_ATOM_ATTACK_HAND_SECONDARY, COMSIG_ATOM_EXITED))
+			UnregisterSignal(thing, list(COMSIG_ATOM_ATTACK_HAND, COMSIG_ATOM_ATTACK_HAND_SECONDARY, COMSIG_ATOM_EXITED))
 	contraband_hooked.Cut()
 	// Prisoners deleted with the prison never pass through forget()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)

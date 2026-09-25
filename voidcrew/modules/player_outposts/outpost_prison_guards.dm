@@ -160,9 +160,9 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 /mob/living/basic/outpost_prison_guard/proc/on_duty()
 	return !QDELETED(src) && phase == OUTPOST_GUARD_PRESENT && stat == CONSCIOUS
 
-/// Whether their AI is running, which it is only while someone is on the level to see them
+/// Whether their AI is running, which it is only while someone is on the level to see them (see outpost_prison_ai_running())
 /mob/living/basic/outpost_prison_guard/proc/ai_running()
-	return ai_controller?.ai_status == AI_STATUS_ON
+	return outpost_prison_ai_running(src)
 
 /mob/living/basic/outpost_prison_guard/update_overlays()
 	. = ..()

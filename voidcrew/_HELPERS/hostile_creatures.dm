@@ -37,8 +37,11 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
  * pinned to a person's, so it stays honest if that strategy gains more variants.
  */
 /proc/creature_threatens_people(mob/living/creature)
-	// A mob with no AI controller (or none set on its blackboard) has no strategy to look up.
-	var/strategy_type = creature.ai_controller?.blackboard?[BB_TARGETING_STRATEGY]
+	// No strategy to look up without a running controller: none at all, or a mob that has not
+	// initialized yet, whose ai_controller is still a type path (a trader outpost's crew while
+	// the outpost loads, with its turrets already scanning).
+	var/datum/ai_controller/controller = creature.ai_controller
+	var/strategy_type = istype(controller) ? controller.blackboard[BB_TARGETING_STRATEGY] : null
 	var/datum/targeting_strategy/basic/of_size/sizer = strategy_type ? GET_TARGETING_STRATEGY(strategy_type) : null
 	if(!istype(sizer)) // Anything not size-gated will take a swing at whatever it can reach.
 		return TRUE
@@ -82,7 +85,7 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
 		return FALSE
 
 	var/datum/ai_controller/controller = creature.ai_controller
-	if(!controller)
+	if(!istype(controller)) // no AI, or not started yet (still a type path)
 		return FALSE
 
 	var/provoked = FALSE

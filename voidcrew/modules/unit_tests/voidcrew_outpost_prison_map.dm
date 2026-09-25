@@ -8,9 +8,9 @@
  */
 
 /// A turned wing comes with a tiny fan under its entrance, its yard bin and its office kit: the
-/// baton instead of handcuffs, the recharger, light tubes, flashlights, the cleaning kit, eight
-/// uniforms, the mailbag on an office table by a serving hatch, a crowbar on the rack for the
-/// cell cisterns, and air scrubbers in the cells and the yard.
+/// baton instead of handcuffs, the recharger, a mixed box of lights, flashlights, the cleaning kit,
+/// eight uniforms, a crowbar on the rack for the cell cisterns, and air scrubbers in the cells and
+/// the yard.
 /datum/unit_test/voidcrew_outpost_prison_map_kit
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -88,14 +88,16 @@
 	TEST_ASSERT(locate(/obj/structure/table) in get_turf(rechargers[1]), "The recharger is not on a table")
 
 	// Lights and the cleaning kit.
-	var/list/tubes = wing_things(prison, /obj/item/storage/box/lights/tubes)
-	TEST_ASSERT_EQUAL(length(tubes), 1, "The wing should have one box of light tubes")
+	// tg's mixed box, tubes and bulbs: the wing has both kinds of fixture.
+	var/list/light_boxes = wing_things(prison, /obj/item/storage/box/lights/mixed)
+	TEST_ASSERT_EQUAL(length(light_boxes), 1, "The wing should have one mixed box of lights")
+	TEST_ASSERT_EQUAL(length(wing_things(prison, /obj/item/storage/box/lights/tubes)), 0, "The wing still has a tubes-only box, which can't replace its bulbs")
 	var/flashlights = 0
 	for(var/obj/item/flashlight/light as anything in wing_things(prison, /obj/item/flashlight))
 		if(light.type == /obj/item/flashlight)
 			flashlights++
 	TEST_ASSERT_EQUAL(flashlights, 2, "The wing should have two flashlights")
-	var/list/kit = batons + rechargers + tubes
+	var/list/kit = batons + rechargers + light_boxes
 	for(var/kit_type in list(/obj/item/mop, /obj/structure/mop_bucket, /obj/item/storage/bag/trash, /obj/item/reagent_containers/spray/cleaner, /obj/item/clothing/suit/caution, /obj/item/melee/flyswatter))
 		var/list/pieces = wing_things(prison, kit_type)
 		TEST_ASSERT(length(pieces), "The wing has no [kit_type]")
@@ -109,20 +111,6 @@
 		TEST_ASSERT(istype(uniform.loc, /obj/structure/closet) && !istype(uniform.loc, /obj/structure/closet/crate), "A prison uniform is not in the locker")
 	TEST_ASSERT(all_in_office(prison, uniforms), "The uniform locker is on the prisoners' side of the wing")
 
-	// The mailbag: one, on an office table (not a serving hatch) beside a hatch.
-	var/list/mailbags = wing_things(prison, /obj/structure/outpost_prison_mailbag)
-	TEST_ASSERT_EQUAL(length(mailbags), 1, "The wing should have one mailbag")
-	var/obj/structure/outpost_prison_mailbag/mailbag = mailbags[1]
-	TEST_ASSERT(isturf(mailbag.loc), "The mailbag is inside something")
-	var/turf/mail_tile = mailbag.loc
-	TEST_ASSERT_NULL(locate(/obj/structure/table/reinforced/prison_hatch) in mail_tile, "The mailbag is on a serving hatch")
-	TEST_ASSERT_NOTNULL(locate(/obj/structure/table) in mail_tile, "The mailbag is not on a table")
-	var/hatch_beside = FALSE
-	for(var/turf/near in range(1, mail_tile))
-		if(locate(/obj/structure/table/reinforced/prison_hatch) in near)
-			hatch_beside = TRUE
-	TEST_ASSERT(hatch_beside, "The mailbag's table is not beside a serving hatch")
-
 	// A plain crowbar on the rack, for lifting the cell cistern lids.
 	var/list/crowbars = list()
 	for(var/obj/item/crowbar/bar as anything in wing_things(prison, /obj/item/crowbar))
@@ -130,7 +118,7 @@
 			crowbars += bar
 	TEST_ASSERT_EQUAL(length(crowbars), 1, "The wing should have one crowbar")
 	TEST_ASSERT(locate(/obj/structure/rack) in get_turf(crowbars[1]), "The crowbar is not on the rack")
-	TEST_ASSERT(all_in_office(prison, mailbags + crowbars), "The mailbag or the crowbar is on the prisoners' side of the wing")
+	TEST_ASSERT(all_in_office(prison, crowbars), "The crowbar is on the prisoners' side of the wing")
 
 	// Air scrubbers for the scrubber overflow: one in each cell and three in the yard, all in the
 	// cell block and none welded. The seven sealed Kessler vents are still there beside them.

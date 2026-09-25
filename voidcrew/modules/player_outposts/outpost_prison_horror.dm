@@ -29,7 +29,9 @@
  * admins. Ambient NPCs are killed, never absorbed.
  *
  * Its shield turns aside a quarter of the hits that come at its face, never from the side or back.
- * Burns hurt it double, standing or down, and set alight it keeps burning for a few seconds.
+ * Fire hurts it double, standing or down (take_fire_damage()), and set alight it keeps burning for a
+ * few seconds. Its burning counts as the crew's for the containment bonus when a player lit it or
+ * hurt it lately (fire_credit()).
  * Doors that will not open for it, it pries; kept from its quarry, it breaks interior windows
  * toward them. It never breaches the prison wing's outer ring, never a wall or window with
  * anything but the outpost's own floor beyond, and never steps off the outpost's ground.
@@ -85,7 +87,7 @@
 	maxHealth = OUTPOST_HORROR_BASE_HEALTH
 	health = OUTPOST_HORROR_BASE_HEALTH
 	speed = OUTPOST_HORROR_SPEED
-	damage_coeff = list(BRUTE = OUTPOST_HORROR_DAMAGE_COEFF, BURN = OUTPOST_HORROR_BURN_COEFF, TOX = 0, STAMINA = 0, OXY = 0)
+	damage_coeff = list(BRUTE = OUTPOST_HORROR_DAMAGE_COEFF, BURN = OUTPOST_HORROR_DAMAGE_COEFF, TOX = 0, STAMINA = 0, OXY = 0)
 	melee_damage_lower = OUTPOST_HORROR_BLADE_DAMAGE
 	melee_damage_upper = OUTPOST_HORROR_BLADE_DAMAGE
 	melee_attack_cooldown = OUTPOST_HORROR_BLADE_COOLDOWN
@@ -161,6 +163,11 @@
 	var/rise_warned = FALSE
 	/// The next death() is for good: an admin's kill, open space, or its body destroyed
 	var/final_death = FALSE
+	/// The last player who aimed a lit flamethrower at it, and when
+	var/datum/weakref/fire_aimer_ref
+	var/fire_aimed_at = 0
+	/// The player who set it alight this time, if it could tell (on_ignited())
+	var/datum/weakref/igniter_ref
 
 /mob/living/basic/outpost_experiment/horror/Initialize(mapload)
 	. = ..()
@@ -184,6 +191,7 @@
 	RegisterSignal(src, COMSIG_LIVING_CHECK_BLOCK, PROC_REF(on_check_block), override = TRUE)
 	RegisterSignal(src, COMSIG_ATOM_PRE_BULLET_ACT, PROC_REF(on_pre_bullet_act), override = TRUE)
 	RegisterSignal(src, COMSIG_LIVING_IGNITED, PROC_REF(on_ignited), override = TRUE)
+	RegisterSignal(src, COMSIG_ATOM_RANGED_ITEM_INTERACTION, PROC_REF(on_ranged_item_used), override = TRUE)
 	RegisterSignal(src, COMSIG_LIVING_REVIVE, PROC_REF(on_revived), override = TRUE)
 	grant_ability("resonant", /datum/action/cooldown/mob_cooldown/outpost_horror/resonant_shriek)
 
@@ -196,6 +204,8 @@
 	last_attacker_ref = null
 	quarry_ref = null
 	absorb_turf = null
+	fire_aimer_ref = null
+	igniter_ref = null
 	return ..()
 
 /**
@@ -350,9 +360,9 @@
 		return
 	if(die_if_spaced())
 		return
-	// Burning eats its body; OUTPOST_HORROR_BURN_COEFF doubles it, as it does any burn.
+	// Burning eats its body, doubled like any fire on it.
 	if(on_fire)
-		apply_damage(OUTPOST_HORROR_REMAINS_BURN * seconds, BURN)
+		take_fire_damage(OUTPOST_HORROR_REMAINS_BURN * seconds)
 		if(QDELETED(src) || stat == DEAD)
 			return
 	stasis_tells(seconds)
@@ -648,19 +658,59 @@
 	return COMPONENT_BULLET_BLOCKED
 
 /**
- * Each tick of burning while it stands: OUTPOST_HORROR_FIRE_DAMAGE a second, doubled by
- * OUTPOST_HORROR_BURN_COEFF. tg's fire only warms a basic mob, and it has no heat damage. Down,
- * regen_tick() burns its body instead.
+ * Each tick of burning while it stands: OUTPOST_HORROR_FIRE_DAMAGE a second, doubled. tg's fire
+ * only warms a basic mob (fire_act() and hotspots just light it), and it has no heat damage, so
+ * this is all the harm fire does it. Down, regen_tick() burns its body instead.
  */
 /mob/living/basic/outpost_experiment/horror/on_fire_stack(seconds_per_tick, datum/status_effect/fire_handler/fire_stacks/fire_handler)
 	. = ..()
-	if(stat != CONSCIOUS || regenerating || HAS_TRAIT(src, TRAIT_GODMODE))
+	if(stat != CONSCIOUS || regenerating)
 		return
-	apply_damage(OUTPOST_HORROR_FIRE_DAMAGE * seconds_per_tick, BURN)
+	take_fire_damage(OUTPOST_HORROR_FIRE_DAMAGE * seconds_per_tick)
 
-/// Fire breaks an absorb or a mend
+/**
+ * Burn damage from fire: `amount` times OUTPOST_HORROR_FIRE_MULT, past the chitin's
+ * OUTPOST_HORROR_DAMAGE_COEFF, which only lasers and other burns get. Booked on its damage ledger
+ * as the crew's when fire_credit() names a player, else as nobody's. Returns the damage done.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/take_fire_damage(amount)
+	if(amount <= 0 || stat == DEAD || HAS_TRAIT(src, TRAIT_GODMODE))
+		return 0
+	var/datum/component/experiment_damage_ledger/ledger = GetComponent(/datum/component/experiment_damage_ledger)
+	if(ledger && fire_credit(ledger))
+		ledger.crediting_players = TRUE
+	. = apply_damage(amount * OUTPOST_HORROR_FIRE_MULT, BURN, forced = TRUE)
+	if(ledger)
+		ledger.crediting_players = FALSE
+
+/**
+ * The player its burning is credited to: whoever set it alight, if it could tell; else whoever
+ * aimed a flamethrower at it or hurt it within OUTPOST_HORROR_FIRE_CREDIT_WINDOW. Null for nobody.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/fire_credit(datum/component/experiment_damage_ledger/ledger)
+	var/mob/living/igniter = igniter_ref?.resolve()
+	if(igniter)
+		return igniter
+	var/mob/living/aimer = fire_aimer_ref?.resolve()
+	if(aimer && world.time - fire_aimed_at <= OUTPOST_HORROR_FIRE_CREDIT_WINDOW)
+		return aimer
+	return ledger?.recent_player(OUTPOST_HORROR_FIRE_CREDIT_WINDOW)
+
+/// A player aiming a lit flamethrower at it: if it catches fire in the next moment, they lit it
+/mob/living/basic/outpost_experiment/horror/proc/on_ranged_item_used(datum/source, mob/living/user, obj/item/tool, list/modifiers)
+	SIGNAL_HANDLER
+	var/obj/item/flamethrower/flamer = tool
+	if(!istype(flamer) || !flamer.lit || !outpost_experiment_is_player(user))
+		return NONE
+	fire_aimer_ref = WEAKREF(user)
+	fire_aimed_at = world.time
+	return NONE
+
+/// Fire breaks an absorb or a mend. Set alight by a flamethrower just aimed at it, it knows who did it.
 /mob/living/basic/outpost_experiment/horror/proc/on_ignited(datum/source)
 	SIGNAL_HANDLER
+	var/mob/living/aimer = fire_aimer_ref?.resolve()
+	igniter_ref = (aimer && world.time - fire_aimed_at <= OUTPOST_HORROR_FIRE_AIM_WINDOW) ? WEAKREF(aimer) : null
 	if(busy == "absorb")
 		INVOKE_ASYNC(src, PROC_REF(interrupt_absorb), "shrieking as it burns")
 	else if(busy == "fleshmend")

@@ -53,14 +53,18 @@
 /// More health per living player on the level beyond the first, at emergence, up to the cap
 #define OUTPOST_HORROR_HEALTH_PER_PLAYER 100
 #define OUTPOST_HORROR_EXTRA_PLAYERS_MAX 3
-/// Brute damage it takes per point dealt: the chitin turns some of it
+/// Brute and burn damage it takes per point dealt: the chitin turns some of it
 #define OUTPOST_HORROR_DAMAGE_COEFF 0.85
-/// Burn damage it takes per point dealt: fire and lasers hurt it double, standing or down
-#define OUTPOST_HORROR_BURN_COEFF 2
-/// Burn damage a second it takes on fire while standing, before OUTPOST_HORROR_BURN_COEFF
+/// Fire hurts it this many times over, standing or down (burning only; lasers and other burns take OUTPOST_HORROR_DAMAGE_COEFF)
+#define OUTPOST_HORROR_FIRE_MULT 2
+/// Burn damage a second it takes on fire while standing, before OUTPOST_HORROR_FIRE_MULT
 #define OUTPOST_HORROR_FIRE_DAMAGE 5
 /// Fire stacks it loses a second (basic mobs lose 5, so a lick of flame goes out before it burns)
 #define OUTPOST_HORROR_FIRE_DECAY -1
+/// Its burning is the crew's for the containment bonus: whoever lit it, else whoever hurt it or aimed fire at it within this long
+#define OUTPOST_HORROR_FIRE_CREDIT_WINDOW (30 SECONDS)
+/// A flamethrower aimed at it this recently lit it, if it catches fire now
+#define OUTPOST_HORROR_FIRE_AIM_WINDOW (3 SECONDS)
 #define OUTPOST_HORROR_SPEED 2
 /// The arm blade
 #define OUTPOST_HORROR_BLADE_DAMAGE 22
@@ -144,7 +148,7 @@
 #define OUTPOST_HORROR_RISE_WARNING 5
 /// Damage its body can take while it is down before it bursts, dead for good
 #define OUTPOST_HORROR_REMAINS 200
-/// Burn damage a second fire does to its body while it is down, before OUTPOST_HORROR_BURN_COEFF doubles it
+/// Burn damage a second fire does to its body while it is down, before OUTPOST_HORROR_FIRE_MULT doubles it
 #define OUTPOST_HORROR_REMAINS_BURN 10
 
 // ----- afterwards -----

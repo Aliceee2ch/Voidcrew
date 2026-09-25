@@ -945,7 +945,8 @@
  * (turrets, traps, explosions, fire, other creatures). The containment bonus needs players to have
  * done at least OUTPOST_EXPERIMENT_PLAYER_SHARE of it. Damage and the report of who did it arrive
  * in either order within one tick, so each waits a tick for the other; damage nobody claims is
- * not the players'. Also marks the mob as an experiment's (TRAIT_OUTPOST_EXPERIMENT).
+ * not the players'. The horror's burning is the exception: it is the players' when one lit it or
+ * hurt it lately (crediting_players). Also marks the mob as an experiment's (TRAIT_OUTPOST_EXPERIMENT).
  */
 /datum/component/experiment_damage_ledger
 	dupe_mode = COMPONENT_DUPE_UNIQUE
@@ -961,6 +962,9 @@
 	/// The last player who hurt it, and when
 	var/datum/weakref/last_player_ref
 	var/last_player_time = 0
+	/// While set, the damage it takes is the players' whoever struck last: fire a player is credited
+	/// with (the horror's take_fire_damage()). It is not a blow, so recent_player() keeps its time.
+	var/crediting_players = FALSE
 
 /datum/component/experiment_damage_ledger/Initialize()
 	if(!isliving(parent))
@@ -1003,6 +1007,9 @@
 /datum/component/experiment_damage_ledger/proc/on_damaged(datum/source, damage, damagetype)
 	SIGNAL_HANDLER
 	if(damage <= 0 || (damagetype != BRUTE && damagetype != BURN))
+		return
+	if(crediting_players)
+		add_damage(damage, TRUE)
 		return
 	if(last_attack_time == world.time)
 		add_damage(damage, last_attack_player)

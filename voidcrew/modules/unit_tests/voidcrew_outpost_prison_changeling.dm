@@ -895,36 +895,46 @@
 /datum/unit_test/voidcrew_outpost_prison_changeling_fire
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
+/// A specimen taken straight to the horror by the admin stage, standing and free in the yard
+/datum/unit_test/voidcrew_outpost_prison_changeling_fire/proc/horror_for(datum/outpost_prison/prison, obj/structure/overmap/dynamic/player_outpost/home)
+	var/datum/outpost_changeling_event/event = changeling_host(prison, home)
+	if(!event?.force_stage("horror"))
+		return null
+	var/mob/living/basic/outpost_experiment/horror/horror = event.horror
+	horror.clear_busy()
+	horror.forceMove(prison_spot(home, 9, 9))
+	return horror
+
 /datum/unit_test/voidcrew_outpost_prison_changeling_fire/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("fireowner")
 	TEST_ASSERT_NOTNULL(home, "The fire test prison did not load")
 	var/datum/outpost_prison/prison = test_prison(home)
 	prison.crew_home_override = TRUE
 	var/mob/living/carbon/human/crew = make_player(prison_spot(home, 12, 3), "fireowner")
-	var/datum/outpost_changeling_event/event = changeling_host(prison, home)
-	TEST_ASSERT(event?.force_stage("horror"), "The admin horror stage made no horror")
-	var/mob/living/basic/outpost_experiment/horror/horror = event.horror
-	horror.clear_busy()
-	horror.forceMove(prison_spot(home, 9, 9))
+	var/mob/living/basic/outpost_experiment/horror/horror = horror_for(prison, home)
+	TEST_ASSERT_NOTNULL(horror, "The admin horror stage made no horror")
+	var/datum/outpost_changeling_event/event = horror.event
+	var/datum/component/experiment_damage_ledger/ledger = horror.GetComponent(/datum/component/experiment_damage_ledger)
 	TEST_ASSERT(findtext(jointext(horror.examine(crew), " "), "shies away from fire"), "Examining the horror does not say it shies away from fire")
 
-	// Burns hurt it double; brute gets the chitin's 0.85.
+	// A laser's burn gets the chitin's 0.85, as brute does.
 	var/before = horror.health
 	horror.apply_damage(10, BURN)
-	TEST_ASSERT(abs(before - horror.health - 20) < 0.01, "10 burn took [before - horror.health] health, not 20") // OUTPOST_HORROR_BURN_COEFF
+	TEST_ASSERT(abs(before - horror.health - 8.5) < 0.01, "10 burn took [before - horror.health] health, not 8.5") // OUTPOST_HORROR_DAMAGE_COEFF
 	before = horror.health
 	horror.apply_damage(10, BRUTE)
 	TEST_ASSERT(abs(before - horror.health - 8.5) < 0.01, "10 brute took [before - horror.health] health, not 8.5") // OUTPOST_HORROR_DAMAGE_COEFF
 
-	// Fire on its tile lights it, and burning hurts it: 5 a second, doubled.
+	// Fire on its tile lights it, and burning hurts it: 5 a second, doubled. Nobody lit it or hurt it, so it is nobody's.
 	horror.fire_act(1000, 500)
 	TEST_ASSERT(horror.on_fire, "Fire on its tile did not set the horror alight")
 	var/datum/status_effect/fire_handler/fire_stacks/burning = horror.has_status_effect(/datum/status_effect/fire_handler/fire_stacks)
 	TEST_ASSERT_NOTNULL(burning, "The burning horror has no fire on it")
 	before = horror.health
 	burning.tick(2)
-	TEST_ASSERT(abs(before - horror.health - 20) < 0.01, "Two seconds alight took [before - horror.health] health, not 20") // OUTPOST_HORROR_FIRE_DAMAGE, OUTPOST_HORROR_BURN_COEFF
+	TEST_ASSERT(abs(before - horror.health - 20) < 0.01, "Two seconds alight took [before - horror.health] health, not 20") // OUTPOST_HORROR_FIRE_DAMAGE, OUTPOST_HORROR_FIRE_MULT
 	TEST_ASSERT(horror.on_fire, "A lick of flame went out within two seconds") // OUTPOST_HORROR_FIRE_DECAY
+	TEST_ASSERT_EQUAL(ledger.player_damage, 0, "Fire nobody lit counted as the crew's")
 	horror.extinguish_mob()
 
 	// Down and burning, its body goes twice as fast: 200 in 10 s, where it took 20.
@@ -933,11 +943,49 @@
 	horror.ignite_mob()
 	TEST_ASSERT(horror.on_fire, "The horror's body would not catch fire")
 	changeling_ticks(event, 5)
-	TEST_ASSERT(abs(horror.remains - 100) < 0.01, "Five seconds alight left [horror.remains] of its body, not 100") // OUTPOST_HORROR_REMAINS less 5 * OUTPOST_HORROR_REMAINS_BURN * OUTPOST_HORROR_BURN_COEFF
+	TEST_ASSERT(abs(horror.remains - 100) < 0.01, "Five seconds alight left [horror.remains] of its body, not 100") // OUTPOST_HORROR_REMAINS less 5 * OUTPOST_HORROR_REMAINS_BURN * OUTPOST_HORROR_FIRE_MULT
 	changeling_ticks(event, 4)
 	TEST_ASSERT(!QDELETED(horror) && horror.regenerating, "The burning body was destroyed before 10 s")
 	changeling_ticks(event, 1)
 	TEST_ASSERT(QDELETED(horror), "The burning body was not destroyed after 10 s")
 	TEST_ASSERT_EQUAL(event.stage, "done", "Burning its body away did not end the changeling event")
 	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "Burning its body away did not contain the horror")
+
+	// Fire is the crew's for the containment bonus. A second horror, last hurt by the crew 31 s ago: its burning is nobody's.
+	var/mob/living/basic/outpost_experiment/horror/torched = horror_for(prison, home)
+	TEST_ASSERT_NOTNULL(torched, "The second horror did not come out")
+	var/datum/outpost_changeling_event/second_event = torched.event
+	var/datum/component/experiment_damage_ledger/torched_ledger = torched.GetComponent(/datum/component/experiment_damage_ledger)
+	torched_ledger.note_attacker(crew)
+	torched_ledger.last_attack_time -= 31 SECONDS
+	torched_ledger.last_player_time -= 31 SECONDS
+	TEST_ASSERT(torched.take_fire_damage(5) > 0, "Fire did not hurt the second horror")
+	TEST_ASSERT_EQUAL(torched_ledger.player_damage, 0, "Fire 31 s after the crew last hurt it counted as the crew's") // OUTPOST_HORROR_FIRE_CREDIT_WINDOW
+	// Hurt by the crew 10 s ago, it is theirs.
+	torched_ledger.last_player_time = world.time - 10 SECONDS
+	torched.take_fire_damage(5)
+	TEST_ASSERT(abs(torched_ledger.player_damage - 10) < 0.01, "Fire 10 s after the crew hurt it was [torched_ledger.player_damage] crew damage, not 10") // OUTPOST_HORROR_FIRE_MULT
+	torched_ledger.last_player_time = world.time - 31 SECONDS
+
+	// Set alight by a flamethrower the crew just aimed at it: theirs however long it burns, and burned down, it pays in full.
+	var/obj/item/flamethrower/flamer = allocate(/obj/item/flamethrower)
+	flamer.lit = TRUE
+	SEND_SIGNAL(torched, COMSIG_ATOM_RANGED_ITEM_INTERACTION, crew, flamer, list())
+	torched.fire_act(1000, 500)
+	TEST_ASSERT(torched.on_fire, "The flamethrower's fire did not set the horror alight")
+	TEST_ASSERT_EQUAL(torched.igniter_ref?.resolve(), crew, "The horror does not know who set it alight")
+	torched.fire_aimed_at -= 31 SECONDS
+	for(var/i in 1 to 40)
+		if(torched.regenerating)
+			break
+		torched.fire_act(1000, 500)
+		var/datum/status_effect/fire_handler/fire_stacks/flames = torched.has_status_effect(/datum/status_effect/fire_handler/fire_stacks)
+		flames?.tick(2)
+	TEST_ASSERT(torched.regenerating, "Burning did not bring the second horror down")
+	TEST_ASSERT(torched_ledger.player_share() > 0.9, "The horror burned down by the crew's fire is [torched_ledger.player_share()] the crew's damage")
+	torched.adjust_fire_stacks(20)
+	changeling_ticks(second_event, 10)
+	TEST_ASSERT(QDELETED(torched), "The second horror's body did not burn away")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "Burning the second horror away did not contain it")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 3900, "A horror killed by a flamethrower paid [prison.experiment.bonus_paid], not 3900") // OUTPOST_EXPERIMENT_BONUS_HORROR
 	settle_prison_air(home)

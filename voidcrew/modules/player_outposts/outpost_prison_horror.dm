@@ -352,8 +352,9 @@
 
 /**
  * `seconds` down: fire eats at its body, it twitches, and if `home` (a member of the wing is home)
- * the clock to getting up runs, with a warning OUTPOST_HORROR_RISE_WARNING before. Out in open space
- * it dies instead, if on_moved() has not seen to that already.
+ * the clock to getting up runs, with a warning OUTPOST_HORROR_RISE_WARNING before. While it burns
+ * or lies in flames the clock waits (fire_holds_down()), and it warns again once the fire is out.
+ * Out in open space it dies instead, if on_moved() has not seen to that already.
  */
 /mob/living/basic/outpost_experiment/horror/proc/regen_tick(seconds, home = TRUE)
 	if(!regenerating || stat == DEAD || QDELETED(src) || HAS_TRAIT(src, TRAIT_GODMODE))
@@ -368,6 +369,10 @@
 	stasis_tells(seconds)
 	if(!home)
 		return
+	if(fire_holds_down())
+		rise_warned = FALSE
+		regen_left = max(regen_left, OUTPOST_HORROR_RISE_WARNING + 1)
+		return
 	regen_left -= seconds
 	if(!rise_warned && regen_left <= OUTPOST_HORROR_RISE_WARNING)
 		rise_warned = TRUE
@@ -378,6 +383,10 @@
 		event?.horror_rising()
 	if(regen_left <= 0)
 		rise_again()
+
+/// On fire, or lying in flames: its body cannot knit back together while it burns
+/mob/living/basic/outpost_experiment/horror/proc/fire_holds_down()
+	return on_fire || !!(locate(/obj/effect/hotspot) in loc)
 
 /// Down, it twitches and heaves every few seconds, with wet noises
 /mob/living/basic/outpost_experiment/horror/proc/stasis_tells(seconds)
@@ -507,6 +516,8 @@
 		return
 	if(regenerating)
 		. += span_warning("It's still moving.")
+		if(fire_holds_down())
+			. += span_notice("The flames keep its body from knitting back together.")
 	. += span_notice("It shies away from fire.")
 
 /// Down and regenerating, it is no target for turrets

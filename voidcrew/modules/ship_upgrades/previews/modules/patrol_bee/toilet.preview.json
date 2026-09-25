@@ -17,6 +17,16 @@
      "png": "patrol_bee_toilet_standard.png",
      "src_md5": "f74edbce3872e290e984130712ea7895",
      "width": 3
+    },
+    "syndicate_black": {
+     "connector": [
+      1,
+      1
+     ],
+     "height": 1,
+     "png": "patrol_bee_toilet_syndicate_black.png",
+     "src_md5": "1bb42943fb527025e3405819707ffc71",
+     "width": 3
     }
    },
    "width": 3

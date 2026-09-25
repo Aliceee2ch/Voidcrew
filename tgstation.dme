@@ -6821,6 +6821,7 @@
 #include "voidcrew\mapping\docking_port\_docking_port.dm"
 #include "voidcrew\mapping\ship_areas\nanobead.dm"
 #include "voidcrew\mapping\ship_crew\nanobead.dm"
+#include "voidcrew\mapping\ship_crew\patrol_bee.dm"
 #include "voidcrew\mapping\ship_areas\squab.dm"
 #include "voidcrew\mapping\ship_crew\squab.dm"
 #include "voidcrew\mapping\shuttles\_shuttle.dm"

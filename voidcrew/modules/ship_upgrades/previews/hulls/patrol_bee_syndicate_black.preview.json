@@ -1,8 +1,8 @@
 {
  "hulls": {
-  "patrol_bee_nanotrasen": {
+  "patrol_bee_syndicate_black": {
    "height": 24,
-   "png": "ship_patrol_bee_nanotrasen.png",
+   "png": "ship_patrol_bee_syndicate_black.png",
    "slots": {
     "Upper_Cargo": [
      7,
@@ -25,7 +25,7 @@
      9
     ]
    },
-   "src_md5": "f914e518c253d29ca3dd7d9696318f85",
+   "src_md5": "c3f329159d00b7701bba893e08bb1597",
    "width": 24
   }
  },

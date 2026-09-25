@@ -1,21 +1,21 @@
 {
  "hulls": {},
  "modules": {
-  "patrol_bee/pharmacy_lab.dmm": {
+  "patrol_bee/hydroponics.dmm": {
    "connector": [
     1,
     1
    ],
-   "height": 4,
+   "height": 7,
    "themes": {
     "standard": {
      "connector": [
       1,
       1
      ],
-     "height": 4,
-     "png": "patrol_bee_pharmacy_lab_standard.png",
-     "src_md5": "f79a8260295c5c9f480cd9560c2828c2",
+     "height": 7,
+     "png": "patrol_bee_hydroponics_standard.png",
+     "src_md5": "5e6d15dd88fea13a06d83ca9192ee03d",
      "width": 3
     },
     "syndicate_black": {
@@ -23,9 +23,9 @@
       1,
       1
      ],
-     "height": 4,
-     "png": "patrol_bee_pharmacy_lab_syndicate_black.png",
-     "src_md5": "d90e9356ebb61894c1cca0ed00b3ad7b",
+     "height": 7,
+     "png": "patrol_bee_hydroponics_syndicate_black.png",
+     "src_md5": "106cd5be9362cd253e941cf4b67ef748",
      "width": 3
     }
    },

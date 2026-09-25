@@ -1,7 +1,7 @@
 {
  "hulls": {},
  "modules": {
-  "patrol_bee/full_kitchen.dmm": {
+  "patrol_bee/kitchen_and_hydroponics.dmm": {
    "connector": [
     1,
     1
@@ -14,8 +14,8 @@
       1
      ],
      "height": 7,
-     "png": "patrol_bee_full_kitchen_standard.png",
-     "src_md5": "818732a50f8b2c36716485c5df0868a2",
+     "png": "patrol_bee_kitchen_and_hydroponics_standard.png",
+     "src_md5": "d716e89eee935261f1dc7335ba51d4fd",
      "width": 3
     },
     "syndicate_black": {
@@ -24,8 +24,8 @@
       1
      ],
      "height": 7,
-     "png": "patrol_bee_full_kitchen_syndicate_black.png",
-     "src_md5": "94f81bce99d831c886be679a2ab3f33a",
+     "png": "patrol_bee_kitchen_and_hydroponics_syndicate_black.png",
+     "src_md5": "26f46cbbb0b9b9c920893671b0544c06",
      "width": 3
     }
    },

@@ -1,33 +1,35 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
-"bwK" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/turf_decal/siding/thinplating/dark{
-	dir = 1
-	},
-/obj/effect/turf_decal/siding/thinplating/dark,
-/turf/template_noop,
-/area/template_noop)
-"cuH" = (
+"bXM" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal/tile/bar/opposingcorners,
-/obj/machinery/button/door/directional/north{
-	id = "cafe_counter"
+/obj/effect/turf_decal/siding/wideplating/dark{
+	dir = 8
+	},
+/obj/machinery/door/airlock{
+	name = "Kitchen"
 	},
 /turf/open/floor/iron,
 /area/template_noop)
-"dAq" = (
+"eAW" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/structure/table,
-/obj/machinery/microwave{
-	pixel_y = 3
-	},
-/obj/item/storage/box/donkpockets,
-/turf/open/floor/iron/cafeteria,
+/obj/effect/turf_decal/tile/blue/full,
+/obj/structure/window/reinforced/spawner/directional/north,
+/obj/machinery/vending/hydroseeds,
+/turf/open/floor/iron/large,
 /area/template_noop)
-"dIJ" = (
-/turf/template_noop,
+"eZs" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/tile/blue/full,
+/turf/open/floor/iron/large,
 /area/template_noop)
-"eMx" = (
+"fjq" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/tile/green/full,
+/obj/machinery/hydroponics/constructable,
+/obj/structure/window/reinforced/spawner/directional/north,
+/turf/open/floor/iron/large,
+/area/template_noop)
+"fFG" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal/tile/bar/opposingcorners,
 /obj/effect/turf_decal/siding/wideplating/dark{
@@ -54,19 +56,40 @@
 	},
 /turf/open/floor/iron,
 /area/template_noop)
-"lEW" = (
+"lfV" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/structure/sign/poster/official/random/directional/north,
 /obj/effect/turf_decal/tile/bar/opposingcorners,
-/obj/machinery/oven/range,
+/obj/effect/decal/cleanable/food/tomato_smudge,
+/obj/item/reagent_containers/cup/glass/bottle/juice/tomatojuice{
+	pixel_x = 8;
+	pixel_y = 7
+	},
 /turf/open/floor/iron,
 /area/template_noop)
-"nvm" = (
+"mEz" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/machinery/deepfryer,
-/turf/open/floor/iron/cafeteria,
+/obj/effect/turf_decal/tile/bar/opposingcorners,
+/obj/machinery/button/door/directional/north{
+	id = "cafe_counter"
+	},
+/turf/open/floor/iron,
 /area/template_noop)
-"oAB" = (
+"oRr" = (
+/turf/template_noop,
+/area/template_noop)
+"pme" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/thinplating/dark,
+/turf/template_noop,
+/area/template_noop)
+"qat" = (
+/obj/modular_map_connector,
+/turf/template_noop,
+/area/template_noop)
+"qlK" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal/tile/bar/opposingcorners,
 /obj/effect/turf_decal/siding/wideplating/dark{
@@ -82,50 +105,24 @@
 /obj/machinery/griddle,
 /turf/open/floor/iron,
 /area/template_noop)
-"pBi" = (
+"seR" = (
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/iron/cafeteria,
+/obj/effect/turf_decal/tile/green/full,
+/turf/open/floor/iron/large,
 /area/template_noop)
-"pPn" = (
-/obj/modular_map_connector,
-/turf/template_noop,
+"sVM" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/sign/poster/official/random/directional/north,
+/obj/effect/turf_decal/tile/bar/opposingcorners,
+/obj/machinery/oven/range,
+/turf/open/floor/iron,
 /area/template_noop)
-"qWq" = (
+"tiu" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal/tile/bar/opposingcorners,
 /turf/open/floor/iron,
 /area/template_noop)
-"rIy" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/structure/closet/secure_closet/freezer/fridge/open,
-/obj/item/reagent_containers/condiment/enzyme,
-/obj/item/reagent_containers/condiment/flour{
-	pixel_x = -3;
-	pixel_y = 3
-	},
-/obj/item/reagent_containers/condiment/flour{
-	pixel_x = -3;
-	pixel_y = 3
-	},
-/obj/item/reagent_containers/condiment/milk,
-/obj/item/food/meat/slab,
-/obj/item/food/meat/slab,
-/obj/item/food/meat/slab,
-/obj/item/reagent_containers/condiment/sugar,
-/turf/open/floor/iron/cafeteria,
-/area/template_noop)
-"rTE" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/turf_decal/tile/bar/opposingcorners,
-/obj/effect/turf_decal/siding/wideplating/dark{
-	dir = 8
-	},
-/obj/machinery/door/airlock{
-	name = "Kitchen"
-	},
-/turf/open/floor/iron,
-/area/template_noop)
-"sPc" = (
+"txy" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal/tile/bar/opposingcorners,
 /obj/structure/table,
@@ -148,52 +145,49 @@
 	},
 /turf/open/floor/iron,
 /area/template_noop)
-"umu" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/structure/sink/kitchen/directional/west,
-/obj/machinery/computer/order_console/cook{
-	dir = 8
-	},
-/turf/open/floor/iron/cafeteria,
+"uDe" = (
+/obj/machinery/biogenerator,
+/obj/structure/window/reinforced/spawner/directional/north,
+/obj/effect/turf_decal/tile/blue/full,
+/turf/open/floor/iron/large,
 /area/template_noop)
-"uyG" = (
-/turf/closed/wall/mineral/titanium/nodiagonal,
-/area/template_noop)
-"wyc" = (
+"vdt" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/effect/turf_decal/tile/bar/opposingcorners,
-/obj/effect/decal/cleanable/food/tomato_smudge,
-/obj/item/reagent_containers/cup/glass/bottle/juice/tomatojuice{
-	pixel_x = 8;
-	pixel_y = 7
-	},
-/turf/open/floor/iron,
+/obj/effect/turf_decal/tile/blue/full,
+/obj/structure/closet/crate/hydroponics,
+/obj/item/reagent_containers/cup/watering_can,
+/obj/item/shovel/spade,
+/obj/item/wirecutters,
+/obj/item/wrench,
+/obj/item/cultivator,
+/obj/item/storage/bag/plants/portaseeder,
+/turf/open/floor/iron/large,
 /area/template_noop)
 
 (1,1,1) = {"
-eMx
-oAB
-rTE
-dIJ
-dIJ
-dIJ
-pPn
+fFG
+qlK
+bXM
+oRr
+oRr
+oRr
+qat
 "}
 (2,1,1) = {"
-cuH
-qWq
-qWq
-bwK
-pBi
-pBi
-rIy
+mEz
+tiu
+tiu
+pme
+eZs
+seR
+vdt
 "}
 (3,1,1) = {"
-lEW
-wyc
-sPc
-uyG
-nvm
-umu
-dAq
+sVM
+lfV
+txy
+uDe
+fjq
+eAW
+fjq
 "}

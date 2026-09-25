@@ -168,6 +168,7 @@
 	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, INNATE_TRAIT)
 	setup_trouble()
 	setup_containment()
+	setup_extras()
 	last_health = health
 
 /mob/living/basic/outpost_prisoner/Destroy()
@@ -760,6 +761,8 @@
 		if(feeder)
 			balloon_alert(feeder, "cuffed")
 		return COMSIG_MOB_CANCEL_EAT
+	if(prison?.pastime_pre_eat(src, food, feeder))
+		return COMSIG_MOB_CANCEL_EAT
 	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || hunger >= PRISONER_HUNGER_FULL || well_fed_left > 0)
 		if(feeder)
 			balloon_alert(feeder, "not hungry")
@@ -893,6 +896,7 @@
 		return
 	last_carer_ref = WEAKREF(carer)
 	last_cared_at = world.time
+	prison?.note_staff_care(carer, src)
 
 // ===== UNIFORMS =====
 
@@ -990,7 +994,8 @@
 	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison || ai_controller?.ai_status == AI_STATUS_ON || in_trouble() || cuffs)
 		return
 	if(wants_food())
-		var/obj/item/food/meal = istype(held_item, /obj/item/food) ? held_item : prison.find_supply(src)
+		// A held cake saved for a party is not a meal (outpost_prison_pastimes.dm).
+		var/obj/item/food/meal = (istype(held_item, /obj/item/food) && !prison.reserved_supply(held_item, src)) ? held_item : prison.find_supply(src)
 		if(meal)
 			var/obj/item/trash = finish_meal(meal, get_turf(src), null)
 			if(trash)

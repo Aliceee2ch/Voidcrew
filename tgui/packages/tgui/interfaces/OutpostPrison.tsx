@@ -83,6 +83,56 @@ type Trouble = {
   loose: { name: string; area: string; time_left: number }[];
 };
 
+type GuardStatus =
+  | 'arriving'
+  | 'post'
+  | 'rounds'
+  | 'routine'
+  | 'responding'
+  | 'riot'
+  | 'down'
+  | 'away';
+
+type Guard = {
+  ref: string;
+  name: string;
+  rank: string;
+  status: GuardStatus;
+  /** seconds until a down or away guard is back, null otherwise */
+  back_in: number | null;
+};
+
+type Guards = {
+  max: number;
+  hire_cost: number;
+  /** cr/min per guard, only while a member is home */
+  wage: number;
+  can_manage: BooleanLike;
+  /** a manager, a free slot, and the fee in the treasury */
+  can_hire: BooleanLike;
+  /** wages skipped in a row */
+  unpaid: number;
+  list: Guard[];
+};
+
+type TurretState = 'loose' | 'on' | 'off' | 'broken' | 'no_power';
+
+type Security = {
+  turret_max: number;
+  turret_cost: number;
+  /** a manager, under the cap, and the fee in the treasury */
+  can_buy: BooleanLike;
+  turrets: { ref: string; state: TurretState }[];
+};
+
+/** Guards, turrets and mail (outpost_prison_extras.dm); null on an unlinked console */
+type Extras = {
+  guards?: Guards | null;
+  security?: Security | null;
+  /** undelivered letters */
+  mail?: { waiting: number } | null;
+};
+
 type ExperimentForm = 'unknown' | 'hulk' | 'fly' | 'nightmare' | 'changeling';
 
 type ExperimentStage =
@@ -138,6 +188,7 @@ export type OutpostPrisonData = {
   visitors_allowed?: BooleanLike;
   hatch?: HatchStock;
   trouble?: Trouble;
+  extras?: Extras | null;
   /** null with no experiment */
   experiment?: Experiment | null;
 };
@@ -201,6 +252,36 @@ const STAGES: Record<PrisonStage, { label: string; color: string }> = {
   riot: { label: 'Riot', color: 'bad' },
 };
 
+/** What each guard is doing. Down and away add when they are back. */
+const GUARD_STATUSES: Record<
+  GuardStatus,
+  { label: string; icon: string; tone?: Tone }
+> = {
+  arriving: { label: 'Arriving', icon: 'right-to-bracket', tone: 'good' },
+  post: { label: 'On post', icon: 'user-shield' },
+  rounds: { label: 'On rounds', icon: 'person-walking' },
+  routine: { label: 'On duty', icon: 'user-shield' },
+  responding: {
+    label: 'Responding',
+    icon: 'person-running',
+    tone: 'average',
+  },
+  riot: { label: 'Holding the door', icon: 'shield-halved', tone: 'bad' },
+  down: { label: 'Down', icon: 'user-injured', tone: 'bad' },
+  away: { label: 'Away', icon: 'right-from-bracket', tone: 'average' },
+};
+
+const TURRET_STATES: Record<
+  TurretState,
+  { label: string; icon: string; tone: Tone }
+> = {
+  on: { label: 'On', icon: 'power-off', tone: 'good' },
+  off: { label: 'Off', icon: 'power-off', tone: 'average' },
+  broken: { label: 'Broken', icon: 'screwdriver-wrench', tone: 'bad' },
+  no_power: { label: 'No power', icon: 'plug-circle-xmark', tone: 'bad' },
+  loose: { label: 'Not mounted', icon: 'box-open', tone: 'average' },
+};
+
 /** A blind serum reads Serum until its creature shows. */
 const EXPERIMENT_FORMS: Record<ExperimentForm, string> = {
   unknown: 'Serum',
@@ -249,6 +330,18 @@ function credits(value: number | null | undefined) {
 
 function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+/** An extras block the server sent as an object; anything else hides its part. */
+function block<T>(value: T | null | undefined): T | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value
+    : null;
+}
+
+/** Whole minutes, at least 1 */
+function minutes(seconds: number) {
+  return Math.max(1, Math.ceil(seconds / 60));
 }
 
 function Empty({ icon, children }: { icon: string; children: ReactNode }) {
@@ -640,6 +733,8 @@ function Hatch({ data }: Props) {
   const clean = hatch.clean_suits || 0;
   const dirty = hatch.dirty_suits || 0;
   const capacity = hatch.capacity || 0;
+  const mail = block(block(data.extras)?.mail);
+  const waiting = mail && isNumber(mail.waiting) ? mail.waiting : 0;
   return (
     <>
       <div className="Outpost__section-label">
@@ -665,6 +760,174 @@ function Hatch({ data }: Props) {
             ? `Lasts about ${Math.max(0, Math.round(hatch.lasts_minutes))} min`
             : null}
         </span>
+      </div>
+      {waiting > 0 ? (
+        <div className="OutpostPrison__flags OutpostPrison__flags--mail">
+          <span className="OutpostPrison__tone--average">
+            <Icon name="envelope" />
+            {`Mail: ${waiting} waiting`}
+          </span>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function GuardRow({
+  guard,
+  canDismiss,
+  act,
+}: {
+  guard: Guard;
+  canDismiss: boolean;
+  act: Act;
+}) {
+  const known = GUARD_STATUSES[guard.status] || {
+    label: guard.status || '?',
+    icon: 'circle-question',
+    tone: 'average' as Tone,
+  };
+  const back =
+    (guard.status === 'down' || guard.status === 'away') &&
+    isNumber(guard.back_in) &&
+    guard.back_in > 0
+      ? `, back in ${minutes(guard.back_in)} min`
+      : '';
+  // The rank is shown unless the name already starts with it ("Officer Hale").
+  const rank = guard.rank || '';
+  const showRank =
+    rank !== '' &&
+    !(guard.name || '').toLowerCase().startsWith(rank.toLowerCase());
+  return (
+    <div className="OutpostPrison__staff-row">
+      <div className="Outpost__person">
+        <strong>{guard.name}</strong>
+        {showRank ? <small>{rank}</small> : null}
+      </div>
+      <span
+        className={`OutpostPrison__status${
+          known.tone ? ` OutpostPrison__tone--${known.tone}` : ''
+        }`}
+      >
+        <Icon name={known.icon} />
+        {`${known.label}${back}`}
+      </span>
+      {canDismiss ? (
+        <Button.Confirm
+          icon="user-minus"
+          confirmContent="Dismiss?"
+          onClick={() => act('guard_dismiss', { ref: guard.ref })}
+        >
+          Dismiss
+        </Button.Confirm>
+      ) : (
+        <span />
+      )}
+    </div>
+  );
+}
+
+function GuardsSection({ data, act }: Props) {
+  const guards = block(block(data.extras)?.guards);
+  if (!guards) {
+    return null;
+  }
+  const list = (guards.list || []).filter(Boolean);
+  const max = guards.max || 0;
+  const manager = !!guards.can_manage;
+  const missed = isNumber(guards.unpaid) ? guards.unpaid : 0;
+  const hireBlocked = !manager
+    ? 'Managers only'
+    : max > 0 && list.length >= max
+      ? `${max} at most`
+      : 'Not enough in the treasury';
+  return (
+    <>
+      <div className="Outpost__section-label">
+        Guards
+        {max > 0 ? <span>{`${list.length}/${max}`}</span> : null}
+      </div>
+      {list.length === 0 ? (
+        <div className="Outpost__quiet">None</div>
+      ) : (
+        list.map((guard) => (
+          <GuardRow
+            key={guard.ref}
+            guard={guard}
+            canDismiss={manager}
+            act={act}
+          />
+        ))
+      )}
+      <div className="OutpostPrison__staff-foot">
+        <small>{`${rate(guards.wage)} cr/min each while you're home`}</small>
+        {missed > 0 ? (
+          <small className="OutpostPrison__tone--bad">
+            {`Missed ${missed} wage${missed === 1 ? '' : 's'}`}
+          </small>
+        ) : null}
+        <Button
+          icon="user-plus"
+          disabled={!guards.can_hire}
+          tooltip={guards.can_hire ? undefined : hireBlocked}
+          onClick={() => act('guard_hire')}
+        >
+          {`Hire (${credits(guards.hire_cost)} cr)`}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function TurretsSection({ data, act }: Props) {
+  const security = block(block(data.extras)?.security);
+  if (!security) {
+    return null;
+  }
+  const turrets = (security.turrets || []).filter(Boolean);
+  const max = security.turret_max || 0;
+  const buyBlocked = !data.can_manage
+    ? 'Managers only'
+    : max > 0 && turrets.length >= max
+      ? `${max} at most`
+      : 'Not enough in the treasury';
+  return (
+    <>
+      <div className="Outpost__section-label">
+        Turrets
+        {max > 0 ? <span>{`${turrets.length}/${max}`}</span> : null}
+      </div>
+      {turrets.length === 0 ? (
+        <div className="Outpost__quiet">None</div>
+      ) : (
+        <div className="OutpostPrison__turrets">
+          {turrets.map((turret, index) => {
+            const known = TURRET_STATES[turret.state] || {
+              label: turret.state || '?',
+              icon: 'circle-question',
+              tone: 'average' as Tone,
+            };
+            return (
+              <span
+                key={turret.ref}
+                className={`OutpostPrison__turret OutpostPrison__tone--${known.tone}`}
+              >
+                <Icon name={known.icon} />
+                {`Turret ${index + 1}: ${known.label}`}
+              </span>
+            );
+          })}
+        </div>
+      )}
+      <div className="OutpostPrison__staff-foot">
+        <Button
+          icon="cart-shopping"
+          disabled={!security.can_buy}
+          tooltip={security.can_buy ? undefined : buyBlocked}
+          onClick={() => act('turret_buy')}
+        >
+          {`Buy (${credits(security.turret_cost)} cr)`}
+        </Button>
       </div>
     </>
   );
@@ -802,6 +1065,8 @@ export function OutpostPrisonPanel({ data, act }: Props) {
           <Conditions data={data} act={act} />
           <Hatch data={data} act={act} />
           <Roster data={data} act={act} />
+          <GuardsSection data={data} act={act} />
+          <TurretsSection data={data} act={act} />
           <Log data={data} act={act} />
         </div>
       ) : (

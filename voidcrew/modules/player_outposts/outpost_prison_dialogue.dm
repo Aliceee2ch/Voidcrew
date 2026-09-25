@@ -7,7 +7,8 @@
  *   lines: context -> {"any": [...], "<personality>": [...]}
  *   conversations: [{"opener": "...", "replies": [...]}], two-person exchanges
  * Lines fill {name} (the speaker's first name), {other} (who they talk to), {crime} (the
- * speaker's crime) and {time_left} (the speaker's sentence left).
+ * speaker's crime) and {time_left} (the speaker's sentence left). The extras add their own files
+ * and placeholders ({staff} and others); see outpost_prison_extras.dm.
  *
  * Spontaneous lines wait out a per-prisoner cooldown (longer for quiet ones) and a short
  * cooldown shared by the whole wing, so a full wing never talks over itself. Replies, thanks,
@@ -60,6 +61,9 @@
 	line = replacetext(line, "{other}", other ? other.speech_name() : "pal")
 	line = replacetext(line, "{crime}", crime)
 	line = replacetext(line, "{time_left}", time_left_text())
+	// {staff}, {place} and the rest, for one line at a time (outpost_prison_extras.dm)
+	for(var/placeholder in extra_line_values)
+		line = replacetext(line, placeholder, "[extra_line_values[placeholder]]")
 	return line
 
 /**
@@ -67,8 +71,8 @@
  * come up more often than the shared ones; lines naming {other} need someone to talk to.
  */
 /mob/living/basic/outpost_prisoner/proc/pick_line(context, mob/living/basic/outpost_prisoner/other)
-	var/list/lines = outpost_prisoner_dialogue("lines")
-	var/list/by_personality = lines[context]
+	// The main file first, then the extras' files (outpost_prison_extras.dm)
+	var/list/by_personality = outpost_prisoner_context_lines(context)
 	if(!islist(by_personality))
 		return null
 	var/list/own = by_personality[personality]
@@ -81,14 +85,23 @@
 		return null
 	return fill_line(pick(usable), other)
 
-/// The lines of `pool` they can say now: not the last thing they said, and naming nobody when alone
+/// The lines of `pool` they can say now: not the last thing they said, naming nobody when alone, and no extra placeholder they have no value for
 /mob/living/basic/outpost_prisoner/proc/usable_lines(list/pool, mob/living/basic/outpost_prisoner/other)
 	var/list/usable = list()
 	for(var/line in pool)
 		if(!istext(line) || line == last_line || (!other && findtext(line, "{other}")))
 			continue
+		if(missing_extra_value(line))
+			continue
 		usable += line
 	return usable
+
+/// Whether `line` names an extra placeholder ({staff}, {place}, ...) that extra_line_values has no value for
+/mob/living/basic/outpost_prisoner/proc/missing_extra_value(line)
+	for(var/placeholder in GLOB.outpost_prisoner_extra_placeholders)
+		if(findtext(line, placeholder) && isnull(LAZYACCESS(extra_line_values, placeholder)))
+			return TRUE
+	return FALSE
 
 /// Says a line for `context`. Returns TRUE if they said something.
 /mob/living/basic/outpost_prisoner/proc/say_context(context, mob/living/basic/outpost_prisoner/other)
@@ -120,7 +133,8 @@
 	var/list/conversations = outpost_prisoner_dialogue("conversations")
 	if(!length(conversations))
 		return FALSE
-	var/list/conversation = pick(conversations)
+	// Friends and rivals have their own (outpost_prison_life.dm).
+	var/list/conversation = prison?.pick_conversation(src, partner) || pick(conversations)
 	var/opener = conversation["opener"]
 	var/list/replies = conversation["replies"]
 	if(!istext(opener) || !length(replies))
@@ -200,6 +214,10 @@
 			return list("dark", null)
 		if(prob(outpost_prisoner_complaint_chance(prison.clean_score)))
 			return list("dirty_prison", null)
+	// Greetings, mail, drink and hints from the extras (outpost_prison_extras.dm)
+	var/list/extra = prison?.extra_speech(src)
+	if(extra)
+		return extra
 	if(prob(30) && staff_in_view())
 		return list("staff_near", null)
 	var/mob/living/basic/outpost_prisoner/partner = activity?.chat_partner()
@@ -222,7 +240,14 @@
 	var/list/choice = pick_speech()
 	if(!choice)
 		return FALSE
-	if(!say_context(choice[1], choice[2]))
+	// A restless yard goes quiet (outpost_prison_ambience.dm).
+	if(prison.speech_hushed(src, choice[1]))
+		return FALSE
+	// An extra's pick may carry values for its placeholders: list(context, other, values)
+	extra_line_values = length(choice) >= 3 ? choice[3] : null
+	var/said = say_context(choice[1], choice[2])
+	extra_line_values = null
+	if(!said)
 		return FALSE
 	show_complaint(choice[1])
 	COOLDOWN_START(src, speech_cooldown, rand(35, 80) SECONDS * speech_pace())

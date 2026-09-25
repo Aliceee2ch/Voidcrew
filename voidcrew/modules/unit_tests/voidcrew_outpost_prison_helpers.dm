@@ -32,11 +32,15 @@
 /datum/unit_test/voidcrew_outpost_management/proc/prison_test_claim(owner_key)
 	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim(owner_key)
 	if(!home)
+		TEST_NOTICE(src, "The test claim for [owner_key] did not load")
 		return null
 	var/datum/outpost_upgrade/prison/blueprint = new(home)
 	home.outpost_upgrades["prison"] = blueprint
 	var/turf/bottom_left = locate(home.template_bottom_left.x, home.template_bottom_left.y + home.shell_template.height + 3, home.upgrade_level_z())
-	if(home.place_outpost_upgrade(blueprint, bottom_left, 0, null) || !blueprint.prison)
+	var/refusal = home.place_outpost_upgrade(blueprint, bottom_left, 0, null)
+	if(refusal || !blueprint.prison)
+		// Rare and not reproduced on a rerun: say what was in the way, as the cargo dock tests do.
+		TEST_NOTICE(src, "The test prison for [owner_key] was not built: [refusal || "no prison"] [refusal == "Position obstructed." ? cargo_dock_blocker(home, blueprint, bottom_left, 0) : ""]")
 		return null
 	STOP_PROCESSING(SSprocessing, blueprint.prison)
 	blueprint.prison.pay_clock = 0

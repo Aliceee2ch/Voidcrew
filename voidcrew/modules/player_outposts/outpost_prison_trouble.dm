@@ -196,7 +196,7 @@
 	// Cuffs kept on without good reason sour them like a lock-in (outpost_prison_capture.dm).
 	if(cuffs_souring())
 		loss += PRISONER_MOOD_CUFFED + round((cuffed_seconds - PRISONER_CUFFED_GRACE) / 60)
-	if(istype(activity, /datum/prisoner_activity/basketball) || istype(activity, /datum/prisoner_activity/read) || istype(activity, /datum/prisoner_activity/chat))
+	if(activity?.mood_activity)
 		gain += PRISONER_MOOD_ACTIVITY
 	if(sentence_left <= PRISONER_RELEASE_SOON_TIME)
 		gain += PRISONER_MOOD_RELEASE_SOON
@@ -272,6 +272,9 @@
  * themselves in the last PRISONER_PROVOKED_TIME.
  */
 /mob/living/basic/outpost_prisoner/proc/hit_justified(atom/attacker)
+	// A guard only ever strikes violence already under way (outpost_prison_guards.dm).
+	if(is_outpost_prison_guard(attacker))
+		return TRUE
 	if(trouble || climb_ref)
 		return TRUE
 	if(trouble_ended_at && world.time - trouble_ended_at <= PRISONER_PROVOKED_TIME)
@@ -292,6 +295,8 @@
 	if(!machine && !is_staff_attacker(attacker))
 		return FALSE
 	last_staff_hit = world.time
+	if(!machine)
+		last_staff_attacker_ref = WEAKREF(attacker)
 	last_hit_justified = machine || hit_justified(attacker)
 	// A weapon's damage lands before its attacker is reported, so a collapse or death at this
 	// same moment was that blow, and goes down to staff now.
@@ -307,6 +312,7 @@
 	if(last_hit_justified)
 		return FALSE
 	adjust_mood(-PRISONER_MOOD_HIT_BY_STAFF)
+	prison?.note_staff_hit(attacker, src)
 	prison?.add_tension_spike(PRISON_SPIKE_STAFF_HIT)
 	return TRUE
 
@@ -354,6 +360,7 @@
 	beaten_by_staff = TRUE
 	if(last_hit_justified)
 		return
+	prison?.note_staff_blamed(src, "beaten")
 	adjust_mood(-PRISONER_MOOD_BEATEN_BY_STAFF)
 	prison?.trouble_event(PRISON_SPIKE_BEATEN, "[real_name] was beaten down by staff")
 
@@ -645,6 +652,9 @@
 /proc/is_outpost_prison_staff(mob/living/person)
 	if(!istype(person) || is_outpost_prisoner(person) || person.stat != CONSCIOUS)
 		return FALSE
+	// A guard that is down, arriving or leaving is nobody's staff.
+	if(is_outpost_prison_guard(person))
+		return is_outpost_prison_guard(person, on_duty = TRUE)
 	if(ismonkey(person) && isnull(person.mind))
 		return FALSE
 	return ishuman(person) || issilicon(person) || !isnull(person.mind)
@@ -695,7 +705,7 @@
 	threat_ref = null
 	threat_left = 0
 	threat_cooldown = PRISONER_THREAT_COOLDOWN
-	if(mood >= PRISONER_THREAT_MOOD || !prob(mood < PRISONER_THREAT_ANGRY_MOOD ? PRISONER_SWING_CHANCE_ANGRY : PRISONER_SWING_CHANCE))
+	if(mood >= (prison ? prison.threat_mood_for(src, person) : PRISONER_THREAT_MOOD) || !prob(mood < PRISONER_THREAT_ANGRY_MOOD ? PRISONER_SWING_CHANCE_ANGRY : PRISONER_SWING_CHANCE))
 		return FALSE
 	swing_ref = WEAKREF(person)
 	swing_left = PRISONER_SWING_TIMEOUT
@@ -751,6 +761,9 @@
 		say_context("talk_refuse")
 		balloon_alert(user, "not listening")
 		return FALSE
+	// The yard's word on this person (outpost_prison_social.dm) can turn them away.
+	if(prison?.refuses_talk_from(src, user))
+		return FALSE
 	if(fight?.fighting)
 		balloon_alert(user, "they're fighting")
 		return FALSE
@@ -784,7 +797,8 @@
 		said = TRUE
 	if(COOLDOWN_FINISHED(src, talk_cooldown))
 		COOLDOWN_START(src, talk_cooldown, PRISONER_TALK_COOLDOWN)
-		adjust_mood(PRISONER_MOOD_TALK)
+		adjust_mood(prison ? prison.talk_mood_for(src, user) : PRISONER_MOOD_TALK)
+		prison?.note_staff_talk(user, src)
 		if(!said)
 			say_context("calm_talk")
 	return TRUE

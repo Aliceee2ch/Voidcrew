@@ -40,6 +40,19 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_experiment", // {ref, form: hulk|fly|nightmare|changeling}: that prisoner is dosed now
 	"prison_changeling_stage", // {stage: burst|horror}: the changeling event skips ahead
 	"prison_experiment_end", // {}: ends the experiment with no fee
+	// The extras (outpost_prison_extras.dm); each package validates its own params
+	"prison_guard_spawn", // {}: a free guard, ignoring the cap
+	"prison_guard_remove", // {ref}
+	"prison_guard_down", // {ref}
+	"prison_turret_spawn", // {}: a loose stun turret at the warden's console
+	"prison_rep", // {key, score}: -10 to 10
+	"prison_affinity", // {a_ref, b_ref, value}: -100 to 100
+	"prison_birthday", // {ref}
+	"prison_party", // {ref}: a cake at the birthday prisoner's feet, and the party starts
+	"prison_cards", // {}: a card game at the table with the deck, if two can play
+	"prison_stash", // {cell, kind: shiv|pruno|clear}
+	"prison_mail", // {ref, kind: good|kid|news|bad|contraband}: a letter for that prisoner in the mailbag
+	"prison_lead", // {ref}: that prisoner carries a lead and the wing is ready to give one
 ))
 
 /// prison_crew_home modes and the crew_home_override each sets
@@ -320,6 +333,17 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 				error = "The experiment did not end."
 				return
 			record(user, home, "end the prison experiment without a fee")
+		else
+			// The extras' own actions: a log line when done, list("error" = text) when refused
+			var/result = prison.extras_admin_act(action, params, user)
+			if(islist(result))
+				var/list/refusal = result
+				error = refusal["error"] || "Invalid prison action."
+				return
+			if(!istext(result))
+				error = "Invalid prison action."
+				return
+			record(user, home, result)
 
 /// TRUE, FALSE or null for a tgui boolean param (0/1, "0"/"1", true/false)
 /datum/outpost_manipulator/proc/admin_bool(value)
@@ -401,6 +425,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 		"floor_size" = mess_floor_size,
 		"lit_samples" = lit_samples,
 		"outage_debt" = round(outage_debt),
+		"extras" = extras_admin_payload(),
 		"experiment" = experiment_block(),
 	)
 

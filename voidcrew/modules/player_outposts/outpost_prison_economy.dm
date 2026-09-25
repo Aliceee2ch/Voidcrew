@@ -359,6 +359,7 @@
 	prisoner.set_mood(starting_mood)
 	refresh_prisoner_reach(prisoner)
 	add_log("[prisoner.real_name] arrived in cell [into ? into.number : "-"], [round(prisoner.sentence_left / 60)] min sentence.")
+	extras_prisoner_admitted(prisoner)
 
 // ===== RELEASES, DEATHS AND EMPTY CELLS =====
 
@@ -381,7 +382,9 @@
 	var/bonus = round(OUTPOST_PRISON_RELEASE_BONUS * average)
 	pay_treasury(bonus, "Prison release: [prisoner.real_name]")
 	add_log("[prisoner.real_name] released, +[bonus] cr.")
-	prisoner.say_context("release")
+	// Friends may say goodbye instead (outpost_prison_life.dm).
+	if(!on_prisoner_releasing(prisoner, average))
+		prisoner.say_context("release")
 	prisoner.beam_out()
 	return bonus
 
@@ -436,6 +439,7 @@
 	if(out_of_hand)
 		var/fine = charge_fine(out_of_hand * OUTPOST_PRISON_ESCAPE_FINE, "Prison escape fines: [out_of_hand] prisoner\s rioting or loose when the outpost was abandoned", TRUE)
 		add_log("[out_of_hand] prisoner\s [out_of_hand == 1 ? "was" : "were"] rioting or loose when the outpost was abandoned.[fine ? " Fined [fine] cr." : ""]")
+	extras_abandon()
 	set_intake(FALSE)
 	intake_suspended = FALSE
 	suspended_after = 0

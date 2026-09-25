@@ -317,8 +317,9 @@
 		TEST_ASSERT(islist(entry) && length(entry["any"]), "The dialogue file has no shared lines for [context]")
 	for(var/datum/prisoner_activity/activity_type as anything in GLOB.outpost_prisoner_leisure + list(/datum/prisoner_activity/eat, /datum/prisoner_activity/hatch_wait))
 		var/context = initial(activity_type.context)
+		// The extras' pastimes keep their lines in their own dialogue files (outpost_prison_extras.dm).
 		if(context)
-			TEST_ASSERT(context in lines, "[activity_type] speaks in a context the dialogue file lacks: [context]")
+			TEST_ASSERT(islist(outpost_prisoner_context_lines(context)), "[activity_type] speaks in a context no dialogue file has: [context]")
 
 	var/mob/living/basic/outpost_prisoner/talker = test_prisoner(prison, prison_spot(home, 7, 8))
 	var/mob/living/basic/outpost_prisoner/listener = test_prisoner(prison, prison_spot(home, 9, 8))

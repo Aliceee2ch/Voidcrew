@@ -510,6 +510,36 @@ $bad: #e7a296;
 .OutpostPrison__tone--average { color: $amber; }
 .OutpostPrison__tone--bad { color: $bad; }
 .OutpostPrison__tone--label { color: $muted; }
+// Guards and turrets (the extras): one row per guard, turrets on one wrapping line, then the buy row
+.OutpostPrison__staff-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  font-size: 12px;
+  .Outpost__person strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.OutpostPrison__staff-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  padding-top: 6px;
+  small { color: $muted; font-size: 11px; }
+  small:first-child { margin-right: auto; }
+  small.OutpostPrison__tone--bad { color: $bad; }
+}
+.OutpostPrison__turrets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-top: 8px;
+}
+.OutpostPrison__turret { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; white-space: nowrap; }
 .OutpostPrison__log {
   padding-top: 6px;
   font-size: 11px;

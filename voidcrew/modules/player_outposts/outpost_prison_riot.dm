@@ -206,6 +206,7 @@
 	if(prisoner.death_blamed)
 		return FALSE
 	prisoner.death_blamed = TRUE
+	note_staff_blamed(prisoner, "killed")
 	if(!prisoner.experiment_subject)
 		var/fine = charge_fine(OUTPOST_PRISON_DEATH_FINE, "Death in custody: [prisoner.real_name]")
 		add_log("[prisoner.real_name]'s death was put down to staff. Fined [fine] cr.")
@@ -216,7 +217,7 @@
 /datum/outpost_prison/proc/counts_for_tension(mob/living/basic/outpost_prisoner/prisoner)
 	return prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && prisoner.trouble != PRISONER_TROUBLE_LOOSE
 
-/// 100 minus the mean mood of the prisoners in the cell block, plus the spike
+/// 100 minus the mean mood of the prisoners in the cell block, plus the spike and any shivs hidden in the wing
 /datum/outpost_prison/proc/compute_tension()
 	var/total = 0
 	var/count = 0
@@ -227,7 +228,7 @@
 		count++
 	if(!count)
 		return 0
-	return clamp(100 - total / count + tension_spike, 0, 100)
+	return clamp(100 - total / count + tension_spike + contraband_tension(), 0, 100)
 
 /// The stage for `tension`. Coming from `previous`, a stage holds until tension falls PRISON_TENSION_HYSTERESIS below its line.
 /proc/outpost_prison_stage_for(tension, previous)
@@ -312,6 +313,9 @@
 		causes += "no power"
 	if(locked)
 		causes += "[locked] locked in"
+	var/extra_cause = contraband_cause()
+	if(extra_cause)
+		causes += extra_cause
 	if(cuffed)
 		causes += "[cuffed] cuffed"
 	return causes
@@ -387,7 +391,7 @@
 			continue
 		if(prisoner.threat_ref)
 			var/mob/living/person = prisoner.threat_ref.resolve()
-			if(!is_outpost_prison_staff(person) || get_dist(prisoner, person) > PRISONER_THREAT_RANGE || !in_cell_block(person) || prisoner.mood >= PRISONER_THREAT_MOOD || prisoner.recently_helped_by(person))
+			if(!is_outpost_prison_staff(person) || get_dist(prisoner, person) > PRISONER_THREAT_RANGE || !in_cell_block(person) || prisoner.mood >= threat_mood_for(prisoner, person) || prisoner.recently_helped_by(person))
 				prisoner.cancel_threat()
 				continue
 			prisoner.face_atom(person)
@@ -397,10 +401,11 @@
 			if(prisoner.threat_left <= 0)
 				prisoner.decide_swing(person)
 			continue
-		if(prisoner.talking || prisoner.swing_ref || prisoner.threat_cooldown > 0 || prisoner.mood >= PRISONER_THREAT_MOOD)
+		if(prisoner.talking || prisoner.swing_ref || prisoner.threat_cooldown > 0 || prisoner.mood >= threat_mood_ceiling())
 			continue
 		var/mob/living/nearby = prisoner.staff_nearby(PRISONER_THREAT_RANGE, spare_helpers = TRUE)
-		if(nearby)
+		// Who they square up to depends on who it is (outpost_prison_social.dm).
+		if(nearby && prisoner.mood < threat_mood_for(prisoner, nearby))
 			prisoner.threaten(nearby)
 
 // ===== FIGHTS =====
@@ -499,6 +504,7 @@
 			continue
 		if((onlooker in view(7, one)) || (onlooker in view(7, two)))
 			onlooker.adjust_mood(-PRISONER_MOOD_SAW_FIGHT)
+	note_fight(one, two)
 	add_log("[one.real_name] and [two.real_name] got into a fight.")
 	return brawl
 
@@ -536,6 +542,9 @@
 		return "ball"
 	if(two.cell?.contains(one) || one.cell?.contains(two))
 		return "bed"
+	var/extra = fight_cause_extra(one, two)
+	if(extra)
+		return extra
 	return "none"
 
 /datum/outpost_prison/proc/fights_tick(seconds)
@@ -576,7 +585,7 @@
 		return null
 	var/list/pair = pick(pairs)
 	var/cause = fight_cause(pair[1], pair[2])
-	var/chance = PRISONER_FIGHT_CHANCE
+	var/chance = PRISONER_FIGHT_CHANCE * extras_fight_mult(pair[1], pair[2])
 	if(cause == "food" || cause == "ball")
 		chance *= PRISONER_FIGHT_CONTEST_MULT
 	if(!prob(chance))
@@ -594,7 +603,7 @@
  * One per PRISON_SPAT_GAP in the wing. Returns TRUE if one started.
  */
 /datum/outpost_prison/proc/try_start_spat()
-	if(!trouble_enabled || riot_active || spat_lines_left > 0 || spat_gap_left > 0 || !prob(PRISON_SPAT_CHANCE))
+	if(!trouble_enabled || riot_active || spat_lines_left > 0 || spat_gap_left > 0 || !prob(PRISON_SPAT_CHANCE * contraband_spat_mult()))
 		return FALSE
 	var/list/sour = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
@@ -609,9 +618,10 @@
 				pairs += list(list(one, two))
 	if(!length(pairs))
 		return FALSE
-	var/list/pair = pick(pairs)
+	var/list/pair = pick_spat_pair(pairs)
 	spat_first_ref = WEAKREF(pair[1])
 	spat_second_ref = WEAKREF(pair[2])
+	note_spat(pair[1], pair[2])
 	spat_lines_left = rand(2, 3)
 	spat_lines_said = 0
 	spat_line_left = 0
@@ -665,18 +675,19 @@
 /mob/living/basic/outpost_prisoner/proc/can_join_riot()
 	return prison && stat == CONSCIOUS && phase == PRISONER_PRESENT && !can_be_dragged() && beaten_left <= 0 && !climb_ref && (!trouble || trouble == PRISONER_TROUBLE_FIGHT) && prison.in_cell_block(src) && !is_confined()
 
-/// Below this mood they join a riot, by personality
+/// Below this mood they join a riot, by personality, raised by a shiv under their mattress (outpost_prison_contraband.dm)
 /mob/living/basic/outpost_prisoner/proc/riot_join_mood()
+	var/line = PRISON_RIOT_JOIN_CHATTY
 	switch(personality)
 		if("grumpy")
-			return PRISON_RIOT_JOIN_GRUMPY
+			line = PRISON_RIOT_JOIN_GRUMPY
 		if("quiet")
-			return PRISON_RIOT_JOIN_QUIET
+			line = PRISON_RIOT_JOIN_QUIET
 		if("cheerful")
-			return PRISON_RIOT_JOIN_CHEERFUL
+			line = PRISON_RIOT_JOIN_CHEERFUL
 		if("nervous")
-			return PRISON_RIOT_JOIN_NERVOUS
-	return PRISON_RIOT_JOIN_CHATTY
+			line = PRISON_RIOT_JOIN_NERVOUS
+	return line + (prison ? prison.riot_join_bonus(src) : 0)
 
 /**
  * Who joins a riot: everyone below their personality's line (everyone able, for an admin riot),
@@ -742,7 +753,9 @@
 	riot_target_ref = null
 	riot_target_hits = 0
 	riot_victim_ref = null
-	draw_shiv()
+	// A shiv they hid in their cell is the one they draw (outpost_prison_contraband.dm).
+	if(!prison?.draw_stashed_shiv(src))
+		draw_shiv()
 	update_bubble()
 	if(shout)
 		say_context("riot")
@@ -923,7 +936,8 @@
 			continue
 		if(prison && prison.attackers_on(person, src) >= PRISON_RIOT_MAX_ATTACKERS)
 			continue
-		var/distance = get_dist(src, person)
+		// A brute seems nearer and a fair hand farther (outpost_prison_social.dm).
+		var/distance = prison ? prison.riot_victim_distance(src, person, get_dist(src, person)) : get_dist(src, person)
 		if(distance < nearest_distance)
 			nearest = person
 			nearest_distance = distance
@@ -952,6 +966,9 @@
 	if(istype(target, /obj/machinery/door))
 		var/obj/machinery/door/door = target
 		return door.density
+	if(is_outpost_prison_stun_turret(target))
+		var/obj/machinery/turret = target
+		return !(turret.machine_stat & BROKEN)
 	return TRUE
 
 /// Whether a door is one of the wing's cell doors, or stands where one did
@@ -969,6 +986,10 @@
  * Once the crew has been told they are at the doors, they go for the doors.
  */
 /datum/outpost_prison/proc/pick_smash_target(mob/living/basic/outpost_prisoner/rioter)
+	// Stun turrets first (outpost_prison_security.dm).
+	var/atom/priority = priority_smash_target(rioter)
+	if(priority)
+		return priority
 	var/breakout = rioter.trouble == PRISONER_TROUBLE_BREAKOUT
 	var/list/exits = list()
 	var/list/fixture_list = list()

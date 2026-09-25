@@ -29,6 +29,8 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 	/obj/machinery/computer/ship_checkpoint,
 	// Made by its turret.
 	/obj/machinery/porta_turret_cover,
+	// Bought for one prison wing and answers only to it (outpost_prison_security.dm); a rebuilt copy would be a free turret.
+	/obj/machinery/porta_turret/ship_defense/outpost_prison,
 	// Never rebuilt: user decision, 2026-09-24.
 	/obj/machinery/syndicatebomb,
 	/obj/machinery/power/supermatter_crystal,

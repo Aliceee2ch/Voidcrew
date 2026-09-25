@@ -101,6 +101,9 @@
 /proc/may_use_outpost_prison_staff_door(atom/door, mob/accessor)
 	if(is_outpost_prisoner(accessor))
 		return FALSE
+	// The wing's own guards (outpost_prison_guards.dm)
+	if(is_outpost_prison_guard(accessor))
+		return TRUE
 	if(isAdminGhostAI(accessor))
 		return TRUE
 	if(istype(accessor, /mob/living/basic/bot/cleanbot) && isnull(accessor.mind))
@@ -127,13 +130,13 @@
 // ===== THE PRISON'S OWN MOBS =====
 
 /**
- * Whether a mob belongs to an outpost prison: its prisoners, and later the experiments' creatures
- * and researcher. The prison deletes them with the outpost, so they never block deleting it.
+ * Whether a mob belongs to an outpost prison: its prisoners and guards, and later the experiments'
+ * creatures and researcher. The prison deletes them with the outpost, so they never block deleting it.
  */
 /proc/is_outpost_prison_mob(atom/thing)
-	// Experiment creatures (the ledger's trait) and the changeling's forms count too, so a live one
-	// holds the outpost like a prisoner does.
-	return is_outpost_prisoner(thing) || is_outpost_experiment_mob(thing) \
+	// Guards, experiment creatures (the ledger's trait) and the changeling's forms count too, so a live
+	// one holds the outpost like a prisoner does.
+	return is_outpost_prisoner(thing) || is_outpost_prison_guard(thing) || is_outpost_experiment_mob(thing) \
 		|| istype(thing, /mob/living/basic/outpost_experiment) || istype(thing, /mob/living/basic/headslug/beakless/outpost)
 
 // ===== REACH =====

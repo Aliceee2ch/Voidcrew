@@ -17,7 +17,9 @@
  * - outpost_prison_doors.dm: the wing's doors and bolt buttons;
  * - outpost_prison_prisoner.dm and outpost_prison_routine.dm: the prisoners, their needs and days;
  * - outpost_prison_trouble.dm and outpost_prison_riot.dm: mood, fights, riots and escapes;
- * - outpost_prison_experiments.dm: the researcher's experiments.
+ * - outpost_prison_experiments.dm: the researcher's experiments;
+ * - outpost_prison_extras.dm: where the extras (guards, turrets, reputation, pastimes,
+ *   contraband, mail, leads) hook in.
  *
  * Supplies: prisoners take food and clean uniforms only from the serving hatches (or from a
  * person's hand), never off a floor or a table, so the hatches, OUTPOST_PRISON_HATCH_CAPACITY
@@ -85,6 +87,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 /datum/outpost_prison/Destroy()
 	STOP_PROCESSING(SSprocessing, src)
+	extras_destroy()
 	GLOB.outpost_prisons -= src
 	set_riot_lights(FALSE)
 	QDEL_LIST(fights)
@@ -395,7 +398,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		for(var/obj/item/thing in counter)
 			if(want_uniform ? !prisoner.would_change_into(thing) : !istype(thing, /obj/item/food))
 				continue
-			if(claimed_by_other(thing, prisoner))
+			if(claimed_by_other(thing, prisoner) || reserved_supply(thing, prisoner))
 				continue
 			var/distance = get_dist(prisoner, thing)
 			if(distance < best_distance)
@@ -412,6 +415,9 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 /datum/outpost_prison/proc/on_hatch_stocked(obj/structure/table/reinforced/prison_hatch/hatch, list/stocked, mob/user)
 	if(!hatch || !length(stocked) || (user && !is_member(user)))
 		return null
+	// A birthday cake or a letter is the extras' business (outpost_prison_extras.dm).
+	if(extras_hatch_stocked(hatch, stocked, user))
+		return null
 	var/food = FALSE
 	var/suits = FALSE
 	for(var/obj/item/thing as anything in stocked)
@@ -423,6 +429,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 				suits = TRUE
 	if(!food && !suits)
 		return null
+	if(user)
+		note_staff_stock(user)
 	// Whoever wants it drops what they were idling at and comes over.
 	for(var/mob/living/basic/outpost_prisoner/wanting in prisoners)
 		var/datum/prisoner_activity/idle = wanting.activity
@@ -478,6 +486,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		diner.shared_meal_at = world.time
 		diner.adjust_mood(PRISONER_MOOD_SHARED_MEAL)
 		lifted += diner
+	if(length(lifted))
+		note_shared_meal(lifted)
 	if(length(lifted) && COOLDOWN_FINISHED(src, mess_hall_cooldown))
 		COOLDOWN_START(src, mess_hall_cooldown, OUTPOST_PRISON_MESS_HALL_GAP)
 		var/mob/living/basic/outpost_prisoner/speaker = pick(lifted)
@@ -498,6 +508,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	if(length(players) < 2)
 		return FALSE
 	COOLDOWN_START(src, staff_basket_cooldown, OUTPOST_PRISON_STAFF_BASKET_GAP)
+	note_staff_basket(shooter)
 	for(var/mob/living/basic/outpost_prisoner/player as anything in players)
 		player.adjust_mood(PRISONER_MOOD_STAFF_BASKET)
 		player.face_atom(hoop)
@@ -618,7 +629,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 /// Whether the wing is quiet enough for a new spontaneous line
 /datum/outpost_prison/proc/wing_can_speak()
-	return COOLDOWN_FINISHED(src, wing_speech_cooldown)
+	return COOLDOWN_FINISHED(src, wing_speech_cooldown) && !scene_active()
 
 /datum/outpost_prison/proc/note_speech()
 	COOLDOWN_START(src, wing_speech_cooldown, OUTPOST_PRISON_SPEECH_GAP)
@@ -676,6 +687,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 			check_release(prisoner)
 	trouble_tick(seconds)
 	experiments_tick(seconds)
+	extras_tick(seconds)
 	intake_tick(seconds)
 	pay_tick(seconds)
 
@@ -690,6 +702,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	if(prisoner.trouble == PRISONER_TROUBLE_LOOSE)
 		clear_outpost_patrol(prisoner)
 	prisoners -= prisoner
+	extras_prisoner_leaving(prisoner)
 	if(!loose_count() && !riot_active)
 		broke_out = FALSE
 	update_riot_lights()

@@ -52,6 +52,7 @@
 		"log" = list(),
 		"alarm" = null,
 		"alarm_text" = null,
+		"extras" = null,
 	)
 
 /obj/machinery/computer/outpost_prison_warden/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -90,6 +91,9 @@
 				return TRUE
 			prison.set_visitors_allowed(!prison.visitors_allowed, user)
 			return TRUE
+	// Guards and turrets (outpost_prison_extras.dm)
+	if(prison.extras_act(action, params, user))
+		return TRUE
 
 // ===== THE PRISON'S SIDE =====
 
@@ -170,5 +174,6 @@
 		"log" = entries.Copy(),
 		"alarm" = alarm[1],
 		"alarm_text" = alarm[2],
+		"extras" = extras_payload(user),
 		"experiment" = experiment_block(),
 	)

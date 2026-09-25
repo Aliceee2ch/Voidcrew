@@ -128,6 +128,10 @@
 	var/personality
 	/// Put down alive
 	var/subdued = FALSE
+	/// Its footsteps: the footstep element's sound set, volume multiplier and extra range
+	var/footstep_kind = FOOTSTEP_MOB_SHOE
+	var/footstep_volume = 0.5
+	var/footstep_range = -8
 
 /mob/living/basic/outpost_experiment/Initialize(mapload, datum/outpost_prison/owner, mob/living/basic/outpost_prisoner/subject)
 	if(subject)
@@ -145,6 +149,7 @@
 	RegisterSignal(src, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(refuse_polymorph))
 	RegisterSignal(src, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(refuse_type_change))
 	AddComponent(/datum/component/experiment_damage_ledger)
+	AddElement(/datum/element/footstep, footstep_type = footstep_kind, volume = footstep_volume, e_range = footstep_range)
 	var/turf/here = get_turf(src)
 	var/full_health = base_health + health_per_player * outpost_experiment_extra_players(here?.z)
 	maxHealth = full_health
@@ -316,6 +321,9 @@
 	desc = "A prisoner swollen into a green giant, still in the rags of a jumpsuit."
 	form_name = "a hulk"
 	mob_size = MOB_SIZE_LARGE
+	footstep_kind = FOOTSTEP_MOB_HEAVY
+	footstep_volume = 1
+	footstep_range = -4
 	status_flags = NONE
 	base_health = OUTPOST_HULK_HEALTH
 	health_per_player = OUTPOST_HULK_HEALTH_PER_PLAYER
@@ -736,6 +744,8 @@
 /mob/living/basic/outpost_experiment/nightmare
 	desc = "A shape like a person cut out of the dark, with a long blade where one arm should be."
 	form_name = "a nightmare"
+	footstep_kind = FOOTSTEP_MOB_BAREFOOT
+	footstep_volume = 0.3
 	base_health = OUTPOST_NIGHTMARE_HEALTH
 	health_per_player = OUTPOST_NIGHTMARE_HEALTH_PER_PLAYER
 	speed = OUTPOST_NIGHTMARE_DARK_SPEED

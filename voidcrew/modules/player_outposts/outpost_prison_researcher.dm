@@ -336,6 +336,7 @@
 	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, INNATE_TRAIT)
 	ADD_TRAIT(src, TRAIT_OUTPOST_EXPERIMENT, INNATE_TRAIT)
 	ADD_TRAIT(src, TRAIT_PUSHIMMUNE, INNATE_TRAIT)
+	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SHOE)
 	RegisterSignal(src, COMSIG_MOVABLE_TELEPORTING, PROC_REF(refuse_teleport))
 	RegisterSignal(src, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(refuse_polymorph))
 	RegisterSignal(src, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(refuse_type_change))

@@ -59,6 +59,9 @@
 	icon = 'icons/mob/simple/simple_human.dmi'
 	gender = NEUTER
 	mob_biotypes = MOB_ORGANIC | MOB_HUMANOID
+	footstep_kind = FOOTSTEP_MOB_HEAVY
+	footstep_volume = 0.8
+	footstep_range = -5
 #ifndef OUTPOST_EXPERIMENT_API
 	// With S4a, the experiment creatures' OUTPOST_EXPERIMENT_NO_SENTIENCE: no potion or injector takes it.
 	sentience_type = SENTIENCE_BOSS

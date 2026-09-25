@@ -140,6 +140,7 @@
 	// One shared list: element arguments are keyed by list reference.
 	var/static/list/edible_types = list(/obj/item/food)
 	AddElement(/datum/element/basic_eating, food_types = edible_types)
+	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SHOE)
 	RegisterSignal(src, COMSIG_MOB_PRE_EAT, PROC_REF(on_pre_eat))
 	RegisterSignal(src, COMSIG_MOB_ATE, PROC_REF(on_ate))
 	RegisterSignal(src, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interaction))

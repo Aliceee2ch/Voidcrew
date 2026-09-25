@@ -1141,6 +1141,8 @@
 	REMOVE_TRAIT(src, TRAIT_VENTCRAWLER_ALWAYS, INNATE_TRAIT)
 	ban_from_containment()
 	AddElement(/datum/element/ai_retaliate)
+	// A wet slither out of the vents; the footstep element stays quiet while it ventcrawls.
+	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SLIME, volume = 0.3)
 	RegisterSignal(src, COMSIG_MOVABLE_TELEPORTING, PROC_REF(refuse_teleport), override = TRUE)
 	RegisterSignal(src, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(refuse_polymorph), override = TRUE)
 	RegisterSignal(src, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(refuse_type_change), override = TRUE)

@@ -71,6 +71,8 @@ Ship docking has separate controls:
 
 Banning a ship overrides docking clearance. Use the hangar elevator to travel between the habitat and occupied visitor berths.
 
+A hull defense turret bolted to the outpost answers only to its owner, stewards, treasurers, residents and builders. Visitors cannot switch it off, change its targeting, unbolt it or scrap it.
+
 ## Advertising
 
 A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships, adds its memo and coordinates to [mission boards](missions.md), and marks it on helm charts. The panel shows why a purchase is refused.

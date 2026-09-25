@@ -66,17 +66,15 @@
 	TEST_ASSERT(islist(guards), "The extras block has no guards")
 	for(var/key in list("max", "hire_cost", "wage", "can_manage", "can_hire", "unpaid", "list"))
 		TEST_ASSERT(key in guards, "The guards block has no [key]")
-	var/list/security = extras["security"]
-	TEST_ASSERT(islist(security), "The extras block has no security")
-	for(var/key in list("turret_max", "turret_cost", "can_buy", "turrets"))
-		TEST_ASSERT(key in security, "The security block has no [key]")
+	// The console's stun turret is gone (built turrets follow the prison's rules), and its security block with it.
+	TEST_ASSERT(!("security" in extras), "The extras block still sends the removed security block")
 	var/list/mail = extras["mail"]
 	TEST_ASSERT(islist(mail) && ("waiting" in mail), "The extras block has no mail count")
 
 	// The admin panel's extras block, and an action no package knows
 	var/list/admin_extras = prison.admin_payload()["extras"]
 	TEST_ASSERT(islist(admin_extras), "The admin panel gets no extras block")
-	for(var/key in list("guards", "security", "social", "life", "contraband", "mail", "leads"))
+	for(var/key in list("guards", "social", "life", "contraband", "mail", "leads"))
 		TEST_ASSERT(islist(admin_extras[key]), "The admin extras block has no [key] list")
 	TEST_ASSERT_NULL(prison.extras_admin_act("prison_no_such_thing", list(), null), "An unknown admin action was taken by a package")
 	TEST_ASSERT(!prison.extras_act("no_such_thing", list(), null), "An unknown console action was taken by a package")

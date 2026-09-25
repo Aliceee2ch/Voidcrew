@@ -582,6 +582,7 @@
 		return
 	state = CHECKPOINT_BUILD_BUILDING
 	last_progress_at = world.time
+	launch_drones()
 	advance_stage()
 	update_bay_status()
 
@@ -600,9 +601,19 @@
 	for(var/i in 1 to count)
 		var/obj/structure/checkpoint_drone_bay/cradle = length(cradles) ? cradles[(i - 1) % length(cradles) + 1] : null
 		drones += new /obj/effect/checkpoint_build_drone(cradle ? get_turf(cradle) : fallback, cradle)
-	for(var/obj/structure/checkpoint_drone_bay/cradle as anything in cradles)
-		cradle.launch()
-	start_yard_noise(bay.reservation)
+
+/// The survey is over: the drones leave their bays.
+/datum/checkpoint_construction/proc/launch_drones()
+	if(!length(drones))
+		return
+	var/list/obj/structure/checkpoint_drone_bay/launched = list()
+	for(var/obj/effect/checkpoint_build_drone/drone as anything in drones)
+		if(QDELETED(drone))
+			continue
+		var/obj/structure/checkpoint_drone_bay/cradle = drone.cradle_ref?.resolve()
+		if(cradle && !(cradle in launched))
+			launched += cradle
+			cradle.launch()
 	play_to_checkpoint_yard(bay.reservation, CHECKPOINT_YARD_LAUNCH_SOUND)
 
 /// One bounded pass over the drones: travel, finish work, or take the next visit.
@@ -1393,8 +1404,6 @@
 		qdel(markers[marked])
 	markers.Cut()
 	var/site_remains = !QDELETED(bay) && !QDELETED(home)
-	if(bay)
-		stop_yard_noise(bay.reservation)
 	var/datum/checkpoint_drone_flock/flock = site_remains && length(drones) ? new(bay.reservation) : null
 	for(var/obj/effect/checkpoint_build_drone/drone as anything in drones)
 		if(drone?.visit)

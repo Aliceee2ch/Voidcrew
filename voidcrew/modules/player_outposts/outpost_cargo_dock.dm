@@ -14,6 +14,18 @@
 	icon_state = "cargo_bay"
 
 /**
+ * Registers once per level. A template load registers every area it touched
+ * (initTemplateBounds()), then the new area registers itself again in Initialize(), and the
+ * parent appends without checking. /area/Destroy() removes one entry per level, so the second
+ * one kept SSmapping.areas_in_z holding the dock's area after its claim was torn down, and the
+ * area could never be garbage collected.
+ */
+/area/voidcrew/player_outpost/cargo_dock/reg_in_areas_in_z()
+	if(z && (src in SSmapping.areas_in_z["[z]"]))
+		return
+	return ..()
+
+/**
  * The landing pad. The mapped values are the cargo ferry's own mobile port: the box ferry is
  * 7x12 with its port on an airlock in the middle of its long side, facing inboard. The map puts
  * this port on the pad's edge beside the apron, facing into the pad, so the ferry lands with that
@@ -35,6 +47,45 @@
  */
 /obj/docking_port/stationary/outpost_cargo_dock/template_load_rotate(rotation)
 	setDir(angle2dir(rotation + dir2angle(dir)))
+
+/**
+ * What the ferry would crush if it landed now. A landing gibs every mob on its turfs and
+ * deletes every anchored object there (/turf/proc/toShuttleMove()), so freight refuses to land
+ * on any of these:
+ * - a mob, alive or dead, or anything holding one (a person in a crate, locker, mech or body bag);
+ * - anything anchored or dense.
+ * Docking ports, effects and landmarks never count, nor does anything the crush spares
+ * (incorporeal mobs, SHUTTLE_CRUSH_PROOF). Loose items are pushed off the pad by the landing.
+ *
+ * Returns the thing as it stands on the pad (the crate, not the person inside), or null.
+ * Only meaningful while nothing is docked here.
+ */
+/obj/docking_port/stationary/outpost_cargo_dock/proc/pad_obstruction()
+	for(var/turf/tile as anything in return_turfs())
+		for(var/atom/movable/thing as anything in tile)
+			if(istype(thing, /obj/docking_port) || (thing.resistance_flags & SHUTTLE_CRUSH_PROOF))
+				continue
+			for(var/mob/living/occupant as anything in thing.get_all_contents_type(/mob/living))
+				if(!occupant.incorporeal_move)
+					return thing
+			if(isobj(thing) && !iseffect(thing) && (thing.anchored || thing.density))
+				return thing
+	return null
+
+/// The middle of the landing rectangle.
+/obj/docking_port/stationary/outpost_cargo_dock/proc/pad_center()
+	var/list/coords = return_coords()
+	return locate(round((coords[1] + coords[3]) / 2), round((coords[2] + coords[4]) / 2), z)
+
+/// The last warning before the ferry lands: an alarm and a message for everyone who can see the pad.
+/obj/docking_port/stationary/outpost_cargo_dock/proc/warn_landing(seconds)
+	var/turf/center = pad_center()
+	if(!center)
+		return FALSE
+	playsound(center, 'sound/machines/warning-buzzer.ogg', 60, FALSE)
+	center.visible_message(span_boldwarning("Warning lights flash around the landing pad. The cargo ferry lands in [seconds] seconds."), \
+		blind_message = span_warning("You hear a landing alarm."), vision_distance = 9)
+	return TRUE
 
 /// Authored with its entrance on the south edge; placement rotates it.
 /datum/map_template/outpost_upgrade/cargo_dock

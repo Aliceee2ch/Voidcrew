@@ -29,6 +29,8 @@
 #define UPGRADE_CELL_RESERVED "x"
 /// The placement survey never covers more than this many tiles a side, centred on the outpost's core
 #define UPGRADE_SURVEY_WINDOW 128
+/// A placement still claiming its blueprint this long after it started, with no map loading, has died
+#define UPGRADE_PLACEMENT_WATCHDOG (60 SECONDS)
 
 /// Base for upgrade rooms. Loaded with load_rotated(), never centered or cached.
 /datum/map_template/outpost_upgrade
@@ -67,6 +69,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/paid = 0
 	/// Claimed by a placement whose map load is still running
 	var/placing = FALSE
+	/// Counts placements, so a watchdog or a late load can tell whether the claim is still its own
+	var/placement_serial = 0
 	var/installed = FALSE
 	/// Degrees clockwise the template was placed at
 	var/rotation = 0
@@ -90,6 +94,27 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 /// Called once the room is stamped and initialized. Upgrades wire their own systems in here.
 /datum/outpost_upgrade/proc/on_installed(mob/user)
 	return
+
+/**
+ * A placement that crashed mid-load never comes back to release its blueprint, which would then
+ * stay "placing" for good: it could not be placed again or refunded. So each placement arms this.
+ * While any map is loading (this one, or the one it is queued behind) it waits another round;
+ * otherwise, with the same placement still claiming the blueprint, it puts the blueprint back on
+ * the shelf. The load itself is never wrapped in try/catch, which leaves dead maps.
+ */
+/datum/outpost_upgrade/proc/placement_watchdog(serial)
+	if(!placing || serial != placement_serial)
+		return
+	if(Master.map_loading)
+		addtimer(CALLBACK(src, PROC_REF(placement_watchdog), serial), UPGRADE_PLACEMENT_WATCHDOG)
+		return
+	placement_serial++
+	placing = FALSE
+	footprint_bounds = null
+	rotation = 0
+	if(!QDELETED(outpost))
+		outpost.upgrade_survey = null
+	log_game("PLAYER OUTPOST: the [name] placement at '[outpost?.name]' never finished; its blueprint was released")
 
 /// One shared, uncached template per upgrade type. Null when the map file is missing.
 /datum/outpost_upgrade/proc/get_template()
@@ -397,6 +422,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	// Claim the blueprint and its ground before the load can yield, so a second Build or an
 	// elevator placement finds nothing to work with.
 	blueprint.placing = TRUE
+	var/serial = ++blueprint.placement_serial
+	addtimer(CALLBACK(blueprint, TYPE_PROC_REF(/datum/outpost_upgrade, placement_watchdog), serial), UPGRADE_PLACEMENT_WATCHDOG)
 	blueprint.rotation = rotation
 	blueprint.footprint_bounds = list(bottom_left.x, bottom_left.y, top_right.x, top_right.y, bottom_left.z)
 	for(var/turf/tile as anything in footprint_turfs)
@@ -404,7 +431,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			qdel(lattice)
 	sweep_upgrade_footprint(footprint)
 	var/list/loaded_bounds = template.load_rotated(bottom_left, rotation)
-	if(QDELETED(blueprint))
+	// Gone, or the watchdog gave up on this load and released the blueprint meanwhile
+	if(QDELETED(blueprint) || blueprint.placement_serial != serial)
 		return "The upgrade could not be built."
 	blueprint.placing = FALSE
 	if(!loaded_bounds || QDELETED(src))
@@ -741,4 +769,5 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 #undef UPGRADE_CELL_OBJECT
 #undef UPGRADE_CELL_RESERVED
 #undef UPGRADE_SURVEY_WINDOW
+#undef UPGRADE_PLACEMENT_WATCHDOG
 #undef OUTPOST_UPGRADE_PREVIEW_DIR

@@ -738,3 +738,63 @@
 	TEST_ASSERT_NOTNULL(survey, "The sprawled outpost could not be surveyed")
 	TEST_ASSERT(survey["width"] <= 128 && survey["height"] <= 128, "The survey covered [survey["width"]] x [survey["height"]] tiles") // UPGRADE_SURVEY_WINDOW
 	TEST_ASSERT(center.x >= survey["x"] && center.x < survey["x"] + survey["width"], "The survey window does not hold the outpost's core")
+
+// ===== A PLACEMENT THAT NEVER FINISHES =====
+
+/**
+ * A placement whose map load crashed never came back to release its blueprint, which then stayed
+ * "placing" for good: it could be neither placed again nor refunded. Every placement arms a
+ * watchdog that puts the blueprint back on the shelf once no map is loading, waits while one is,
+ * and leaves a later placement and a finished one alone.
+ */
+/datum/unit_test/voidcrew_outpost_upgrade_placement_watchdog
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_upgrade_placement_watchdog/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("watchdogowner")
+	TEST_ASSERT_NOTNULL(home, "The watchdog test outpost did not load")
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "watchdogowner")
+	home.ensure_home_services()
+	var/datum/outpost_upgrade/cargo_dock/blueprint = new(home)
+	home.outpost_upgrades["cargo_dock"] = blueprint
+
+	// A placement that died mid-load: the blueprint claimed, its footprint recorded, nobody coming back.
+	blueprint.placing = TRUE
+	var/crashed = ++blueprint.placement_serial
+	blueprint.rotation = 90
+	blueprint.footprint_bounds = list(1, 1, 13, 16, home.upgrade_level_z())
+	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(owner, "cargo_dock"), "Placement in progress.", "A claimed blueprint could be cancelled")
+	TEST_ASSERT_NULL(home.unplaced_upgrade("cargo_dock"), "A claimed blueprint could be placed again")
+
+	// While a map is loading, it may be this placement's own load, or the one it waits behind.
+	var/was_loading = Master.map_loading
+	Master.map_loading = TRUE
+	blueprint.placement_watchdog(crashed)
+	Master.map_loading = was_loading
+	TEST_ASSERT(blueprint.placing, "The watchdog released a placement while a map was loading")
+
+	// With no map loading it gives up on the placement.
+	TEST_ASSERT(!Master.map_loading, "A map was loading during the watchdog test")
+	blueprint.placement_watchdog(crashed)
+	TEST_ASSERT(!blueprint.placing, "The watchdog did not release a placement that never finished")
+	TEST_ASSERT_NULL(blueprint.footprint_bounds, "The released blueprint kept its footprint")
+	TEST_ASSERT_EQUAL(blueprint.rotation, 0, "The released blueprint kept its rotation")
+	TEST_ASSERT_EQUAL(home.unplaced_upgrade("cargo_dock"), blueprint, "The released blueprint cannot be placed again")
+	TEST_ASSERT(blueprint in home.upgrade_blueprints(), "The released blueprint is not back on the shelf")
+
+	// An earlier placement's watchdog leaves a later placement alone.
+	blueprint.placing = TRUE
+	var/later = ++blueprint.placement_serial
+	blueprint.placement_watchdog(crashed)
+	TEST_ASSERT(blueprint.placing, "An earlier placement's watchdog released a later one")
+	blueprint.placing = FALSE
+
+	// A real placement still installs, and its watchdog finds nothing to do.
+	var/result = place_test_cargo_dock(home, user = owner)
+	TEST_ASSERT_EQUAL(result, blueprint, "The released blueprint could not be placed: [result]")
+	TEST_ASSERT(blueprint.installed && !blueprint.placing, "The placement did not install the blueprint")
+	TEST_ASSERT(blueprint.placement_serial > later, "The placement did not count itself")
+	var/list/bounds = blueprint.footprint_bounds.Copy()
+	blueprint.placement_watchdog(blueprint.placement_serial)
+	TEST_ASSERT(blueprint.installed && blueprint.footprint_bounds ~= bounds, "The watchdog touched a finished placement")
+	settle_test_cargo_dock(home)

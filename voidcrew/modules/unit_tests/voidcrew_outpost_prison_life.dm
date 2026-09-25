@@ -476,8 +476,10 @@
 	warden.dropItemToGround(plain_cake)
 	guest.set_hunger(100)
 
-	// Handed to the birthday prisoner, it is theirs for the party and the eat is called off
+	// Handed to the birthday prisoner, it is theirs for the party and the eat is called off.
+	// Handing takes arm's reach, as it does in play, so the warden steps up beside them.
 	prison.give_birthday(host)
+	warden.forceMove(prison_spot(home, 6, 7))
 	var/obj/item/food/cake/birthday/handed = allocate(/obj/item/food/cake/birthday)
 	warden.put_in_active_hand(handed)
 	TEST_ASSERT_EQUAL(host.on_pre_eat(host, handed, warden), COMSIG_MOB_CANCEL_EAT, "The birthday prisoner ate the cake they were handed")
@@ -488,6 +490,7 @@
 	TEST_ASSERT(!prison.reserved_supply(handed, guest), "A cake was still kept after the party was off")
 	TEST_ASSERT(isturf(handed.loc), "The birthday prisoner kept hold of the cake after the party was off")
 	qdel(handed)
+	warden.forceMove(prison_spot(home, 5, 5))
 
 	// On the hatch, it is kept for them: no call-out, and nobody takes it as a meal
 	var/obj/item/food/cake/birthday/cake = new(hatch.loc)

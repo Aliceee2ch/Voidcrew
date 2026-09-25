@@ -440,12 +440,12 @@
 		arrival.sentence_left = 3600
 	TEST_ASSERT_EQUAL(length(prison.entries), 4, "The arrivals were not logged")
 
-	// The roster: name, cell, crime and time left, in cell order, and nothing about their needs.
+	// The roster: name, cell, crime, time left and a birthday mark, in cell order, and nothing about their needs.
 	var/list/roster = console.ui_data(owner)["prisoners"]
 	TEST_ASSERT_EQUAL(length(roster), 4, "The console roster does not list every prisoner")
 	for(var/i in 1 to 4)
 		var/list/row = roster[i]
-		TEST_ASSERT_EQUAL(length(row), 6, "A roster row sends [length(row)] fields, not 6")
+		TEST_ASSERT_EQUAL(length(row), 7, "A roster row sends [length(row)] fields, not 7")
 		for(var/key in list("ref", "name", "cell", "crime", "sentence_left", "status", "birthday"))
 			TEST_ASSERT(key in row, "The console roster sends no [key]")
 		TEST_ASSERT_EQUAL(row["cell"], i, "The roster is not in cell order")

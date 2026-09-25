@@ -81,7 +81,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
 		if(bay?.contains_service_turf(location))
 			return TRUE
-	return ..() || freight_berth?.reservation?.contains_turf(location)
+	return ..()
 
 /obj/structure/overmap/dynamic/player_outpost/Initialize(mapload)
 	. = ..()
@@ -91,13 +91,13 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	var/list/retired_registrations = checkpoints
 	checkpoints = list()
 	QDEL_LIST(retired_registrations)
+	QDEL_LIST_ASSOC_VAL(outpost_upgrades)
 	GLOB.player_outposts -= src
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths.Copy())
 		if(bay)
 			qdel(bay)
 	bay_berths.Cut()
 	QDEL_NULL(freight)
-	QDEL_NULL(freight_berth)
 	QDEL_LIST(cargo_cart)
 	QDEL_NULL(treasury)
 	revoke_research_links()

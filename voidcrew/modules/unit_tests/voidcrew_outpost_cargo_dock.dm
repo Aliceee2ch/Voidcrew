@@ -1,0 +1,346 @@
+/**
+ * Outpost cargo dock: the free catalog entry, the landing pad at every rotation, and outpost
+ * freight landing on it with no elevator and no freight berth.
+ *
+ * Voidcrew defines are not visible from test files, so sizes and messages appear as literals.
+ * The map (outpost_upgrade_cargo_dock.dmm) is 16x13 with its entrance on the south edge; the
+ * pad runs from (3,5) to (14,11) and its port stands on (8,5) facing north.
+ */
+
+// ===== SHARED HELPERS =====
+
+/// A docking port's landing rectangle as list(min_x, min_y, max_x, max_y)
+/datum/unit_test/proc/cargo_dock_rect(obj/docking_port/port)
+	var/list/coords = port.return_coords()
+	return list(min(coords[1], coords[3]), min(coords[2], coords[4]), max(coords[1], coords[3]), max(coords[2], coords[4]))
+
+/// The bottom-left for a cargo dock beside the claim's shell: north, east, south or west of it by rotation.
+/datum/unit_test/proc/cargo_dock_test_corner(obj/structure/overmap/dynamic/player_outpost/home, rotation)
+	var/turf/shell_corner = home.template_bottom_left
+	if(!shell_corner || !home.shell_template)
+		return null
+	var/left = shell_corner.x
+	var/bottom = shell_corner.y
+	var/right = left + home.shell_template.width - 1
+	var/top = bottom + home.shell_template.height - 1
+	var/turned = (rotation % 180) != 0
+	var/footprint_width = turned ? 13 : 16
+	var/footprint_height = turned ? 16 : 13
+	switch(rotation)
+		if(0)
+			return locate(left, top + 4, shell_corner.z)
+		if(90)
+			return locate(right + 4, bottom, shell_corner.z)
+		if(180)
+			return locate(left, bottom - 4 - footprint_height, shell_corner.z)
+		if(270)
+			return locate(left - 4 - footprint_width, bottom, shell_corner.z)
+	return null
+
+/**
+ * Stamps a cargo dock beside the claim's shell, trying each rotation's side in turn, without
+ * going through the console. Returns the placed upgrade, or the last placement error.
+ */
+/datum/unit_test/proc/place_test_cargo_dock(obj/structure/overmap/dynamic/player_outpost/home, list/rotations = list(0, 90, 180, 270), mob/user)
+	var/datum/outpost_upgrade/cargo_dock/blueprint = home.outpost_upgrades["cargo_dock"]
+	if(!blueprint)
+		blueprint = new(home)
+		home.outpost_upgrades["cargo_dock"] = blueprint
+	var/error = "No side of the shell to try."
+	for(var/rotation in rotations)
+		var/turf/corner = cargo_dock_test_corner(home, rotation)
+		if(!corner)
+			continue
+		error = home.place_outpost_upgrade(blueprint, corner, rotation, user)
+		if(!error)
+			return blueprint
+	return error
+
+/// Fresh rooms trade air for a while. Let it settle before the claim is torn down under SSair.
+/datum/unit_test/proc/settle_cargo_dock_air(list/room_turfs)
+	var/settle_until = world.time + 30 SECONDS
+	while(world.time < settle_until)
+		var/busy = FALSE
+		for(var/turf/open/room_turf in room_turfs)
+			if(room_turf.excited)
+				busy = TRUE
+				break
+		if(!busy)
+			return
+		sleep(1 SECONDS)
+
+/// settle_cargo_dock_air() for the claim's placed cargo dock, if it has one
+/datum/unit_test/proc/settle_test_cargo_dock(obj/structure/overmap/dynamic/player_outpost/home)
+	var/datum/outpost_upgrade/cargo_dock/dock = home?.outpost_upgrades["cargo_dock"]
+	var/list/bounds = dock?.footprint_bounds
+	if(bounds)
+		settle_cargo_dock_air(block(bounds[1], bounds[2], bounds[5], bounds[3], bounds[4], bounds[5]))
+
+// ===== CATALOG AND PURCHASE =====
+
+/datum/unit_test/voidcrew_outpost_cargo_dock_purchase
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_cargo_dock_purchase/Run()
+	// Founding used to load a hangar-sized freight berth into its own turf reservation.
+	var/list/reservations_before = LAZYCOPY(SSmapping.turf_reservations)
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("cargodockowner")
+	TEST_ASSERT_NOTNULL(home, "The cargo dock test outpost did not load")
+	TEST_ASSERT(home.home_bundle_installed, "Founding did not install the cargo console, bank and pod")
+	var/datum/map_template/outpost_hangar/hangar = allocate(/datum/map_template/outpost_hangar)
+	for(var/datum/turf_reservation/reservation as anything in SSmapping.turf_reservations)
+		if(reservation in reservations_before)
+			continue
+		TEST_ASSERT(reservation.width != hangar.width || reservation.height != hangar.height, "Founding reserved a [reservation.width]x[reservation.height] freight berth")
+
+	// The cargo console refuses to order until a dock is placed.
+	var/obj/machinery/computer/voidcrew_cargo/cargo_console
+	for(var/obj/machinery/computer/voidcrew_cargo/terminal as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/voidcrew_cargo))
+		if(get_outpost_from_atom(terminal) == home)
+			cargo_console = terminal
+			break
+	TEST_ASSERT_NOTNULL(cargo_console, "The small shell has no cargo console")
+	var/no_dock = "No cargo dock. Place the cargo dock upgrade."
+	TEST_ASSERT_EQUAL(cargo_console.get_shuttle_error_message(), no_dock, "The cargo console did not ask for a cargo dock")
+	TEST_ASSERT(!cargo_console.can_call_cargo_shuttle(), "The cargo console could order with no cargo dock")
+	TEST_ASSERT_EQUAL(home.freight.call_shuttle(), no_dock, "Freight was dispatched with no cargo dock")
+
+	var/turf/console_turf = get_turf(home.management_console)
+	var/mob/living/carbon/human/owner = make_player(console_turf, "cargodockowner")
+	var/datum/player_outpost_management_ui/management_test/panel = upgrade_test_panel(home, owner)
+
+	var/list/dock_entry
+	for(var/list/entry as anything in panel.ui_static_data(owner)["upgrade_catalog"])
+		if(entry["id"] == "cargo_dock")
+			dock_entry = entry
+	TEST_ASSERT_NOTNULL(dock_entry, "The cargo dock is missing from the upgrade catalog")
+	TEST_ASSERT_EQUAL(dock_entry["price"], 0, "The cargo dock is not free")
+	TEST_ASSERT_EQUAL(dock_entry["width"], 16, "The cargo dock's catalog width is wrong")
+	TEST_ASSERT_EQUAL(dock_entry["height"], 13, "The cargo dock's catalog height is wrong")
+	TEST_ASSERT_EQUAL(dock_entry["entrance"], SOUTH, "The cargo dock's entrance edge is wrong")
+	TEST_ASSERT_EQUAL(dock_entry["preview"], "outpost_upgrade_cargo_dock.png", "The cargo dock's preview is missing")
+
+	// Free, but still bought through the normal path: an empty treasury is enough, once.
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "The test treasury did not start empty")
+	TEST_ASSERT_NULL(home.upgrade_purchase_denial(owner, "cargo_dock"), "An empty treasury could not take the free cargo dock")
+	act(panel, owner, "buy_upgrade", null, list("id" = "cargo_dock"))
+	TEST_ASSERT_NULL(panel.upgrade_error, "Buying the cargo dock reported an error")
+	var/datum/outpost_upgrade/cargo_dock/blueprint = home.outpost_upgrades["cargo_dock"]
+	TEST_ASSERT(istype(blueprint), "Buying left no cargo dock blueprint")
+	TEST_ASSERT_EQUAL(blueprint.paid, 0, "The free cargo dock recorded a payment")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "The free cargo dock changed the treasury")
+	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "cargo_dock"), "Blueprint already bought.", "A second cargo dock could be bought")
+	TEST_ASSERT_EQUAL(home.freight.availability_error(), no_dock, "An unplaced blueprint counted as a cargo dock")
+
+	act(panel, owner, "cancel_upgrade", null, list("id" = "cargo_dock"))
+	TEST_ASSERT_NULL(panel.upgrade_error, "Cancelling the free cargo dock reported an error")
+	TEST_ASSERT_NULL(home.outpost_upgrades["cargo_dock"], "Cancelling left the cargo dock blueprint")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "Cancelling the free cargo dock changed the treasury")
+
+	act(panel, owner, "buy_upgrade", null, list("id" = "cargo_dock"))
+	blueprint = home.outpost_upgrades["cargo_dock"]
+	TEST_ASSERT(istype(blueprint), "The cargo dock could not be bought again after cancelling")
+	var/result = place_test_cargo_dock(home, list(0), owner)
+	TEST_ASSERT_EQUAL(result, blueprint, "The bought cargo dock could not be placed: [result]")
+	TEST_ASSERT_NULL(cargo_console.get_shuttle_error_message(), "The cargo console still refuses with a placed cargo dock")
+	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "cargo_dock"), "Already installed.", "A second cargo dock could be bought after placing one")
+	settle_test_cargo_dock(home)
+
+// ===== THE PAD AT EVERY ROTATION =====
+
+/datum/unit_test/voidcrew_outpost_cargo_dock_placement
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_cargo_dock_placement/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("cargodockplacer")
+	TEST_ASSERT_NOTNULL(home, "The cargo dock placement outpost did not load")
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "cargodockplacer")
+	var/datum/player_outpost_management_ui/management_test/panel = upgrade_test_panel(home, owner)
+	var/z = home.upgrade_level_z()
+	var/list/room_turfs = list()
+	var/list/rotations = list(0, 90, 180, 270)
+	for(var/rotation in rotations)
+		var/datum/outpost_upgrade/cargo_dock/blueprint = new(home)
+		home.outpost_upgrades["cargo_dock"] = blueprint
+		var/turf/bottom_left = cargo_dock_test_corner(home, rotation)
+		TEST_ASSERT_NOTNULL(bottom_left, "No test spot at [rotation] degrees")
+		var/list/footprint = blueprint.footprint_at(bottom_left, rotation)
+		TEST_ASSERT_NOTNULL(footprint, "No footprint at [rotation] degrees")
+		var/turf/top_right = footprint["top_right"]
+		for(var/turf/tile as anything in footprint["turfs"])
+			TEST_ASSERT(home.is_upgrade_turf_clear(tile), "Test ground at [tile.x],[tile.y] was not clear at [rotation] degrees")
+		var/mapping_log_count = length(GLOB.unit_test_mapping_logs)
+
+		if(rotation == 90)
+			act(panel, owner, "place_upgrade", null, list("id" = "cargo_dock", "x" = bottom_left.x, "y" = bottom_left.y, "rotation" = rotation))
+			TEST_ASSERT_NULL(panel.upgrade_error, "The placement map's Build failed at [rotation] degrees")
+		else
+			TEST_ASSERT_NULL(home.place_outpost_upgrade(blueprint, bottom_left, rotation, owner), "The cargo dock was not placed at [rotation] degrees")
+		TEST_ASSERT(blueprint.installed, "Placement did not install the cargo dock at [rotation] degrees")
+		if(length(GLOB.unit_test_mapping_logs) > mapping_log_count)
+			TEST_FAIL("Placing the cargo dock at [rotation] degrees logged mapping errors: [jointext(GLOB.unit_test_mapping_logs.Copy(mapping_log_count + 1), "; ")]")
+			return
+		var/area/voidcrew/player_outpost/cargo_dock/dock_area = blueprint.installed_area
+		TEST_ASSERT(istype(dock_area), "No cargo dock area was recorded at [rotation] degrees")
+
+		// The port: where the map put it, turned with the room, and the ferry's size.
+		var/datum/map_template/template = blueprint.get_template()
+		var/obj/docking_port/stationary/outpost_cargo_dock/pad = blueprint.pad
+		TEST_ASSERT_NOTNULL(pad, "The placed cargo dock found no landing pad port at [rotation] degrees")
+		TEST_ASSERT_EQUAL(home.cargo_dock_port(), pad, "The claim does not know its cargo dock at [rotation] degrees")
+		TEST_ASSERT_EQUAL(pad.loc, template.rotated_template_turf(bottom_left, 7, 4, rotation), "The pad port is on the wrong tile at [rotation] degrees")
+		TEST_ASSERT_EQUAL(pad.dir, angle2dir(rotation), "The pad port was not turned with the room at [rotation] degrees")
+		TEST_ASSERT_EQUAL(pad.width, 12, "The pad is the wrong width at [rotation] degrees")
+		TEST_ASSERT_EQUAL(pad.height, 7, "The pad is the wrong height at [rotation] degrees")
+		TEST_ASSERT_EQUAL(pad.dwidth, 5, "The pad port is off-centre across the pad at [rotation] degrees")
+		TEST_ASSERT_EQUAL(pad.dheight, 0, "The pad port is not on the pad's edge at [rotation] degrees")
+		// The painted pad, (3,5)-(14,11) as drawn, turned with the room.
+		var/turf/pad_corner = template.rotated_template_turf(bottom_left, 2, 4, rotation)
+		var/turf/pad_far_corner = template.rotated_template_turf(bottom_left, 13, 10, rotation)
+		var/list/expected_rect = list(min(pad_corner.x, pad_far_corner.x), min(pad_corner.y, pad_far_corner.y), max(pad_corner.x, pad_far_corner.x), max(pad_corner.y, pad_far_corner.y))
+		var/list/rect = cargo_dock_rect(pad)
+		for(var/index in 1 to 4)
+			TEST_ASSERT_EQUAL(rect[index], expected_rect[index], "The landing rectangle ([rect.Join(",")]) is not the painted pad ([expected_rect.Join(",")]) at [rotation] degrees")
+		TEST_ASSERT(rect[1] > bottom_left.x && rect[2] > bottom_left.y && rect[3] < top_right.x && rect[4] < top_right.y, "The landing rectangle reaches the room's walls at [rotation] degrees")
+		// The ferry's airlocks sit on the port's row, so that row must face the entrance.
+		TEST_ASSERT_EQUAL(REVERSE_DIR(pad.dir), footprint["entrance_dir"], "The pad's airlock side does not face the entrance at [rotation] degrees")
+		var/turf/apron = get_step(pad, REVERSE_DIR(pad.dir))
+		TEST_ASSERT(isopenturf(apron) && apron.loc == dock_area, "There is no deck outside the ferry's airlocks at [rotation] degrees")
+		for(var/turf/pad_tile as anything in block(rect[1], rect[2], z, rect[3], rect[4], z))
+			TEST_ASSERT(istype(pad_tile, /turf/open/floor), "Pad tile [pad_tile.x],[pad_tile.y] is not floor at [rotation] degrees")
+			TEST_ASSERT_EQUAL(pad_tile.loc, dock_area, "Pad tile [pad_tile.x],[pad_tile.y] is not in the dock's area at [rotation] degrees")
+			for(var/atom/movable/thing as anything in pad_tile)
+				if(thing == pad || ismob(thing) || iseffect(thing))
+					continue
+				TEST_FAIL("[thing.type] stands on pad tile [pad_tile.x],[pad_tile.y] at [rotation] degrees")
+				return
+		// Other upgrades keep off the pad.
+		TEST_ASSERT(!home.is_upgrade_turf_clear(locate(rect[1] + 3, rect[2] + 3, z)), "Another upgrade could be placed on the pad at [rotation] degrees")
+
+		// Power and the way in, like the prison wing.
+		var/list/apcs = list()
+		var/list/edge_airlocks = list()
+		for(var/turf/tile as anything in footprint["turfs"])
+			TEST_ASSERT_EQUAL(tile.loc, dock_area, "Footprint tile [tile.x],[tile.y] is not in the dock's area at [rotation] degrees")
+			for(var/obj/machinery/power/apc/apc in tile)
+				apcs += apc
+			for(var/obj/machinery/door/airlock/airlock in tile)
+				edge_airlocks += airlock
+		TEST_ASSERT_EQUAL(length(apcs), 1, "The cargo dock should have exactly one APC at [rotation] degrees")
+		var/obj/machinery/power/apc/apc = apcs[1]
+		TEST_ASSERT_EQUAL(dock_area.apc, apc, "The dock's area does not know its APC at [rotation] degrees")
+		TEST_ASSERT(iswallturf(get_step(apc, apc.dir)), "The turned APC is not against a wall at [rotation] degrees")
+		TEST_ASSERT_EQUAL(length(edge_airlocks), 1, "The cargo dock should have exactly one airlock at [rotation] degrees")
+		var/obj/machinery/door/airlock/entrance = edge_airlocks[1]
+		TEST_ASSERT(get_turf(entrance) in footprint["entrance"], "The airlock is not on the entrance edge at [rotation] degrees")
+
+		// One dock per claim: forget this one so the next rotation can be placed.
+		room_turfs += footprint["turfs"]
+		home.outpost_upgrades -= "cargo_dock"
+		qdel(blueprint)
+		TEST_ASSERT(QDELETED(pad), "Forgetting the cargo dock left its pad port registered at [rotation] degrees")
+		TEST_ASSERT_NULL(home.cargo_dock_port(), "The claim kept a forgotten cargo dock at [rotation] degrees")
+	settle_cargo_dock_air(room_turfs)
+
+// ===== FREIGHT LANDS ON THE PAD =====
+
+/datum/unit_test/voidcrew_launch_cargo_fixture/outpost_cargo_dock_delivery
+	var/obj/structure/overmap/dynamic/player_outpost/test_home
+	var/list/saved_elevator_panels
+
+/datum/unit_test/voidcrew_launch_cargo_fixture/outpost_cargo_dock_delivery/Destroy()
+	if(test_home && saved_elevator_panels)
+		test_home.lobby_panels = saved_elevator_panels
+	test_home = null
+	saved_elevator_panels = null
+	return ..()
+
+/datum/unit_test/voidcrew_launch_cargo_fixture/outpost_cargo_dock_delivery/Run()
+	save_economy()
+	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
+	test_home = home
+	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.founder_ckey = "cargodockdelivery"
+	TEST_ASSERT(home.load_level(), "The cargo dock delivery outpost did not load")
+	var/datum/voidcrew_cargo_shuttle/outpost/ferry = home.freight
+	TEST_ASSERT_NOTNULL(ferry, "The claim has no freight service")
+	var/obj/machinery/computer/camera_advanced/base_construction/ship/outpost/builder = home.construction_console
+	TEST_ASSERT_NOTNULL(builder, "The small shell has no construction console")
+	// Freight must not need the hangar elevator at all.
+	saved_elevator_panels = home.lobby_panels
+	home.lobby_panels = list()
+	TEST_ASSERT(!home.has_hangar_elevator(), "The claim still has a working elevator")
+
+	var/list/room_turfs = list()
+	var/list/rotations = list(0, 90, 180, 270)
+	for(var/rotation in rotations)
+		var/result = place_test_cargo_dock(home, list(rotation))
+		TEST_ASSERT(istype(result, /datum/outpost_upgrade/cargo_dock), "The cargo dock could not be placed at [rotation] degrees: [result]")
+		var/datum/outpost_upgrade/cargo_dock/dock = result
+		var/obj/docking_port/stationary/outpost_cargo_dock/pad = dock.pad
+		TEST_ASSERT_NOTNULL(pad, "The cargo dock has no pad at [rotation] degrees")
+		var/list/pad_rect = cargo_dock_rect(pad)
+		var/list/pad_turfs = block(pad_rect[1], pad_rect[2], pad.z, pad_rect[3], pad_rect[4], pad.z)
+		var/list/pad_types = list()
+		var/list/pad_depths = list()
+		for(var/turf/pad_tile as anything in pad_turfs)
+			pad_types[pad_tile] = pad_tile.type
+			pad_depths[pad_tile] = pad_tile.count_baseturfs()
+		var/entrance_side = REVERSE_DIR(pad.dir)
+
+		home.treasury.account_balance = 10000
+		var/datum/supply_pack/voidcrew_outpost_cancel_during_generation/pack = new
+		var/datum/supply_order/order = new(pack)
+		order.manifest_can_fail = FALSE
+		home.cargo_cart += order
+		TEST_ASSERT_NULL(ferry.call_shuttle(), "Freight was not dispatched to the cargo dock at [rotation] degrees")
+		deltimer(ferry.warmup_timer)
+		TEST_ASSERT(ferry.complete_arrival(), "Freight did not land on the cargo dock at [rotation] degrees: [ferry.last_error]")
+
+		// Docked on the pad, on the main level, lined up with the painted rectangle.
+		var/obj/docking_port/mobile/ferry_port = ferry.shuttle_port
+		TEST_ASSERT_NOTNULL(ferry_port, "The ferry vanished on arrival at [rotation] degrees")
+		TEST_ASSERT_EQUAL(ferry_port.get_docked(), pad, "The ferry is not docked on the pad at [rotation] degrees")
+		TEST_ASSERT_EQUAL(ferry_port.z, home.upgrade_level_z(), "The ferry is not on the claim's main level at [rotation] degrees")
+		TEST_ASSERT_EQUAL(ferry_port.dir, pad.dir, "The ferry landed turned against the pad at [rotation] degrees")
+		var/list/ferry_rect = cargo_dock_rect(ferry_port)
+		for(var/index in 1 to 4)
+			TEST_ASSERT_EQUAL(ferry_rect[index], pad_rect[index], "The ferry ([ferry_rect.Join(",")]) does not cover the pad ([pad_rect.Join(",")]) at [rotation] degrees")
+		// Its airlocks open onto the apron, toward the room's entrance.
+		var/airlocks = 0
+		for(var/area/ferry_area as anything in ferry_port.shuttle_areas)
+			for(var/turf/ferry_turf as anything in ferry_area.get_turfs_by_zlevel(pad.z))
+				for(var/obj/machinery/door/airlock/airlock in ferry_turf)
+					airlocks++
+					var/turf/outside = get_step(airlock, entrance_side)
+					TEST_ASSERT_EQUAL(outside.loc, dock.installed_area, "A ferry airlock at [airlock.x],[airlock.y] does not open onto the apron at [rotation] degrees")
+		TEST_ASSERT_EQUAL(airlocks, 2, "The docked ferry has [airlocks] airlocks at [rotation] degrees")
+		// The order was unloaded aboard, on the pad.
+		var/obj/structure/closet/crate/crate = pack.generated_crate
+		TEST_ASSERT(!QDELETED(crate), "The order was not delivered at [rotation] degrees")
+		TEST_ASSERT(ferry_port.is_in_shuttle_bounds(crate), "The delivered crate is not aboard the docked ferry at [rotation] degrees")
+		TEST_ASSERT(!(order in home.cargo_cart), "The delivered order stayed in the cart at [rotation] degrees")
+		// Construction keeps off the docked ferry, and only the ferry.
+		TEST_ASSERT(!builder.can_build_at(get_turf(crate)), "Construction could build on the docked ferry at [rotation] degrees")
+		TEST_ASSERT(builder.can_build_at(get_step(get_step(pad, entrance_side), entrance_side)), "The docked ferry blocked construction on the apron at [rotation] degrees")
+
+		// Departure takes the ferry off and leaves the pad as it was.
+		TEST_ASSERT(ferry.send_shuttle(), "The ferry could not be sent away at [rotation] degrees")
+		deltimer(ferry.warmup_timer)
+		TEST_ASSERT(ferry.complete_departure(), "The ferry could not depart at [rotation] degrees: [ferry.last_error]")
+		TEST_ASSERT_NULL(ferry.shuttle_port, "The departed ferry left its port behind at [rotation] degrees")
+		for(var/turf/pad_tile as anything in pad_turfs)
+			TEST_ASSERT_EQUAL(pad_tile.loc, dock.installed_area, "Pad tile [pad_tile.x],[pad_tile.y] did not return to the dock's area at [rotation] degrees")
+			TEST_ASSERT_EQUAL(pad_tile.type, pad_types[pad_tile], "Pad tile [pad_tile.x],[pad_tile.y] is [pad_tile.type] after departure at [rotation] degrees")
+			TEST_ASSERT_EQUAL(pad_tile.count_baseturfs(), pad_depths[pad_tile], "Pad tile [pad_tile.x],[pad_tile.y] kept the ferry's baseturfs at [rotation] degrees")
+		TEST_ASSERT(builder.can_build_at(locate(pad_rect[1] + 3, pad_rect[2] + 3, pad.z)), "The empty pad still refused construction at [rotation] degrees")
+		TEST_ASSERT_NULL(ferry.availability_error(), "The cargo dock could not take another delivery at [rotation] degrees")
+
+		var/list/bounds = dock.footprint_bounds
+		room_turfs += block(bounds[1], bounds[2], bounds[5], bounds[3], bounds[4], bounds[5])
+		home.outpost_upgrades -= "cargo_dock"
+		qdel(dock)
+
+	home.lobby_panels = saved_elevator_panels
+	saved_elevator_panels = null
+	settle_cargo_dock_air(room_turfs)

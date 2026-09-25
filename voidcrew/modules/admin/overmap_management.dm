@@ -453,8 +453,9 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 
 /obj/structure/overmap/dynamic/player_outpost/admin_ports()
 	. = ..()
-	if(freight_berth?.dock)
-		.["Freight berth"] = freight_berth.dock
+	var/obj/docking_port/stationary/cargo_pad = cargo_dock_port()
+	if(cargo_pad)
+		.["Cargo dock"] = cargo_pad
 
 /obj/structure/overmap/ship/admin_ports()
 	. = ..()

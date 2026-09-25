@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Generate preview assets for the outpost upgrades catalog.
+
+Renders every voidcrew/_maps/map_files/outposts/outpost_upgrade_*.dmm with the
+ship preview renderer (tools/ship_previews), including its smoothing repairs,
+and writes one PNG and one metadata file per map.
+
+Outputs (commit these):
+    voidcrew/modules/player_outposts/previews/<map stem>.png
+    voidcrew/modules/player_outposts/previews/<map stem>.preview.json
+        {"png": ..., "width": ..., "height": ..., "src_md5": ...}
+        width/height are in tiles; src_md5 is the MD5 of the raw .dmm bytes.
+
+Run from the repo root after editing an outpost upgrade map:
+    python tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py
+
+To render only some maps, name them (stem, with or without the outpost_upgrade_
+prefix or the .dmm suffix). Stale previews are only retired on a full run:
+    python tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py cargo_dock
+
+dmm-tools location: $DMM_TOOLS or ~/code/tg-tools/bin/dmm-tools.exe
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ship_previews"))
+from generate_ship_previews import Dmm, find_dmm_tools, render, source_md5  # noqa: E402
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+MAPS_DIR = REPO_ROOT / "voidcrew" / "_maps" / "map_files" / "outposts"
+OUTPUT_DIR = REPO_ROOT / "voidcrew" / "modules" / "player_outposts" / "previews"
+MAP_GLOB = "outpost_upgrade_*.dmm"
+
+
+def map_stem(name: str) -> str:
+    stem = name.removesuffix(".dmm")
+    return stem if stem.startswith("outpost_upgrade_") else f"outpost_upgrade_{stem}"
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Render outpost upgrade previews.")
+    parser.add_argument("maps", nargs="*", help="only render these maps (default: all)")
+    args = parser.parse_args()
+    dmm_tools = find_dmm_tools()
+    all_maps = sorted(MAPS_DIR.glob(MAP_GLOB))
+    if not all_maps:
+        sys.exit(f"no {MAP_GLOB} found in {MAPS_DIR}")
+    maps = all_maps
+    if args.maps:
+        wanted = {map_stem(name) for name in args.maps}
+        maps = [path for path in all_maps if path.stem in wanted]
+        missing = wanted - {path.stem for path in maps}
+        if missing:
+            sys.exit(f"no such outpost upgrade map: {', '.join(sorted(missing))}")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    tmp_dir = Path(tempfile.mkdtemp(prefix="outpost_upgrade_previews_"))
+    try:
+        for dmm_path in maps:
+            dmm = Dmm(dmm_path)
+            png_name = f"{dmm_path.stem}.png"
+            render(dmm_tools, dmm_path, OUTPUT_DIR / png_name, tmp_dir, dmm)
+            metadata = {
+                "png": png_name,
+                "width": dmm.width,
+                "height": dmm.height,
+                "src_md5": source_md5(dmm_path),
+            }
+            text = json.dumps(metadata, indent=1, sort_keys=True) + "\n"
+            (OUTPUT_DIR / f"{dmm_path.stem}.preview.json").write_bytes(text.encode("utf-8"))
+            print(f"{dmm_path.stem}: {dmm.width}x{dmm.height}")
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    # Retire previews whose map was deleted or renamed. A partial run cannot tell.
+    if args.maps:
+        return
+    stems = {path.stem for path in all_maps}
+    for stale in OUTPUT_DIR.glob("outpost_upgrade_*.preview.json"):
+        stem = stale.name.removesuffix(".preview.json")
+        if stem not in stems:
+            stale.unlink()
+            (OUTPUT_DIR / f"{stem}.png").unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    main()

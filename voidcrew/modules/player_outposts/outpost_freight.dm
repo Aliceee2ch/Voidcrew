@@ -18,8 +18,8 @@
 /datum/voidcrew_cargo_shuttle/outpost/proc/availability_error()
 	if(!home?.founder_ckey)
 		return "Claim has no owner; freight is suspended"
-	if(!home.has_hangar_elevator() || !home.freight_berth?.panel || !home.freight_berth?.dock)
-		return "No freight receiver or elevator connection; repair the receiving facility"
+	if(!home.cargo_dock_port())
+		return "No cargo dock. Place the cargo dock upgrade."
 	return null
 
 /datum/voidcrew_cargo_shuttle/outpost/call_shuttle(obj/structure/overmap/ship/unused)
@@ -115,7 +115,8 @@
 	cancel_pending()
 	// Preserve already delivered goods if an unrelated failure interrupted a
 	// later package. The physical deck remains accessible for unloading.
-	if(shuttle_port && home?.freight_berth?.dock && shuttle_port.get_docked() == home.freight_berth.dock)
+	var/obj/docking_port/stationary/pad = home?.cargo_dock_port()
+	if(shuttle_port && pad && shuttle_port.get_docked() == pad)
 		state = CARGO_SHUTTLE_DOCKED
 		stall_deadline = 0
 	else
@@ -129,12 +130,17 @@
 	busy = TRUE
 	var/operation_generation = delivery_generation
 	var/error = availability_error()
-	if(!error && shuttle_port && !home.freight_berth.dock.get_docked())
-		adjust_reserve_dock_to_shuttle(home.freight_berth.dock, shuttle_port)
-		if(shuttle_port.initiate_docking(home.freight_berth.dock) != DOCKING_SUCCESS)
-			error = "Freight berth is obstructed; clear the landing pad and retry"
-	else
-		error ||= "Freight receiver unavailable"
+	// The ferry lands straight on the claim's own cargo dock, on the main level.
+	var/obj/docking_port/stationary/pad = home?.cargo_dock_port()
+	if(!error)
+		if(!shuttle_port || !pad)
+			error = "Cargo dock unavailable"
+		else if(pad.get_docked())
+			error = "Cargo dock is occupied"
+		else if(shuttle_port.canDock(pad) != SHUTTLE_CAN_DOCK)
+			error = "The cargo ferry does not fit the cargo dock"
+		else if(shuttle_port.initiate_docking(pad) != DOCKING_SUCCESS)
+			error = "Cargo dock is obstructed; clear the landing pad and retry"
 	if(QDELETED(src) || operation_generation != delivery_generation)
 		return FALSE
 	if(!error)
@@ -207,7 +213,7 @@
 	state = CARGO_SHUTTLE_DOCKED
 	stall_deadline = 0
 	busy = FALSE
-	home.ship_notify("Freight has arrived. Take the elevator to Freight Receiving.", "CARGO")
+	home.ship_notify("Freight has arrived at the cargo dock.", "CARGO")
 	return TRUE
 
 /// Contents may hold a passenger inside a crate or mech, not just on a floor.
@@ -250,38 +256,17 @@
 	last_error = null
 	return TRUE
 
-/obj/structure/overmap/dynamic/player_outpost/proc/install_freight_receiver()
-	if(freight_berth)
-		return TRUE
-	if(!GLOB.outpost_hangar_template)
-		GLOB.outpost_hangar_template = new
-	var/datum/map_template/outpost_hangar/template = GLOB.outpost_hangar_template
-	var/datum/turf_reservation/reservation = SSmapping.request_turf_block_reservation(template.width, template.height, 1, requester = "player outpost '[name]' freight berth")
-	if(!reservation)
-		return FALSE
-	var/datum/outpost_berth/berth = new(src, OUTPOST_MAX_BERTHS + 1, null)
-	berth.reservation = reservation
-	berth.hangar_bottom_left = reservation.bottom_left_turfs[1]
-	if(!template.load(berth.hangar_bottom_left) || !berth.link_hangar_contents())
-		qdel(berth)
-		return FALSE
-	freight_berth = berth
-	for(var/obj/machinery/status_display/outpost_berth/sign as anything in berth.status_signs)
-		sign.set_messages("FREIGHT", "RECEIVING")
-	return TRUE
-
 /obj/structure/overmap/dynamic/player_outpost/get_floor_alcove(floor_id)
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
 		if(bay?.berth_number == floor_id)
 			return bay.alcove_turfs
-	if(floor_id == OUTPOST_MAX_BERTHS + 1)
-		return freight_berth?.alcove_turfs
 	return ..()
 
+/// Freight needs no facility of its own here: it lands on the cargo dock upgrade (outpost_cargo_dock.dm).
 /obj/structure/overmap/dynamic/player_outpost/proc/install_home_bundle()
 	if(home_bundle_installed)
 		return TRUE
-	if(!outpost_area || !management_console || !construction_console || !has_hangar_elevator() || !arrival_turf)
+	if(!outpost_area || !management_console || !construction_console || !arrival_turf)
 		return FALSE
 	// Furnishings belong in the template so windows, doors and work areas determine
 	// their positions. Reconnecting services must never create replacement stock.
@@ -292,7 +277,7 @@
 		cargo ||= locate(/obj/machinery/computer/voidcrew_cargo) in location
 		bank ||= locate(/obj/machinery/computer/bank_machine) in location
 		pod ||= locate(/obj/machinery/cryopod) in location
-	if(!cargo || !bank || !pod || !install_freight_receiver())
+	if(!cargo || !bank || !pod)
 		return FALSE
 	cargo.cargo_account()
 	bank.resolve_outpost_bank()

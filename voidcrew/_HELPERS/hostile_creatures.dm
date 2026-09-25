@@ -60,6 +60,11 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
  * GLOB.ai_subtrees, so this is a handful of list lookups.
  */
 /proc/is_hostile_creature(mob/living/creature)
+	// Outpost prisoners (outpost_prison_*.dm): left alone inside their wing, rioting or not;
+	// once loose outside it they are fair game. Interim rule until guards and turrets are designed.
+	if(istype(creature, /mob/living/basic/outpost_prisoner))
+		return is_loose_outpost_prisoner(creature)
+
 	// The /hostile branch of the old simple animal tree is aggressive by definition; its
 	// retaliate-only subtypes were all moved over to /mob/living/basic long ago.
 	if(istype(creature, /mob/living/simple_animal/hostile))

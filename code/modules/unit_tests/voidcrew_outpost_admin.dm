@@ -29,7 +29,7 @@
 	allocated += home
 	panel.selected = home
 	TEST_ASSERT(home.loaded && home.home_bundle_installed && home.arrival_turf, "Admin creation skipped the complete purchased-home loader")
-	TEST_ASSERT(home.treasury && home.freight_berth?.dock && length(home.resident_pods), "Admin-created home lacks bank, freight or cryo services")
+	TEST_ASSERT(home.treasury && home.freight && length(home.resident_pods), "Admin-created home lacks bank, freight or cryo services")
 	TEST_ASSERT_NULL(home.founder_ckey, "Unowned admin creation silently assigned an owner")
 	TEST_ASSERT_EQUAL(home.resident_mode, "closed", "Unowned admin creation allowed resident arrivals")
 	TEST_ASSERT_NULL(panel.create_home(operator, sector, /datum/map_template/player_outpost/small, "Duplicate"), "Admin creation accepted an occupied sector")

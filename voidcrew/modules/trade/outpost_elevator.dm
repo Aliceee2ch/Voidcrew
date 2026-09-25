@@ -132,8 +132,6 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/outpost_elevator, 32)
 					"occupied" = bay && length(bay.alcove_turfs) > 0,
 					"your_ship" = !!(bay?.ship?.ship_team in user?.mind?.ship_teams),
 				))
-		if(home?.freight_berth)
-			floors += list(list("id" = OUTPOST_MAX_BERTHS + 1, "name" = "Freight Receiving", "occupied" = TRUE, "your_ship" = FALSE))
 	data["floors"] = floors
 	return data
 

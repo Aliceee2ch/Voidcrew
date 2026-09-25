@@ -5,6 +5,7 @@ import {
   Icon,
   LabeledList,
   NoticeBox,
+  NumberInput,
   ProgressBar,
   Section,
   Stack,
@@ -76,6 +77,51 @@ type CheckpointAdminData = {
   }[];
 };
 
+type PrisonAdminPrisoner = {
+  ref: string;
+  name: string;
+  cell: number;
+  personality: string;
+  crime: string;
+  activity: string;
+  /** 0-100 each; hunger is how fed they are, 100 = full */
+  hunger: number;
+  grime: number;
+  health: number;
+  care: number;
+  /** 0-100 */
+  mood: number;
+  state: PrisonerState;
+  /** seconds until an escaped prisoner is gone for good, null when not loose */
+  loose_left: number | null;
+  /** seconds */
+  sentence_left: number;
+  dead: BooleanLike;
+};
+
+type PrisonerState = 'normal' | 'fighting' | 'beaten' | 'rioting' | 'loose';
+
+type PrisonStage = 'calm' | 'grumbling' | 'restless' | 'riot';
+
+type PrisonAdminData = {
+  intake_open: BooleanLike;
+  /** seconds, null when nothing is scheduled */
+  next_arrival: number | null;
+  /** cr/min */
+  pay_rate: number;
+  paid_total: number;
+  powered: BooleanLike;
+  /** 0-100 each */
+  conditions: { clean: number; lit: number; powered: number; score: number };
+  cells: { number: number; occupant_ref: string | null }[];
+  prisoners: PrisonAdminPrisoner[];
+  /** 0-100 */
+  tension: number;
+  stage: PrisonStage;
+  /** seconds until an unresolved riot becomes a breakout, null when none */
+  breakout_in: number | null;
+};
+
 type SelectedOutpost = {
   ref: string;
   name: string;
@@ -92,6 +138,8 @@ type SelectedOutpost = {
   residents: Resident[];
   ship_bays: ShipBayData;
   checkpoints: CheckpointAdminData;
+  /** null when the outpost has no prison */
+  prison?: PrisonAdminData | null;
 };
 
 export type Data = {
@@ -308,6 +356,16 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
           />
         </Stack.Item>
       )}
+
+      <Stack.Item>
+        {selected.prison ? (
+          <PrisonTools data={selected.prison} busy={busy} act={mutate} />
+        ) : (
+          <Section title="Prison">
+            <Box color="label">No prison</Box>
+          </Section>
+        )}
+      </Stack.Item>
 
       <Stack.Item>
         <Section title="Services">
@@ -747,3 +805,504 @@ const CheckpointTools = ({
     )}
   </Section>
 );
+
+/** m:ss */
+const clock = (seconds: number) => {
+  const total = Math.max(0, Math.ceil(seconds || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+};
+
+const conditionColor = (value: number) =>
+  value >= 80 ? 'good' : value >= 50 ? 'average' : 'bad';
+
+type PrisonStat = {
+  field: 'hunger' | 'grime' | 'health' | 'mood';
+  label: string;
+  presets: number[];
+  color: (value: number) => string;
+};
+
+// Colours follow the PRISONER_* thresholds in voidcrew/_DEFINES/player_outposts.dm.
+const PRISON_STATS: PrisonStat[] = [
+  {
+    field: 'hunger',
+    label: 'Fed',
+    presets: [0, 30, 100],
+    // Hungry below 40, starving below 15.
+    color: (value) => (value < 15 ? 'bad' : value < 40 ? 'average' : 'good'),
+  },
+  {
+    field: 'grime',
+    label: 'Grime',
+    presets: [0, 60, 100],
+    // Dirty at 50, filthy at 80.
+    color: (value) => (value >= 80 ? 'bad' : value >= 50 ? 'average' : 'good'),
+  },
+  {
+    field: 'health',
+    label: 'Health',
+    presets: [20, 60, 100],
+    // Injured below 90.
+    color: (value) => (value < 50 ? 'bad' : value < 90 ? 'average' : 'good'),
+  },
+  {
+    field: 'mood',
+    label: 'Mood',
+    // 10 attacks staff and fights, 40 only climbs out of an open hatch, 70 is the start value.
+    presets: [10, 40, 70],
+    // Attacks staff below 35, escapes below 50.
+    color: (value) => (value < 35 ? 'bad' : value < 50 ? 'average' : 'good'),
+  },
+];
+
+/** Seconds. 30 s starts the walk back to the cell. */
+const SENTENCE_PRESETS = [30, 300, 900];
+
+const PRISON_ALL = [
+  ['starve', 'Starve'],
+  ['feed', 'Feed'],
+  ['dirty', 'Dirty'],
+  ['clean', 'Clean'],
+  ['hurt', 'Hurt'],
+  ['heal', 'Heal'],
+  ['enrage', 'Enrage'],
+  ['calm', 'Calm'],
+] as const;
+
+const PRISON_STAGES: Record<PrisonStage, { label: string; color: string }> = {
+  calm: { label: 'Calm', color: 'good' },
+  grumbling: { label: 'Grumbling', color: 'average' },
+  restless: { label: 'Restless', color: 'orange' },
+  riot: { label: 'Riot', color: 'bad' },
+};
+
+/** Normal prisoners get no badge. */
+const PRISONER_STATES: Partial<
+  Record<PrisonerState, { label: string; icon: string; color: string }>
+> = {
+  fighting: { label: 'Fighting', icon: 'hand-back-fist', color: 'orange' },
+  beaten: { label: 'Beaten', icon: 'user-injured', color: 'average' },
+  rioting: { label: 'Rioting', icon: 'hand-fist', color: 'bad' },
+  loose: { label: 'Loose', icon: 'person-running', color: 'bad' },
+};
+
+/** Stage thresholds: calm below 40, riot at 80. */
+const tensionColor = (value: number) =>
+  value >= 80 ? 'bad' : value >= 40 ? 'average' : 'good';
+
+/** Minutes */
+const PRISON_ADVANCE = [1, 5, 10];
+
+type PrisonProps = {
+  data: PrisonAdminData;
+  busy: boolean;
+  act: DetailsProps['act'];
+};
+
+const PrisonTools = ({ data, busy, act }: PrisonProps) => {
+  const open = !!data.intake_open;
+  const powered = !!data.powered;
+  const conditions = data.conditions || {
+    clean: 0,
+    lit: 0,
+    powered: 0,
+    score: 0,
+  };
+  const prisoners = [...(data.prisoners || [])].sort((a, b) => a.cell - b.cell);
+  const names: Record<string, string> = {};
+  for (const prisoner of prisoners) {
+    names[prisoner.ref] = prisoner.name;
+  }
+  const conditionParts: [string, number][] = [
+    ['Clean', conditions.clean],
+    ['Lit', conditions.lit],
+    ['Power', conditions.powered],
+    ['Score', conditions.score],
+  ];
+  const tension = Math.round(data.tension || 0);
+  const stage = PRISON_STAGES[data.stage] || {
+    label: data.stage || '?',
+    color: 'label',
+  };
+
+  return (
+    <Section title="Prison">
+      <Stack wrap align="center" mb={1}>
+        <Button
+          icon={open ? 'door-open' : 'door-closed'}
+          selected={open}
+          disabled={busy}
+          onClick={() => act('prison_intake', { open: open ? 0 : 1 })}
+        >
+          {open ? 'Intake: Open' : 'Intake: Closed'}
+        </Button>
+        <Button
+          icon="user-plus"
+          disabled={busy}
+          onClick={() => act('prison_spawn', {})}
+        >
+          Spawn One
+        </Button>
+        <Button
+          icon="users"
+          disabled={busy}
+          onClick={() => act('prison_fill', {})}
+        >
+          Fill Cells
+        </Button>
+        <Button
+          icon="coins"
+          disabled={busy}
+          onClick={() => act('prison_pay_now', {})}
+        >
+          Pay Now
+        </Button>
+        <Button
+          icon="trash"
+          disabled={busy}
+          onClick={() => act('prison_mess', {})}
+        >
+          Mess
+        </Button>
+        <Button
+          icon="lightbulb"
+          disabled={busy}
+          onClick={() => act('prison_break_lights', {})}
+        >
+          Break Lights
+        </Button>
+        <Button
+          icon={powered ? 'plug-circle-xmark' : 'plug'}
+          color={powered ? undefined : 'good'}
+          disabled={busy}
+          onClick={() => act('prison_power', { on: powered ? 0 : 1 })}
+        >
+          {powered ? 'Cut Power' : 'Restore Power'}
+        </Button>
+        {PRISON_ADVANCE.map((minutes) => (
+          <Button
+            key={minutes}
+            icon="forward"
+            disabled={busy}
+            tooltip={`Skip ${minutes} min`}
+            onClick={() => act('prison_advance', { minutes })}
+          >
+            {`+${minutes} min`}
+          </Button>
+        ))}
+      </Stack>
+      <Stack className="OutpostPrisonAdmin__trouble" align="center" wrap mb={1}>
+        <Stack.Item width="90px" bold>
+          Trouble
+        </Stack.Item>
+        <Button
+          icon="hand-fist"
+          color="bad"
+          disabled={busy || prisoners.length === 0}
+          onClick={() => act('prison_riot', {})}
+        >
+          Riot
+        </Button>
+        <Button
+          icon="dove"
+          color="good"
+          disabled={busy}
+          onClick={() => act('prison_calm', {})}
+        >
+          Calm all
+        </Button>
+        <Stack.Item className="OutpostPrisonAdmin__tension" ml={1}>
+          {'Tension '}
+          <Box
+            inline
+            bold
+            className="OutpostPrisonAdmin__tension-value"
+            color={tensionColor(tension)}
+          >
+            {`${tension}`}
+          </Box>
+          <Box inline bold ml={1} color={stage.color}>
+            {stage.label}
+          </Box>
+          {typeof data.breakout_in === 'number' ? (
+            <Box inline bold ml={1} color="bad">
+              {`breakout in ${clock(data.breakout_in)}`}
+            </Box>
+          ) : null}
+        </Stack.Item>
+      </Stack>
+
+      <LabeledList>
+        <LabeledList.Item label="Pay">
+          {`${Math.round((data.pay_rate || 0) * 10) / 10} cr/min, ${Math.floor(
+            data.paid_total || 0,
+          ).toLocaleString()} cr paid`}
+        </LabeledList.Item>
+        <LabeledList.Item label="Arrivals">
+          {!open
+            ? 'Intake closed'
+            : typeof data.next_arrival === 'number'
+              ? `Next in ${clock(data.next_arrival)}`
+              : 'None scheduled'}
+          {powered ? null : (
+            <Box inline color="bad" ml={1}>
+              No power
+            </Box>
+          )}
+        </LabeledList.Item>
+        <LabeledList.Item label="Conditions">
+          {conditionParts.map(([label, value]) => (
+            <Box inline key={label} mr={1.5}>
+              {`${label} `}
+              <Box inline bold color={conditionColor(value || 0)}>
+                {Math.round(value || 0)}
+              </Box>
+            </Box>
+          ))}
+        </LabeledList.Item>
+        <LabeledList.Item label="Cells">
+          {(data.cells || []).map((cell) => (
+            <Box
+              inline
+              key={cell.number}
+              mr={1.5}
+              color={cell.occupant_ref ? undefined : 'label'}
+            >
+              {`${cell.number}: ${
+                cell.occupant_ref
+                  ? names[cell.occupant_ref] || `? ${cell.occupant_ref}`
+                  : 'Empty'
+              }`}
+            </Box>
+          ))}
+        </LabeledList.Item>
+      </LabeledList>
+
+      <Stack align="center" wrap mt={1}>
+        <Stack.Item width="90px" bold>
+          All prisoners
+        </Stack.Item>
+        {PRISON_ALL.map(([what, label]) => (
+          <Button
+            key={what}
+            disabled={busy || prisoners.length === 0}
+            onClick={() => act('prison_all', { what })}
+          >
+            {label}
+          </Button>
+        ))}
+      </Stack>
+
+      {prisoners.length === 0 ? (
+        <Box color="label" mt={1}>
+          No prisoners
+        </Box>
+      ) : (
+        prisoners.map((prisoner) => (
+          <PrisonerRow
+            key={prisoner.ref}
+            prisoner={prisoner}
+            busy={busy}
+            act={act}
+          />
+        ))
+      )}
+    </Section>
+  );
+};
+
+type PrisonerRowProps = {
+  prisoner: PrisonAdminPrisoner;
+  busy: boolean;
+  act: DetailsProps['act'];
+};
+
+const PrisonerRow = ({ prisoner, busy, act }: PrisonerRowProps) => {
+  const dead = !!prisoner.dead;
+  const locked = busy || dead;
+  const ref = prisoner.ref;
+  const set = (field: string, value: number) =>
+    act('prison_set', { ref, field, value });
+  const loose = !dead && typeof prisoner.loose_left === 'number';
+  // No badge for normal or dead prisoners, and none for Loose while the
+  // loose timer shows, since it says the same thing.
+  const badged =
+    !dead &&
+    !!prisoner.state &&
+    prisoner.state !== 'normal' &&
+    !(loose && prisoner.state === 'loose');
+  const state = badged
+    ? PRISONER_STATES[prisoner.state] || {
+        label: prisoner.state,
+        icon: 'circle-question',
+        color: 'label',
+      }
+    : null;
+
+  return (
+    <Box
+      className="OutpostPrisonAdmin__prisoner"
+      mt={1}
+      pt={1}
+      style={{
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        opacity: dead ? 0.6 : undefined,
+      }}
+    >
+      <Stack align="center">
+        <Stack.Item grow>
+          <Box bold style={{ overflowWrap: 'anywhere' }}>
+            {`Cell ${prisoner.cell}: ${prisoner.name}`}
+            {dead ? (
+              <Box inline color="bad" ml={1}>
+                Dead
+              </Box>
+            ) : null}
+            {state ? (
+              <Box
+                inline
+                className="OutpostPrisonAdmin__state"
+                color={state.color}
+                ml={1}
+              >
+                <Icon name={state.icon} mr={0.5} />
+                {state.label}
+              </Box>
+            ) : null}
+            {loose ? (
+              <Box
+                inline
+                className="OutpostPrisonAdmin__loose"
+                color="bad"
+                ml={1}
+              >
+                <Icon name="person-running" mr={0.5} />
+                {`loose ${clock(prisoner.loose_left as number)}`}
+              </Box>
+            ) : null}
+          </Box>
+          <Box color="label" fontSize="11px">
+            {[prisoner.personality, prisoner.crime, prisoner.activity]
+              .filter(Boolean)
+              .join(' / ')}
+          </Box>
+        </Stack.Item>
+        <Stack.Item>
+          <Button
+            compact
+            icon="hand-back-fist"
+            disabled={locked}
+            onClick={() => act('prison_fight', { ref })}
+          >
+            Fight
+          </Button>
+          <Button
+            compact
+            icon="burst"
+            disabled={locked}
+            onClick={() => act('prison_breakout', { ref })}
+          >
+            Breakout
+          </Button>
+          <Button
+            compact
+            icon="person-walking-arrow-right"
+            disabled={locked}
+            onClick={() => act('prison_release', { ref })}
+          >
+            Release
+          </Button>
+          <Button.Confirm
+            compact
+            icon="skull"
+            color="bad"
+            confirmContent="Kill?"
+            disabled={locked}
+            onClick={() => act('prison_kill', { ref })}
+          >
+            Kill
+          </Button.Confirm>
+          <Button.Confirm
+            compact
+            icon="trash"
+            color="bad"
+            confirmContent="Remove?"
+            disabled={busy}
+            onClick={() => act('prison_remove', { ref })}
+          >
+            Remove
+          </Button.Confirm>
+        </Stack.Item>
+      </Stack>
+      <Stack align="center" wrap mt={0.5}>
+        {PRISON_STATS.map((stat) => {
+          const value = Math.round(prisoner[stat.field] || 0);
+          return (
+            <Stack.Item
+              key={stat.field}
+              className={`OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--${stat.field}`}
+              mr={1}
+            >
+              <Box inline bold color={stat.color(value)} mr={0.5}>
+                {stat.label}
+              </Box>
+              <NumberInput
+                value={value}
+                minValue={0}
+                maxValue={100}
+                step={1}
+                stepPixelSize={2}
+                width="38px"
+                disabled={locked}
+                onChange={(next) => set(stat.field, Math.round(next))}
+              />
+              {stat.presets.map((preset) => (
+                <Button
+                  key={preset}
+                  compact
+                  disabled={locked}
+                  onClick={() => set(stat.field, preset)}
+                >
+                  {preset}
+                </Button>
+              ))}
+            </Stack.Item>
+          );
+        })}
+        <Stack.Item
+          className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--care"
+          mr={1}
+          color="label"
+        >
+          {`Care ${Math.round(prisoner.care || 0)}`}
+        </Stack.Item>
+        <Stack.Item className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--sentence">
+          <Box inline bold mr={0.5}>
+            Left
+          </Box>
+          <NumberInput
+            value={Math.max(0, Math.round(prisoner.sentence_left || 0))}
+            minValue={0}
+            maxValue={3600}
+            step={30}
+            stepPixelSize={4}
+            width="48px"
+            format={clock}
+            disabled={locked}
+            onChange={(next) => set('sentence', Math.round(next))}
+          />
+          {SENTENCE_PRESETS.map((preset) => (
+            <Button
+              key={preset}
+              compact
+              disabled={locked}
+              onClick={() => set('sentence', preset)}
+            >
+              {clock(preset)}
+            </Button>
+          ))}
+        </Stack.Item>
+      </Stack>
+    </Box>
+  );
+};

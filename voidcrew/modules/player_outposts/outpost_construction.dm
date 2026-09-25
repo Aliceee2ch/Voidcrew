@@ -76,8 +76,9 @@
 /obj/machinery/computer/camera_advanced/base_construction/ship/outpost/can_move_to(turf/T)
 	return T && outpost?.is_turf_buildable(T)
 
+/// The docked cargo ferry is not outpost ground (outpost_cargo_dock.dm).
 /obj/machinery/computer/camera_advanced/base_construction/ship/outpost/can_build_at(turf/T)
-	return T && outpost?.is_turf_buildable(T)
+	return T && outpost?.is_turf_buildable(T) && !outpost.cargo_ferry_covers(T)
 
 // No shuttle to grow: "expansion" just pulls the freshly built turf into the
 // outpost's area

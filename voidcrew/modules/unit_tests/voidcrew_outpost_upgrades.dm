@@ -1,0 +1,665 @@
+/**
+ * Outpost upgrades: buying from the management console, the tiles a placement may cover, the
+ * rotated template loader, and the prison wing stamped at every rotation.
+ *
+ * Voidcrew defines are not visible from test files, so prices appear as literals.
+ */
+
+/// Three by two, every tile different, with a sign hung on the one wall.
+/datum/map_template/voidcrew_rotated_load_test
+	name = "Rotated Load Test"
+	mappath = "voidcrew/_maps/map_files/unit_tests/rotated_load_test.dmm"
+
+/datum/unit_test/voidcrew_rotated_template_load
+	var/datum/turf_reservation/reserved
+
+/datum/unit_test/voidcrew_rotated_template_load/Destroy()
+	QDEL_NULL(reserved)
+	return ..()
+
+/datum/unit_test/voidcrew_rotated_template_load/Run()
+	var/datum/map_template/voidcrew_rotated_load_test/template = allocate(__IMPLIED_TYPE__)
+	TEST_ASSERT_EQUAL(template.width, 3, "The rotation test map has the wrong width")
+	TEST_ASSERT_EQUAL(template.height, 2, "The rotation test map has the wrong height")
+	reserved = SSmapping.request_turf_block_reservation(22, 6, 1)
+	TEST_ASSERT_NOTNULL(reserved, "Could not reserve space for the rotation test")
+	var/turf/origin = reserved.bottom_left_turfs[1]
+
+	// Zero-based offsets from the rotated footprint's bottom-left, worked out by hand for each
+	// clockwise rotation of:  y1: dark  wall  white
+	//                         y0: plate sign  wood   (the sign hangs on the wall above it)
+	var/list/expected = list(
+		"0" = list(
+			/turf/open/floor/plating = list(0, 0),
+			/turf/closed/wall = list(1, 1),
+			/turf/open/floor/iron/dark = list(0, 1),
+			/turf/open/floor/iron/white = list(2, 1),
+			/turf/open/floor/wood = list(2, 0),
+			/obj/structure/sign = list(1, 0),
+		),
+		"90" = list(
+			/turf/open/floor/plating = list(0, 2),
+			/turf/closed/wall = list(1, 1),
+			/turf/open/floor/iron/dark = list(1, 2),
+			/turf/open/floor/iron/white = list(1, 0),
+			/turf/open/floor/wood = list(0, 0),
+			/obj/structure/sign = list(0, 1),
+		),
+		"180" = list(
+			/turf/open/floor/plating = list(2, 1),
+			/turf/closed/wall = list(1, 0),
+			/turf/open/floor/iron/dark = list(2, 0),
+			/turf/open/floor/iron/white = list(0, 0),
+			/turf/open/floor/wood = list(0, 1),
+			/obj/structure/sign = list(1, 1),
+		),
+		"270" = list(
+			/turf/open/floor/plating = list(1, 0),
+			/turf/closed/wall = list(0, 1),
+			/turf/open/floor/iron/dark = list(0, 0),
+			/turf/open/floor/iron/white = list(0, 2),
+			/turf/open/floor/wood = list(1, 2),
+			/obj/structure/sign = list(1, 1),
+		),
+	)
+	var/list/sign_dirs = list("0" = NORTH, "90" = EAST, "180" = SOUTH, "270" = WEST)
+	var/list/sign_offsets = list("0" = list(0, 32), "90" = list(32, 0), "180" = list(0, -32), "270" = list(-32, 0))
+
+	var/list/rotations = list(0, 90, 180, 270)
+	for(var/index in 1 to length(rotations))
+		var/rotation = rotations[index]
+		var/turf/bottom_left = locate(origin.x + 1 + (index - 1) * 5, origin.y + 1, origin.z)
+		var/footprint_width = (rotation % 180) ? 2 : 3
+		var/footprint_height = (rotation % 180) ? 3 : 2
+		var/list/spots = expected["[rotation]"]
+		var/list/old_areas = list()
+		for(var/turf/ground as anything in block(bottom_left.x, bottom_left.y, bottom_left.z, bottom_left.x + footprint_width - 1, bottom_left.y + footprint_height - 1, bottom_left.z))
+			old_areas[ground] = ground.loc
+
+		// Something already on the ground keeps its own facing.
+		var/list/wood_offset = spots[/turf/open/floor/wood]
+		var/turf/wood_spot = locate(bottom_left.x + wood_offset[1], bottom_left.y + wood_offset[2], bottom_left.z)
+		var/obj/item/wrench/bystander = allocate(__IMPLIED_TYPE__, wood_spot)
+		bystander.setDir(NORTH)
+
+		var/list/bounds = template.load_rotated(bottom_left, rotation)
+		TEST_ASSERT_NOTNULL(bounds, "The rotated load failed at [rotation] degrees")
+		TEST_ASSERT_EQUAL(bounds[MAP_MAXX] - bounds[MAP_MINX] + 1, footprint_width, "Wrong footprint width at [rotation] degrees")
+		TEST_ASSERT_EQUAL(bounds[MAP_MAXY] - bounds[MAP_MINY] + 1, footprint_height, "Wrong footprint height at [rotation] degrees")
+		TEST_ASSERT_EQUAL(bounds[MAP_MINX], bottom_left.x, "The footprint moved off its bottom-left corner at [rotation] degrees")
+		TEST_ASSERT_EQUAL(bounds[MAP_MINY], bottom_left.y, "The footprint moved off its bottom-left corner at [rotation] degrees")
+
+		for(var/turf_type in spots)
+			if(!ispath(turf_type, /turf))
+				continue
+			var/list/offset = spots[turf_type]
+			var/turf/tile = locate(bottom_left.x + offset[1], bottom_left.y + offset[2], bottom_left.z)
+			TEST_ASSERT_EQUAL(tile.type, turf_type, "At [rotation] degrees, [turf_type] should be at +[offset[1]],+[offset[2]]")
+			// template_noop keeps the ground's area; built-over space moves to nearstation as with load()
+			var/area/old_area = old_areas[tile]
+			var/area/new_area = tile.loc
+			var/promoted = istype(old_area, /area/space) && istype(new_area, /area/space/nearstation)
+			TEST_ASSERT(new_area == old_area || promoted, "A template_noop area replaced the ground's area at [rotation] degrees: [new_area.type], was [old_area.type]")
+
+		var/list/sign_offset = spots[/obj/structure/sign]
+		var/turf/sign_turf = locate(bottom_left.x + sign_offset[1], bottom_left.y + sign_offset[2], bottom_left.z)
+		var/obj/structure/sign/sign = locate() in sign_turf
+		TEST_ASSERT_NOTNULL(sign, "The sign is not at +[sign_offset[1]],+[sign_offset[2]] at [rotation] degrees")
+		TEST_ASSERT_EQUAL(sign.dir, sign_dirs["[rotation]"], "The sign faces the wrong way at [rotation] degrees")
+		var/list/pixels = sign_offsets["[rotation]"]
+		TEST_ASSERT_EQUAL(sign.pixel_x, pixels[1], "The sign's x offset was not turned at [rotation] degrees")
+		TEST_ASSERT_EQUAL(sign.pixel_y, pixels[2], "The sign's y offset was not turned at [rotation] degrees")
+		TEST_ASSERT(iswallturf(get_step(sign, sign.dir)), "The turned sign does not face its wall at [rotation] degrees")
+		TEST_ASSERT(length(sign.GetComponents(/datum/component/wall_mounted)), "The sign initialized before it was turned and found no wall at [rotation] degrees")
+
+		TEST_ASSERT_EQUAL(bystander.dir, NORTH, "The load turned an object that was already on the ground at [rotation] degrees")
+		TEST_ASSERT_EQUAL(bystander.loc, wood_spot, "The load moved an object that was already on the ground at [rotation] degrees")
+		TEST_ASSERT(isspaceturf(locate(bottom_left.x + footprint_width, bottom_left.y, bottom_left.z)), "The load spilled past its footprint at [rotation] degrees")
+		TEST_ASSERT(isspaceturf(locate(bottom_left.x, bottom_left.y + footprint_height, bottom_left.z)), "The load spilled past its footprint at [rotation] degrees")
+
+/// Upgrade tests run on a real claim, like the other outpost service tests.
+/datum/unit_test/voidcrew_outpost_upgrade_purchase
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// A loaded small-shell claim owned by `owner_key`, with a management console panel for that owner.
+/datum/unit_test/voidcrew_outpost_management/proc/upgrade_test_claim(owner_key)
+	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
+	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.founder_ckey = owner_key
+	if(!home.load_level())
+		return null
+	return home
+
+/datum/unit_test/voidcrew_outpost_management/proc/upgrade_test_panel(obj/structure/overmap/dynamic/player_outpost/home, mob/user)
+	var/obj/machinery/computer/player_outpost_management/console = allocate(/obj/machinery/computer/player_outpost_management, get_turf(home.management_console))
+	return allocate(/datum/player_outpost_management_ui/management_test, home, user, console)
+
+/datum/unit_test/voidcrew_outpost_management/proc/prison_status(datum/player_outpost_management_ui/panel, mob/user)
+	var/list/data = panel.ui_data(user)
+	for(var/list/entry as anything in data["upgrades"])
+		if(entry["id"] == "prison")
+			return entry
+	return null
+
+/datum/unit_test/voidcrew_outpost_upgrade_purchase/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("upgradeowner")
+	TEST_ASSERT_NOTNULL(home, "The upgrade test outpost did not load")
+	var/turf/console_turf = get_turf(home.management_console)
+	var/mob/living/carbon/human/owner = make_player(console_turf, "upgradeowner")
+	var/mob/living/carbon/human/visitor = make_player(console_turf, "upgradevisitor")
+	var/datum/player_outpost_management_ui/management_test/panel = upgrade_test_panel(home, owner)
+
+	var/list/prison_entry
+	var/list/static_data = panel.ui_static_data(owner)
+	for(var/list/entry as anything in static_data["upgrade_catalog"])
+		if(entry["id"] == "prison")
+			prison_entry = entry
+	TEST_ASSERT_NOTNULL(prison_entry, "The prison wing is missing from the upgrade catalog")
+	for(var/key in list("id", "name", "desc", "price", "width", "height", "entrance", "preview"))
+		TEST_ASSERT(key in prison_entry, "The catalog entry has no [key] for the Upgrades tab")
+	TEST_ASSERT_EQUAL(prison_entry["price"], 12000, "The prison wing's catalog price is wrong") // OUTPOST_PRISON_COST
+	TEST_ASSERT_EQUAL(prison_entry["width"], 17, "The prison wing's catalog width is wrong")
+	TEST_ASSERT_EQUAL(prison_entry["height"], 16, "The prison wing's catalog height is wrong")
+	TEST_ASSERT_EQUAL(prison_entry["entrance"], SOUTH, "The prison wing's entrance edge is wrong")
+	TEST_ASSERT_EQUAL(prison_entry["preview"], "outpost_upgrade_prison.png", "The prison wing's preview is missing")
+	TEST_ASSERT_NULL(static_data["upgrade_survey"], "The survey was sent without a placement map open")
+	var/list/status = prison_status(panel, owner)
+	for(var/key in list("id", "state", "denial", "manage_denial"))
+		TEST_ASSERT(key in status, "The upgrade state has no [key] for the Upgrades tab")
+
+	// Unfunded: refused with a reason, nothing charged, no blueprint.
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "The test treasury did not start empty")
+	TEST_ASSERT_EQUAL(status["denial"], "Insufficient outpost funds.", "An unfunded purchase gave no reason")
+	act(panel, owner, "buy_upgrade", null, list("id" = "prison"))
+	TEST_ASSERT_NULL(home.outpost_upgrades["prison"], "An unfunded purchase left a blueprint")
+	TEST_ASSERT_EQUAL(panel.upgrade_error, "Insufficient outpost funds.", "An unfunded purchase showed no error")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "An unfunded purchase changed the treasury")
+
+	home.treasury.adjust_money(12500, "Upgrade test")
+	TEST_ASSERT_EQUAL(home.upgrade_purchase_denial(visitor, "prison"), "Management and treasury access required.", "A visitor was not refused")
+	TEST_ASSERT_NOTNULL(home.buy_outpost_upgrade(visitor, "prison"), "A visitor bought an upgrade")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 12500, "A refused visitor purchase charged the treasury")
+	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "not_an_upgrade"), "Unknown upgrade.", "An unknown upgrade was not refused")
+	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, 1), "Unknown upgrade.", "A numeric id reached the catalog by position")
+	status = prison_status(panel, owner)
+	TEST_ASSERT_EQUAL(status["state"], "available", "An unbought upgrade did not show as available")
+	TEST_ASSERT_NULL(status["denial"], "A funded owner was refused")
+
+	// Funded owner: exact debit, one unplaced blueprint.
+	act(panel, owner, "buy_upgrade", null, list("id" = "prison"))
+	TEST_ASSERT_NULL(panel.upgrade_error, "A funded purchase reported an error")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 500, "The prison wing did not cost exactly its price")
+	var/datum/outpost_upgrade/blueprint = home.outpost_upgrades["prison"]
+	TEST_ASSERT(istype(blueprint, /datum/outpost_upgrade/prison), "The purchase left no prison blueprint")
+	TEST_ASSERT_EQUAL(blueprint.outpost, home, "The blueprint does not belong to the outpost")
+	TEST_ASSERT_EQUAL(blueprint.paid, 12000, "The blueprint did not record what was paid")
+	TEST_ASSERT(!blueprint.installed && !blueprint.placing, "A bought blueprint was already placed")
+	var/list/blueprints = home.upgrade_blueprints()
+	TEST_ASSERT_EQUAL(length(blueprints), 1, "The bought blueprint is not waiting to be placed")
+	TEST_ASSERT_EQUAL(blueprints[1], blueprint, "The wrong blueprint is waiting to be placed")
+	status = prison_status(panel, owner)
+	TEST_ASSERT_EQUAL(status["state"], "ready", "A bought blueprint did not show as ready to place")
+	TEST_ASSERT_EQUAL(status["denial"], "Blueprint already bought.", "A second purchase was offered")
+	TEST_ASSERT_NULL(status["manage_denial"], "The owner could not place or cancel the blueprint")
+
+	// A second purchase is refused while the first is unplaced, and charges nothing.
+	home.treasury.adjust_money(20000, "Upgrade test")
+	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "prison"), "Blueprint already bought.", "A second purchase was not refused")
+	act(panel, owner, "buy_upgrade", null, list("id" = "prison"))
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "A refused second purchase charged the treasury")
+	TEST_ASSERT_EQUAL(home.outpost_upgrades["prison"], blueprint, "A second purchase replaced the blueprint")
+
+	// Cancelling refunds exactly what was paid and frees the slot; only management may do it.
+	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(visitor, "prison"), "Management and treasury access required.", "A visitor cancelled the purchase")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "A refused cancel changed the treasury")
+	act(panel, owner, "cancel_upgrade", null, list("id" = "prison"))
+	TEST_ASSERT_NULL(panel.upgrade_error, "Cancelling the purchase reported an error")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 32500, "Cancelling did not refund exactly the price")
+	TEST_ASSERT_NULL(home.outpost_upgrades["prison"], "Cancelling left the blueprint behind")
+	TEST_ASSERT(QDELETED(blueprint), "The cancelled blueprint was not deleted")
+	TEST_ASSERT_EQUAL(prison_status(panel, owner)["state"], "available", "A cancelled upgrade did not return to the catalog")
+	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(owner, "prison"), "No blueprint bought.", "A second cancel was accepted")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 32500, "A second cancel refunded again")
+
+	// An installed upgrade cannot be bought again or refunded.
+	TEST_ASSERT_NULL(home.buy_outpost_upgrade(owner, "prison"), "The upgrade could not be bought again after a refund")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "The second purchase did not cost exactly its price")
+	blueprint = home.outpost_upgrades["prison"]
+	blueprint.installed = TRUE
+	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "prison"), "Already installed.", "An installed upgrade could be bought again")
+	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(owner, "prison"), "Already installed.", "An installed upgrade was refunded")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "Refusing an installed upgrade changed the treasury")
+
+/datum/unit_test/voidcrew_outpost_upgrade_tiles
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_upgrade_tiles/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("tileowner")
+	TEST_ASSERT_NOTNULL(home, "The tile test outpost did not load")
+	var/z = home.upgrade_level_z()
+	var/list/claim = home.build_bounds
+	var/turf/open_ground = locate(claim[1] + 12, claim[4] - 12, z)
+	TEST_ASSERT(home.is_upgrade_turf_clear(open_ground), "Open space inside the claim was refused")
+
+	var/obj/structure/lattice/lattice = allocate(__IMPLIED_TYPE__, open_ground)
+	var/obj/item/wrench/loose = allocate(__IMPLIED_TYPE__, open_ground)
+	TEST_ASSERT(home.is_upgrade_turf_clear(open_ground), "A lattice or a loose item blocked an upgrade")
+	qdel(lattice)
+	qdel(loose)
+	var/obj/structure/grille/grille = allocate(__IMPLIED_TYPE__, open_ground)
+	TEST_ASSERT(!home.is_upgrade_turf_clear(open_ground), "An anchored structure did not block an upgrade")
+	qdel(grille)
+	TEST_ASSERT(home.is_upgrade_turf_clear(open_ground), "Clearing the tile did not free it")
+
+	var/turf/wall_spot = locate(open_ground.x + 1, open_ground.y, z)
+	wall_spot.ChangeTurf(/turf/closed/wall)
+	TEST_ASSERT(!home.is_upgrade_turf_clear(wall_spot), "A wall accepted an upgrade")
+
+	var/turf/mob_spot = locate(open_ground.x + 2, open_ground.y, z)
+	allocate(/mob/living/carbon/human/consistent, mob_spot)
+	TEST_ASSERT(!home.is_upgrade_turf_clear(mob_spot), "A living mob did not block an upgrade")
+	TEST_ASSERT(home.is_upgrade_turf_clear(mob_spot, ignore_mobs = TRUE), "The survey's mob exemption did not apply")
+
+	var/obj/docking_port/stationary/pad = home.reserve_dock
+	TEST_ASSERT_NOTNULL(pad, "The test outpost has no reserve berth")
+	TEST_ASSERT(!home.is_upgrade_turf_clear(locate(pad.x + 5, pad.y + 5, pad.z)), "Reserve berth ground accepted an upgrade")
+	TEST_ASSERT(!home.is_upgrade_turf_clear(home.arrival_turf), "The arrival point accepted an upgrade")
+	if(length(home.lobby_alcove_turfs))
+		TEST_ASSERT(!home.is_upgrade_turf_clear(home.lobby_alcove_turfs[1]), "The elevator alcove accepted an upgrade")
+	TEST_ASSERT(!home.is_upgrade_turf_clear(run_loc_floor_bottom_left), "Ground outside the claim accepted an upgrade")
+
+	// An installed room blocks upgrades and the hangar elevator alike, but only inside it.
+	var/datum/outpost_upgrade/prison/placed = new(home)
+	home.outpost_upgrades["prison"] = placed
+	placed.installed = TRUE
+	var/turf/room_corner = locate(open_ground.x + 5, open_ground.y - 6, z)
+	placed.footprint_bounds = list(room_corner.x, room_corner.y, room_corner.x + 2, room_corner.y + 2, z)
+	var/turf/inside = locate(room_corner.x + 1, room_corner.y + 1, z)
+	var/turf/beside = locate(room_corner.x + 3, room_corner.y + 1, z)
+	TEST_ASSERT(!home.is_upgrade_turf_clear(inside), "An upgrade could overlap an installed one")
+	TEST_ASSERT(home.is_upgrade_turf_clear(beside), "Ground next to an installed upgrade was refused")
+	var/obj/machinery/computer/camera_advanced/base_construction/ship/outpost/builder = home.construction_console
+	TEST_ASSERT_NOTNULL(builder, "The test shell has no construction console")
+	TEST_ASSERT(!builder.is_elevator_turf_clear(inside), "The hangar elevator could be placed inside an installed upgrade")
+	TEST_ASSERT(builder.is_elevator_turf_clear(beside), "The hangar elevator was refused next to an installed upgrade")
+
+	// Distance: open ground far from the outpost is refused, and nothing is claimed.
+	home.outpost_upgrades -= "prison"
+	qdel(placed)
+	var/datum/outpost_upgrade/prison/blueprint = new(home)
+	home.outpost_upgrades["prison"] = blueprint
+	var/turf/far_corner = locate(claim[1] + 10, claim[4] - 40, z)
+	var/list/far_footprint = blueprint.footprint_at(far_corner, 0)
+	for(var/turf/far_tile as anything in far_footprint["turfs"])
+		TEST_ASSERT(home.is_upgrade_turf_clear(far_tile), "Test ground at [far_tile.x],[far_tile.y] was not clear")
+	TEST_ASSERT(!home.upgrade_footprint_near_outpost(far_corner, far_footprint["top_right"]), "A footprint across the claim counted as near the outpost")
+	TEST_ASSERT_EQUAL(home.place_outpost_upgrade(blueprint, far_corner, 0, null), "Too far from the outpost.", "A room far from the outpost was placed")
+	TEST_ASSERT(!blueprint.installed && !blueprint.placing && !blueprint.footprint_bounds, "A refused placement claimed the blueprint")
+
+	// Just inside and just outside the gap, east of the easternmost outpost ground.
+	var/list/owned = home.outpost_owned_turfs()
+	var/turf/east_ground
+	for(var/turf/owned_turf as anything in owned)
+		if(!east_ground || owned_turf.x > east_ground.x)
+			east_ground = owned_turf
+	var/turf/near_corner = locate(east_ground.x + 8, east_ground.y, z) // OUTPOST_UPGRADE_MAX_GAP
+	TEST_ASSERT(home.upgrade_footprint_near_outpost(near_corner, locate(near_corner.x + 16, near_corner.y + 15, z)), "A room eight tiles from the outpost was too far")
+	// Every tile of this one is at least nine columns east of all outpost ground.
+	var/turf/gap_corner = locate(east_ground.x + 9, east_ground.y, z)
+	TEST_ASSERT(!home.upgrade_footprint_near_outpost(gap_corner, locate(gap_corner.x + 16, gap_corner.y + 15, z)), "A room nine tiles from the outpost counted as near")
+
+/datum/unit_test/voidcrew_outpost_upgrade_survey
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// Cells where the survey string disagrees with is_upgrade_turf_clear() now, with what stands there.
+/datum/unit_test/voidcrew_outpost_upgrade_survey/proc/survey_disagreements(obj/structure/overmap/dynamic/player_outpost/home, list/survey, z)
+	var/list/found = list()
+	var/list/protected_rects = home.upgrade_protected_rects(z)
+	var/width = survey["width"]
+	var/string_cells = survey["cells"]
+	for(var/row in 0 to survey["height"] - 1)
+		for(var/column in 0 to width - 1)
+			var/turf/tile = locate(survey["x"] + column, survey["y"] + row, z)
+			var/cell = copytext(string_cells, row * width + column + 1, row * width + column + 2)
+			if((findtext("slf", cell) > 0) == home.is_upgrade_turf_clear(tile, protected_rects, TRUE))
+				continue
+			var/list/stuff = list()
+			for(var/atom/movable/thing as anything in tile)
+				stuff += "[thing.type]{a=[thing.anchored],d=[thing.density]}"
+			var/list/ports = list()
+			for(var/obj/docking_port/port in SSshuttle.stationary_docking_ports + SSshuttle.mobile_docking_ports)
+				if(port.z == z)
+					ports += "[port.type]@[port.x],[port.y] ([port.return_coords().Join(",")])"
+			found += "cell [cell] at [tile.x],[tile.y] is now [home.upgrade_survey_class(tile, protected_rects)], turf [tile.type], reserved [home.is_upgrade_ground_reserved(tile, protected_rects)], contents [stuff.Join(" ")], ports on z [ports.Join("; ")]"
+			if(length(found) >= 3)
+				return found
+	return found
+
+/datum/unit_test/voidcrew_outpost_upgrade_survey/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("surveyowner")
+	TEST_ASSERT_NOTNULL(home, "The survey test outpost did not load")
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "surveyowner")
+	var/datum/player_outpost_management_ui/management_test/panel = upgrade_test_panel(home, owner)
+	var/z = home.upgrade_level_z()
+	var/list/owned = home.outpost_owned_turfs()
+	TEST_ASSERT(length(owned), "The small shell has no outpost ground")
+
+	// Obstacles for the survey to see: a wall, a grille, and a mob it must leave out.
+	var/list/claim = home.build_bounds
+	var/turf/shell_corner = home.template_bottom_left
+	var/turf/wall_spot = locate(shell_corner.x - 3, shell_corner.y, z)
+	wall_spot.ChangeTurf(/turf/closed/wall)
+	allocate(/obj/structure/grille, locate(shell_corner.x - 3, shell_corner.y + 1, z))
+	var/turf/mob_spot = locate(shell_corner.x - 3, shell_corner.y + 2, z)
+	allocate(/mob/living/carbon/human/consistent, mob_spot)
+
+	var/list/survey = home.build_upgrade_survey()
+	TEST_ASSERT_NOTNULL(survey, "The survey failed")
+	var/width = survey["width"]
+	var/height = survey["height"]
+	var/string_cells = survey["cells"]
+	var/string_near = survey["near"]
+	TEST_ASSERT_EQUAL(length(string_cells), width * height, "The survey has the wrong number of cells")
+	TEST_ASSERT_EQUAL(length(string_near), width * height, "The near mask has the wrong number of cells")
+	TEST_ASSERT(survey["x"] >= claim[1] && survey["y"] >= claim[2] && survey["x"] + width - 1 <= claim[3] && survey["y"] + height - 1 <= claim[4], "The survey left the claim")
+	for(var/turf/owned_turf as anything in owned)
+		TEST_ASSERT(owned_turf.x >= survey["x"] && owned_turf.y >= survey["y"] && owned_turf.x < survey["x"] + width && owned_turf.y < survey["y"] + height, "The survey does not cover all outpost ground")
+
+	// Every cell agrees with the placement rule, mobs aside. Something passing through while the
+	// survey yields can change one tile, so a disagreement must survive a fresh survey to fail.
+	var/list/disagreements = survey_disagreements(home, survey, z)
+	if(length(disagreements))
+		var/list/retry = home.build_upgrade_survey()
+		var/list/still = survey_disagreements(home, retry, z)
+		if(length(still))
+			TEST_FAIL("The survey disagrees with the placement rule twice: [still.Join(" | ")]")
+			return
+		log_test("Survey cells changed while the survey ran and settled on a retry: [disagreements.Join(" | ")]")
+		survey = retry
+		string_cells = survey["cells"]
+	var/checked_open = 0
+	var/checked_blocked = 0
+	for(var/index in 1 to length(string_cells))
+		if(findtext("slf", copytext(string_cells, index, index + 1)))
+			checked_open++
+		else
+			checked_blocked++
+	TEST_ASSERT(checked_open && checked_blocked, "The survey sample had no open or no blocked ground")
+	var/wall_cell = copytext(string_cells, (wall_spot.y - survey["y"]) * width + (wall_spot.x - survey["x"]) + 1, (wall_spot.y - survey["y"]) * width + (wall_spot.x - survey["x"]) + 2)
+	TEST_ASSERT_EQUAL(wall_cell, "w", "The survey did not draw the wall as a wall")
+	var/mob_index = (mob_spot.y - survey["y"]) * width + (mob_spot.x - survey["x"]) + 1
+	TEST_ASSERT(findtext("slf", copytext(string_cells, mob_index, mob_index + 1)), "The survey blocked a tile only because a mob stood on it")
+
+	// The near mask is "within the gap of outpost ground", checked by brute force on a sample.
+	for(var/index in 1 to width * height step 7)
+		var/column = (index - 1) % width
+		var/row = round((index - 1) / width)
+		var/x = survey["x"] + column
+		var/y = survey["y"] + row
+		var/expected = FALSE
+		for(var/turf/owned_turf as anything in owned)
+			if(abs(owned_turf.x - x) <= 8 && abs(owned_turf.y - y) <= 8) // OUTPOST_UPGRADE_MAX_GAP
+				expected = TRUE
+				break
+		if((copytext(string_near, index, index + 1) == "1") != expected)
+			TEST_FAIL("The near mask is wrong at [x],[y]")
+			return
+
+	// The console path: opening the map surveys in the background and sends it as static data.
+	home.outpost_upgrades["prison"] = new /datum/outpost_upgrade/prison(home)
+	act(panel, owner, "open_upgrade_map", null, list("id" = "prison"))
+	TEST_ASSERT_NULL(panel.upgrade_error, "Opening the placement map reported an error")
+	var/deadline = world.time + 20 SECONDS
+	while(home.upgrade_surveying && world.time < deadline)
+		sleep(1)
+	TEST_ASSERT(!home.upgrade_surveying, "The background survey never finished")
+	var/list/sent = panel.ui_static_data(owner)["upgrade_survey"]
+	TEST_ASSERT_NOTNULL(sent, "The finished survey was not sent to the open map")
+	// Something loose drifting through open space between the two surveys (seen once in 5 runs:
+	// one tile went from object to open and another the other way) is not a disagreement about
+	// the rules. Anything else is.
+	var/sent_cells = sent["cells"]
+	TEST_ASSERT_EQUAL(length(sent_cells), length(string_cells), "The background survey covers a different area")
+	var/list/moved = list()
+	for(var/index in 1 to length(string_cells))
+		var/before = copytext(string_cells, index, index + 1)
+		var/after = copytext(sent_cells, index, index + 1)
+		if(before == after)
+			continue
+		if(!findtext("mslf", before) || !findtext("mslf", after) || length(moved) >= 4)
+			TEST_FAIL("The background survey disagrees with the direct one at cell [index]: [before] became [after]")
+			return
+		moved += "[index]:[before]>[after]"
+	if(length(moved))
+		log_test("Loose objects moved between the two surveys: [moved.Join(" ")]")
+	act(panel, owner, "close_upgrade_map", null, list("id" = "prison"))
+	TEST_ASSERT_NULL(panel.ui_static_data(owner)["upgrade_survey"], "The survey was still sent after the map closed")
+
+/datum/unit_test/voidcrew_outpost_prison_placement
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// Things that move about by themselves near a claim, whatever a placement does
+/datum/unit_test/voidcrew_outpost_prison_placement/proc/placement_bystander(atom/movable/thing)
+	return ismob(thing) || iseffect(thing) || thing.drift_handler || thing.throwing
+
+/datum/unit_test/voidcrew_outpost_prison_placement/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("prisonowner")
+	TEST_ASSERT_NOTNULL(home, "The prison test outpost did not load")
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "prisonowner")
+	var/datum/player_outpost_management_ui/management_test/panel = upgrade_test_panel(home, owner)
+	var/z = home.upgrade_level_z()
+	// The shell's footprint; each room goes on one side of it, three tiles out.
+	var/shell_left = home.template_bottom_left.x
+	var/shell_bottom = home.template_bottom_left.y
+	var/shell_right = shell_left + home.shell_template.width - 1
+	var/shell_top = shell_bottom + home.shell_template.height - 1
+	var/list/corners = list(
+		"0" = list(shell_left, shell_top + 4),
+		"90" = list(shell_right + 4, shell_bottom),
+		"180" = list(shell_left, shell_bottom - 20),
+		"270" = list(shell_left - 20, shell_bottom),
+	)
+
+	// Zero-based spots from the rotated footprint's bottom-left for the template's entrance
+	// airlock (9,1) and APC (10,2), both authored on or against the south wall.
+	var/list/airlock_spots = list("0" = list(8, 0), "90" = list(0, 8), "180" = list(8, 15), "270" = list(15, 8))
+	var/list/apc_spots = list("0" = list(9, 1), "90" = list(1, 7), "180" = list(7, 14), "270" = list(14, 9))
+	var/list/south_turned = list("0" = SOUTH, "90" = WEST, "180" = NORTH, "270" = EAST)
+	var/list/placed_wings = list()
+	var/list/room_turfs = list()
+	var/list/rotations = list(0, 90, 180, 270)
+	for(var/index in 1 to length(rotations))
+		var/rotation = rotations[index]
+		var/expected_side = south_turned["[rotation]"]
+		var/datum/outpost_upgrade/prison/blueprint = new(home)
+		home.outpost_upgrades["prison"] = blueprint
+		var/list/corner = corners["[rotation]"]
+		var/turf/bottom_left = locate(corner[1], corner[2], z)
+		var/list/footprint = blueprint.footprint_at(bottom_left, rotation)
+		TEST_ASSERT_NOTNULL(footprint, "No footprint at [rotation] degrees")
+		var/turf/top_right = footprint["top_right"]
+		TEST_ASSERT_EQUAL(top_right.x - bottom_left.x + 1, (rotation % 180) ? 16 : 17, "Wrong footprint width at [rotation] degrees")
+		TEST_ASSERT_EQUAL(top_right.y - bottom_left.y + 1, (rotation % 180) ? 17 : 16, "Wrong footprint height at [rotation] degrees")
+		TEST_ASSERT_EQUAL(footprint["entrance_dir"], expected_side, "The entrance edge was not turned at [rotation] degrees")
+		var/list/footprint_turfs = footprint["turfs"]
+		var/list/old_areas = list()
+		for(var/turf/tile as anything in footprint_turfs)
+			TEST_ASSERT(home.is_upgrade_turf_clear(tile), "Test ground at [tile.x],[tile.y] was not clear at [rotation] degrees")
+			old_areas |= tile.loc
+		TEST_ASSERT(home.upgrade_footprint_near_outpost(bottom_left, top_right), "The test spot is not near the outpost at [rotation] degrees")
+
+		// Everything within two tiles of the footprint, to prove the placement stays inside it.
+		var/list/ring = list()
+		for(var/turf/near as anything in block(bottom_left.x - 2, bottom_left.y - 2, z, top_right.x + 2, top_right.y + 2, z))
+			if(near.x >= bottom_left.x && near.x <= top_right.x && near.y >= bottom_left.y && near.y <= top_right.y)
+				continue
+			ring[near] = list(near.type, near.loc, near.contents.Copy())
+		var/mapping_log_count = length(GLOB.unit_test_mapping_logs)
+
+		if(rotation == 90)
+			// Players place from the management console's map: bottom-left and rotation.
+			act(panel, owner, "place_upgrade", null, list("id" = "prison", "x" = bottom_left.x, "y" = bottom_left.y, "rotation" = rotation))
+			TEST_ASSERT_NULL(panel.upgrade_error, "The placement map's Build failed at [rotation] degrees")
+		else
+			TEST_ASSERT_NULL(home.place_outpost_upgrade(blueprint, bottom_left, rotation, owner), "The prison wing was not placed at [rotation] degrees")
+
+		TEST_ASSERT(blueprint.installed && !blueprint.placing, "Placement did not consume the blueprint at [rotation] degrees")
+		TEST_ASSERT_EQUAL(blueprint.rotation, rotation, "The placement recorded the wrong rotation")
+		TEST_ASSERT_EQUAL(length(home.upgrade_blueprints()), 0, "The placed blueprint is still waiting to be placed")
+		TEST_ASSERT_NOTNULL(home.place_outpost_upgrade(blueprint, locate(bottom_left.x, bottom_left.y - 25, z), rotation, owner), "A placed blueprint was placed a second time")
+		TEST_ASSERT_EQUAL(home.upgrade_at_turf(bottom_left), blueprint, "The installed footprint is not recorded")
+		TEST_ASSERT_NULL(home.upgrade_survey, "Placement left a stale survey")
+
+		var/area/voidcrew/player_outpost/prison/wing = blueprint.installed_area
+		TEST_ASSERT(istype(wing), "No prison area was recorded at [rotation] degrees")
+		TEST_ASSERT(!(wing in old_areas), "The prison reused the ground's area at [rotation] degrees")
+		TEST_ASSERT(!(wing in placed_wings), "Two prison placements share one area")
+		var/prisons_made = 0
+		for(var/datum/outpost_prison/running as anything in GLOB.outpost_prisons)
+			if(running.upgrade == blueprint)
+				prisons_made++
+		TEST_ASSERT_EQUAL(prisons_made, 1, "Placing the prison wing did not start exactly one prison at [rotation] degrees")
+		TEST_ASSERT_EQUAL(wing.prison, blueprint.prison, "The prison area does not know its prison at [rotation] degrees")
+		TEST_ASSERT_EQUAL(blueprint.prison.outpost, home, "The prison belongs to another outpost at [rotation] degrees")
+		placed_wings += wing
+		var/list/apcs = list()
+		var/list/edge_airlocks = list("[NORTH]" = 0, "[SOUTH]" = 0, "[EAST]" = 0, "[WEST]" = 0)
+		var/obj/machinery/door/airlock/entrance
+		var/hatches = 0
+		for(var/turf/tile as anything in footprint_turfs)
+			TEST_ASSERT_EQUAL(tile.loc, wing, "Footprint tile [tile.x],[tile.y] is not in the new prison area at [rotation] degrees")
+			for(var/obj/machinery/power/apc/apc in tile)
+				apcs += apc
+			if(locate(/obj/structure/table/reinforced/prison_hatch) in tile)
+				hatches++
+			for(var/obj/machinery/door/airlock/airlock in tile)
+				if(airlock.name == "Prison Wing")
+					entrance = airlock
+				if(tile.y == top_right.y)
+					edge_airlocks["[NORTH]"]++
+				if(tile.y == bottom_left.y)
+					edge_airlocks["[SOUTH]"]++
+				if(tile.x == top_right.x)
+					edge_airlocks["[EAST]"]++
+				if(tile.x == bottom_left.x)
+					edge_airlocks["[WEST]"]++
+
+		TEST_ASSERT_EQUAL(length(apcs), 1, "The prison wing should have exactly one APC at [rotation] degrees")
+		var/obj/machinery/power/apc/apc = apcs[1]
+		TEST_ASSERT_EQUAL(apc.area, wing, "The wing's APC powers another area at [rotation] degrees")
+		TEST_ASSERT_EQUAL(wing.apc, apc, "The wing does not know its APC at [rotation] degrees")
+		var/list/apc_spot = apc_spots["[rotation]"]
+		TEST_ASSERT_EQUAL(apc.x - bottom_left.x, apc_spot[1], "The APC is in the wrong column at [rotation] degrees")
+		TEST_ASSERT_EQUAL(apc.y - bottom_left.y, apc_spot[2], "The APC is in the wrong row at [rotation] degrees")
+		TEST_ASSERT_EQUAL(apc.dir, expected_side, "The APC faces the wrong wall at [rotation] degrees")
+		TEST_ASSERT(iswallturf(get_step(apc, apc.dir)), "The turned APC is not against a wall at [rotation] degrees")
+
+		TEST_ASSERT_NOTNULL(entrance, "The entrance airlock is missing at [rotation] degrees")
+		var/list/airlock_spot = airlock_spots["[rotation]"]
+		TEST_ASSERT_EQUAL(entrance.x - bottom_left.x, airlock_spot[1], "The entrance is in the wrong column at [rotation] degrees")
+		TEST_ASSERT_EQUAL(entrance.y - bottom_left.y, airlock_spot[2], "The entrance is in the wrong row at [rotation] degrees")
+		for(var/side in edge_airlocks)
+			TEST_ASSERT_EQUAL(edge_airlocks[side], (text2num(side) == expected_side) ? 1 : 0, "Wrong number of airlocks on the [dir2text(text2num(side))] edge at [rotation] degrees")
+		TEST_ASSERT_EQUAL(hatches, 2, "The prison wing should have two serving hatches at [rotation] degrees")
+		TEST_ASSERT(istype(entrance, /obj/machinery/door/airlock/security/prison_staff), "The entrance is not a staff airlock at [rotation] degrees")
+		TEST_ASSERT_EQUAL(length(blueprint.prison?.wing_turfs()), length(footprint_turfs), "The placed prison does not cover its footprint at [rotation] degrees")
+
+		// Cells, their bolt buttons and the hatches' window doors all turn with the room.
+		var/datum/outpost_prison/running = blueprint.prison
+		TEST_ASSERT_EQUAL(length(running.cells), 4, "The prison found [length(running.cells)] cells at [rotation] degrees")
+		for(var/datum/outpost_prison_cell/cell as anything in running.cells)
+			TEST_ASSERT(cell.door() && cell.bed(), "Cell [cell.number] has no door or bed at [rotation] degrees")
+			TEST_ASSERT_EQUAL(length(cell.turfs), 9, "Cell [cell.number] has [length(cell.turfs)] tiles at [rotation] degrees")
+		var/buttons = 0
+		for(var/turf/tile as anything in footprint_turfs)
+			for(var/obj/machinery/button/outpost_prison_bolt/button in tile)
+				buttons++
+				var/datum/outpost_prison_cell/button_cell = running.cell_by_number(button.cell_number)
+				TEST_ASSERT(button_cell && get_dist(button, button_cell.door()) <= 1, "Cell [button.cell_number]'s bolt button is not beside its door at [rotation] degrees")
+				TEST_ASSERT(!button_cell.turf_set[tile], "Cell [button.cell_number]'s bolt button is inside the cell at [rotation] degrees")
+				var/turf/mount = get_step(button, button.dir)
+				TEST_ASSERT(iswallturf(mount), "Cell [button.cell_number]'s bolt button is not on a wall at [rotation] degrees")
+				var/list/offset_dirs = list("[NORTH]" = button.pixel_y > 0, "[SOUTH]" = button.pixel_y < 0, "[EAST]" = button.pixel_x > 0, "[WEST]" = button.pixel_x < 0)
+				TEST_ASSERT(offset_dirs["[button.dir]"], "Cell [button.cell_number]'s bolt button is drawn off its wall at [rotation] degrees")
+			for(var/obj/structure/table/reinforced/prison_hatch/hatch in tile)
+				var/obj/machinery/door/window/yard_door = hatch.yard_windoor()
+				var/obj/machinery/door/window/staff_door = hatch.staff_windoor()
+				TEST_ASSERT(yard_door && staff_door, "A serving hatch lost a window door at [rotation] degrees")
+				TEST_ASSERT_EQUAL(yard_door.dir, REVERSE_DIR(staff_door.dir), "A hatch's window doors are not on opposite sides at [rotation] degrees")
+				// The yard side is the one nearer the cells.
+				var/yard_reach = 0
+				var/staff_reach = 0
+				for(var/datum/outpost_prison_cell/cell as anything in running.cells)
+					yard_reach += get_dist(get_step(hatch, yard_door.dir), cell.door())
+					staff_reach += get_dist(get_step(hatch, staff_door.dir), cell.door())
+				TEST_ASSERT(yard_reach < staff_reach, "A hatch's yard side faces the office at [rotation] degrees")
+		TEST_ASSERT_EQUAL(buttons, 4, "The wing has [buttons] bolt buttons at [rotation] degrees")
+
+		for(var/turf/near as anything in ring)
+			var/list/before = ring[near]
+			TEST_ASSERT_EQUAL(near.type, before[1], "The placement changed the turf at [near.x],[near.y] outside its footprint")
+			TEST_ASSERT_EQUAL(near.loc, before[2], "The placement changed the area at [near.x],[near.y] outside its footprint")
+			// Mobs, effects and anything drifting through open space come and go on their own
+			// (seen once in 6 runs); only things that appeared or vanished otherwise count.
+			var/list/old_contents = before[3]
+			for(var/atom/movable/thing as anything in near.contents)
+				if(!(thing in old_contents) && !placement_bystander(thing))
+					TEST_FAIL("The placement put [thing.type] at [near.x],[near.y] outside its footprint at [rotation] degrees")
+					return
+			for(var/atom/movable/thing as anything in old_contents)
+				if(!(thing in near.contents) && (QDELETED(thing) || !placement_bystander(thing)))
+					TEST_FAIL("The placement removed [thing] at [near.x],[near.y] outside its footprint at [rotation] degrees")
+					return
+
+		if(length(GLOB.unit_test_mapping_logs) > mapping_log_count)
+			TEST_FAIL("Placing the prison at [rotation] degrees logged mapping errors: [jointext(GLOB.unit_test_mapping_logs.Copy(mapping_log_count + 1), "; ")]")
+			return
+
+		// One prison per claim: forget this one so the next rotation can be placed elsewhere.
+		var/datum/outpost_prison/placed_prison = blueprint.prison
+		home.outpost_upgrades -= "prison"
+		qdel(blueprint)
+		TEST_ASSERT(QDELETED(placed_prison), "Forgetting the placed wing left its prison running at [rotation] degrees")
+		room_turfs += ring
+		room_turfs += footprint_turfs
+
+	// Claims are never torn down in play, but this one is, seconds after four fresh rooms began
+	// trading air. Let that go idle first so the level teardown does not race SSair.
+	var/settle_until = world.time + 30 SECONDS
+	while(world.time < settle_until)
+		var/busy = FALSE
+		for(var/turf/open/room_turf in room_turfs)
+			if(room_turf.excited)
+				busy = TRUE
+				break
+		if(!busy)
+			break
+		sleep(1 SECONDS)
+
+/// The Upgrades tab shows baked art; it must be regenerated whenever an upgrade's map changes.
+/datum/unit_test/voidcrew_outpost_upgrade_previews
+
+/datum/unit_test/voidcrew_outpost_upgrade_previews/Run()
+	var/checked = 0
+	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
+		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
+		var/datum/map_template/template_type = upgrade.template_type
+		var/map_path = initial(template_type.mappath)
+		TEST_ASSERT(fexists(map_path), "The [upgrade.name] map [map_path] is missing")
+		TEST_ASSERT(upgrade.preview_name, "The [upgrade.name] upgrade has no preview")
+		var/json_path = "voidcrew/modules/player_outposts/previews/[upgrade.preview_name].preview.json"
+		TEST_ASSERT(fexists(json_path), "[json_path] is missing. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py")
+		var/list/meta = json_decode(file2text(json_path))
+		TEST_ASSERT(islist(meta), "[json_path] is not valid JSON")
+		TEST_ASSERT_EQUAL(meta["png"], "[upgrade.preview_name].png", "[json_path] names the wrong image")
+		TEST_ASSERT(fexists("voidcrew/modules/player_outposts/previews/[meta["png"]]"), "The [upgrade.name] preview image is missing")
+		var/datum/map_template/template = upgrade.get_template()
+		TEST_ASSERT_NOTNULL(template, "The [upgrade.name] template did not load its map")
+		TEST_ASSERT_EQUAL(meta["width"], template.width, "The [upgrade.name] preview has the wrong width")
+		TEST_ASSERT_EQUAL(meta["height"], template.height, "The [upgrade.name] preview has the wrong height")
+		if(meta["src_md5"] != rustg_hash_file(RUSTG_HASH_MD5, map_path))
+			TEST_FAIL("The [upgrade.name] preview was rendered from a different version of [map_path] than the one on disk, so the Upgrades \
+				tab shows a room that no longer exists. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py and commit \
+				the new PNG and .preview.json with the map change.")
+		checked++
+	TEST_ASSERT(checked, "The upgrade catalog is empty")

@@ -78,6 +78,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		"freight_error" = selected.freight?.last_error, "research_connection" = selected.research_connection_summary(),
 		"ship_bays" = ship_bay_data(selected),
 		"checkpoints" = checkpoint_admin_data(selected),
+		"prison" = prison_admin_data(selected),
 	)
 	return data
 
@@ -193,6 +194,9 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		return
 	if(action in list("checkpoint_save", "checkpoint_rebuild_docked", "checkpoint_rebuild", "checkpoint_delete", "bay_remove_ship", "rebuild_rush", "rebuild_hand_over", "rebuild_stop"))
 		manage_checkpoints(home, user, action, params)
+		return
+	if(action in GLOB.outpost_admin_prison_actions)
+		manage_prison(home, user, action, params)
 		return
 	switch(action)
 		if("jump", "jump_overmap")

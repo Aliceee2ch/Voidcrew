@@ -450,6 +450,11 @@
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_admin_bays.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_admin_checkpoints.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_checkpoints.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_upgrades.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_trouble.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_cargo_dock.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_patrol.dm" // VOIDCREW EDIT ADDITION
 // END_INCLUDE
 #ifdef REFERENCE_TRACKING_DEBUG //Don't try and parse this file if ref tracking isn't turned on. IE: don't parse ref tracking please mr linter
 #include "find_reference_sanity.dm"

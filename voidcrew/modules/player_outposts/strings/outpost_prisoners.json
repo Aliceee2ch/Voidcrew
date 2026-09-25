@@ -143,6 +143,86 @@
 				"Okay."
 			]
 		},
+		"arrival_stained": {
+			"any": [
+				"They didn't even give me a clean suit.",
+				"Sorry about the smell. Long transfer.",
+				"This suit's been through three prisons before me.",
+				"Anyone got a fresh jumpsuit? This one's rank.",
+				"Transfer shuttle had no showers.",
+				"Somebody wore this before me. Lots of somebodies.",
+				"I know. I stink. Not my fault.",
+				"A clean suit would be nice, crew.",
+				"Transferred in a dirty suit. Great start."
+			],
+			"chatty": [
+				"Hi, everyone! Don't mind the smell. Long trip.",
+				"Before anyone says anything, it's the suit, not me.",
+				"They lost my bag on the transfer and gave me this rag.",
+				"Hey, crew! Any chance of a suit that doesn't smell like a cargo hold?"
+			],
+			"grumpy": [
+				"Who issued this rag? I want a new one.",
+				"Filthy suit, filthy shuttle. Nice service.",
+				"Get me a clean suit before I say something.",
+				"I'm not wearing this all week. Clean one. Now."
+			],
+			"nervous": [
+				"Is there somewhere to wash? Sorry.",
+				"Please don't make me wear this the whole time.",
+				"It was like this when they gave it to me. I swear."
+			],
+			"cheerful": [
+				"New place, same stinky suit!",
+				"Hi! I promise I smell better when I'm clean.",
+				"Laundry's first on my list. Right after lunch."
+			],
+			"quiet": [
+				"Need a clean suit.",
+				"Smells. Sorry.",
+				"Suit's dirty."
+			]
+		},
+		"arrival_hurt": {
+			"any": [
+				"Escort was a bit rough.",
+				"Anyone got a bandage? Transfer wasn't gentle.",
+				"Ow. Watch the ribs.",
+				"Took a few knocks on the way in.",
+				"Shuttle guards don't like it when you talk back.",
+				"Can somebody look at my arm?",
+				"Bit banged up. I'll live.",
+				"Somebody's boot and my face got acquainted.",
+				"Hey, crew, I could use a medic."
+			],
+			"chatty": [
+				"You should see the other guy. No, really, he's fine.",
+				"Got roughed up on the shuttle. Long story. Want to hear it?",
+				"Hi! Is there a medic here? Asking for me.",
+				"Fell down the shuttle ramp. With help."
+			],
+			"grumpy": [
+				"Transfer guards are animals.",
+				"I want that escort's name.",
+				"Somebody patch me up. Now.",
+				"Great welcome. Bruises and a cell."
+			],
+			"nervous": [
+				"Is it bleeding? It feels like it's bleeding.",
+				"Please, I need a medic.",
+				"They didn't have to hit me. I was going quietly."
+			],
+			"cheerful": [
+				"Rough ride in! Anyone got a bandage?",
+				"Bit bruised, but hey, I made it.",
+				"Nothing a bandage can't fix. Probably."
+			],
+			"quiet": [
+				"Hurt.",
+				"Need a medic.",
+				"Ribs."
+			]
+		},
 		"release_soon": {
 			"any": [
 				"Only {time_left} left. I can almost taste real food.",
@@ -447,6 +527,115 @@
 				"I don't like this. I really don't."
 			]
 		},
+		"rat": {
+			"any": [
+				"Rat! There's a rat!",
+				"Something just ran under the table.",
+				"Was that a rat?",
+				"Great. Now we've got rats.",
+				"Get it! Get it!",
+				"Rats. Of course there are rats.",
+				"It's in the corner! The rat!",
+				"That's what happens when nobody cleans.",
+				"Hey, crew! We've got rats in here!"
+			],
+			"chatty": [
+				"I knew it! I told you I heard squeaking!",
+				"Hey, crew! You've got a rat problem!",
+				"Anybody want to name it? I'm calling it Captain."
+			],
+			"grumpy": [
+				"Rats. Perfect. This dump has everything.",
+				"Somebody clean this place before they breed.",
+				"I'm not sharing my cell with that thing."
+			],
+			"nervous": [
+				"Rat! Rat! Get it away from me!",
+				"Did it bite anyone? Do they bite?",
+				"I'm not sleeping tonight."
+			],
+			"cheerful": [
+				"Aw, look. A friend. A disgusting friend.",
+				"Anybody want a pet?"
+			],
+			"quiet": [
+				"Rat.",
+				"Hm. Rat."
+			]
+		},
+		"no_air": {
+			"any": [
+				"Something's wrong with the air.",
+				"I can't catch my breath.",
+				"Air's bad in here.",
+				"Is anyone else feeling this?",
+				"Hey, crew! Check the air!",
+				"My head's pounding. It's the air.",
+				"Who messed with the vents?",
+				"Feels wrong in here. Hard to breathe.",
+				"I'm getting dizzy."
+			],
+			"chatty": [
+				"Hey! Crew! The air's gone weird in here!",
+				"Anybody got a spare tank? Asking for everyone.",
+				"I've worked on ships with better air than this."
+			],
+			"grumpy": [
+				"Can't even keep the air right. Unbelievable.",
+				"Fix the air, you idiots!",
+				"They're going to kill us with the air."
+			],
+			"nervous": [
+				"We're going to suffocate. We're going to suffocate.",
+				"Please, check the air! Something's wrong!",
+				"My chest hurts. Is that the air?"
+			],
+			"cheerful": [
+				"Air's a bit off today, crew! Little help?",
+				"Anyone else lightheaded? Just me?"
+			],
+			"quiet": [
+				"Air.",
+				"Can't breathe.",
+				"Bad air."
+			]
+		},
+		"lights_flicker": {
+			"any": [
+				"Lights just flickered.",
+				"Was that the power?",
+				"Lights are acting up.",
+				"Did anyone else see that?",
+				"Power's going, I think.",
+				"Uh oh. The lights.",
+				"Hey, crew! The lights are flickering.",
+				"That doesn't look good.",
+				"Somebody check the power."
+			],
+			"chatty": [
+				"Hey, crew, your lights are blinking! Just so you know.",
+				"Anybody else see that? The flicker?",
+				"My old ship did that right before the power died."
+			],
+			"grumpy": [
+				"Great. Power's dying now too.",
+				"Can't even pay the power bill.",
+				"Somebody fix that before it goes out."
+			],
+			"nervous": [
+				"Please don't go dark. Please don't go dark.",
+				"Is the power going out? Is it?",
+				"I don't like this."
+			],
+			"cheerful": [
+				"Light show! Oh. Oh, that's bad.",
+				"Lights are blinking. That's new. And bad."
+			],
+			"quiet": [
+				"Flicker.",
+				"Hm. Lights."
+			]
+		},
 		"staff_near": {
 			"any": [
 				"Hey, you. Any chance of food?",
@@ -578,6 +767,368 @@
 				"Thank you. I really thought that was it.",
 				"Is it infected? It's not, right?",
 				"Thanks. Sorry for panicking."
+			]
+		},
+		"food_up": {
+			"any": [
+				"Food's up!",
+				"Food's up! Hatch is stocked.",
+				"Chow's here!",
+				"Grub's on the hatch!",
+				"Hey, food! Finally.",
+				"Hatch has food, everybody.",
+				"Lunch is here!",
+				"Trays are out. Come and get it.",
+				"Food's on the counter!"
+			],
+			"chatty": [
+				"Food's up! Come on, everyone, it's getting cold!",
+				"Hey, {other}, food's here! Save me a seat.",
+				"Food's up! Who's sitting with me?",
+				"Chow time! Best part of the day."
+			],
+			"grumpy": [
+				"Food's up. About time.",
+				"Hatch has food. Took them long enough.",
+				"Finally. Food.",
+				"Food's here. Don't hog the good trays."
+			],
+			"nervous": [
+				"Oh, food's here. Is there enough for everyone?",
+				"Food's up! Quick, before it's gone.",
+				"They didn't forget us. Food's here."
+			],
+			"cheerful": [
+				"Food's up! Great timing, crew!",
+				"Chow's here! Thanks, crew!",
+				"Hey hey, food's up!",
+				"Food! Best news all day."
+			],
+			"quiet": [
+				"Food.",
+				"Food's up.",
+				"Chow."
+			]
+		},
+		"suits_up": {
+			"any": [
+				"Clean suits!",
+				"Clean suits on the hatch!",
+				"Fresh jumpsuits, everybody.",
+				"Laundry's back!",
+				"New suits are out.",
+				"Hatch has clean jumpsuits.",
+				"Clean clothes! Finally.",
+				"Suits are up. Grab one before they're gone."
+			],
+			"chatty": [
+				"Clean suits! Everybody go change, you all stink.",
+				"Laundry day! Best day of the week.",
+				"Fresh suits, {other}! Go change, please.",
+				"Clean suits are up! Who's first?"
+			],
+			"grumpy": [
+				"Clean suits. About time.",
+				"Laundry's back. Only took forever.",
+				"Suits are up. Hope they're the right size this time.",
+				"Finally something that doesn't reek."
+			],
+			"nervous": [
+				"Clean suits! Is there one my size?",
+				"Oh good, clean suits. Mine was getting bad.",
+				"Fresh suits. I'll wait my turn."
+			],
+			"cheerful": [
+				"Clean suits! Smells like soap already.",
+				"Laundry's here! Happy day.",
+				"Fresh jumpsuits, everybody! Line up!",
+				"Clean suits! Thanks, crew!"
+			],
+			"quiet": [
+				"Suits.",
+				"Clean suits.",
+				"Laundry's up."
+			]
+		},
+		"hatch_empty": {
+			"any": [
+				"Hatch is empty again.",
+				"Nothing on the hatch.",
+				"Empty. Again.",
+				"No food on the hatch. Great.",
+				"Hey, crew! The hatch is empty!",
+				"Who took the last one?",
+				"Anybody out there? Hatch is bare.",
+				"They forgot to restock.",
+				"Nothing here but crumbs."
+			],
+			"chatty": [
+				"Hey, crew! Hatch is empty! Just so you know!",
+				"Empty hatch. Did everyone else eat without me?",
+				"Anyone want to guess when they'll restock? I say never."
+			],
+			"grumpy": [
+				"Empty. Of course it's empty.",
+				"Is anyone even running this place?",
+				"Restock the damn hatch."
+			],
+			"nervous": [
+				"It's empty. What if nobody comes?",
+				"There's nothing left. Did I miss it?",
+				"Um, crew? The hatch is empty."
+			],
+			"cheerful": [
+				"Empty hatch! Guess I'm waiting.",
+				"Nothing yet. Next round, maybe!"
+			],
+			"quiet": [
+				"Empty.",
+				"Nothing.",
+				"Hm. Empty."
+			]
+		},
+		"good_food": {
+			"any": [
+				"Now that's a meal. Who cooked?",
+				"Real food! Somebody actually cooked this.",
+				"Oh, that's good. That's really good.",
+				"Hot food. I forgot what that was like.",
+				"This beats rations by a mile.",
+				"Somebody out there can cook.",
+				"I'm full. Actually full.",
+				"Okay, that was worth waiting for.",
+				"Tell whoever made this thanks."
+			],
+			"chatty": [
+				"Who made this? I want the recipe.",
+				"Now we're talking! Tell the cook they're a hero.",
+				"Best meal I've had since I got pinched.",
+				"{other}, you have to try this. Seriously."
+			],
+			"grumpy": [
+				"Huh. That's actually decent.",
+				"Fine. That was good. Don't get used to me saying it.",
+				"Why can't it be like this every day?",
+				"Not bad. Not bad at all."
+			],
+			"nervous": [
+				"This is really for us? It's so good.",
+				"Is this a mistake? It's too nice for prison food.",
+				"Thank you. That was really good."
+			],
+			"cheerful": [
+				"Now that's cooking! Compliments to the chef!",
+				"Oh, wow. Best day in here by far.",
+				"Somebody give the cook a raise!",
+				"I could eat this every day."
+			],
+			"quiet": [
+				"Good.",
+				"That was good.",
+				"Real food. Nice."
+			]
+		},
+		"poor_food": {
+			"any": [
+				"Raw? Seriously?",
+				"This isn't even cooked.",
+				"What is this? Is it even food?",
+				"Tastes like the floor.",
+				"Did anyone look at this before sending it?",
+				"That's not a meal. That's an ingredient.",
+				"My stomach's going to hate me for this.",
+				"Cold, slimy and raw. Great.",
+				"I've eaten worse. Can't remember when."
+			],
+			"chatty": [
+				"Who sent this? Tell them it needs cooking.",
+				"I've had better food out of a salvage bin.",
+				"{other}, don't eat that. Trust me.",
+				"Somebody tell the crew raw isn't a flavor."
+			],
+			"grumpy": [
+				"This is garbage. Actual garbage.",
+				"You call this food? I'm filing a complaint.",
+				"Raw. Of course it's raw.",
+				"Wouldn't feed this to a space carp."
+			],
+			"nervous": [
+				"Is this safe to eat? It doesn't look safe.",
+				"I think this is going to make me sick.",
+				"Should it be this color?"
+			],
+			"cheerful": [
+				"Well, it's food. Technically.",
+				"Crunchy! Not supposed to be crunchy, but crunchy.",
+				"Bold choice, crew. Very bold."
+			],
+			"quiet": [
+				"Raw.",
+				"No.",
+				"Ugh."
+			]
+		},
+		"mess_hall": {
+			"any": [
+				"Pass the salt. Oh, right. No salt.",
+				"This is nice. Everybody eating together.",
+				"Anyone want to trade trays?",
+				"Who's got the good tray?",
+				"Not bad today, is it?",
+				"Eat up, everyone.",
+				"Scoot over, {other}.",
+				"Almost feels like a ship's galley in here.",
+				"Anybody else's tray missing a spoon?",
+				"Best part of the day, this."
+			],
+			"chatty": [
+				"So, {other}, how's the food? Honest review.",
+				"Reminds me of dinner on my old ship. Everyone yelling.",
+				"Alright, table talk. Worst job you ever had. Go.",
+				"You know, the company's better than the food."
+			],
+			"grumpy": [
+				"Keep your elbows on your side, {other}.",
+				"Can a guy eat in peace?",
+				"Stop talking with your mouth full.",
+				"Who took my seat?"
+			],
+			"nervous": [
+				"Is this seat taken? Can I sit here?",
+				"It's nice not eating alone.",
+				"Nobody touch my tray, okay? Please."
+			],
+			"cheerful": [
+				"Look at us. Proper family dinner.",
+				"Cheers, everybody!",
+				"Now this is a nice dinner.",
+				"Good company. The food's alright too."
+			],
+			"quiet": [
+				"Mm.",
+				"Pass that.",
+				"Good."
+			]
+		},
+		"sick_call": {
+			"any": [
+				"Doc! Over here.",
+				"Hey, you with the bandages! Over here.",
+				"Can you take a look at this?",
+				"Got a minute? I'm hurt.",
+				"Over here! I need patching up.",
+				"Hey, doc. My arm's in bad shape.",
+				"Can I get one of those?",
+				"Me next. I'm hurt.",
+				"Could you patch me up?"
+			],
+			"chatty": [
+				"Doc! Over here! You won't believe what happened.",
+				"Hey, doc, got a minute? It's a bit of a story.",
+				"You got bandages? Great, because I've got cuts.",
+				"Hey! Medic! That's you, right?"
+			],
+			"grumpy": [
+				"Hey. Doc. Over here.",
+				"You gonna patch me up or just stand there?",
+				"Hurry up with those, I'm bleeding.",
+				"Took you long enough. Over here."
+			],
+			"nervous": [
+				"Excuse me? Could you look at this? Please?",
+				"Is that for me? I'm hurt. I think it's bad.",
+				"Doc, please. It really hurts.",
+				"Sorry, am I next? I'm bleeding."
+			],
+			"cheerful": [
+				"Doc! Over here! Customer!",
+				"Hey, perfect timing! I'm leaking a bit.",
+				"Over here, doc! Just a scratch. Big scratch."
+			],
+			"quiet": [
+				"Doc.",
+				"Over here.",
+				"Hurt."
+			]
+		},
+		"tidy": {
+			"any": [
+				"Who leaves wrappers lying around?",
+				"There. Binned.",
+				"Might as well clean up.",
+				"Can't stand the mess.",
+				"Somebody dropped this. Again.",
+				"Bin's right there, people.",
+				"Keeping the place decent.",
+				"Picked up after you, whoever you are.",
+				"It's our floor too."
+			],
+			"chatty": [
+				"Somebody's got to keep this place nice. Might as well be me.",
+				"Look at that. Tidy. You're welcome, everyone.",
+				"{other}, is this yours? It's in the bin now.",
+				"My old captain would be proud. Clean deck."
+			],
+			"grumpy": [
+				"Pigs. I'm living with pigs.",
+				"Who keeps doing this?",
+				"I'm not your maid. Just this once.",
+				"Bin. It's right there. Use it."
+			],
+			"nervous": [
+				"I'll just get that. It's fine.",
+				"Don't want anyone slipping.",
+				"Don't want the crew thinking it was me."
+			],
+			"cheerful": [
+				"Two points!",
+				"Tidying up! Somebody has to.",
+				"There we go. Much nicer.",
+				"Look at that. Spotless. Almost."
+			],
+			"quiet": [
+				"There.",
+				"Mm.",
+				"Binned."
+			]
+		},
+		"bin_full": {
+			"any": [
+				"Bin's full again.",
+				"Can't fit anything else in here.",
+				"Bin's full. Somebody empty it.",
+				"Where am I supposed to put this?",
+				"Bin's overflowing.",
+				"Guess this goes on the table, then.",
+				"Nobody's emptied this in ages.",
+				"Full. Of course it's full.",
+				"Hey, crew! The bin's full."
+			],
+			"chatty": [
+				"Hey, crew! Bin's full! Just so you know!",
+				"I'd bin this, but somebody has to empty it first.",
+				"Bin's stuffed. Who's on trash duty? Not me."
+			],
+			"grumpy": [
+				"Bin's full. Great. Real great.",
+				"Empty the damn bin already.",
+				"What's the point of a bin nobody empties?",
+				"Fine. It goes on the table."
+			],
+			"nervous": [
+				"Bin's full. I'll just leave it here. Sorry.",
+				"Is it okay if I leave this on the table?",
+				"Somebody's going to blame me for this mess."
+			],
+			"cheerful": [
+				"Bin's full! We've been busy eating, I guess.",
+				"No room in the bin. Table it is.",
+				"Somebody's gonna have fun emptying that."
+			],
+			"quiet": [
+				"Full.",
+				"Bin's full.",
+				"Hm. Full."
 			]
 		},
 		"eating": {
@@ -863,6 +1414,81 @@
 				"Door. Now."
 			]
 		},
+		"unbolted": {
+			"any": [
+				"Finally.",
+				"About time.",
+				"Thank you. My legs were cramping.",
+				"Out. Finally.",
+				"Door's open. Good.",
+				"Took you long enough.",
+				"Fresh air. Well, yard air.",
+				"I'm out. Don't do that again.",
+				"Okay. I can breathe again."
+			],
+			"chatty": [
+				"Freedom! Well, yard freedom.",
+				"Finally! I was about to start talking to the wall.",
+				"Door's open! Did everyone miss me?"
+			],
+			"grumpy": [
+				"About damn time.",
+				"Don't bolt me in again.",
+				"Shitcurity. But thanks."
+			],
+			"nervous": [
+				"Oh, thank you. I thought you forgot me.",
+				"Can I really come out?",
+				"Thanks. I didn't like that at all."
+			],
+			"cheerful": [
+				"Door's open! Thanks, crew!",
+				"Ah, room to stretch. Lovely."
+			],
+			"quiet": [
+				"Good.",
+				"Thanks.",
+				"Out."
+			]
+		},
+		"wreck": {
+			"any": [
+				"Let me out or I tear this place apart!",
+				"I'm breaking everything in here!",
+				"You want a mess? Here's your mess!",
+				"Open the door! OPEN IT!",
+				"I'm kicking this door till it breaks!",
+				"Shitcurity! Come see what I'm doing!",
+				"There goes the light!",
+				"Nobody's coming? Fine!",
+				"This whole cell's getting wrecked!",
+				"Hear that? That's your door!"
+			],
+			"chatty": [
+				"Hey, crew! Hope you like redecorating!",
+				"I told you what would happen! I told you!",
+				"Everybody hear that? That's me! Wrecking stuff!"
+			],
+			"grumpy": [
+				"I warned you! I warned all of you!",
+				"Hear that? That's your property.",
+				"Those bolts won't hold forever."
+			],
+			"nervous": [
+				"I can't stay in here! I can't!",
+				"Let me out! Please! I'm going crazy!",
+				"I'm sorry! Just open the door!"
+			],
+			"cheerful": [
+				"I'm done being nice! Done!",
+				"Ha! Look at this mess! Look at it!"
+			],
+			"quiet": [
+				"Open it.",
+				"Out. Now.",
+				"Enough."
+			]
+		},
 		"grumbling": {
 			"any": [
 				"This place is going downhill.",
@@ -978,6 +1604,114 @@
 				"Walk away."
 			]
 		},
+		"threat_backed_down": {
+			"any": [
+				"Fine. Fine.",
+				"Alright. I'm backing off.",
+				"Okay. Forget it.",
+				"Yeah, okay. My mistake.",
+				"Fine. Just give me some room.",
+				"Alright, alright. We're good.",
+				"Sorry. Bad day.",
+				"Okay. I'm calm.",
+				"Forget I said anything."
+			],
+			"chatty": [
+				"Okay, okay. I got carried away. It happens.",
+				"Fine. No hard feelings, right?"
+			],
+			"grumpy": [
+				"Fine. Just stay out of my face.",
+				"Whatever. You're not worth it."
+			],
+			"nervous": [
+				"Sorry! Sorry. I didn't mean it.",
+				"Okay. I'm sorry. Please don't hit me."
+			],
+			"quiet": [
+				"Fine.",
+				"Okay."
+			]
+		},
+		"calm_talk": {
+			"any": [
+				"Yeah. Okay. Thanks for asking.",
+				"It's just been a long day.",
+				"I know. I'll keep my head down.",
+				"Alright. I'm calm. I'm calm.",
+				"Thanks. Nobody ever talks to us in here.",
+				"You're right. It's not worth the trouble.",
+				"Okay. I just needed to say it.",
+				"Fine. I'll go shoot some hoops or something.",
+				"Thanks. I feel a bit better."
+			],
+			"chatty": [
+				"Finally, someone to talk to! Okay, so here's the thing.",
+				"Thanks for listening. Most crews just yell.",
+				"You're alright, you know that?",
+				"Okay, yeah. Feels good to get that off my chest."
+			],
+			"grumpy": [
+				"Fine. You've got a point. Don't let it go to your head.",
+				"Alright. I'll cool off.",
+				"You're the first one to ask. Took long enough.",
+				"Yeah, yeah. I hear you."
+			],
+			"nervous": [
+				"Really? Okay. That helps. Thanks.",
+				"Sorry. I just get worked up.",
+				"So I'm not in trouble? Okay. Good.",
+				"Thanks. I didn't know who to talk to."
+			],
+			"cheerful": [
+				"Aw, thanks. You're alright.",
+				"Yeah, you're right. Could be worse!",
+				"Good chat. We should do this more."
+			],
+			"quiet": [
+				"Okay.",
+				"Thanks.",
+				"Yeah. Alright.",
+				"Mm. Better."
+			]
+		},
+		"talk_refuse": {
+			"any": [
+				"Not interested.",
+				"Save it.",
+				"Talk to the wall.",
+				"Don't even start.",
+				"Get away from me.",
+				"I'm done talking.",
+				"Talking won't fix the food.",
+				"Go away.",
+				"You had your chance."
+			],
+			"chatty": [
+				"Oh, now you want to talk? Now?",
+				"Nope. I've got nothing to say to you.",
+				"Should've talked before you let this place rot."
+			],
+			"grumpy": [
+				"Get lost.",
+				"Don't touch me.",
+				"Walk away, pal."
+			],
+			"nervous": [
+				"Please, just leave me alone.",
+				"I can't. Not now.",
+				"Go away. Please."
+			],
+			"cheerful": [
+				"Not in the mood, sorry.",
+				"Even I don't want to chat right now."
+			],
+			"quiet": [
+				"No.",
+				"Leave.",
+				"Go."
+			]
+		},
 		"riot": {
 			"any": [
 				"Tear it down!",
@@ -994,6 +1728,112 @@
 				"Shitcurity can't stop us!"
 			]
 		},
+		"riot_imminent": {
+			"any": [
+				"Everybody up. It's happening.",
+				"Get ready. We go on my word.",
+				"Grab something heavy.",
+				"Last chance, crew! Fix it or else!",
+				"Get to the door. All of you.",
+				"They're not listening. So we make them.",
+				"Stick together. Nobody backs out.",
+				"This is it, people.",
+				"Shoes on. We're doing this."
+			],
+			"chatty": [
+				"Listen up! When it starts, go for the hatch!",
+				"Come on, everybody, it's now or never.",
+				"Last chance, crew! You hearing this?"
+			],
+			"grumpy": [
+				"I'm done waiting. Who's with me?",
+				"Let's tear this dump apart.",
+				"No more asking nicely."
+			],
+			"nervous": [
+				"Oh no. Oh no, they're really doing this.",
+				"Guys, please, let's just wait.",
+				"I don't want to get hurt."
+			],
+			"cheerful": [
+				"Well, it was nice while it lasted.",
+				"Sorry, crew. You had your chance."
+			],
+			"quiet": [
+				"Get ready.",
+				"Now.",
+				"It's time."
+			]
+		},
+		"riot_bystander": {
+			"any": [
+				"Leave me out of it.",
+				"I'm not part of this.",
+				"I'm staying in my cell.",
+				"Not my riot.",
+				"I've got {time_left} left. I'm not blowing it.",
+				"Count me out.",
+				"I'm just going to sit here.",
+				"I didn't do anything. Remember that.",
+				"Wake me when it's over."
+			],
+			"chatty": [
+				"Hey, crew, for the record, I'm in my cell!",
+				"Somebody write down that I stayed put."
+			],
+			"grumpy": [
+				"Idiots. The lot of them.",
+				"I'm not getting more time for these clowns."
+			],
+			"nervous": [
+				"Please don't hurt me. I'm not in this.",
+				"I'm staying right here. Right here.",
+				"Crew, I'm not with them! I'm in my cell!"
+			],
+			"cheerful": [
+				"Nope. I'm sitting this one out.",
+				"Enjoy yourselves. I'll be on my bunk.",
+				"I like my release date too much."
+			],
+			"quiet": [
+				"Not me.",
+				"Staying here.",
+				"Out of it."
+			]
+		},
+		"subdued": {
+			"any": [
+				"Alright. It's over.",
+				"That got out of hand.",
+				"My hands won't stop shaking.",
+				"Was that worth it? Probably not.",
+				"Okay. I'm done. I'm done.",
+				"Everybody just calm down.",
+				"What a mess.",
+				"Nobody got anything out of that.",
+				"I need to sit down."
+			],
+			"chatty": [
+				"So, are we in trouble? We're in trouble.",
+				"Anyone see where my shoe went?"
+			],
+			"grumpy": [
+				"Still mad. Just tired now.",
+				"Next time they'll listen."
+			],
+			"nervous": [
+				"Is it over? Is it really over?",
+				"I'm never doing that again."
+			],
+			"cheerful": [
+				"Well. That happened.",
+				"Okay. Deep breaths, everybody."
+			],
+			"quiet": [
+				"Over.",
+				"Done."
+			]
+		},
 		"fight_argue": {
 			"any": [
 				"{other}, you want to go? Let's go.",
@@ -1005,6 +1845,201 @@
 				"You took my bunk, {other}. Big mistake.",
 				"Come on then, {other}. Swing first.",
 				"Keep talking, {other}. See where it gets you."
+			]
+		},
+		"spat": {
+			"any": [
+				"You're in my spot, {other}.",
+				"Keep it down, {other}. Some of us are trying to think.",
+				"Were you raised on a cargo barge, {other}?",
+				"Stop breathing so loud.",
+				"Nobody asked you.",
+				"Mind your own business.",
+				"You always do this, {other}.",
+				"Oh, here we go again.",
+				"Whatever. You're wrong.",
+				"Don't start with me today.",
+				"You're the reason the food's late, you know that?"
+			],
+			"chatty": [
+				"You know what your problem is, {other}? Everything.",
+				"I'm not arguing, I'm explaining why you're wrong.",
+				"Oh, sure. Blame me. Everybody blames me.",
+				"You talk more than I do, and that's saying something."
+			],
+			"grumpy": [
+				"Shut up, {other}.",
+				"Get out of my face.",
+				"You're getting on my last nerve.",
+				"Go bother someone else."
+			],
+			"nervous": [
+				"I didn't say anything! Leave me alone.",
+				"Can we not do this? Please?",
+				"Why is everyone mad at me?",
+				"Fine, sorry. Whatever I did, sorry."
+			],
+			"cheerful": [
+				"Wow. Somebody woke up grumpy.",
+				"Easy there, {other}. Nobody's out to get you.",
+				"Alright, alright. No need to shout.",
+				"Somebody needs a nap."
+			],
+			"quiet": [
+				"Drop it.",
+				"Leave me alone.",
+				"Whatever.",
+				"Not now."
+			]
+		},
+		"fight_argue_food": {
+			"any": [
+				"That was my tray, {other}.",
+				"You took my food, {other}. Give it back.",
+				"Keep your hands off my plate, {other}.",
+				"You ate my share, didn't you?",
+				"I saw you take two trays, {other}.",
+				"That's the last one and it's mine.",
+				"Touch my food again. Go on.",
+				"You cut the line, {other}.",
+				"We're all starving and you take mine?"
+			],
+			"chatty": [
+				"Oh, you're hungry? We're all hungry, {other}!",
+				"Everybody saw you take that, {other}. Everybody.",
+				"One tray each, {other}. Can you count?"
+			],
+			"grumpy": [
+				"Put the tray down, {other}. Now.",
+				"Steal my food one more time and see what happens.",
+				"That's mine and you know it."
+			],
+			"nervous": [
+				"That's mine! Give it back!",
+				"I was here first, {other}. I was!",
+				"Please, I haven't eaten all day."
+			],
+			"cheerful": [
+				"Hey, that's mine, {other}. Not funny.",
+				"Joke's over. Give me my tray.",
+				"Sharing's fine. Stealing isn't."
+			],
+			"quiet": [
+				"Mine.",
+				"Give it back.",
+				"Put it down."
+			]
+		},
+		"fight_argue_ball": {
+			"any": [
+				"It's my ball, {other}. Give it here.",
+				"That was a foul and you know it.",
+				"You've been hogging the ball all day.",
+				"You shoved me, {other}.",
+				"That shot counted. It counted!",
+				"Pass it or get off the court.",
+				"Quit cheating, {other}.",
+				"You traveled. Again.",
+				"Elbow me one more time, {other}."
+			],
+			"chatty": [
+				"Everybody saw that foul! Everybody!",
+				"You call that defense? That's assault, {other}.",
+				"I'm not playing with a cheater."
+			],
+			"grumpy": [
+				"Give me the ball. Now.",
+				"Foul me again and we're done playing.",
+				"Cheat. You're a cheat, {other}."
+			],
+			"nervous": [
+				"You pushed me! You did!",
+				"I had the ball first. I did.",
+				"Can I just have one turn?"
+			],
+			"cheerful": [
+				"Come on, {other}, that was clean. Mostly.",
+				"Okay, that's not funny anymore.",
+				"Keep your elbows to yourself, pal."
+			],
+			"quiet": [
+				"My ball.",
+				"Foul.",
+				"Give it."
+			]
+		},
+		"fight_argue_bed": {
+			"any": [
+				"You're in my bunk, {other}.",
+				"Get out of my cell.",
+				"That's my bed. Move.",
+				"Who said you could sleep there?",
+				"Off my bunk, {other}. Now.",
+				"I just made that bed.",
+				"Wrong cell, {other}. Get out.",
+				"Find your own bunk.",
+				"Were you going through my stuff?"
+			],
+			"chatty": [
+				"Your cell's the other way, {other}. Can't count?",
+				"Oh, nice. Make yourself at home. In my bed.",
+				"Everybody gets one bunk, {other}. That one's mine."
+			],
+			"grumpy": [
+				"Get off my bunk before I throw you off.",
+				"My cell. My bed. Out.",
+				"I'm counting to three, {other}."
+			],
+			"nervous": [
+				"That's, um, that's my bed, {other}.",
+				"Please get out of my cell.",
+				"My stuff's in there. Don't touch it."
+			],
+			"cheerful": [
+				"Cozy, is it? Now get off.",
+				"Wrong bunk, buddy. Out you go."
+			],
+			"quiet": [
+				"My bunk.",
+				"Out.",
+				"Move."
+			]
+		},
+		"fight_argue_none": {
+			"any": [
+				"What are you looking at, {other}?",
+				"Got a problem with me?",
+				"You been talking about me, {other}?",
+				"Keep staring. See what happens.",
+				"I heard what you said.",
+				"I'm done with your attitude, {other}.",
+				"Say it to my face.",
+				"You think you're better than me?",
+				"Something funny, {other}?"
+			],
+			"chatty": [
+				"You've been on my case all week, {other}.",
+				"Everybody knows what you said about me.",
+				"Go on, say it louder. Let everyone hear."
+			],
+			"grumpy": [
+				"Look at me like that again.",
+				"I've had it with you, {other}.",
+				"You want a problem? You found one."
+			],
+			"nervous": [
+				"Stop following me around, {other}.",
+				"What did I ever do to you?",
+				"Leave me alone! I mean it!"
+			],
+			"cheerful": [
+				"Okay, {other}, what's your problem today?",
+				"I was being nice. Now I'm not."
+			],
+			"quiet": [
+				"What.",
+				"Back off.",
+				"Try it."
 			]
 		},
 		"fight": {
@@ -1019,6 +2054,83 @@
 				"Ugh! Cheap shot!",
 				"Take that!",
 				"Hold still!"
+			]
+		},
+		"fight_yield": {
+			"any": [
+				"Okay! Okay! I give up!",
+				"Enough! I'm done.",
+				"Alright, you win. Stop.",
+				"I give! Back off!",
+				"Stop, stop. I'm out.",
+				"Fine! You win!",
+				"I'm down. I'm staying down.",
+				"No more. I mean it.",
+				"I'm done! I'm done!"
+			],
+			"chatty": [
+				"Alright! You win! Nobody needs to hear about this.",
+				"I give! Ow. I give.",
+				"Okay, you're tougher than you look. Stop."
+			],
+			"grumpy": [
+				"Fine. You win this time.",
+				"Get off me. I'm done.",
+				"This isn't over."
+			],
+			"nervous": [
+				"Please stop! I give up!",
+				"Don't hit me again, please.",
+				"I'm sorry! I'm sorry!"
+			],
+			"cheerful": [
+				"Okay, okay! Good fight. Stop now.",
+				"You win! I'm tapping out.",
+				"Truce! Truce!"
+			],
+			"quiet": [
+				"Enough.",
+				"I'm done.",
+				"Stop."
+			]
+		},
+		"fight_talked_down": {
+			"any": [
+				"{other} started it.",
+				"Fine. Fine. I'm going.",
+				"Alright, I'm walking away.",
+				"We were just talking.",
+				"It's not worth it.",
+				"Okay. Sorry.",
+				"Whatever. We're done here.",
+				"You got lucky, {other}.",
+				"Fine. For now.",
+				"I'm cool. I'm cool."
+			],
+			"chatty": [
+				"We were just having a talk! A loud talk.",
+				"It's fine, we're friends. Mostly.",
+				"Okay, okay. Nobody got hurt, right?"
+			],
+			"grumpy": [
+				"Fine. But this isn't over.",
+				"Ugh. Fine.",
+				"Next time, {other}."
+			],
+			"nervous": [
+				"Thank you. I didn't want to fight.",
+				"Sorry, sorry. I'll go.",
+				"I didn't start it, I swear."
+			],
+			"cheerful": [
+				"No harm done! Right, {other}?",
+				"Okay, cooling off. Promise.",
+				"Heh. Got a bit heated there."
+			],
+			"quiet": [
+				"Fine.",
+				"Okay.",
+				"Done."
 			]
 		},
 		"beaten": {
@@ -1129,6 +2241,46 @@
 				"No matter. There are other outposts."
 			]
 		},
+		"researcher_sweetened": {
+			"any": [
+				"I've raised the fee. I think you'll find it generous.",
+				"Let's try this again. The payment's better now.",
+				"My firm has authorized a larger fee. Just for you.",
+				"Same offer, bigger number. Interested?",
+				"You turned me down last time. I took that personally.",
+				"Other wardens say yes. I'd hate for you to miss out.",
+				"Think of your treasury. It could use this.",
+				"The money's better and the dose is the same.",
+				"I don't usually come back. Your inmates are that good.",
+				"Final offer. Well, until next time."
+			]
+		},
+		"researcher_no_data": {
+			"any": [
+				"You killed the subject. There's nothing to measure.",
+				"That's no data at all. No data, no fee.",
+				"A dead subject tells me nothing. Very disappointing.",
+				"Months of work, and the subject's dead before it took.",
+				"I needed the subject alive. That was the whole point.",
+				"I'll have to write this one up as a loss.",
+				"My firm won't pay for a corpse.",
+				"Next time, let the compound finish its work.",
+				"Well. That was a waste of a good dose."
+			]
+		},
+		"researcher_pigsty": {
+			"any": [
+				"I can't work in this filth. Goodbye.",
+				"This wing is a pigsty. I'll come back when it's clean.",
+				"No study runs in conditions like these.",
+				"My firm has standards. This wing doesn't meet them.",
+				"Clean the place up. Then we'll talk.",
+				"I'm not setting foot in that mess.",
+				"Contamination risk. I'm leaving.",
+				"The results would be worthless in a wing like this.",
+				"Call me when it doesn't smell."
+			]
+		},
 		"experiment_dose": {
 			"any": [
 				"What was in that?",
@@ -1185,6 +2337,160 @@
 				"It's got someone! It's got someone!",
 				"I'm not going in there. No way.",
 				"Help! Anybody! Please!"
+			]
+		},
+		"kessler_recovery": {
+			"any": [
+				"Kessler recovery. Stand clear.",
+				"Specimen located. Securing it now.",
+				"Stand back, please. This one bites.",
+				"Recovery team on site. Nobody touch anything.",
+				"We'll take it from here.",
+				"The recovery fee goes on your account.",
+				"Specimen secured. Beaming out.",
+				"Next time, contain it yourselves. It's cheaper.",
+				"Don't worry about the paperwork. We'll bill you."
+			]
+		},
+		"vent_noise": {
+			"any": [
+				"Something's in the walls!",
+				"Did you hear that? In the vent?",
+				"There's something crawling in the pipes.",
+				"That vent just moved.",
+				"What's making that scratching?",
+				"Hey, crew! Something's in the vents!",
+				"It's getting louder.",
+				"I'm not sleeping near that vent.",
+				"Something's knocking in there."
+			],
+			"chatty": [
+				"Okay, everybody else hears that, right? Right?",
+				"That's not the air system. I know air systems.",
+				"Hey, crew! Your vents are making noises!"
+			],
+			"grumpy": [
+				"Somebody go check the damn vent.",
+				"Whatever's in there, it's not paying rent.",
+				"Great. Now the walls are noisy too."
+			],
+			"nervous": [
+				"It's in the walls. It's in the walls!",
+				"I heard it right above my bunk!",
+				"Make it stop. Please make it stop."
+			],
+			"cheerful": [
+				"Probably just pipes. Big, crawly pipes.",
+				"Ha. That's a weird noise. Ha."
+			],
+			"quiet": [
+				"Hear that?",
+				"Vent.",
+				"Something's there."
+			]
+		},
+		"creature_panic": {
+			"any": [
+				"Lock me in! Lock the door!",
+				"Bolt it! Bolt my door!",
+				"Crew! Lock my cell, please!",
+				"I'm in my cell! Lock it!",
+				"Hit the bolts! Now!",
+				"Don't let it in here!",
+				"Lock the door! What are you waiting for?",
+				"Shut me in! I don't care how long!",
+				"Somebody lock this door!"
+			],
+			"chatty": [
+				"Hey! Crew! Remember the bolt button? Use it!",
+				"Lock me in! I'll never complain about it again!"
+			],
+			"grumpy": [
+				"Bolt my door, you idiots!",
+				"Lock it! For once, lock it!"
+			],
+			"nervous": [
+				"Please, please lock me in!",
+				"It's coming! Lock it! Lock it!",
+				"I don't want to die in here!"
+			],
+			"cheerful": [
+				"Okay, I'm ready to be locked in now! Please!",
+				"Lock me in! I promise I'll behave!"
+			],
+			"quiet": [
+				"Lock it.",
+				"Door. Now.",
+				"Bolt it."
+			]
+		},
+		"horror": {
+			"any": [
+				"What is that thing?!",
+				"It's got a blade for an arm!",
+				"Run! Just run!",
+				"Get away from it!",
+				"It came out of the vent!",
+				"Crew! Shoot it! Shoot it!",
+				"It's eating somebody!",
+				"Don't let it grab you!",
+				"Lock the doors! Lock everything!",
+				"That used to be a person!"
+			],
+			"chatty": [
+				"Somebody tell me that's a costume!",
+				"I've seen pirates. That's worse than pirates!"
+			],
+			"grumpy": [
+				"Kill it! What are you waiting for?",
+				"Nice going, crew! Really nice!"
+			],
+			"nervous": [
+				"No no no no.",
+				"I'm hiding. I'm hiding!",
+				"It looked at me. It looked right at me!"
+			],
+			"cheerful": [
+				"Okay! Not fine! Not fine at all!",
+				"Crew? Crew! Big problem!"
+			],
+			"quiet": [
+				"Run.",
+				"Move.",
+				"Oh no."
+			]
+		},
+		"absorbed": {
+			"any": [
+				"Get it off me!",
+				"Help! Somebody help!",
+				"No! Let go!",
+				"It's got me!",
+				"Pull me out!",
+				"Crew! Please!",
+				"I can't move!",
+				"Somebody, anybody!",
+				"Don't let it..."
+			],
+			"chatty": [
+				"Somebody tell my crew...",
+				"Wait! Wait, no!"
+			],
+			"grumpy": [
+				"Get off me, you freak!",
+				"Somebody shoot it!"
+			],
+			"nervous": [
+				"Please! Please, no!",
+				"I don't want to die!"
+			],
+			"cheerful": [
+				"This isn't funny! Help!",
+				"Oh no. Oh no, no."
+			],
+			"quiet": [
+				"No...",
+				"Help."
 			]
 		}
 	},

@@ -656,6 +656,8 @@
 	hulk.apply_damage(120, STAMINA)
 	TEST_ASSERT(hulk.subdued, "Two baton hits' worth of stamina did not put the exhausted hulk down") // OUTPOST_HULK_STAMINA
 	TEST_ASSERT(hulk.stat != DEAD, "Subduing the hulk killed it")
+	TEST_ASSERT_EQUAL(hulk.body_position, LYING_DOWN, "The subdued hulk stayed on its feet")
+	TEST_ASSERT_EQUAL(prison.experiment_payload()["pickup"], "subdued", "The console does not show the hulk subdued, awaiting pickup")
 	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 2400, "Subduing the hulk paid [prison.experiment.bonus_paid], not 2400") // OUTPOST_EXPERIMENT_BONUS_HULK_SUBDUED
 	TEST_ASSERT(!is_hostile_creature(hulk), "A turret would shoot a subdued hulk")
 
@@ -705,8 +707,113 @@
 	// What they saw lands when it is over.
 	var/tension = prison.tension_spike
 	nightmare.death()
+	TEST_ASSERT_EQUAL(nightmare.body_position, LYING_DOWN, "The dead nightmare stayed on its feet")
+	TEST_ASSERT_EQUAL(prison.experiment_payload()["pickup"], "down", "The console does not show the dead nightmare awaiting pickup")
 	TEST_ASSERT(abs(onlooker.mood - 60) < 0.01, "A witness lost [70 - onlooker.mood] mood, not 10") // OUTPOST_EXPERIMENT_SAW_DEATH_MOOD
 	TEST_ASSERT(prison.tension_spike >= tension + 15 - 0.01, "A creature's kill added [prison.tension_spike - tension] tension, not 15") // OUTPOST_EXPERIMENT_KILL_TENSION
+	settle_prison_air(home)
+
+// ===== THE FLY PERSON =====
+
+/// The fly person darts about the cell block, keeps away from people, dodges shots while it flies freely, and drops when put down
+/datum/unit_test/voidcrew_outpost_prison_experiment_fly
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_experiment_fly/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = experiment_test_claim("flyowner", trouble = TRUE)
+	TEST_ASSERT_NOTNULL(home, "The fly test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	trouble_fund(home, 0)
+	var/turf/yard = prison_spot(home, 8, 8)
+	var/mob/living/basic/outpost_experiment/fly/fly = allocate(/mob/living/basic/outpost_experiment/fly, yard, prison, null)
+	prison.experiment_creature_appeared(fly, "fly")
+	var/datum/ai_controller/brain = fly.ai_controller
+	// Four tiles off: not close enough to chase it off
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 12, 8), "flyowner")
+	TEST_ASSERT(HAS_TRAIT(fly, TRAIT_MOVE_FLYING), "The fly person does not fly")
+	TEST_ASSERT(fly.flying_freely(), "A fly person alone in the yard is not flying freely")
+	TEST_ASSERT(fly.speed < 1.5, "The fly person moves at [fly.speed], no faster than a running person")
+	var/list/looked = fly.examine(owner)
+	TEST_ASSERT(findtext(jointext(looked, " "), "Knock it out of the air"), "The fly person's examine does not say how to put it down")
+
+	// Its darts: two to five tiles, always in the cell block.
+	for(var/i in 1 to 30)
+		var/turf/spot = fly.dart_spot()
+		TEST_ASSERT_NOTNULL(spot, "The fly person found nowhere to dart in the yard")
+		TEST_ASSERT(prison.in_cell_block(spot), "The fly person darted out of the cell block to [spot.x],[spot.y]")
+		var/distance = get_dist(fly, spot)
+		TEST_ASSERT(distance >= 2 && distance <= 5, "A dart went [distance] tiles, not 2 to 5") // OUTPOST_FLY_DART_MIN/_MAX
+	fly.ai_think(brain)
+	TEST_ASSERT(brain.current_behaviors[GET_AI_BEHAVIOR(/datum/ai_behavior/outpost_fly_dart)], "The fly person alone did not dart about")
+	brain.CancelActions()
+
+	// Someone beside it: it darts away from them, to somewhere farther off.
+	owner.forceMove(prison_spot(home, 9, 8))
+	TEST_ASSERT_EQUAL(fly.nearest_threat(), owner, "The fly person paid no mind to someone beside it")
+	for(var/i in 1 to 20)
+		var/turf/away = fly.dart_spot(owner)
+		TEST_ASSERT_NOTNULL(away, "The fly person had nowhere to go from someone beside it in the open yard")
+		TEST_ASSERT(get_dist(away, owner) > 1, "The fly person darted no farther from the person beside it")
+	fly.ai_think(brain)
+	TEST_ASSERT(brain.current_behaviors[GET_AI_BEHAVIOR(/datum/ai_behavior/outpost_fly_dart/away)], "The fly person did not dart away from someone beside it")
+	brain.CancelActions()
+
+	// Hit, it keeps away from whoever did it even once they are out of reach.
+	SEND_SIGNAL(fly, COMSIG_ATOM_WAS_ATTACKED, owner, ATTACKER_DAMAGING_ATTACK)
+	owner.forceMove(prison_spot(home, 12, 8))
+	TEST_ASSERT_NULL(fly.nearest_threat(), "Someone four tiles off still counts as close") // OUTPOST_FLY_FLEE_RANGE
+	TEST_ASSERT_EQUAL(fly.flit_threat(), owner, "The fly person forgot who just hit it")
+	fly.ai_think(brain)
+	TEST_ASSERT(brain.current_behaviors[GET_AI_BEHAVIOR(/datum/ai_behavior/outpost_fly_dart/away)], "The fly person did not flit away from whoever hit it")
+	brain.CancelActions()
+	fly.flit_until = 0
+
+	// Shots: it dodges some while it flies freely, and none while knocked down.
+	var/obj/projectile/beam/disabler/shot = allocate(/obj/projectile/beam/disabler, prison_spot(home, 12, 8))
+	var/dodged = 0
+	for(var/i in 1 to 200)
+		if(fly.dodge(fly, shot) & PROJECTILE_INTERRUPT_HIT_PHASE)
+			dodged++
+	TEST_ASSERT(dodged >= 40 && dodged <= 120, "The fly person dodged [dodged] of 200 shots, not about 40%") // OUTPOST_FLY_DODGE
+	fly.Knockdown(5 SECONDS)
+	TEST_ASSERT_EQUAL(fly.body_position, LYING_DOWN, "A baton's knockdown did not put the fly person on the floor")
+	TEST_ASSERT(!HAS_TRAIT(fly, TRAIT_MOVE_FLYING), "The fly person flies while knocked down")
+	for(var/i in 1 to 50)
+		TEST_ASSERT(!(fly.dodge(fly, shot) & PROJECTILE_INTERRUPT_HIT_PHASE), "The fly person dodged a shot while knocked down")
+	fly.SetKnockdown(0)
+	fly.get_up(instant = TRUE)
+	TEST_ASSERT_EQUAL(fly.body_position, STANDING_UP, "The fly person did not get back up")
+	TEST_ASSERT(HAS_TRAIT(fly, TRAIT_MOVE_FLYING), "The fly person did not take off again")
+
+	// Worn out: it drops out of the air and stays down, and the console says so until Kessler takes it.
+	var/datum/component/experiment_damage_ledger/ledger = fly.GetComponent(/datum/component/experiment_damage_ledger)
+	ledger.note_attacker(owner)
+	fly.apply_damage(100, STAMINA) // OUTPOST_FLY_STAMINA
+	TEST_ASSERT(fly.subdued, "A full load of stamina damage did not subdue the fly person")
+	TEST_ASSERT_EQUAL(fly.body_position, LYING_DOWN, "The subdued fly person stayed in the air")
+	TEST_ASSERT(!HAS_TRAIT(fly, TRAIT_MOVE_FLYING), "The subdued fly person is still flying")
+	TEST_ASSERT(!fly.flying_freely(), "The subdued fly person could still fly off")
+	fly.SetAllImmobility(0)
+	fly.setStaminaLoss(0)
+	TEST_ASSERT_EQUAL(fly.body_position, LYING_DOWN, "The subdued fly person got up once its stamina came back")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 700, "Subduing the fly person paid [prison.experiment.bonus_paid], not 700") // OUTPOST_EXPERIMENT_BONUS_FLY
+	var/list/block = prison.experiment_payload()
+	TEST_ASSERT_EQUAL(block["stage"], "contained", "The subdued fly person did not contain the experiment")
+	TEST_ASSERT_EQUAL(block["pickup"], "subdued", "The console does not show the fly person subdued, awaiting pickup")
+	looked = fly.examine(owner)
+	TEST_ASSERT(findtext(jointext(looked, " "), "will collect"), "The subdued fly person's examine does not say Kessler is coming for it")
+
+	// Kessler's team beams in for it, and the beam takes it; then the console shows it contained.
+	prison.kessler_collect(WEAKREF(fly))
+	TEST_ASSERT(HAS_TRAIT(fly, TRAIT_GODMODE), "The fly person could be hurt while Kessler collected it")
+	TEST_ASSERT_NOTNULL(locate(/mob/living/basic/outpost_kessler_staff/agent) in range(1, fly), "No Kessler agents beamed in for the fly person")
+	var/logged = FALSE
+	for(var/list/entry as anything in prison.entries)
+		if(findtext(entry["text"], "Kessler Biolabs collected"))
+			logged = TRUE
+	TEST_ASSERT(logged, "The warden's log does not say Kessler collected the fly person")
+	TEST_ASSERT(wait_until(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(is_qdeleted_ref), WEAKREF(fly)), 12 SECONDS), "Kessler never took the fly person away")
+	TEST_ASSERT_NULL(prison.experiment_payload()["pickup"], "The console still shows the fly person awaiting pickup after Kessler took it")
 	settle_prison_air(home)
 
 // ===== THE CHANGELING'S SIDE OF THE API =====

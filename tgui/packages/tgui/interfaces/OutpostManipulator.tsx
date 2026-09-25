@@ -138,6 +138,8 @@ type PrisonExperiment = {
   bonus_paid: number;
   /** up or regenerating while the changeling's horror is out, else null */
   horror?: string | null;
+  /** subdued or down while a creature that was put down waits for Kessler, else null */
+  pickup?: string | null;
 };
 
 type PrisonAdminData = {
@@ -1596,6 +1598,7 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
               experiment.form || 'unknown',
               experiment.stage || '?',
               experiment.horror === 'regenerating' ? 'regenerating' : '',
+              experiment.pickup ? `${experiment.pickup}, awaiting pickup` : '',
               experiment.subject || '',
               isNum(experiment.time_left)
                 ? `${clock(experiment.time_left)} left`

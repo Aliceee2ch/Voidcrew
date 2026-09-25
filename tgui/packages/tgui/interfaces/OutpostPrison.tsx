@@ -149,6 +149,8 @@ type Experiment = {
   bonus_paid: number;
   /** "up" or "regenerating" while the horror is out; time_left is then the time until it gets up */
   horror?: string | null;
+  /** "subdued" or "down" while a creature that was put down waits for Kessler to collect it */
+  pickup?: string | null;
 };
 
 export type OutpostPrisonData = {
@@ -530,10 +532,14 @@ function ExperimentPanel({ data }: Props) {
     form === 'unknown' && CHANGELING_STAGES.includes(experiment.stage)
       ? 'dosed'
       : experiment.stage;
-  const stage = EXPERIMENT_STAGES[stageKey] || {
-    label: stageKey || '?',
-    tone: 'label',
-  };
+  const pickup = experiment.pickup || null;
+  // Put down and lying there until Kessler's team beams in for it.
+  const stage = pickup
+    ? { label: pickup === 'subdued' ? 'Subdued' : 'Down', tone: 'good' }
+    : EXPERIMENT_STAGES[stageKey] || {
+        label: stageKey || '?',
+        tone: 'label',
+      };
   const formLabel = EXPERIMENT_FORMS[form] || form;
   const present = !!experiment.researcher_present;
   const fee = isNumber(experiment.fee_paid) ? experiment.fee_paid : 0;
@@ -564,6 +570,12 @@ function ExperimentPanel({ data }: Props) {
           <span className="OutpostPrison__tone--bad">
             <Icon name="heart-pulse" />
             Regenerating
+          </span>
+        ) : null}
+        {pickup ? (
+          <span className="OutpostPrison__tone--average">
+            <Icon name="hourglass-half" />
+            Awaiting pickup
           </span>
         ) : null}
         {fee > 0 ? (

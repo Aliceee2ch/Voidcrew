@@ -2615,15 +2615,27 @@
 		},
 		"kessler_recovery": {
 			"any": [
-				"Kessler recovery. Stand clear.",
-				"Specimen located. Securing it now.",
-				"Stand back, please. This one bites.",
-				"Recovery team on site. Nobody touch anything.",
+				"Kessler recovery team, please stand clear.",
+				"Specimen located, and we're securing it now.",
+				"Stand back, please, because this one bites.",
+				"Nobody touch anything while we work.",
 				"We'll take it from here.",
 				"The recovery fee goes on your account.",
-				"Specimen secured. Beaming out.",
-				"Next time, contain it yourselves. It's cheaper.",
-				"Don't worry about the paperwork. We'll bill you."
+				"Containing it yourselves would have been cheaper.",
+				"Don't worry about the paperwork, because we'll bill you."
+			]
+		},
+		"kessler_collect": {
+			"any": [
+				"Kessler Biolabs, here for the specimen.",
+				"We'll take it from here.",
+				"Stand clear while we work, please.",
+				"Specimen secured.",
+				"That's the one we're after.",
+				"We'll get it back to the lab.",
+				"Nobody touch it, please.",
+				"Thanks for keeping it in one place.",
+				"Right, let's get it out of here."
 			]
 		},
 		"vent_noise": {

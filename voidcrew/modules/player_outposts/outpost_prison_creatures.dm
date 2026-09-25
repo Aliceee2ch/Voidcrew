@@ -7,13 +7,17 @@
  *   wall_tearer, limited to the outpost's inside) and forces doors. It knocks prisoners flat but
  *   never kills them. Worn down to a quarter it is exhausted, and a baton or disabler puts it down
  *   alive for a bigger bonus.
- * - The fly person: tg's fly species. Fast, jinks, dodges some shots, runs from anyone close,
- *   eats whatever food it finds and throws up every few seconds. A flyswatter hits it thirty times
- *   harder, as it does tg's fly people.
+ * - The fly person: tg's fly species, flying. It zips about the wing in short random darts, darts
+ *   away from anyone close and from whoever just hit it, and jinks out of the way of some shots while
+ *   it flies freely. Cornered, it bites. It eats whatever food it finds and throws up every few
+ *   seconds. A flyswatter hits it thirty times harder, as it does tg's fly people; a baton knocks it
+ *   to the floor for a moment, and stamina weapons slow it down and then put it down alive.
  * - The nightmare: tg's nightmare with its light eater. It spends its first half minute breaking
  *   the lights, then hunts prisoners in the dark. It heals and dodges in the dark and burns in the
  *   light, jaunts beside a target through the dark after a warning ripple, and a flash burns it.
- * Before the change, the dosed prisoner shows the form's tells (outpost_experiment_tell()).
+ * Before the change, the dosed prisoner shows the form's tells (outpost_experiment_tell()). Put
+ * down, alive or dead, a creature lies on the floor where everyone can see it (show_down()), a
+ * subdued one twitching, until Kessler's team beams in for it (kessler_collect()).
  *
  * All of them are basic mobs under /mob/living/basic/outpost_experiment, never megafauna, with no
  * sentience, no need for air, and no way to be boxed, teleported, polymorphed or revived. They
@@ -116,8 +120,15 @@
 	ai_controller = /datum/ai_controller/basic_controller/outpost_experiment
 	// tg's human deathgasp
 	death_message = "seizes up and falls limp, their eyes dead and lifeless..."
+	// Knocked down, subdued or dead, it lies on the floor like a person.
+	mobility_flags = MOBILITY_FLAGS_REST_CAPABLE_DEFAULT
+	rotate_on_lying = TRUE
 	/// What the log calls it: "a hulk"
 	var/form_name = "a creature"
+	/// What everyone sees when it is subdued, after its name
+	var/subdued_message = "collapses, spent."
+	/// A line on examine saying how to put it down, if any
+	var/win_hint
 	/// Health with one player on the level, and per extra player
 	var/base_health = 100
 	var/health_per_player = 0
@@ -189,6 +200,32 @@
 /mob/living/basic/outpost_experiment/death(gibbed)
 	. = ..()
 	move_resist = MOVE_RESIST_DEFAULT
+	if(. && !gibbed && !QDELETED(src))
+		show_down(FALSE)
+
+/mob/living/basic/outpost_experiment/examine(mob/user)
+	. = ..()
+	if(HAS_TRAIT_FROM(src, TRAIT_GODMODE, OUTPOST_KESSLER_TRAIT))
+		. += span_notice("Kessler Biolabs is taking [p_them()] away.")
+	else if(subdued || stat == DEAD)
+		. += span_notice("[p_They()] [p_are()] down. Kessler Biolabs will collect [p_them()] shortly.")
+	else if(win_hint)
+		. += span_notice(win_hint)
+
+/**
+ * Put down: everyone in sight is told, with a balloon over it. `subdued` is alive (the death
+ * message has already said the rest); it lies there twitching until Kessler collects it (Life()).
+ */
+/mob/living/basic/outpost_experiment/proc/show_down(subdued)
+	if(subdued)
+		visible_message(span_danger("[src] [subdued_message]"))
+	balloon_alert_to_viewers(subdued ? "subdued" : "dead")
+
+/// Twitches on the floor, subdued, waiting for Kessler
+/mob/living/basic/outpost_experiment/proc/down_twitch()
+	Shake(1, 0, 0.4 SECONDS)
+	if(prob(30))
+		manual_emote(pick("twitches.", "groans.", "stirs weakly."))
 
 /// Health it still had, which a gib or dust takes without it counting as damage on its ledger
 /mob/living/basic/outpost_experiment/proc/unspent_health()
@@ -212,6 +249,10 @@
 
 /mob/living/basic/outpost_experiment/Life(seconds_per_tick = SSMOBS_DT, times_fired)
 	. = ..()
+	if(subdued && stat != DEAD && !HAS_TRAIT_FROM(src, TRAIT_GODMODE, OUTPOST_KESSLER_TRAIT) && !QDELETED(src))
+		if(prob(60))
+			down_twitch()
+		return
 	if(stat == DEAD || subdued || HAS_TRAIT(src, TRAIT_GODMODE) || !awake())
 		return
 	creature_life(seconds_per_tick)
@@ -229,8 +270,8 @@
 	return
 
 /**
- * Worn out on stamina: down alive, held still, and the containment bonus for a live one.
- * Kessler collects it a few seconds later.
+ * Worn out on stamina: down alive on the floor, held there, and the containment bonus for a live
+ * one. Kessler's team comes for it OUTPOST_EXPERIMENT_PICKUP seconds later.
  */
 /mob/living/basic/outpost_experiment/proc/subdue()
 	if(subdued || stat == DEAD)
@@ -241,7 +282,7 @@
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, OUTPOST_KESSLER_TRAIT)
 	ADD_TRAIT(src, TRAIT_FLOORED, OUTPOST_KESSLER_TRAIT)
 	ai_controller?.CancelActions()
-	visible_message(span_danger("[src] collapses, spent."))
+	show_down(TRUE)
 	prison?.experiment_creature_down(src, subdued = TRUE)
 	return TRUE
 
@@ -615,27 +656,53 @@
 	status_flags = CANPUSH | CANSTUN | CANKNOCKDOWN
 	max_stamina = OUTPOST_FLY_STAMINA
 	line_context = "fly"
+	ai_controller = /datum/ai_controller/basic_controller/outpost_experiment/fly
+	death_message = "drops out of the air and goes still."
+	subdued_message = "drops out of the air, stunned."
+	win_hint = "Knock it out of the air and Kessler Biolabs will collect it."
 	/// Seconds to its next heave
 	var/vomit_left = OUTPOST_FLY_VOMIT_MIN
-	/// world.time it last moved, to tell when it is cornered
-	var/last_moved = 0
 	/// REF() of prisoners who watched it throw up -> world.time
 	var/list/disgusted = list()
+	/// world.time of its next random dart, and by when the dart under way must be over
+	var/next_dart = 0
+	var/dart_until = 0
+	/// Whoever hit it last, whom it keeps away from until flit_until
+	var/datum/weakref/flit_from_ref
+	var/flit_until = 0
 
 /mob/living/basic/outpost_experiment/fly/Initialize(mapload, datum/outpost_prison/owner, mob/living/basic/outpost_prisoner/subject)
 	. = ..()
 	RegisterSignal(src, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS, PROC_REF(swatter_weakness))
 	RegisterSignal(src, COMSIG_PROJECTILE_PREHIT, PROC_REF(dodge))
-	ai_controller?.set_blackboard_key(BB_BASIC_MOB_FLEE_DISTANCE, 6)
+	RegisterSignal(src, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(on_attacked))
+	ADD_TRAIT(src, TRAIT_MOVE_FLYING, OUTPOST_FLY_TRAIT)
 	playsound(src, 'sound/mobs/non-humanoids/bee/bee_swarm.ogg', 60, TRUE)
 	visible_message(span_danger("[src] folds up, splits open and unfolds as something with wings!"))
+
+/mob/living/basic/outpost_experiment/fly/Destroy()
+	flit_from_ref = null
+	return ..()
 
 /mob/living/basic/outpost_experiment/fly/build_look(outfit_path)
 	apply_dynamic_human_appearance(src, outfit_path, /datum/species/fly)
 
-/mob/living/basic/outpost_experiment/fly/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
+/// On the floor (knocked down, subdued or dead) it is not flying
+/mob/living/basic/outpost_experiment/fly/on_lying_down(new_lying_angle)
 	. = ..()
-	last_moved = world.time
+	REMOVE_TRAIT(src, TRAIT_MOVE_FLYING, OUTPOST_FLY_TRAIT)
+
+/// Back up, it takes off again
+/mob/living/basic/outpost_experiment/fly/on_standing_up()
+	. = ..()
+	if(stat == CONSCIOUS && !subdued)
+		ADD_TRAIT(src, TRAIT_MOVE_FLYING, OUTPOST_FLY_TRAIT)
+
+/mob/living/basic/outpost_experiment/fly/down_twitch()
+	Shake(1, 0, 0.4 SECONDS)
+	playsound(src, 'sound/mobs/non-humanoids/bee/bee.ogg', 15, TRUE)
+	if(prob(40))
+		manual_emote(pick("buzzes weakly.", "twitches [p_their()] wings.", "twitches."))
 
 /// tg's fly people take thirty times the damage from a flyswatter
 /mob/living/basic/outpost_experiment/fly/proc/swatter_weakness(datum/source, list/damage_mods, damage_amount, damagetype, def_zone, sharpness, attack_direction, obj/item/attacking_item)
@@ -643,13 +710,51 @@
 	if(istype(attacking_item, /obj/item/melee/flyswatter))
 		damage_mods += OUTPOST_FLY_SWATTER_MULT
 
-/// Jinks out of the way of some shots
+/// In the air and free to move: not knocked down, stunned, held, pulled, subdued or being taken away
+/mob/living/basic/outpost_experiment/fly/proc/flying_freely()
+	if(stat != CONSCIOUS || subdued || !isturf(loc) || pulledby || buckled || body_position != STANDING_UP)
+		return FALSE
+	return !HAS_TRAIT(src, TRAIT_IMMOBILIZED) && !HAS_TRAIT(src, TRAIT_INCAPACITATED) && !HAS_TRAIT(src, TRAIT_GODMODE)
+
+/// Jinks out of the way of some shots while it flies freely
 /mob/living/basic/outpost_experiment/fly/proc/dodge(datum/source, obj/projectile/shot)
 	SIGNAL_HANDLER
-	if(stat != CONSCIOUS || subdued || !prob(OUTPOST_FLY_DODGE))
+	if(!flying_freely() || !prob(OUTPOST_FLY_DODGE))
 		return NONE
 	visible_message(span_warning("[src] jinks out of the way of [shot]!"))
+	playsound(src, 'sound/mobs/non-humanoids/bee/bee.ogg', 30, TRUE)
 	return PROJECTILE_INTERRUPT_HIT_PHASE
+
+/// Hit while flying: it flits away from whoever did it, and keeps away from them for a few seconds
+/mob/living/basic/outpost_experiment/fly/proc/on_attacked(datum/source, atom/attacker, attack_flags)
+	SIGNAL_HANDLER
+	if(!attacker || attacker == src || !flying_freely())
+		return
+	flit_from_ref = WEAKREF(attacker)
+	flit_until = world.time + OUTPOST_FLY_FLIT_TIME
+	// Once the blow is over, not in the middle of it.
+	addtimer(CALLBACK(src, PROC_REF(flit)), 1, TIMER_UNIQUE | TIMER_OVERRIDE | TIMER_DELETE_ME)
+
+/// Whoever hit it within OUTPOST_FLY_FLIT_TIME, if still near enough to keep away from
+/mob/living/basic/outpost_experiment/fly/proc/flit_threat()
+	if(world.time > flit_until)
+		return null
+	var/atom/movable/attacker = flit_from_ref?.resolve()
+	if(QDELETED(attacker) || attacker.z != z || get_dist(src, attacker) > OUTPOST_FLY_DART_MAX + OUTPOST_FLY_FLEE_RANGE)
+		return null
+	return attacker
+
+/// Darts away from whoever just hit it, at once rather than at its next thought. Returns TRUE if it went.
+/mob/living/basic/outpost_experiment/fly/proc/flit()
+	var/atom/attacker = flit_threat()
+	if(!attacker || !flying_freely() || !ai_controller || !awake())
+		return FALSE
+	var/turf/spot = dart_spot(attacker)
+	if(!spot)
+		return FALSE
+	ai_controller.CancelActions()
+	ai_controller.queue_behavior(/datum/ai_behavior/outpost_fly_dart/away, spot)
+	return TRUE
 
 /// It goes for food and bites only when cornered: its "targets" are meals, and people it cannot get away from
 /mob/living/basic/outpost_experiment/fly/can_target(atom/target)
@@ -657,7 +762,7 @@
 		return isturf(target.loc)
 	return ..()
 
-/// Whoever is closest within OUTPOST_FLY_FLEE_RANGE, to run from
+/// Whoever is closest within OUTPOST_FLY_FLEE_RANGE, to keep away from
 /mob/living/basic/outpost_experiment/fly/proc/nearest_threat()
 	var/mob/living/nearest
 	var/nearest_distance = INFINITY
@@ -670,24 +775,91 @@
 			nearest_distance = distance
 	return nearest
 
+/**
+ * Somewhere to dart to: an open tile OUTPOST_FLY_DART_MIN to OUTPOST_FLY_DART_MAX tiles off, in a
+ * clear line, on ground it keeps to (may_dart_to()). Away from `threat`, only somewhere farther
+ * from it than it is now, and out of its OUTPOST_FLY_FLEE_RANGE if it can. Null if there is
+ * nowhere: cornered.
+ */
+/mob/living/basic/outpost_experiment/fly/proc/dart_spot(atom/threat)
+	var/turf/here = get_turf(src)
+	if(!here)
+		return null
+	var/threat_distance = threat ? get_dist(here, threat) : 0
+	var/list/spots = list()
+	var/list/clear_spots = list()
+	for(var/turf/open/tile in RANGE_TURFS(OUTPOST_FLY_DART_MAX, here))
+		if(get_dist(here, tile) < OUTPOST_FLY_DART_MIN)
+			continue
+		var/from_threat = threat ? get_dist(tile, threat) : INFINITY
+		if(from_threat <= threat_distance || !may_dart_to(tile) || !clear_line(here, tile))
+			continue
+		spots += tile
+		if(from_threat > OUTPOST_FLY_FLEE_RANGE)
+			clear_spots += tile
+	if(length(clear_spots))
+		return pick(clear_spots)
+	return length(spots) ? pick(spots) : null
+
+/**
+ * Whether it keeps to `tile`: free and safe, and in the wing (its cell block, while it is in
+ * there) like the other creatures. Got out of the wing, it darts about the room it is in.
+ */
+/mob/living/basic/outpost_experiment/fly/proc/may_dart_to(turf/tile)
+	if(isspaceturf(tile) || isopenspaceturf(tile) || tile.is_blocked_turf(FALSE, src) || !tile.can_cross_safely(src))
+		return FALSE
+	var/turf/here = get_turf(src)
+	if(prison?.wing && here.loc == prison.wing)
+		return tile.loc == prison.wing && (!prison.in_cell_block(here) || prison.in_cell_block(tile))
+	return tile.loc == here.loc
+
+/// Whether it can fly straight from `start` to `finish`: nothing solid or opaque in the way
+/mob/living/basic/outpost_experiment/fly/proc/clear_line(turf/start, turf/finish)
+	for(var/turf/step as anything in get_line(start, finish))
+		if(step == start)
+			continue
+		if(step.opacity || step.is_blocked_turf(TRUE, src))
+			return FALSE
+	return TRUE
+
+/**
+ * Keeps moving: darts away from anyone close or who just hit it, and bites only when cornered
+ * with someone at it. Otherwise it goes for food in sight, or darts about at random with short
+ * pauses. It hovers (outpost_fly_hover) rather than planning nothing, so it notices people at once.
+ */
 /mob/living/basic/outpost_experiment/fly/ai_think(datum/ai_controller/controller)
-	var/mob/living/threat = nearest_threat()
+	if(!flying_freely())
+		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
+		controller.queue_behavior(/datum/ai_behavior/outpost_fly_hover)
+		return SUBTREE_RETURN_FINISH_PLANNING
+	var/atom/threat = flit_threat() || nearest_threat()
 	if(threat)
-		// Nowhere left to go: it bites.
-		if(Adjacent(threat) && world.time - last_moved > 2 SECONDS)
-			controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, threat)
+		var/turf/away = dart_spot(threat)
+		if(away)
+			controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
+			controller.queue_behavior(/datum/ai_behavior/outpost_fly_dart/away, away)
+			return SUBTREE_RETURN_FINISH_PLANNING
+		// Nowhere farther to go: it bites whoever is at it.
+		var/mob/living/at_it = threat
+		if(istype(at_it) && Adjacent(at_it) && can_target(at_it))
+			controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, at_it)
 			return null
 		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
-		controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, threat)
-		controller.queue_behavior(/datum/ai_behavior/run_away_from_target, BB_BASIC_MOB_FLEE_TARGET, BB_BASIC_MOB_FLEE_TARGET_HIDING_LOCATION)
+		controller.queue_behavior(/datum/ai_behavior/outpost_fly_hover)
 		return SUBTREE_RETURN_FINISH_PLANNING
-	controller.clear_blackboard_key(BB_BASIC_MOB_FLEE_TARGET)
 	var/obj/item/food/meal = find_meal()
 	if(meal)
 		controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, meal)
-	else
-		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
-	return null
+		return null
+	controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
+	var/turf/spot = world.time >= next_dart ? dart_spot() : null
+	if(spot)
+		controller.queue_behavior(/datum/ai_behavior/outpost_fly_dart, spot)
+		return SUBTREE_RETURN_FINISH_PLANNING
+	if(world.time >= next_dart)
+		next_dart = world.time + rand(OUTPOST_FLY_DART_GAP_MIN, OUTPOST_FLY_DART_GAP_MAX)
+	controller.queue_behavior(/datum/ai_behavior/outpost_fly_hover)
+	return SUBTREE_RETURN_FINISH_PLANNING
 
 /// The nearest food in sight: a serving hatch, a table or the floor
 /mob/living/basic/outpost_experiment/fly/proc/find_meal()
@@ -1010,6 +1182,71 @@
 		/datum/ai_planning_subtree/attack_obstacle_in_path/outpost_experiment,
 		/datum/ai_planning_subtree/basic_melee_attack_subtree,
 	)
+
+/// The fly person moves only in its own darts: no aimless steps, which would also crawl it about while knocked down
+/datum/ai_controller/basic_controller/outpost_experiment/fly
+	idle_behavior = null
+
+/// The fly person's darts: straight hops that start at once
+/datum/ai_movement/basic_avoidance/outpost_fly
+	move_flags = MOVEMENT_LOOP_START_FAST
+
+/**
+ * A fly person's dart to the turf it picked (dart_spot()): done when it gets there, given up after
+ * OUTPOST_FLY_DART_TIMEOUT. Planning goes on meanwhile, so a dart away from someone can cut a
+ * random one short. A random dart is followed by a short pause.
+ */
+/datum/ai_behavior/outpost_fly_dart
+	required_distance = 0
+	action_cooldown = 0
+	behavior_flags = AI_BEHAVIOR_REQUIRE_MOVEMENT | AI_BEHAVIOR_MOVE_AND_PERFORM | AI_BEHAVIOR_CAN_PLAN_DURING_EXECUTION
+
+/datum/ai_behavior/outpost_fly_dart/setup(datum/ai_controller/controller, turf/destination)
+	var/mob/living/basic/outpost_experiment/fly/fly = controller.pawn
+	if(!istype(fly) || !isturf(destination) || destination.z != fly.z)
+		return FALSE
+	fly.dart_until = world.time + OUTPOST_FLY_DART_TIMEOUT
+	set_movement_target(controller, destination, /datum/ai_movement/basic_avoidance/outpost_fly)
+	return ..()
+
+/datum/ai_behavior/outpost_fly_dart/perform(seconds_per_tick, datum/ai_controller/controller, turf/destination)
+	var/mob/living/basic/outpost_experiment/fly/fly = controller.pawn
+	if(!istype(fly) || world.time >= fly.dart_until)
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+	if(get_turf(fly) == destination)
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
+	return AI_BEHAVIOR_DELAY
+
+/datum/ai_behavior/outpost_fly_dart/finish_action(datum/ai_controller/controller, succeeded, turf/destination)
+	// A dart that took over from this one has set its own movement; leave that be.
+	var/moving_for_us = controller.movement_target_source == type
+	. = ..()
+	if(moving_for_us)
+		controller.change_ai_movement_type(initial(controller.ai_movement))
+	var/mob/living/basic/outpost_experiment/fly/fly = controller.pawn
+	if(istype(fly))
+		fly.next_dart = world.time + pause_after()
+
+/// How long it hangs in the air after this dart before the next random one
+/datum/ai_behavior/outpost_fly_dart/proc/pause_after()
+	return rand(OUTPOST_FLY_DART_GAP_MIN, OUTPOST_FLY_DART_GAP_MAX)
+
+/// Away from someone: no pause after it
+/datum/ai_behavior/outpost_fly_dart/away
+
+/datum/ai_behavior/outpost_fly_dart/away/pause_after()
+	return 0
+
+/// The fly person hanging in the air between darts. Planning goes on, so it notices anyone coming at once.
+/datum/ai_behavior/outpost_fly_hover
+	action_cooldown = 0
+	behavior_flags = AI_BEHAVIOR_CAN_PLAN_DURING_EXECUTION
+
+/datum/ai_behavior/outpost_fly_hover/perform(seconds_per_tick, datum/ai_controller/controller)
+	var/mob/living/basic/outpost_experiment/fly/fly = controller.pawn
+	if(!istype(fly) || world.time >= fly.next_dart)
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
+	return AI_BEHAVIOR_DELAY
 
 /// The creature decides what it is after
 /datum/ai_planning_subtree/outpost_experiment_think

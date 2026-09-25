@@ -12,9 +12,9 @@
  * OUTPOST_EXPERIMENT_SWEETENER, up to OUTPOST_EXPERIMENT_SWEETENER_MAX. Hurt, they beam out at once.
  * A visit whose only failed gate is the wing's state is a short one: they look round, say so, and go.
  *
- * Kessler's recovery agents (outpost_kessler_team()) beam in around a creature Kessler is taking
- * back, tranquilise it and beam out with it. Nobody from Kessler can be boxed, teleported,
- * polymorphed or made sentient, and none of them can be hurt.
+ * Kessler's agents (outpost_kessler_team()) beam in around a creature Kessler is taking away,
+ * tranquilise it if it is still on its feet, and beam out with it. Nobody from Kessler can be
+ * boxed, teleported, polymorphed or made sentient, and none of them can be hurt.
  */
 
 // ===== THE PRISON'S SIDE =====
@@ -518,10 +518,11 @@
 	outfit = /datum/outfit/outpost_kessler_agent
 
 /**
- * Two agents beam in around `creature`, one says what they are there for, the creature is
- * tranquilised, and they all beam out after OUTPOST_KESSLER_TEAM_TIME.
+ * Two agents beam in around `creature`, one says a line of `context` once they are all the way in,
+ * and they all beam out after OUTPOST_KESSLER_TEAM_TIME. A creature still on its feet is
+ * `tranquilise`d; one already down is simply collected.
  */
-/proc/outpost_kessler_team(mob/living/creature)
+/proc/outpost_kessler_team(mob/living/creature, context = "kessler_recovery", tranquilise = TRUE)
 	var/turf/center = get_turf(creature)
 	if(!center)
 		return
@@ -539,9 +540,12 @@
 			speaker = agent
 	// Said once they are all the way in, not from thin air.
 	if(speaker)
-		speaker.arrival_line = "kessler_recovery"
-	creature.visible_message(span_warning("Kessler Biolabs agents beam in around [creature], and a tranquilliser dart drops [creature.p_them()]."))
-	playsound(center, 'sound/items/syringeproj.ogg', 50, TRUE)
+		speaker.arrival_line = context
+	if(tranquilise)
+		creature.visible_message(span_warning("Kessler Biolabs agents beam in around [creature], and a tranquilliser dart drops [creature.p_them()]."))
+		playsound(center, 'sound/items/syringeproj.ogg', 50, TRUE)
+	else
+		creature.visible_message(span_notice("Kessler Biolabs agents beam in to collect [creature]."))
 
 /// Kessler's beam takes `target` away for good
 /proc/outpost_kessler_beam_away(mob/living/target)
@@ -549,6 +553,7 @@
 		return
 	var/turf/spot = get_turf(target)
 	if(spot)
+		target.visible_message(span_notice("A transporter beam takes [target] away."))
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_KESSLER_BEAM_TIME + 0.5 SECONDS)
 	transporter_dematerialise(target, OUTPOST_KESSLER_BEAM_TIME)

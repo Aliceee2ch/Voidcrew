@@ -18,6 +18,7 @@
  * threat_backed_down (a threat called off by a talk) are spares for the same systems.
  * turret_backs_off, turret_gives_up and turret_defies answer a turret's warning (outpost_prison_security.dm).
  * creature_flee is the moment a prisoner breaks and runs from a creature (outpost_prison_panic.dm).
+ * riot_break_door is a rioter hammering at a way out of the cell block (outpost_prison_breakout.dm).
  */
 /datum/unit_test/voidcrew_outpost_prison_dialogue_contexts/proc/prisoner_contexts()
 	return list(
@@ -29,6 +30,8 @@
 		"hatch_empty", "subdued", "fight_argue_none", "threat_backed_down",
 		"cuffed", "cuffs_off", "lockdown", "lockdown_over",
 		"turret_backs_off", "turret_gives_up", "turret_defies",
+		// A rioter hammering at a door or window out (outpost_prison_breakout.dm)
+		"riot_break_door",
 		// Wildcard incidents and wing events (outpost_prison_incidents.dm, outpost_prison_wing_events.dm)
 		"incident_brooding", "incident_stab", "incident_stopped", "incident_pacing", "incident_snap",
 		"wing_lights_blown", "wing_vent_backup", "wing_toilet_flood",

@@ -147,8 +147,9 @@
 #define PRISON_SMASH_DAMAGE 10
 // A rioter's blow at a way out of the cell block (outpost_prison_breakout.dm), while the crew is home;
 // with nobody home it only booms. At a blow every 2 seconds (a basic mob's melee cooldown), one
-// rioter needs about 90 s for a staff airlock (450 integrity, 400 glass), 60 s for the office side of
-// a serving hatch (300) and 54 s for a reinforced window and its grille (150 + 30).
+// rioter needs about 80 s for the wing's glass staff door (400 integrity; 90 s for a solid one, 450),
+// 60 s for the office side of a serving hatch (300) and 54 s for a reinforced window and its grille
+// (150 + 30).
 #define PRISON_RIOT_DOOR_DAMAGE 10
 #define PRISON_RIOT_WINDOOR_DAMAGE 10
 #define PRISON_RIOT_WINDOW_DAMAGE 7

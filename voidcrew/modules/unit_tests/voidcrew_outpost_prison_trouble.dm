@@ -767,27 +767,28 @@
 	var/atom/third_target = third.riot_target()
 	TEST_ASSERT(third_target != warden, "A third rioter went for someone two rioters were already on")
 	TEST_ASSERT_NOTNULL(third_target, "The third rioter found nothing else to smash")
-	// With staff out of reach: the wing's fixtures and the doors out, never a cell door or a hatch.
+	// With staff out of reach: a way out of the cell block from the start (the rest is in
+	// voidcrew_outpost_prison_breakout.dm), and now and then a fixture on the way; never a cell door
+	// or a window in the outer wall.
 	warden.forceMove(prison_spot(home, 8, 4))
 	for(var/i in 1 to 40)
 		first.riot_target_ref = null
 		var/atom/target = first.riot_target()
 		TEST_ASSERT_NOTNULL(target, "A rioter found nothing to smash")
 		TEST_ASSERT(first.reachable[get_turf(target)], "A rioter went for [target] out of reach")
-		TEST_ASSERT(!istype(target, /obj/structure/table/reinforced/prison_hatch), "A rioter went for a serving hatch before the breakout")
+		TEST_ASSERT(prison.is_exit_blocker(target) || prison.is_riot_fixture(target, get_turf(target)), "A rioter went for [target], neither a way out nor a fixture")
 		TEST_ASSERT(!istype(target, /obj/machinery/door) || !prison.is_cell_door(target), "A rioter went for a cell door")
 		if(istype(target, /obj/structure/window) || istype(target, /obj/structure/grille))
 			TEST_ASSERT(!prison.on_wing_edge(get_turf(target)), "A rioter went for a window in the outer wall")
-			TEST_ASSERT(!prison.leads_out_of_cell_block(get_turf(target)), "A rioter went for a window out of the cell block before the breakout")
-	// Before the breakout the staff door is banged on, not broken.
+	// From the first blow, with the crew home, the staff door takes real damage.
 	var/obj/machinery/door/airlock/security/prison_staff/staff_door = locate() in prison_spot(home, 9, 6)
 	TEST_ASSERT_NOTNULL(staff_door, "The staff door is not where the map puts it")
 	var/door_before = staff_door.get_integrity()
 	first.forceMove(prison_spot(home, 9, 7))
-	for(var/i in 1 to 5)
-		first.baton_stop_until = 0
-		TEST_ASSERT(first.confront(staff_door), "A rioter could not bang on the staff door")
-	TEST_ASSERT_EQUAL(staff_door.get_integrity(), door_before, "Banging on the staff door before the breakout damaged it")
+	first.baton_stop_until = 0
+	TEST_ASSERT(first.confront(staff_door), "A rioter could not hit the staff door")
+	TEST_ASSERT_EQUAL(staff_door.get_integrity(), door_before - 10, "A rioter's blow did [door_before - staff_door.get_integrity()] to the staff door, not 10") // PRISON_RIOT_DOOR_DAMAGE
+	staff_door.repair_damage(staff_door.max_integrity)
 	// Smashing: a light breaks, a table takes damage, staff get the shiv (7-10).
 	var/obj/machinery/light/yard_light = locate() in prison_spot(home, 5, 11)
 	TEST_ASSERT_NOTNULL(yard_light, "The yard light is not where the map puts it")
@@ -907,24 +908,28 @@
 		TEST_ASSERT_EQUAL(rioter.trouble, "breakout", "[rioter] is [rioter.trouble] in the breakout")
 		TEST_ASSERT_EQUAL(rioter.loose_left, 300, "[rioter] has [rioter.loose_left] s on their breakout clock")
 	TEST_ASSERT_EQUAL(length(prison.trouble_payload()["loose"]), 4, "The console lists [length(prison.trouble_payload()["loose"])] prisoners on the clock")
-	var/atom/exit = first.riot_target()
-	TEST_ASSERT_NOTNULL(exit, "A rioter breaking out found no way out to hit")
-	TEST_ASSERT(prison.leads_out_of_cell_block(get_turf(exit)), "A rioter breaking out went for [exit] at [exit.x],[exit.y], which leads nowhere")
-	// From the breakout on, the doors out take real damage.
+	// Breaking out, every rioter goes for a way out, never a fixture on the way.
+	prison.riot_detour_chance = 100
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in everyone)
+		var/atom/exit = rioter.riot_target()
+		TEST_ASSERT_NOTNULL(exit, "[rioter] breaking out found no way out to hit")
+		TEST_ASSERT(prison.is_exit_blocker(exit), "[rioter] breaking out went for [exit] at [exit.x],[exit.y], which is no way out")
+	prison.riot_detour_chance = 15 // PRISON_RIOT_DETOUR_CHANCE
 	door_before = staff_door.get_integrity()
 	first.forceMove(prison_spot(home, 9, 7))
 	first.confront(staff_door)
 	TEST_ASSERT(staff_door.get_integrity() < door_before, "A rioter breaking out did no damage to the staff door")
 	staff_door.repair_damage(staff_door.max_integrity)
 
-	// A serving hatch gives after twelve blows (PRISON_HATCH_FORCE_HITS) and is then climbed.
+	// A serving hatch's office side gives after thirty blows (300 integrity, PRISON_RIOT_WINDOOR_DAMAGE 10)
+	// and the hatch is then climbed.
 	var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in prison_spot(home, 5, 6)
 	first.forceMove(prison_spot(home, 5, 7))
-	for(var/i in 1 to 11)
+	for(var/i in 1 to 29)
 		TEST_ASSERT(first.confront(hatch), "A rioter could not work at the hatch")
 	TEST_ASSERT(!hatch.both_sides_open(), "The hatch gave early")
 	first.confront(hatch)
-	TEST_ASSERT(wait_until(CALLBACK(hatch, TYPE_PROC_REF(/obj/structure/table/reinforced/prison_hatch, both_sides_open)), 5 SECONDS), "Twelve blows did not force the hatch open")
+	TEST_ASSERT(wait_until(CALLBACK(hatch, TYPE_PROC_REF(/obj/structure/table/reinforced/prison_hatch, both_sides_open)), 5 SECONDS), "Thirty blows did not force the hatch open")
 	TEST_ASSERT_EQUAL(first.riot_target(), hatch, "A rioter did not go for the forced hatch")
 	TEST_ASSERT(first.confront(hatch), "A rioter did not start over the forced hatch")
 	prison.tick(3)

@@ -23,8 +23,9 @@
  *    (outpost_prison_horror.dm) comes out. It never comes out of a vent in a bolted cell while
  *    there is another.
  * 4. The horror, until it dies for good. At 0 health it goes down regenerating and gets up again
- *    unless its body is destroyed or it is in vacuum; the first time, the outpost is told how to
- *    finish it (horror_collapsed()). Prisoners shout when it gets back up.
+ *    unless its body is destroyed or put out into open space off the outpost (in_open_space());
+ *    the first time, the outpost is told how to finish it (horror_collapsed()). Prisoners shout
+ *    when it gets back up.
  *
  * Every clock pauses while no member of the wing is home (crew_home()), except a dead host's last
  * three seconds. When it ends, prisoners who saw a death lose mood, each prisoner the creature
@@ -790,13 +791,16 @@
 #ifndef OUTPOST_EXPERIMENT_API
 	// With S4a, its creature tick keeps the leash and calls the breach.
 	leash_check(horror)
+	// Taken by Kessler, or dead out in space: it is over.
+	if(stage == "done")
+		return
 	if(!breach_announced && prison.wing && get_area(horror) != prison.wing)
 		breach_announced = TRUE
 		prison.add_log("The horror got out of the prison wing.")
 		prison.announce("CONTAINMENT BREACH: the Kessler specimen has left the prison wing!", SHIP_NOTIFY_DANGER)
 		prison.play_alarm()
 #endif
-	// Down and regenerating: its own clock, which also checks for vacuum and fire whoever is home.
+	// Down and regenerating: its own clock, which also checks for open space and fire whoever is home.
 	if(horror.regenerating)
 		horror.regen_tick(seconds, home)
 		if(QDELETED(horror) || horror.stat == DEAD)
@@ -833,7 +837,7 @@
 	if(regen_announced)
 		return
 	regen_announced = TRUE
-	prison.announce("Prison wing: the specimen is regenerating. Destroy the body or get it into space.", SHIP_NOTIFY_DANGER)
+	prison.announce("Prison wing: the specimen is regenerating. Destroy the body, or drag it off the outpost into space.", SHIP_NOTIFY_DANGER)
 
 /// The horror is pushing itself back up: a prisoner who can see it shouts about it
 /datum/outpost_changeling_event/proc/horror_rising()
@@ -871,12 +875,27 @@
 	return FALSE
 
 /**
+ * Whether `place` is out in open space off the outpost: a space tile in none of the outpost's areas,
+ * in space's own area (so not a docked ship's, and not a breach in the outpost's own floor). The
+ * horror's body, down, dies there for good; a vented room inside the outpost is not open space.
+ */
+/datum/outpost_changeling_event/proc/in_open_space(atom/place)
+	var/turf/tile = get_turf(place)
+	if(!isspaceturf(tile) || !istype(tile.loc, /area/space))
+		return FALSE
+	return !on_outpost_ground(tile)
+
+/**
  * A creature that ended up off the outpost (thrown, carried, teleported by an admin) is taken by
- * Kessler at once. It could not have walked there, so no recovery fee.
+ * Kessler at once. It could not have walked there, so no recovery fee. The horror's body, down and
+ * out in open space, is not taken: it dies there for good. Returns TRUE if Kessler took it.
  */
 /datum/outpost_changeling_event/proc/leash_check(mob/living/creature)
 	// By where it is, not what it is in: a pod or a locker carried off counts too.
 	if(QDELETED(creature) || creature.stat == DEAD || on_outpost_ground(creature))
+		return FALSE
+	var/mob/living/basic/outpost_experiment/horror/spaced = creature
+	if(istype(spaced) && spaced.die_if_spaced())
 		return FALSE
 	var/datum/outpost_prison/held = prison
 	prison.add_log("Kessler took the specimen back: it was found off the outpost.")

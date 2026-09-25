@@ -1,7 +1,7 @@
 /**
  * The changeling experiment: the host's incubation and burst, the headslug and the sealed vents,
- * the horror's emergence, its kit and its absorb, its regeneration, and what keeps it on the outpost
- * and inside the wing's outer ring.
+ * the horror's emergence, its kit and its absorb, its regeneration, spacing it and burning it, and
+ * what keeps it on the outpost and inside the wing's outer ring.
  *
  * Voidcrew defines are not visible from test files, so tuning values appear as literals with the
  * define named beside them. The prison's own clock is stopped (prison_test_claim()), and so is the
@@ -754,24 +754,238 @@
 	TEST_ASSERT(!prison.experiment_creature_down(horror), "The containment bonus could be claimed twice")
 	TEST_ASSERT_NOTNULL(locate(/obj/item/organ/heart) in spot, "The burst body left no organs")
 
-	// A second horror, down in vacuum: it freezes, dead for good.
-	var/mob/living/basic/outpost_experiment/horror/frozen = fresh_horror(prison, home)
-	TEST_ASSERT_NOTNULL(frozen, "The second horror did not come out")
-	var/datum/outpost_changeling_event/second_event = frozen.event
-	TEST_ASSERT(frozen.start_regenerating(), "The second horror would not go down")
-	var/turf/open/cold = get_turf(frozen)
+	// A second horror, down in a vented room inside the wing: the low pressure does nothing to it, and it gets up as usual.
+	var/mob/living/basic/outpost_experiment/horror/vented = fresh_horror(prison, home)
+	TEST_ASSERT_NOTNULL(vented, "The second horror did not come out")
+	var/datum/outpost_changeling_event/second_event = vented.event
+	TEST_ASSERT(vented.start_regenerating(), "The second horror would not go down")
+	var/turf/open/cold = get_turf(vented)
 	var/datum/gas_mixture/air = cold.return_air()
 	air.remove_ratio(1)
-	TEST_ASSERT(frozen.in_vacuum(), "Emptying the air around the horror did not make a vacuum")
+	TEST_ASSERT(air.return_pressure() < 20, "Emptying the air around the horror did not vent its tile") // HAZARD_LOW_PRESSURE
+	TEST_ASSERT(!vented.in_open_space(), "A vented tile in the wing counts as open space")
 	changeling_ticks(second_event, 1)
-	TEST_ASSERT_EQUAL(frozen.stat, DEAD, "The horror down in vacuum did not die")
-	TEST_ASSERT(!frozen.regenerating, "The frozen horror is still regenerating")
-	TEST_ASSERT_EQUAL(second_event.stage, "done", "The horror freezing did not end the changeling event")
-	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "The horror freezing did not end the experiment")
+	TEST_ASSERT(vented.stat != DEAD && vented.regenerating, "The horror down in a vented room died")
+	changeling_ticks(second_event, 44)
+	TEST_ASSERT(!vented.regenerating, "The horror down in a vented room did not get up after 45 s") // OUTPOST_HORROR_REGEN_TIME
+	TEST_ASSERT_EQUAL(vented.stat, CONSCIOUS, "The horror got up in a vented room but is not conscious")
+	TEST_ASSERT_EQUAL(second_event.stage, "horror", "The horror down in a vented room ended the changeling event")
+	TEST_ASSERT(prison.admin_horror("kill"), "The admin kill did nothing to the second horror")
+	TEST_ASSERT_EQUAL(second_event.stage, "done", "The admin kill did not end the second changeling event")
 
-	// Brought down in vacuum, it never goes down regenerating at all.
-	var/mob/living/basic/outpost_experiment/horror/spaced = allocate(/mob/living/basic/outpost_experiment/horror, cold)
-	spaced.adjust_health(spaced.maxHealth)
-	TEST_ASSERT_EQUAL(spaced.stat, DEAD, "A horror brought down in vacuum did not die for good")
-	TEST_ASSERT(!spaced.regenerating, "A horror brought down in vacuum went down regenerating")
+	// Brought down in a vented room, it goes down regenerating as it would anywhere on the outpost.
+	var/mob/living/basic/outpost_experiment/horror/collapsing = allocate(/mob/living/basic/outpost_experiment/horror, cold)
+	collapsing.adjust_health(collapsing.maxHealth)
+	TEST_ASSERT(collapsing.stat != DEAD, "A horror brought down in a vented room died for good")
+	TEST_ASSERT(collapsing.regenerating, "A horror brought down in a vented room did not go down regenerating")
+	settle_prison_air(home)
+
+// ===== SPACING =====
+
+/datum/unit_test/voidcrew_outpost_prison_changeling_spacing
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// A specimen taken straight to the horror by the admin stage, standing and free, with the event's clock stopped
+/datum/unit_test/voidcrew_outpost_prison_changeling_spacing/proc/horror_for(datum/outpost_prison/prison, obj/structure/overmap/dynamic/player_outpost/home)
+	var/datum/outpost_changeling_event/event = changeling_host(prison, home)
+	if(!event?.force_stage("horror"))
+		return null
+	var/mob/living/basic/outpost_experiment/horror/horror = event.horror
+	horror.clear_busy()
+	return horror
+
+/datum/unit_test/voidcrew_outpost_prison_changeling_spacing/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("spacingowner")
+	TEST_ASSERT_NOTNULL(home, "The spacing test prison did not load")
+	TEST_ASSERT_NOTNULL(home.outpost_area, "The spacing test outpost has no area")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.crew_home_override = TRUE
+	var/datum/bank_account/treasury = trouble_fund(home, 0)
+	var/mob/living/carbon/human/crew = make_player(prison_spot(home, 12, 3), "spacingowner")
+
+	// West of the wing, three tiles of space. One joins the outpost's area, as a hole in its floor
+	// would; the one beyond it stays open space; the one north of the hole becomes a deck that is not
+	// the outpost's, as a docked ship's would be.
+	var/list/bounds = prison.upgrade.footprint_bounds
+	var/turf/breach = locate(bounds[1] - 2, bounds[2] + 5, bounds[5])
+	var/turf/open_space = locate(bounds[1] - 3, bounds[2] + 5, bounds[5])
+	var/turf/deck = locate(bounds[1] - 2, bounds[2] + 6, bounds[5])
+	for(var/turf/tile as anything in list(breach, open_space, deck))
+		TEST_ASSERT(isspaceturf(tile) && istype(tile.loc, /area/space), "A tile west of the wing is not open space")
+	var/area/space_area = breach.loc
+	breach.change_area(space_area, home.outpost_area)
+	deck = deck.ChangeTurf(/turf/open/floor/plating/airless)
+
+	var/mob/living/basic/outpost_experiment/horror/horror = horror_for(prison, home)
+	TEST_ASSERT_NOTNULL(horror, "The admin horror stage made no horror")
+	var/datum/outpost_changeling_event/event = horror.event
+	TEST_ASSERT(event.on_outpost_ground(breach), "A hole in the outpost's floor does not count as the outpost's ground")
+	TEST_ASSERT(!event.in_open_space(breach), "A hole in the outpost's floor counts as open space")
+	TEST_ASSERT(event.in_open_space(open_space), "Space beside the outpost does not count as open space")
+	TEST_ASSERT(!event.on_outpost_ground(deck) && !event.in_open_space(deck), "A deck off the outpost counts as the outpost's ground or as open space")
+	TEST_ASSERT(!event.in_open_space(prison_spot(home, 9, 9)), "The wing's yard counts as open space")
+
+	// Standing, it never steps off the outpost's ground: not into space, not onto the deck.
+	horror.forceMove(breach)
+	TEST_ASSERT(SEND_SIGNAL(horror, COMSIG_MOVABLE_PRE_MOVE, open_space) & COMPONENT_MOVABLE_BLOCK_PRE_MOVE, "The standing horror could step off the outpost into space")
+	horror.Move(open_space, WEST)
+	TEST_ASSERT_EQUAL(get_turf(horror), breach, "The standing horror stepped off the outpost into space")
+	horror.Move(deck, NORTH)
+	TEST_ASSERT_EQUAL(get_turf(horror), breach, "The standing horror stepped off the outpost onto the deck")
+	TEST_ASSERT_EQUAL(horror.stat, CONSCIOUS, "The standing horror is not standing")
+
+	// Down on the hole in the floor, still on the outpost, it lies there regenerating.
+	var/datum/component/experiment_damage_ledger/ledger = horror.GetComponent(/datum/component/experiment_damage_ledger)
+	var/fee = treasury.account_balance
+	ledger.note_attacker(crew)
+	horror.apply_damage(horror.maxHealth * 2, BRUTE)
+	TEST_ASSERT(horror.regenerating, "The horror did not go down on the hole in the floor")
+	changeling_ticks(event, 1)
+	TEST_ASSERT(horror.regenerating && horror.stat != DEAD, "The horror died down on a space tile inside the outpost's area")
+
+	// Its body may not be moved onto ground off the outpost.
+	TEST_ASSERT(SEND_SIGNAL(horror, COMSIG_MOVABLE_PRE_MOVE, deck) & COMPONENT_MOVABLE_BLOCK_PRE_MOVE, "The horror's body could be moved onto a deck off the outpost")
+	horror.Move(deck, NORTH)
+	TEST_ASSERT_EQUAL(get_turf(horror), breach, "The horror's body was moved onto a deck off the outpost")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 0, "The horror paid its containment bonus while down")
+
+	// Pushed out into open space, it dies on arrival: for good, and the containment bonus is paid once.
+	TEST_ASSERT(!(SEND_SIGNAL(horror, COMSIG_MOVABLE_PRE_MOVE, open_space) & COMPONENT_MOVABLE_BLOCK_PRE_MOVE), "The horror's body could not be moved into open space")
+	horror.Move(open_space, WEST)
+	TEST_ASSERT_EQUAL(get_turf(horror), open_space, "The horror's body was not pushed into open space")
+	TEST_ASSERT_EQUAL(horror.stat, DEAD, "The horror's body in open space did not die")
+	TEST_ASSERT(horror.final_death && !horror.regenerating, "The horror in open space is not dead for good")
+	TEST_ASSERT_EQUAL(event.stage, "done", "Spacing the horror did not end the changeling event")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "Spacing the horror did not contain it")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 3900, "Spacing the horror paid [prison.experiment.bonus_paid], not 3900") // OUTPOST_EXPERIMENT_BONUS_HORROR
+	TEST_ASSERT_EQUAL(treasury.account_balance, fee + 3900, "Spacing the horror paid [treasury.account_balance - fee] cr, not 3900 once")
+	TEST_ASSERT(!prison.experiment_creature_down(horror), "The containment bonus could be claimed twice")
+	prison.experiments_tick(1)
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "The off-outpost check turned the spaced horror into a recovery")
+	TEST_ASSERT_EQUAL(treasury.account_balance, fee + 3900, "The off-outpost check charged for the spaced horror")
+
+	// Nor does the off-outpost check take a body that lies down in open space: it dies there. This one is
+	// held (as an admin's godmode would hold it) while it is put out there, so only the check sees to it.
+	var/mob/living/basic/outpost_experiment/horror/drifter = horror_for(prison, home)
+	TEST_ASSERT_NOTNULL(drifter, "The second horror did not come out")
+	var/datum/outpost_changeling_event/second_event = drifter.event
+	drifter.forceMove(breach)
+	var/datum/component/experiment_damage_ledger/second_ledger = drifter.GetComponent(/datum/component/experiment_damage_ledger)
+	second_ledger.note_attacker(crew)
+	drifter.apply_damage(drifter.maxHealth * 2, BRUTE)
+	TEST_ASSERT(drifter.regenerating, "The second horror did not go down")
+	ADD_TRAIT(drifter, TRAIT_GODMODE, TRAIT_SOURCE_UNIT_TESTS)
+	drifter.forceMove(open_space)
+	TEST_ASSERT(drifter.regenerating && drifter.stat != DEAD, "A held horror died in open space")
+	REMOVE_TRAIT(drifter, TRAIT_GODMODE, TRAIT_SOURCE_UNIT_TESTS)
+	var/balance = treasury.account_balance
+	prison.experiments_tick(1)
+	TEST_ASSERT_EQUAL(drifter.stat, DEAD, "The off-outpost check did not kill the horror's body down in open space")
+	TEST_ASSERT_EQUAL(second_event.stage, "done", "The horror dying on the off-outpost check did not end the changeling event")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "The off-outpost check recovered the horror's body instead of letting it die")
+	TEST_ASSERT_EQUAL(prison.treasury_debt(), 0, "The off-outpost check charged a recovery fee for the spaced horror")
+	TEST_ASSERT_EQUAL(treasury.account_balance, balance + 3900, "The second spaced horror paid [treasury.account_balance - balance] cr, not 3900")
+
+	breach.change_area(home.outpost_area, space_area)
+	deck.ChangeTurf(/turf/open/space/basic)
+	settle_prison_air(home)
+
+// ===== FIRE =====
+
+/datum/unit_test/voidcrew_outpost_prison_changeling_fire
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// A specimen taken straight to the horror by the admin stage, standing and free in the yard
+/datum/unit_test/voidcrew_outpost_prison_changeling_fire/proc/horror_for(datum/outpost_prison/prison, obj/structure/overmap/dynamic/player_outpost/home)
+	var/datum/outpost_changeling_event/event = changeling_host(prison, home)
+	if(!event?.force_stage("horror"))
+		return null
+	var/mob/living/basic/outpost_experiment/horror/horror = event.horror
+	horror.clear_busy()
+	horror.forceMove(prison_spot(home, 9, 9))
+	return horror
+
+/datum/unit_test/voidcrew_outpost_prison_changeling_fire/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("fireowner")
+	TEST_ASSERT_NOTNULL(home, "The fire test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.crew_home_override = TRUE
+	var/mob/living/carbon/human/crew = make_player(prison_spot(home, 12, 3), "fireowner")
+	var/mob/living/basic/outpost_experiment/horror/horror = horror_for(prison, home)
+	TEST_ASSERT_NOTNULL(horror, "The admin horror stage made no horror")
+	var/datum/outpost_changeling_event/event = horror.event
+	var/datum/component/experiment_damage_ledger/ledger = horror.GetComponent(/datum/component/experiment_damage_ledger)
+	TEST_ASSERT(findtext(jointext(horror.examine(crew), " "), "shies away from fire"), "Examining the horror does not say it shies away from fire")
+
+	// A laser's burn gets the chitin's 0.85, as brute does.
+	var/before = horror.health
+	horror.apply_damage(10, BURN)
+	TEST_ASSERT(abs(before - horror.health - 8.5) < 0.01, "10 burn took [before - horror.health] health, not 8.5") // OUTPOST_HORROR_DAMAGE_COEFF
+	before = horror.health
+	horror.apply_damage(10, BRUTE)
+	TEST_ASSERT(abs(before - horror.health - 8.5) < 0.01, "10 brute took [before - horror.health] health, not 8.5") // OUTPOST_HORROR_DAMAGE_COEFF
+
+	// Fire on its tile lights it, and burning hurts it: 5 a second, doubled. Nobody lit it or hurt it, so it is nobody's.
+	horror.fire_act(1000, 500)
+	TEST_ASSERT(horror.on_fire, "Fire on its tile did not set the horror alight")
+	var/datum/status_effect/fire_handler/fire_stacks/burning = horror.has_status_effect(/datum/status_effect/fire_handler/fire_stacks)
+	TEST_ASSERT_NOTNULL(burning, "The burning horror has no fire on it")
+	before = horror.health
+	burning.tick(2)
+	TEST_ASSERT(abs(before - horror.health - 20) < 0.01, "Two seconds alight took [before - horror.health] health, not 20") // OUTPOST_HORROR_FIRE_DAMAGE, OUTPOST_HORROR_FIRE_MULT
+	TEST_ASSERT(horror.on_fire, "A lick of flame went out within two seconds") // OUTPOST_HORROR_FIRE_DECAY
+	TEST_ASSERT_EQUAL(ledger.player_damage, 0, "Fire nobody lit counted as the crew's")
+	horror.extinguish_mob()
+
+	// Down and burning, its body goes twice as fast: 200 in 10 s, where it took 20.
+	TEST_ASSERT(horror.start_regenerating(), "The horror would not go down")
+	horror.adjust_fire_stacks(20)
+	horror.ignite_mob()
+	TEST_ASSERT(horror.on_fire, "The horror's body would not catch fire")
+	changeling_ticks(event, 5)
+	TEST_ASSERT(abs(horror.remains - 100) < 0.01, "Five seconds alight left [horror.remains] of its body, not 100") // OUTPOST_HORROR_REMAINS less 5 * OUTPOST_HORROR_REMAINS_BURN * OUTPOST_HORROR_FIRE_MULT
+	changeling_ticks(event, 4)
+	TEST_ASSERT(!QDELETED(horror) && horror.regenerating, "The burning body was destroyed before 10 s")
+	changeling_ticks(event, 1)
+	TEST_ASSERT(QDELETED(horror), "The burning body was not destroyed after 10 s")
+	TEST_ASSERT_EQUAL(event.stage, "done", "Burning its body away did not end the changeling event")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "Burning its body away did not contain the horror")
+
+	// Fire is the crew's for the containment bonus. A second horror, last hurt by the crew 31 s ago: its burning is nobody's.
+	var/mob/living/basic/outpost_experiment/horror/torched = horror_for(prison, home)
+	TEST_ASSERT_NOTNULL(torched, "The second horror did not come out")
+	var/datum/outpost_changeling_event/second_event = torched.event
+	var/datum/component/experiment_damage_ledger/torched_ledger = torched.GetComponent(/datum/component/experiment_damage_ledger)
+	torched_ledger.note_attacker(crew)
+	torched_ledger.last_attack_time -= 31 SECONDS
+	torched_ledger.last_player_time -= 31 SECONDS
+	TEST_ASSERT(torched.take_fire_damage(5) > 0, "Fire did not hurt the second horror")
+	TEST_ASSERT_EQUAL(torched_ledger.player_damage, 0, "Fire 31 s after the crew last hurt it counted as the crew's") // OUTPOST_HORROR_FIRE_CREDIT_WINDOW
+	// Hurt by the crew 10 s ago, it is theirs.
+	torched_ledger.last_player_time = world.time - 10 SECONDS
+	torched.take_fire_damage(5)
+	TEST_ASSERT(abs(torched_ledger.player_damage - 10) < 0.01, "Fire 10 s after the crew hurt it was [torched_ledger.player_damage] crew damage, not 10") // OUTPOST_HORROR_FIRE_MULT
+	torched_ledger.last_player_time = world.time - 31 SECONDS
+
+	// Set alight by a flamethrower the crew just aimed at it: theirs however long it burns, and burned down, it pays in full.
+	var/obj/item/flamethrower/flamer = allocate(/obj/item/flamethrower)
+	flamer.lit = TRUE
+	SEND_SIGNAL(torched, COMSIG_ATOM_RANGED_ITEM_INTERACTION, crew, flamer, list())
+	torched.fire_act(1000, 500)
+	TEST_ASSERT(torched.on_fire, "The flamethrower's fire did not set the horror alight")
+	TEST_ASSERT_EQUAL(torched.igniter_ref?.resolve(), crew, "The horror does not know who set it alight")
+	torched.fire_aimed_at -= 31 SECONDS
+	for(var/i in 1 to 40)
+		if(torched.regenerating)
+			break
+		torched.fire_act(1000, 500)
+		var/datum/status_effect/fire_handler/fire_stacks/flames = torched.has_status_effect(/datum/status_effect/fire_handler/fire_stacks)
+		flames?.tick(2)
+	TEST_ASSERT(torched.regenerating, "Burning did not bring the second horror down")
+	TEST_ASSERT(torched_ledger.player_share() > 0.9, "The horror burned down by the crew's fire is [torched_ledger.player_share()] the crew's damage")
+	torched.adjust_fire_stacks(20)
+	changeling_ticks(second_event, 10)
+	TEST_ASSERT(QDELETED(torched), "The second horror's body did not burn away")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "Burning the second horror away did not contain it")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 3900, "A horror killed by a flamethrower paid [prison.experiment.bonus_paid], not 3900") // OUTPOST_EXPERIMENT_BONUS_HORROR
 	settle_prison_air(home)

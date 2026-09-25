@@ -274,7 +274,21 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		console.disconnect_materials()
 		console.current_ship = null
 	reset_reserve_dock_to_home(dock)
+	refresh_hangar_air()
 	update_status()
+
+/// The hangar keeps its own atmosphere. A departing hull leaves its own air on the pad, vacuum
+/// from its outer plating included, and the sealed hangar would spend the next few minutes (and
+/// a lot of atmos time) evening that out, drawing its pressure down for good. Every hangar
+/// tile not under a ship goes back to the hangar's own air instead, already settled.
+/datum/outpost_berth/ship_bay/proc/refresh_hangar_air()
+	if(QDELETED(reservation))
+		return
+	for(var/turf/open/tile in CORNER_BLOCK(reservation.bottom_left_turfs[1], reservation.width, reservation.height))
+		if(!tile.air || tile.blocks_air || istype(tile.loc, /area/shuttle))
+			continue
+		tile.air.copy_from(tile.create_gas_mixture())
+		SSair.remove_from_active(tile)
 
 /datum/outpost_berth/ship_bay/proc/retry_release()
 	release_timer = null

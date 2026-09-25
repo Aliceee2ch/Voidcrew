@@ -23,9 +23,9 @@
 		if(listener.client && yard.contains_turf(get_turf(listener)))
 			. += listener
 
-/proc/play_to_checkpoint_yard(datum/turf_reservation/yard, sound_file)
+/proc/play_to_checkpoint_yard(datum/turf_reservation/yard, sound_file, volume = CHECKPOINT_YARD_ONESHOT_VOLUME)
 	for(var/mob/listener as anything in checkpoint_yard_listeners(yard))
-		listener.playsound_local(null, sound_file, CHECKPOINT_YARD_ONESHOT_VOLUME)
+		listener.playsound_local(null, sound_file, volume)
 
 /// Inside a ship bay the yard replaces the area's hum. The client repeats it, so the loop is seamless.
 /mob/refresh_looping_ambience()

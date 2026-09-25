@@ -85,7 +85,15 @@
 			deck = tile
 			break
 	var/mob/living/carbon/human/crew = make_player(deck, "checkpointcrew")
+	// A deleted duct drops a stack of duct; none of that may be left on the pad.
+	new /obj/machinery/duct(deck)
+	var/list/pad = original.shuttle.return_turfs()
 	panel.manage_outpost(home, operator, "bay_remove_ship", list("ref" = REF(bay)))
+	for(var/turf/tile as anything in pad)
+		var/obj/item/debris = locate() in tile
+		if(debris)
+			TEST_FAIL("Remove Ship left [debris] on the pad at [tile.x],[tile.y]")
+			break
 	TEST_ASSERT(QDELETED(original), "Remove Ship left the hull: [panel.error]")
 	TEST_ASSERT(crew.stat != DEAD && (get_turf(crew) in bay.alcove_turfs), "Someone aboard was not moved to the bay elevator")
 	TEST_ASSERT(bay.is_available(), "The bay was not released after removing its ship")

@@ -421,6 +421,8 @@
 
 /datum/checkpoint_construction/proc/begin_marking()
 	state = CHECKPOINT_BUILD_MARKING
+	// New deck takes the air on its spot, so start from a settled hangar.
+	bay.refresh_hangar_air()
 	for(var/index in hull_indices)
 		var/turf/target = bay_turfs[index]
 		markers[target] = new /obj/effect/checkpoint_build_marker(target)
@@ -1099,6 +1101,7 @@
 	var/datum/turf_reservation/released = source_reservation
 	source_reservation = null
 	if(released)
+		clear_reservation_landmarks(released)
 		// Large reservations yield while releasing; never inside a processing tick.
 		INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(qdel), released)
 
@@ -1111,7 +1114,17 @@
 			if(!QDELETED(room) && !room.has_contained_turfs())
 				qdel(room)
 	if(loaded_space)
+		clear_reservation_landmarks(loaded_space)
 		INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(qdel), loaded_space)
+
+/// Releasing a reservation empties its turfs but keeps landmarks, so the hidden copy's job
+/// spawns would be left standing wherever that space is handed out next.
+/proc/clear_reservation_landmarks(datum/turf_reservation/space)
+	if(QDELETED(space))
+		return
+	for(var/turf/tile as anything in space.reserved_turfs)
+		for(var/obj/effect/landmark/mark in tile)
+			qdel(mark)
 
 /// Hands the hidden source tiles back from the ship's rooms once the port has left them.
 /// Releasing the reservation then empties and resets them over later ticks.

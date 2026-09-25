@@ -255,6 +255,12 @@
 	for(var/area/replacement as anything in replacements)
 		if(!replacement.has_contained_turfs())
 			qdel(replacement)
+	// Some fittings drop parts as they are deleted: every duct leaves a stack of duct. The crew
+	// were moved off first, so anything loose on the pad now is debris from the deletion.
+	for(var/turf/tile as anything in underlying)
+		for(var/obj/item/debris in tile)
+			qdel(debris)
+	bay.refresh_hangar_air()
 	record(user, home, "delete [ship_name] from Ship Bay [bay.bay_number]")
 	return TRUE
 

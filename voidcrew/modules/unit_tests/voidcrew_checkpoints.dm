@@ -677,11 +677,39 @@
 	TEST_ASSERT(count_bay_ship_tiles(bay) > 0 && count_bay_ship_tiles(bay) < length(job.hull_indices), "The drone build was not partial part way through")
 	// Let the real controller finish and hand over on its own.
 	var/total_visits = job.visit_total
+	var/list/copy_turfs = job.source_reservation?.reserved_turfs.Copy()
 	deadline = world.time + 5 MINUTES
+	// Placing pieces must not keep the pressurised hangar's air awake.
+	var/list/peaks = list()
+	var/list/sums = list()
+	var/list/stage_samples = list()
 	while(!QDELETED(job) && world.time < deadline)
 		sleep(5)
+		if(QDELETED(job))
+			break
+		var/stage = job.stage_name()
+		var/list/counts = list("bay deck ([stage])" = 0, "bay ship ([stage])" = 0)
+		for(var/turf/open/active as anything in SSair.active_turfs)
+			if(bay.reservation.contains_turf(active))
+				counts[(get_area(active) in job.port?.shuttle_areas) ? "bay ship ([stage])" : "bay deck ([stage])"]++
+		for(var/key in counts)
+			peaks[key] = max(peaks[key], counts[key])
+			sums[key] += counts[key]
+			stage_samples[key]++
 	TEST_ASSERT(QDELETED(job), "The drones did not finish [total_visits] visits within five minutes")
-	log_test("Drone reconstruction placed [total_visits] visits in [(world.time - started_at) / 10] seconds, including the survey.")
+	// Releasing the hidden copy's space must not leave its job spawns behind for the next user.
+	for(var/turf/tile as anything in copy_turfs)
+		var/obj/effect/landmark/stray = locate() in tile
+		if(stray)
+			TEST_FAIL("The hidden copy left [stray.type] at [tile.x],[tile.y]")
+			break
+	var/list/report = list()
+	for(var/key in peaks)
+		var/mean = round(sums[key] / stage_samples[key])
+		report += "[key] peak [peaks[key]] mean [mean]"
+		// The bay resets its air before a build, so placing pieces leaves little to settle.
+		TEST_ASSERT(mean <= 300, "The hangar stayed busy with atmos while building: [key] averaged [mean] active turfs")
+	log_test("Drone reconstruction placed [total_visits] visits in [(world.time - started_at) / 10] seconds, including the survey. Active air turfs while building: [report.Join("; ")].")
 	// Released drones fly back to their own bays and dock there.
 	deadline = world.time + 30 SECONDS
 	var/docked = FALSE

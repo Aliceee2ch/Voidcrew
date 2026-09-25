@@ -98,8 +98,10 @@
 #define CHECKPOINT_YARD_DOCK_SOUND 'voidcrew/sound/checkpoint/drone_dock.ogg'
 #define CHECKPOINT_BUILD_MIN_DRONES 8
 #define CHECKPOINT_BUILD_MAX_DRONES 16
-/// Tiles a drone crosses per controller tick (SSfastprocess, 0.2 seconds).
+/// Tiles a drone crosses in one hop.
 #define CHECKPOINT_DRONE_TILES_PER_TICK 3
+/// How often a drone makes that hop. The glide between hops takes the same time.
+#define CHECKPOINT_DRONE_FLIGHT_INTERVAL (0.4 SECONDS)
 /// Roughly one extra drone per this many visits, between the limits above.
 #define CHECKPOINT_BUILD_VISITS_PER_DRONE 100
 /// Upper bound on tile visits completed in one controller tick, across all drones.

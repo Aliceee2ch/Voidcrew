@@ -71,6 +71,8 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	var/datum/weakref/cradle_ref
 	/// Set once the job lets the drone go; it then flies home on its own and docks.
 	var/returning_until = 0
+	/// When the drone may make its next hop.
+	var/next_flight_at = 0
 	/// The drones released together. The last one home plays the dock sound to the bay.
 	var/datum/checkpoint_drone_flock/flock
 
@@ -124,6 +126,9 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 		return TRUE
 	if(get_dist(start, destination) <= 1)
 		return TRUE
+	if(world.time < next_flight_at)
+		return FALSE
+	next_flight_at = world.time + CHECKPOINT_DRONE_FLIGHT_INTERVAL
 	var/turf/next = start
 	for(var/i in 1 to CHECKPOINT_DRONE_TILES_PER_TICK)
 		if(get_dist(next, destination) <= 1)
@@ -133,7 +138,7 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	forceMove(next)
 	pixel_x = base_pixel_x + (start.x - next.x) * ICON_SIZE_X
 	pixel_y = base_pixel_y + (start.y - next.y) * ICON_SIZE_Y
-	animate(src, pixel_x = base_pixel_x, pixel_y = base_pixel_y, time = SSfastprocess.wait, flags = ANIMATION_PARALLEL)
+	animate(src, pixel_x = base_pixel_x, pixel_y = base_pixel_y, time = CHECKPOINT_DRONE_FLIGHT_INTERVAL, flags = ANIMATION_PARALLEL)
 	return get_dist(next, destination) <= 1
 
 /// Projects the piece about to appear and points the work beam at it.
@@ -195,5 +200,5 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	if(length(drones))
 		return
 	if(!QDELETED(yard))
-		play_to_checkpoint_yard(yard, CHECKPOINT_YARD_DOCK_SOUND)
+		play_to_checkpoint_yard(yard, CHECKPOINT_YARD_DOCK_SOUND, 25)
 	qdel(src)

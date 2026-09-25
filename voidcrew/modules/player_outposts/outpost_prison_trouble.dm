@@ -1352,24 +1352,23 @@
 	// The climb carries on outside the routine; this activity is done either way.
 	return FALSE
 
-/// Not joining a riot: back to their own cell to sit it out on the bed
+/// Not joining a riot: back to their own cell to sit it out in its chair (or on the bed)
 /datum/prisoner_activity/hide
 	name = "sitting out the riot"
 	context = "riot_bystander"
 	leisure = FALSE
 	weight = 0
 	interruptible = FALSE
-	var/datum/weakref/bed_ref
+	var/datum/weakref/seat_ref
 
 /datum/prisoner_activity/hide/setup()
 	var/datum/outpost_prison_cell/home = prisoner.cell
 	if(!home)
 		return FALSE
-	var/obj/structure/bed/bed = home.bed()
-	var/turf/bed_turf = bed ? get_turf(bed) : null
-	if(bed_turf && prisoner.walkable?[bed_turf] && (bed_turf == prisoner.loc || !prisoner.tile_taken(bed_turf)) && claim(bed))
-		bed_ref = WEAKREF(bed)
-		spot = bed_turf
+	var/obj/structure/seat = prisoner.home_seat()
+	if(seat && claim(seat))
+		seat_ref = WEAKREF(seat)
+		spot = get_turf(seat)
 		return TRUE
 	for(var/turf/tile as anything in home.turfs)
 		if(prisoner.walkable?[tile] && (tile == prisoner.loc || !prisoner.tile_taken(tile)))
@@ -1380,9 +1379,9 @@
 /datum/prisoner_activity/hide/begin()
 	started = TRUE
 	ends_at = INFINITY
-	if(bed_ref?.resolve())
+	if(seat_ref?.resolve())
 		var/obj/machinery/door/door = prisoner.cell?.door()
-		prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
+		prisoner.sit_in_cell(door ? get_cardinal_dir(prisoner, door) : SOUTH)
 	prisoner.say_context("riot_bystander")
 
 /datum/prisoner_activity/hide/tick(seconds)

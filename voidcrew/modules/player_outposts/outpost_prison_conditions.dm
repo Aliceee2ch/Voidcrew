@@ -34,6 +34,8 @@ GLOBAL_LIST_INIT(outpost_prison_mess_weights, build_outpost_prison_mess_weights(
 /// Furniture category ("bed", "stool", ...) by type, for the wing's furniture list
 GLOBAL_LIST_INIT(outpost_prison_furniture_types, zebra_typecacheof(list(
 	/obj/structure/bed = "bed",
+	// The cells' chairs, and any other plain chair; stools and the reading chair are their own kinds below
+	/obj/structure/chair = "chair",
 	/obj/structure/chair/stool = "stool",
 	/obj/structure/chair/comfy = "reading_chair",
 	/obj/structure/table = "table",
@@ -199,6 +201,7 @@ GLOBAL_LIST_INIT(outpost_prison_furniture_types, zebra_typecacheof(list(
 	var/list/categories = GLOB.outpost_prison_furniture_types
 	var/list/found = list(
 		"bed" = list(),
+		"chair" = list(),
 		"stool" = list(),
 		"reading_chair" = list(),
 		"table" = list(),

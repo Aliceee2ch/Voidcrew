@@ -124,21 +124,22 @@
 	var/mob/living/basic/outpost_prisoner/runner = trouble_prisoner(prison, middle)
 	var/datum/outpost_prison_cell/own = runner.cell
 	TEST_ASSERT_NOTNULL(own, "The test prisoner has no cell")
-	var/obj/structure/bed/bunk = own.bed()
-	TEST_ASSERT_NOTNULL(bunk, "The test prisoner's cell has no bed")
-	var/turf/bunk_turf = get_turf(bunk)
+	var/obj/structure/chair/seat = own.chair()
+	TEST_ASSERT_NOTNULL(seat, "The test prisoner's cell has no chair")
+	var/turf/seat_turf = get_turf(seat)
 
-	// Across the yard from their cell: home is safe, and they run for their bed.
+	// Across the yard from their cell: home is safe, and they run for their cell's chair.
 	var/far_x = own.door_turf.x < middle.x ? 15 : 3
 	var/mob/living/basic/outpost_experiment/hulk/hulk = allocate(/mob/living/basic/outpost_experiment/hulk, prison_spot(home, far_x, 8), prison, null)
 	prison.experiment_creature_appeared(hulk, "hulk")
 	var/datum/prisoner_activity/creature_panic/panic = runner.activity
 	TEST_ASSERT(istype(panic), "A prisoner in the yard with a hulk loose in it did not run ([runner.activity?.type])")
 	TEST_ASSERT_EQUAL(panic.plan, "home", "With the hulk across the yard, the prisoner did not run for their cell")
-	TEST_ASSERT_EQUAL(panic.spot, bunk_turf, "The prisoner did not run for their own bed")
-	runner.forceMove(bunk_turf)
+	TEST_ASSERT_EQUAL(panic.spot, seat_turf, "The prisoner did not run for their cell's chair")
+	runner.forceMove(seat_turf)
 	panic.arrive()
 	TEST_ASSERT(own.contains(runner), "The prisoner is not in their cell")
+	TEST_ASSERT_EQUAL(runner.buckled, seat, "Home from a hulk, the prisoner did not sit in their cell's chair")
 
 	// It comes into the cell where they hide: out they go, and away from it.
 	var/turf/far_corner = panic_far_corner(own)

@@ -1108,17 +1108,19 @@
 // ===== HIDING FROM IT =====
 
 /**
- * Something is loose: back to their own cell, onto the bunk, shouting to be locked in until
- * somebody bolts the door. Over when the creature is dead or taken; with the experiments core in,
- * over once the slug is out of the vents, when the creature itself frightens them instead
- * (outpost_prison_panic.dm). Bolted in their own cell meanwhile, the lock-in costs them nothing.
+ * Something is loose: back to their own cell, into its chair (or onto the bunk), shouting to be
+ * locked in until somebody bolts the door. Over when the creature is dead or taken; with the
+ * experiments core in, over once the slug is out of the vents, when the creature itself frightens
+ * them instead (outpost_prison_panic.dm). Bolted in their own cell meanwhile, the lock-in costs
+ * them nothing.
  */
 /datum/prisoner_activity/flee_creature
 	name = "hiding in their cell"
 	context = "creature_panic"
 	weight = 0
 	interruptible = FALSE
-	var/datum/weakref/bed_ref
+	/// Their cell's chair or bunk
+	var/datum/weakref/seat_ref
 	/// Seconds to the next shout
 	var/shout_left = 0
 
@@ -1126,11 +1128,10 @@
 	var/datum/outpost_prison_cell/home = prisoner.cell
 	if(!home)
 		return FALSE
-	var/obj/structure/bed/bunk = home.bed()
-	var/turf/bunk_turf = bunk ? get_turf(bunk) : null
-	if(bunk_turf && prisoner.walkable?[bunk_turf] && (bunk_turf == prisoner.loc || !prisoner.tile_taken(bunk_turf)) && claim(bunk))
-		bed_ref = WEAKREF(bunk)
-		spot = bunk_turf
+	var/obj/structure/seat = prisoner.home_seat()
+	if(seat && claim(seat))
+		seat_ref = WEAKREF(seat)
+		spot = get_turf(seat)
 		return TRUE
 	for(var/turf/tile as anything in home.turfs)
 		if(prisoner.walkable?[tile] && (tile == prisoner.loc || !prisoner.tile_taken(tile)))
@@ -1142,9 +1143,9 @@
 	started = TRUE
 	ends_at = INFINITY
 	shout_left = rand(4, 10)
-	if(bed_ref?.resolve())
+	if(seat_ref?.resolve())
 		var/obj/machinery/door/door = prisoner.cell?.door()
-		prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
+		prisoner.sit_in_cell(door ? get_cardinal_dir(prisoner, door) : SOUTH)
 
 /datum/prisoner_activity/flee_creature/tick(seconds)
 	var/datum/outpost_prison/prison = prisoner.prison

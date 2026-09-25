@@ -10,7 +10,7 @@
  * off: creature_shut_in()) frightens only those who can see it. Once no creature has frightened them
  * for OUTPOST_PANIC_CALM_TIME, they calm down and go back to their day.
  *
- * - Free to move, they run (OUTPOST_PANIC_FLEE_SPEED) for their own cell and bed and shout to be
+ * - Free to move, they run (OUTPOST_PANIC_FLEE_SPEED) for their own cell, its chair or bed, and shout to be
  *   bolted in, unless the creature is in that cell, can get to its door first, or is on or near the
  *   way there. Then they run the other way: to the tile of the cell block they can walk to that is
  *   farthest from it, out of its sight if there is one (another open cell, the far end of the yard).
@@ -347,7 +347,7 @@
 		return FALSE
 	if(istype(prisoner.activity, /datum/prisoner_activity/creature_panic))
 		return FALSE
-	// What they were doing lets go of its things first, so the bed the panic claims stays claimed.
+	// What they were doing lets go of its things first, so the seat the panic claims stays claimed.
 	prisoner.end_activity()
 	var/datum/prisoner_activity/creature_panic/panic = new(prisoner)
 	panic.setup()
@@ -476,15 +476,14 @@
 			queue += next
 	return steps
 
-/// Where they hide at home: their own bed, or failing that any free tile of their own cell they can walk to, or null
+/// Where they hide at home: their own cell's chair or bed (home_seat()), or failing that any free tile of their own cell they can walk to, or null
 /datum/outpost_prison/proc/panic_home_spot(mob/living/basic/outpost_prisoner/prisoner)
 	var/datum/outpost_prison_cell/home = prisoner.cell
 	if(!home || !prisoner.walkable)
 		return null
-	var/obj/structure/bed/bed = home.bed()
-	var/turf/bed_turf = bed ? get_turf(bed) : null
-	if(bed_turf && prisoner.walkable[bed_turf] && (bed_turf == prisoner.loc || !prisoner.tile_taken(bed_turf)) && !claimed_by_other(bed, prisoner))
-		return bed_turf
+	var/obj/structure/seat = prisoner.home_seat()
+	if(seat)
+		return get_turf(seat)
 	for(var/turf/tile as anything in home.turfs)
 		if(prisoner.walkable[tile] && (tile == prisoner.loc || !prisoner.tile_taken(tile)))
 			return tile
@@ -565,7 +564,7 @@
 // ===== RUNNING =====
 
 /**
- * Running from a creature: home to their own cell and bed, shouting to be bolted in; or, with no safe
+ * Running from a creature: home to their own cell and its chair or bed, shouting to be bolted in; or, with no safe
  * way home, as far from it as they can get and out of its sight if they can; or, with nowhere to go,
  * cowering where they are. The prison rethinks it as the creature moves (reconsider()); it is over
  * once they calm down (calm_from_panic()).
@@ -577,7 +576,8 @@
 	interruptible = FALSE
 	/// "home", "away" or "cower"
 	var/plan
-	var/datum/weakref/bed_ref
+	/// The chair or bed they are running home to
+	var/datum/weakref/seat_ref
 	/// Seconds to the next look at whether the plan still holds
 	var/replan_left = 0
 
@@ -589,10 +589,10 @@
 /datum/prisoner_activity/creature_panic/proc/make_plan(mob/living/threat)
 	var/datum/outpost_prison/prison = prisoner.prison
 	replan_left = OUTPOST_PANIC_REPLAN_GAP
-	var/obj/structure/bed/old_bed = bed_ref?.resolve()
-	bed_ref = null
-	if(old_bed)
-		unclaim(old_bed)
+	var/obj/structure/old_seat = seat_ref?.resolve()
+	seat_ref = null
+	if(old_seat)
+		unclaim(old_seat)
 	spot = null
 	// Their walks keep failing: they stay where they are.
 	if(!prison || prisoner.activity_on_cooldown(type))
@@ -601,9 +601,9 @@
 	if(home && prison.home_is_safe(prisoner, home, threat))
 		plan = "home"
 		name = "running for their cell"
-		var/obj/structure/bed/bed = prisoner.cell?.bed()
-		if(bed && get_turf(bed) == home && claim(bed))
-			bed_ref = WEAKREF(bed)
+		var/obj/structure/seat = prisoner.home_seat()
+		if(seat && get_turf(seat) == home && claim(seat))
+			seat_ref = WEAKREF(seat)
 		spot = home
 		return plan
 	var/turf/away = threat ? prison.flee_spot(prisoner, threat) : null
@@ -633,14 +633,14 @@
 		begin()
 	return TRUE
 
-/// Where they ended up: on their bunk facing the door, facing it from a distance, or cowering
+/// Where they ended up: in their chair or on their bunk at home, facing the creature from a distance, or cowering
 /datum/prisoner_activity/creature_panic/proc/settle()
 	var/mob/living/threat = prisoner.panic_threat()
 	switch(plan)
 		if("home")
-			if(bed_ref?.resolve() && prisoner.cell?.contains(prisoner))
+			if(seat_ref?.resolve() && prisoner.cell?.contains(prisoner))
 				var/obj/machinery/door/door = prisoner.cell.door()
-				prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
+				prisoner.sit_in_cell(door ? get_cardinal_dir(prisoner, door) : SOUTH)
 		if("away")
 			if(threat)
 				prisoner.face_atom(threat)

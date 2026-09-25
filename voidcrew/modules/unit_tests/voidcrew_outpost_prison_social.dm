@@ -593,16 +593,26 @@
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A second ask inside a minute did something")
 	TEST_ASSERT_EQUAL(length(prisoner.order_times), 1, "An ask inside the minute was counted")
 	prisoner.order_cooldown = 0
-	// Sitting on their own bed when asked: the old activity lets the bed go, the new one keeps it.
-	var/datum/prisoner_activity/sit_bed/sitting = new(prisoner)
-	TEST_ASSERT(sitting.setup(), "The prisoner could not sit on their bed")
+	// Sitting in their own cell's chair when asked: the old activity lets the chair go, the new one keeps it.
+	var/obj/structure/chair/cell_chair = prisoner.cell.chair()
+	TEST_ASSERT_NOTNULL(cell_chair, "The prisoner's cell has no chair")
+	var/datum/prisoner_activity/sit_cell/sitting = new(prisoner)
+	TEST_ASSERT(sitting.setup(), "The prisoner could not sit in their cell")
 	prisoner.start_activity(sitting)
 	TEST_ASSERT(prisoner.talk_menu_order(owner), "A chatty prisoner at 45 did not go back to the cell")
 	var/datum/prisoner_activity/sent_to_cell/going = prisoner.activity
 	TEST_ASSERT(istype(going), "Going back to the cell is not what they're doing")
 	TEST_ASSERT(going.spot && prisoner.cell.contains(going.spot), "They're not headed into their own cell")
 	TEST_ASSERT(!going.leisure && !going.interruptible, "Being sent back is leisure or can be interrupted")
-	TEST_ASSERT_EQUAL(prison.claimant(prisoner.cell.bed()), prisoner, "Being sent back lost the claim on their own bed")
+	TEST_ASSERT_EQUAL(prison.claimant(cell_chair), prisoner, "Being sent back lost the claim on their cell's chair")
+	// Back in the cell, they sit in its chair, not on the bed.
+	TEST_ASSERT_EQUAL(going.spot, get_turf(cell_chair), "Sent back, they did not head for their cell's chair")
+	var/turf/asked_at = prisoner.loc
+	prisoner.forceMove(going.spot)
+	going.arrive()
+	TEST_ASSERT_EQUAL(prisoner.buckled, cell_chair, "Sent back to their cell, the prisoner did not sit in its chair")
+	prisoner.stand_up()
+	prisoner.forceMove(asked_at)
 	// The third ask inside five minutes costs 2 mood and is refused (PRISON_TALK_ORDER_SPAM_*).
 	prisoner.end_activity(cancel_ai = FALSE)
 	prisoner.order_cooldown = 0
@@ -837,12 +847,12 @@
 	prison.refresh_prisoner_reach(prisoner)
 	TEST_ASSERT(prisoner.is_confined(), "The prisoner is not shut in the bolted cell")
 
-	// Asked back to the cell they're bolted into: they go to the bed, and the lock-in clock keeps its count.
+	// Asked back to the cell they're bolted into: they go to its chair, and the lock-in clock keeps its count.
 	prison.tick(60)
 	TEST_ASSERT_EQUAL(prisoner.locked_in_seconds, 60, "A minute bolted in counted [prisoner.locked_in_seconds] s")
 	prisoner.set_mood(70)
-	TEST_ASSERT(prisoner.talk_menu_order(owner), "A bolted-in prisoner at 70 would not go to their bed")
-	TEST_ASSERT(istype(prisoner.activity, /datum/prisoner_activity/sent_to_cell), "The order did not send them to their bed")
+	TEST_ASSERT(prisoner.talk_menu_order(owner), "A bolted-in prisoner at 70 would not go to their chair")
+	TEST_ASSERT(istype(prisoner.activity, /datum/prisoner_activity/sent_to_cell), "The order did not send them to their chair")
 	TEST_ASSERT_EQUAL(prisoner.locked_in_seconds, 60, "The order reset the lock-in clock to [prisoner.locked_in_seconds]")
 	// And a lock-in still stops pay after 120 seconds (OUTPOST_PRISON_CONFINED_PAY_AFTER).
 	prison.tick(61)

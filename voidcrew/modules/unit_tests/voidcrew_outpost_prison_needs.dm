@@ -436,7 +436,7 @@
 				TEST_ASSERT_EQUAL(activity.spot.loc, prison.wing, "[activity_type] sent them out of the wing")
 		qdel(activity)
 	TEST_ASSERT_EQUAL(length(prison.claims), 0, "Activities that were set up and dropped left claims behind")
-	for(var/activity_type in list(/datum/prisoner_activity/rest, /datum/prisoner_activity/rest/sleep, /datum/prisoner_activity/sit_bed, /datum/prisoner_activity/toilet, /datum/prisoner_activity/sink, /datum/prisoner_activity/basketball, /datum/prisoner_activity/read, /datum/prisoner_activity/water, /datum/prisoner_activity/chat, /datum/prisoner_activity/pace, /datum/prisoner_activity/window, /datum/prisoner_activity/wander))
+	for(var/activity_type in list(/datum/prisoner_activity/rest, /datum/prisoner_activity/rest/sleep, /datum/prisoner_activity/sit_cell, /datum/prisoner_activity/toilet, /datum/prisoner_activity/sink, /datum/prisoner_activity/basketball, /datum/prisoner_activity/read, /datum/prisoner_activity/water, /datum/prisoner_activity/chat, /datum/prisoner_activity/pace, /datum/prisoner_activity/window, /datum/prisoner_activity/wander))
 		TEST_ASSERT(activity_type in set_up, "[activity_type] could not be set up in a fresh wing")
 	// Picking by needs, personality and what is free always gives something valid.
 	for(var/i in 1 to 30)
@@ -457,6 +457,36 @@
 	TEST_ASSERT_EQUAL(nap.tick(1), 0, "Resting ended at once") // ACTIVITY_CONTINUE
 	talker.end_activity(cancel_ai = FALSE)
 	TEST_ASSERT_NULL(talker.buckled, "Getting up left them in bed")
+
+	// Sitting in their cell: in its chair, facing the way it does; the bed is for lying down.
+	var/obj/structure/chair/cell_chair = talker.cell.chair()
+	TEST_ASSERT_NOTNULL(cell_chair, "The talker's cell has no chair")
+	var/datum/prisoner_activity/sit_cell/sitting = talker.start_activity(new /datum/prisoner_activity/sit_cell(talker))
+	TEST_ASSERT(sitting.setup(), "Sitting in the cell could not be set up")
+	TEST_ASSERT_EQUAL(sitting.spot, get_turf(cell_chair), "Sitting in the cell did not go to its chair")
+	talker.forceMove(sitting.spot)
+	sitting.arrive()
+	TEST_ASSERT_EQUAL(talker.buckled, cell_chair, "Sitting in the cell did not put them in its chair")
+	TEST_ASSERT_EQUAL(talker.dir, cell_chair.dir, "Sitting in the chair, they did not face the way it does")
+	TEST_ASSERT_EQUAL(sitting.tick(1), 0, "Sitting ended at once") // ACTIVITY_CONTINUE
+	talker.end_activity(cancel_ai = FALSE)
+	TEST_ASSERT_NULL(talker.buckled, "Getting up left them in the chair")
+	// With the chair gone they lie on their bed instead, never stand on it.
+	var/turf/chair_turf = get_turf(cell_chair)
+	var/chair_dir = cell_chair.dir
+	qdel(cell_chair)
+	TEST_ASSERT_NULL(talker.cell.chair(), "The cell still has a chair")
+	sitting = talker.start_activity(new /datum/prisoner_activity/sit_cell(talker))
+	TEST_ASSERT(sitting.setup(), "With the chair gone, sitting in the cell could not be set up")
+	TEST_ASSERT_EQUAL(sitting.spot, get_turf(talker.cell.bed()), "With the chair gone, they did not go to their bed")
+	talker.forceMove(sitting.spot)
+	sitting.arrive()
+	TEST_ASSERT_EQUAL(talker.buckled, talker.cell.bed(), "With the chair gone, they did not lie on their bed")
+	TEST_ASSERT_EQUAL(talker.body_position, LYING_DOWN, "On the bed with no chair, they were not lying down")
+	talker.end_activity(cancel_ai = FALSE)
+	var/obj/structure/chair/replacement = allocate(/obj/structure/chair, chair_turf)
+	replacement.setDir(chair_dir)
+	TEST_ASSERT_EQUAL(talker.cell.chair(), replacement, "A chair put back in the cell is not its chair")
 
 	// Reading: a book off the shelf, read in the chair by the bookcase.
 	talker.forceMove(prison_spot(home, 4, 8))

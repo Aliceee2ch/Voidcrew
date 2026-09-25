@@ -338,14 +338,13 @@
 		return null
 	return turret
 
-/// Where a rioter who gave up waits: their bed, or any free tile of their own cell they can walk to
+/// Where a rioter who gave up waits: their cell's chair or bed (home_seat()), or any free tile of their own cell they can walk to
 /mob/living/basic/outpost_prisoner/proc/own_cell_spot()
 	if(!cell)
 		return null
-	var/obj/structure/bed/bed = cell.bed()
-	var/turf/bed_turf = bed ? get_turf(bed) : null
-	if(bed_turf && walkable?[bed_turf] && (bed_turf == loc || !tile_taken(bed_turf)))
-		return bed_turf
+	var/obj/structure/seat = home_seat()
+	if(seat)
+		return get_turf(seat)
 	for(var/turf/tile as anything in cell.turfs)
 		if(walkable?[tile] && (tile == loc || !tile_taken(tile)))
 			return tile
@@ -385,7 +384,8 @@
 
 /**
  * Plans the walk after a turret's warning, from the trouble subtree: TRUE while they are on the
- * way. At the spot, or out of time, they stop; one who gave up and got to their bed sits on it.
+ * way. At the spot, or out of time, they stop; one who gave up and got to their cell's chair or
+ * bed sits down (sit_in_cell()).
  */
 /mob/living/basic/outpost_prisoner/proc/plan_turret_retreat(datum/ai_controller/controller)
 	if(!turret_retreat_spot)
@@ -401,10 +401,10 @@
 /mob/living/basic/outpost_prisoner/proc/finish_turret_retreat()
 	var/turf/spot = turret_retreat_spot
 	turret_retreat_spot = null
-	if(!surrendered_to_turret() || loc != spot || !cell?.contains(src) || !(locate(/obj/structure/bed) in loc))
+	if(!surrendered_to_turret() || loc != spot || !cell?.contains(src) || !((locate(/obj/structure/chair) in loc) || (locate(/obj/structure/bed) in loc)))
 		return
 	var/obj/machinery/door/door = cell.door()
-	sit_on_edge(door ? get_cardinal_dir(src, door) : SOUTH)
+	sit_in_cell(door ? get_cardinal_dir(src, door) : SOUTH)
 
 /// Walks to where they are backing off to
 /datum/ai_behavior/outpost_prisoner_turret_retreat

@@ -575,7 +575,7 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 
 /**
  * `prisoner` reads a letter they were handed: OUTPOST_MAIL_READ_TIME with their routine held,
- * unless `instant`, then the letter takes effect. Bad news sends them to sit on their bed a while.
+ * unless `instant`, then the letter takes effect. Bad news sends them to sit in their cell a while.
  * Returns the kind read, or null. Sleeps unless `instant`.
  */
 /datum/outpost_prison/proc/mail_read(mob/living/basic/outpost_prisoner/prisoner, obj/item/thing, instant = FALSE)
@@ -633,7 +633,7 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 	qdel(thing)
 	return kind
 
-/// Bad news: they go and sit on their bed for a while, if they can
+/// Bad news: they go and sit in their cell's chair (or on its bed) for a while, if they can
 /datum/outpost_prison/proc/mail_start_mull(mob/living/basic/outpost_prisoner/prisoner)
 	if(QDELETED(prisoner) || !prisoner.ai_running() || !prisoner.routine_allowed())
 		return FALSE
@@ -743,7 +743,7 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 
 // ===== ACTIVITIES =====
 
-/// A letter for them was left on a serving hatch: they fetch it, read it, and after bad news sit on their bed a while
+/// A letter for them was left on a serving hatch: they fetch it, read it, and after bad news sit in their cell a while
 /datum/prisoner_activity/fetch_mail
 	name = "fetching a letter"
 	weight = 0
@@ -754,7 +754,7 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 	/// Ticks spent waiting for the hatch, and seconds spent reading
 	var/waited = 0
 	var/read_for = 0
-	var/datum/weakref/bed_ref
+	var/datum/weakref/seat_ref
 
 /datum/prisoner_activity/fetch_mail/New(mob/living/basic/outpost_prisoner/doer, obj/item/thing)
 	. = ..(doer)
@@ -774,7 +774,7 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 		ends_at = INFINITY
 	if(stage == "mull")
 		var/obj/machinery/door/door = prisoner.cell?.door()
-		prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
+		prisoner.sit_in_cell(door ? get_cardinal_dir(prisoner, door) : SOUTH)
 		ends_at = world.time + rand(OUTPOST_MAIL_MULL_MIN, OUTPOST_MAIL_MULL_MAX) SECONDS
 	return TRUE
 
@@ -806,18 +806,17 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 				return ACTIVITY_CONTINUE
 			if(prison.mail_finish_reading(prisoner, thing) != "bad")
 				return ACTIVITY_DONE
-			// Bad news: back to their bed to think it over
-			var/obj/structure/bed/bed = prisoner.cell?.bed()
-			var/turf/bed_turf = bed ? get_turf(bed) : null
-			if(!bed_turf || !prisoner.walkable?[bed_turf] || !claim(bed))
+			// Bad news: back to their cell's chair (or bed) to think it over
+			var/obj/structure/seat = prisoner.home_seat()
+			if(!seat || !claim(seat))
 				return ACTIVITY_DONE
-			bed_ref = WEAKREF(bed)
+			seat_ref = WEAKREF(seat)
 			stage = "mull"
-			spot = bed_turf
+			spot = get_turf(seat)
 			return ACTIVITY_MOVE
 		if("mull")
-			var/obj/structure/bed/bed = bed_ref?.resolve()
-			if(!bed || prisoner.loc != bed.loc || world.time >= ends_at)
+			var/obj/structure/seat = seat_ref?.resolve()
+			if(!seat || prisoner.loc != seat.loc || world.time >= ends_at)
 				return ACTIVITY_DONE
 			return ACTIVITY_CONTINUE
 	return ACTIVITY_DONE
@@ -832,34 +831,31 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 			thing.forceMove(prisoner.drop_location())
 	return ..()
 
-/// After bad news in the post: sitting on the edge of their bed for a while
+/// After bad news in the post: sitting in their cell's chair (or on its bed) for a while
 /datum/prisoner_activity/mull_letter
 	name = "thinking over a letter"
 	weight = 0
 	interruptible = FALSE
 	min_duration = OUTPOST_MAIL_MULL_MIN SECONDS
 	max_duration = OUTPOST_MAIL_MULL_MAX SECONDS
-	var/datum/weakref/bed_ref
+	var/datum/weakref/seat_ref
 
 /datum/prisoner_activity/mull_letter/setup()
-	var/obj/structure/bed/bed = prisoner.cell?.bed()
-	var/turf/bed_turf = bed ? get_turf(bed) : null
-	if(!bed_turf || !prisoner.walkable?[bed_turf] || (bed_turf != prisoner.loc && prisoner.tile_taken(bed_turf)))
+	var/obj/structure/seat = prisoner.home_seat()
+	if(!seat || !claim(seat))
 		return FALSE
-	if(!claim(bed))
-		return FALSE
-	bed_ref = WEAKREF(bed)
-	spot = bed_turf
+	seat_ref = WEAKREF(seat)
+	spot = get_turf(seat)
 	return TRUE
 
 /datum/prisoner_activity/mull_letter/begin()
 	. = ..()
 	var/obj/machinery/door/door = prisoner.cell?.door()
-	prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
+	prisoner.sit_in_cell(door ? get_cardinal_dir(prisoner, door) : SOUTH)
 
 /datum/prisoner_activity/mull_letter/tick(seconds)
-	var/obj/structure/bed/bed = bed_ref?.resolve()
-	if(!bed || prisoner.loc != bed.loc)
+	var/obj/structure/seat = seat_ref?.resolve()
+	if(!seat || prisoner.loc != seat.loc)
 		return ACTIVITY_DONE
 	return ..()
 

@@ -9,8 +9,8 @@
 
 /// A turned wing comes with a tiny fan under its entrance, its yard bin and its office kit: the
 /// baton instead of handcuffs, the recharger, a mixed box of lights, flashlights, the cleaning kit,
-/// eight uniforms, a crowbar on the rack for the cell cisterns, and air scrubbers in the cells and
-/// the yard.
+/// eight uniforms, a crowbar on the rack for the cell cisterns, air scrubbers in the cells and the
+/// yard, and a chair in each cell.
 /datum/unit_test/voidcrew_outpost_prison_map_kit
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -128,6 +128,19 @@
 		TEST_ASSERT(prison.cell_block[get_turf(scrubber)], "An air scrubber is outside the cell block")
 		TEST_ASSERT(!scrubber.welded, "An air scrubber came welded shut")
 	TEST_ASSERT_EQUAL(length(prison.cells), 4, "The turned wing should have four cells")
+	// A plain chair in each cell for sitting, the bed being for lying down: off the bed, toilet and
+	// sink, not in the doorway, facing into the cell.
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		var/obj/structure/chair/seat = cell.chair()
+		TEST_ASSERT_NOTNULL(seat, "Cell [cell.number] has no chair")
+		TEST_ASSERT_EQUAL(seat.type, /obj/structure/chair, "Cell [cell.number]'s seat is a [seat.type], not a plain chair")
+		var/turf/seat_turf = get_turf(seat)
+		TEST_ASSERT(!(locate(/obj/structure/bed) in seat_turf) && !(locate(/obj/structure/toilet) in seat_turf) && !(locate(/obj/structure/sink) in seat_turf), "Cell [cell.number]'s chair shares a tile with its bed, toilet or sink")
+		for(var/direction in GLOB.cardinals)
+			var/turf/inside_door = get_step(cell.door_turf, direction)
+			if(cell.contains(inside_door))
+				TEST_ASSERT(seat_turf != inside_door, "Cell [cell.number]'s chair stands in the doorway")
+		TEST_ASSERT(cell.contains(get_step(seat, seat.dir)), "Cell [cell.number]'s chair faces out of the cell")
 	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
 		var/in_cell = 0
 		for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrubber as anything in scrubbers)

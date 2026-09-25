@@ -325,7 +325,7 @@
 			line += PRISON_TALK_ORDER_BRUTE_SHIFT
 	return line
 
-/// Asked back to their cell: to their own bed, to sit on its edge for a minute or so
+/// Asked back to their cell: to its chair (or with the chair taken, gone or out of reach, their bed) for a minute or so
 /datum/prisoner_activity/sent_to_cell
 	name = "sent back to their cell"
 	context = "sent_to_cell"
@@ -333,7 +333,7 @@
 	interruptible = FALSE
 	min_duration = PRISON_SENT_TO_CELL_MIN
 	max_duration = PRISON_SENT_TO_CELL_MAX
-	var/datum/weakref/bed_ref
+	var/datum/weakref/seat_ref
 
 /datum/prisoner_activity/sent_to_cell/setup()
 	var/datum/outpost_prison_cell/home = prisoner.cell
@@ -343,11 +343,10 @@
 		prisoner.prison?.refresh_prisoner_reach(prisoner)
 	if(!prisoner.walkable)
 		return FALSE
-	var/obj/structure/bed/bed = home.bed()
-	var/turf/bed_turf = bed ? get_turf(bed) : null
-	if(bed_turf && prisoner.walkable[bed_turf] && (bed_turf == prisoner.loc || !prisoner.tile_taken(bed_turf)) && claim(bed))
-		bed_ref = WEAKREF(bed)
-		spot = bed_turf
+	var/obj/structure/seat = prisoner.home_seat()
+	if(seat && claim(seat))
+		seat_ref = WEAKREF(seat)
+		spot = get_turf(seat)
 		return TRUE
 	for(var/turf/tile as anything in home.turfs)
 		if(prisoner.walkable[tile] && (tile == prisoner.loc || !prisoner.tile_taken(tile)))
@@ -357,10 +356,10 @@
 
 /datum/prisoner_activity/sent_to_cell/begin()
 	. = ..()
-	var/obj/structure/bed/bed = bed_ref?.resolve()
-	if(bed && prisoner.loc == bed.loc)
+	var/obj/structure/seat = seat_ref?.resolve()
+	if(seat && prisoner.loc == seat.loc)
 		var/obj/machinery/door/door = prisoner.cell?.door()
-		prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
+		prisoner.sit_in_cell(door ? get_cardinal_dir(prisoner, door) : SOUTH)
 
 /datum/prisoner_activity/sent_to_cell/tick(seconds)
 	if(!prisoner.cell?.contains(prisoner))

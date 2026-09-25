@@ -783,6 +783,14 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	var/obj/structure/bed/bed = bed_ref?.resolve()
 	return (bed && turf_set[get_turf(bed)]) ? bed : null
 
+/// A chair inside the cell: the one the map puts there, or any moved or built in since
+/datum/outpost_prison_cell/proc/chair()
+	for(var/turf/tile as anything in turfs)
+		for(var/obj/structure/chair/seat in tile)
+			if(!QDELETED(seat))
+				return seat
+	return null
+
 /datum/outpost_prison_cell/proc/contains(atom/thing)
 	return !!turf_set[get_turf(thing)]
 

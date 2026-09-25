@@ -866,6 +866,42 @@
 /mob/living/basic/outpost_prisoner/proc/is_crouching()
 	return !!has_offset(PRISONER_SITTING_OFFSET)
 
+/**
+ * Sits down where they stand in their cell: in the chair under them if nobody else is in it, else
+ * on the bed under them (lying on it, see sit_on_edge()), else crouching. In a chair they face the
+ * way it faces; `facing` is for the bed and the crouch. The bed is for lying down, so any sitting in
+ * the cell goes to the chair first (home_seat()).
+ */
+/mob/living/basic/outpost_prisoner/proc/sit_in_cell(facing)
+	var/obj/structure/chair/chair = locate() in loc
+	if(chair && (buckled == chair || !chair.has_buckled_mobs()) && sit_on(chair))
+		return
+	sit_on_edge(facing)
+
+/**
+ * Where they sit down in their own cell: its chair if they can use it (seat_usable()), else its bed
+ * on the same terms, lying on it. Null if the cell has neither they can use.
+ */
+/mob/living/basic/outpost_prisoner/proc/home_seat()
+	if(!cell)
+		return null
+	var/obj/structure/chair/chair = cell.chair()
+	if(chair && seat_usable(chair))
+		return chair
+	var/obj/structure/bed/bed = cell.bed()
+	if(bed && seat_usable(bed))
+		return bed
+	return null
+
+/// Whether they can walk to `seat` and use it: nobody else on its tile or in it, and nobody else has claimed it
+/mob/living/basic/outpost_prisoner/proc/seat_usable(obj/structure/seat)
+	var/turf/tile = get_turf(seat)
+	if(!tile || !walkable?[tile] || (tile != loc && tile_taken(tile)))
+		return FALSE
+	if(seat.has_buckled_mobs() && !(src in seat.buckled_mobs))
+		return FALSE
+	return !prison?.claimed_by_other(seat, src)
+
 // ===== FOOD =====
 
 /**

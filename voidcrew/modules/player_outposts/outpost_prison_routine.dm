@@ -508,32 +508,37 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	interruptible = FALSE
 	sleeping = TRUE
 
-/// Lying on their bed for a bit, awake (see sit_on_edge())
-/datum/prisoner_activity/sit_bed
-	name = "lying on their bed"
+/**
+ * Sitting in their cell for a bit: in its chair, or with the chair taken, gone or out of reach,
+ * lying on a bed awake (see sit_in_cell())
+ */
+/datum/prisoner_activity/sit_cell
+	name = "sitting in their cell"
 	leisure = TRUE
 	context = "idle"
 	weight = 6
 	min_duration = 20 SECONDS
 	max_duration = 60 SECONDS
-	var/datum/weakref/bed_ref
+	var/datum/weakref/seat_ref
 
-/datum/prisoner_activity/sit_bed/setup()
-	var/obj/structure/bed/bed = prisoner.find_bed()
-	if(!bed || !claim(bed))
+/datum/prisoner_activity/sit_cell/setup()
+	var/obj/structure/seat = prisoner.home_seat() || prisoner.find_bed()
+	if(!seat || !claim(seat))
 		return FALSE
-	bed_ref = WEAKREF(bed)
-	spot = get_turf(bed)
+	seat_ref = WEAKREF(seat)
+	spot = get_turf(seat)
+	if(istype(seat, /obj/structure/bed))
+		name = "lying on their bed"
 	return TRUE
 
-/datum/prisoner_activity/sit_bed/begin()
+/datum/prisoner_activity/sit_cell/begin()
 	. = ..()
 	var/obj/machinery/door/door = prisoner.cell?.door()
-	prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
+	prisoner.sit_in_cell(door ? get_cardinal_dir(prisoner, door) : SOUTH)
 
-/datum/prisoner_activity/sit_bed/tick(seconds)
-	var/obj/structure/bed/bed = bed_ref?.resolve()
-	if(!bed || prisoner.loc != bed.loc)
+/datum/prisoner_activity/sit_cell/tick(seconds)
+	var/obj/structure/seat = seat_ref?.resolve()
+	if(!seat || prisoner.loc != seat.loc)
 		return ACTIVITY_DONE
 	return ..()
 

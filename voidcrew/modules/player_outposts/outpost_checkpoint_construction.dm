@@ -866,6 +866,11 @@
 	if(istype(power_machine))
 		power_machine.connect_to_network()
 	attach_mergers(piece, merge_groups)
+	// Plumbing reconnects after a move only if it was connected when it left, and the hidden
+	// copy's load can leave an anchored machine switched off. Anchored plumbing is always on.
+	for(var/datum/component/plumbing/plumber as anything in piece.GetComponents(/datum/component/plumbing))
+		if(!plumber.active && piece.anchored)
+			plumber.enable()
 	// Smoothing is worked out from neighbours, and most of this piece's arrive after it.
 	if(piece.smoothing_flags & USES_SMOOTHING)
 		QUEUE_SMOOTH(piece)

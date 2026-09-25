@@ -33,7 +33,7 @@ Pay depends on how well each prisoner is looked after and on the conditions. Whe
 
 ## Trouble
 
-Unhappy prisoners argue, fight, threaten staff and climb over the hatches. If the yard stays unhappy it riots: the lights strobe red and every rioter pulls a shiv. A riot nobody deals with turns into a breakout. A prisoner who stays loose outside the wing for too long escapes, and the outpost is fined.
+Unhappy prisoners argue, fight, threaten staff and climb over the hatches. If the yard stays unhappy it riots: the lights strobe red and every rioter pulls a shiv. Shiv stabs and cuts can bleed, and armour helps. A riot nobody deals with turns into a breakout. A prisoner who stays loose outside the wing for too long escapes, and the outpost is fined.
 
 Nobody comes for the dead. A body left in the cell block upsets the other prisoners and keeps its cell empty until someone carries it out: to a morgue, out an airlock, anywhere outside the cell block. A death isn't fined, but prisoners take it hard when staff kill one of them.
 

@@ -42,7 +42,7 @@
 #define ACTIVITY_DONE 1
 
 /mob/living/basic/outpost_prisoner
-	// Swings at staff and each other; rioters with a shiv hit harder (update_melee()).
+	// Swings at staff and each other; rioters with a shiv hit harder, and can wound (update_melee()).
 	melee_damage_lower = PRISONER_PUNCH_MIN
 	melee_damage_upper = PRISONER_PUNCH_MAX
 	attack_verb_continuous = "punches"
@@ -736,24 +736,46 @@
 	update_melee()
 	return shiv
 
-/// Fists or a shiv
+/**
+ * Fists or a shiv, for the next blow. A shiv hits people as tg's glass shiv does in someone's hand,
+ * only harder: each blow a stab or a slash (even odds) with the shiv's wound bonus, so it can leave
+ * a puncture or a cut that bleeds. Fists are blunt and never wound. tg's basic mob attack
+ * (/mob/living/attack_animal()) hands these vars to apply_damage(); a basic mob's wound_bonus starts
+ * at CANT_WOUND, which is why a shiv never wounded anyone before. Blows at other prisoners are
+ * strike()'s own and take only the verb and sound from here.
+ */
 /mob/living/basic/outpost_prisoner/proc/update_melee()
 	if(has_shiv())
 		melee_damage_lower = PRISONER_SHIV_MIN
 		melee_damage_upper = PRISONER_SHIV_MAX
-		attack_verb_continuous = "stabs"
-		attack_verb_simple = "stab"
+		wound_bonus = PRISONER_SHIV_WOUND_BONUS
+		exposed_wound_bonus = PRISONER_SHIV_EXPOSED_WOUND_BONUS
 		attack_sound = 'sound/items/weapons/bladeslice.ogg'
 		attack_vis_effect = ATTACK_EFFECT_SLASH
-		sharpness = SHARP_POINTY
+		if(prob(50))
+			sharpness = SHARP_POINTY
+			attack_verb_continuous = "stabs"
+			attack_verb_simple = "stab"
+		else
+			sharpness = SHARP_EDGED
+			attack_verb_continuous = "slashes"
+			attack_verb_simple = "slash"
 	else
 		melee_damage_lower = PRISONER_PUNCH_MIN
 		melee_damage_upper = PRISONER_PUNCH_MAX
+		wound_bonus = CANT_WOUND
+		exposed_wound_bonus = 0
 		attack_verb_continuous = "punches"
 		attack_verb_simple = "punch"
 		attack_sound = pick('sound/items/weapons/punch1.ogg', 'sound/items/weapons/punch2.ogg', 'sound/items/weapons/punch3.ogg')
 		attack_vis_effect = ATTACK_EFFECT_PUNCH
 		sharpness = NONE
+
+// Every blow is set up afresh, whether the trouble AI (strike()) or the breakout AI (the outpost
+// patrol's melee) throws it: a new stab or slash, and never a shiv's edge on bare hands.
+/mob/living/basic/outpost_prisoner/melee_attack(atom/target, list/modifiers, ignore_cooldown = FALSE)
+	update_melee()
+	return ..()
 
 // ===== STRIKING =====
 
@@ -854,8 +876,8 @@
 	// Nobody puts the boot in on a prisoner who is already down, and no prisoner kills another.
 	if(other.can_be_dragged())
 		return FALSE
-	// A shiv (a stabbing, outpost_prison_incidents.dm) hits as hard as it does at staff.
-	var/damage = min(has_shiv() ? rand(PRISONER_SHIV_MIN, PRISONER_SHIV_MAX) : rand(PRISONER_FIGHT_HIT_MIN, PRISONER_FIGHT_HIT_MAX), other.health - 1)
+	// A shiv (a stabbing, outpost_prison_incidents.dm) hits harder than a fist, though not as hard as at staff.
+	var/damage = min(has_shiv() ? rand(PRISONER_STAB_MIN, PRISONER_STAB_MAX) : rand(PRISONER_FIGHT_HIT_MIN, PRISONER_FIGHT_HIT_MAX), other.health - 1)
 	do_attack_animation(other, attack_vis_effect)
 	playsound(other, attack_sound, 50, TRUE)
 	other.visible_message(span_danger("[src] [attack_verb_continuous] [other]!"))

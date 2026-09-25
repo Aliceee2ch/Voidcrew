@@ -665,11 +665,10 @@
  * tg's thought bubble, as a point uses, with the needed item's own sprite inset. A prisoner's pops up
  * now and then through their vis_contents, so it animates apart from them.
  *
- * It sits off their right shoulder, level with the head, rather than over it. tg's runechat starts
- * 32 pixels up (the message's pixel_z is the speaker's maptext_height) and draws on RUNECHAT_PLANE,
- * above this POINT_PLANE, so anything above the head is hidden behind what anyone says there. At
- * 0.85 scale the bubble is 27 pixels across, from 7 to 34 pixels up and 20 to 47 across, with its
- * trailing dots at their shoulder; the first line of a message starts at about 34.
+ * It sits over their head, a little to the right. At 0.85 scale it is 27 pixels across, from 29 to
+ * 55 pixels up and 10 to 36 across, its trailing dots on top of their head. tg's runechat starts 32
+ * pixels up and draws on RUNECHAT_PLANE, above this POINT_PLANE, so what they say would hide it;
+ * it is never up while they talk (hush_bubble()).
  */
 /obj/effect/abstract/outpost_thought
 	name = "thought"
@@ -679,13 +678,13 @@
 	appearance_flags = KEEP_APART | RESET_COLOR | RESET_ALPHA | RESET_TRANSFORM | PIXEL_SCALE
 	vis_flags = NONE
 	plane = POINT_PLANE
-	// Off their right shoulder, its trailing dots towards them
-	pixel_w = 18
-	pixel_z = 4
+	// Over their head, a little to the right, its trailing dots on top of it
+	pixel_w = 8
+	pixel_z = 26
 	alpha = 0
 	/// Size and height it settles at; it bobs 2 pixels above that
 	var/rest_scale = 0.85
-	var/rest_z = 4
+	var/rest_z = 26
 
 /// Shows a need's item and bounces up: it grows past full size, settles, bobs and fades
 /obj/effect/abstract/outpost_thought/proc/pop(need, atom/movable/owner)

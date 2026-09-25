@@ -735,7 +735,7 @@
 	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second))
 		TEST_ASSERT(istype(rioter.held_item, /obj/item/knife/shiv), "[rioter] has no shiv out")
 		TEST_ASSERT_EQUAL(rioter.bubble, "riot", "[rioter] shows the [rioter.bubble] bubble, not the shiv")
-		TEST_ASSERT_EQUAL(rioter.melee_damage_lower, 7, "A shiv does not hit harder") // PRISONER_SHIV_MIN
+		TEST_ASSERT_EQUAL(rioter.melee_damage_lower, 10, "A shiv does not hit harder") // PRISONER_SHIV_MIN
 		TEST_ASSERT_EQUAL(prison.prisoner_pay_rate(rioter), 0, "A rioter earned a stipend")
 	var/list/riot_data = console.ui_data(warden)
 	TEST_ASSERT_EQUAL(riot_data["alarm"], "riot", "The console alarm is [riot_data["alarm"]]")
@@ -789,7 +789,7 @@
 	TEST_ASSERT(first.confront(staff_door), "A rioter could not hit the staff door")
 	TEST_ASSERT_EQUAL(staff_door.get_integrity(), door_before - 10, "A rioter's blow did [door_before - staff_door.get_integrity()] to the staff door, not 10") // PRISON_RIOT_DOOR_DAMAGE
 	staff_door.repair_damage(staff_door.max_integrity)
-	// Smashing: a light breaks, a table takes damage, staff get the shiv (7-10).
+	// Smashing: a light breaks, a table takes damage, staff get the shiv (10-15).
 	var/obj/machinery/light/yard_light = locate() in prison_spot(home, 5, 11)
 	TEST_ASSERT_NOTNULL(yard_light, "The yard light is not where the map puts it")
 	first.forceMove(prison_spot(home, 5, 10))
@@ -803,7 +803,7 @@
 	var/brute_before = warden.getBruteLoss()
 	first.confront(warden)
 	var/stabbed = warden.getBruteLoss() - brute_before
-	TEST_ASSERT(stabbed >= 7 && stabbed <= 10, "A shiv did [stabbed] brute, not 7-10") // PRISONER_SHIV_MIN/MAX
+	TEST_ASSERT(stabbed >= 10 && stabbed <= 15, "A shiv did [stabbed] brute, not 10-15") // PRISONER_SHIV_MIN/MAX
 	warden.forceMove(prison_spot(home, 8, 4))
 	warden.fully_heal()
 
@@ -1513,4 +1513,111 @@
 	TEST_ASSERT_NOTNULL(guard, "The guard did not arrive")
 	TEST_ASSERT(!prisoner.may_react_to_hit(guard), "A guard's blow gets a reaction")
 	prison.forced_hit_reaction = null
+	settle_prison_air(home)
+
+// ===== SHIV BLOWS =====
+
+/**
+ * A shiv at a person: 10-15 brute, each blow a stab or a slash with the shiv's wound bonus, so it
+ * can leave a puncture or a cut that bleeds. Fists stay blunt and never wound. A guard takes five
+ * blows and is still on duty; a stab at another prisoner stays at 7-10.
+ */
+/datum/unit_test/voidcrew_outpost_prison_shiv_blows
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+	/// What the last blow on the test player handed apply_damage()
+	var/list/last_blow
+
+/datum/unit_test/voidcrew_outpost_prison_shiv_blows/proc/note_blow(datum/source, damage, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness)
+	SIGNAL_HANDLER
+	last_blow = list("damage" = damage, "type" = damagetype, "wound_bonus" = wound_bonus, "exposed" = exposed_wound_bonus, "sharpness" = sharpness)
+
+/// One blow from `prisoner` at a freshly healed `warden`; returns the brute it did
+/datum/unit_test/voidcrew_outpost_prison_shiv_blows/proc/blow(mob/living/basic/outpost_prisoner/prisoner, mob/living/carbon/human/warden)
+	warden.fully_heal()
+	last_blow = null
+	prisoner.strike(warden)
+	return warden.getBruteLoss()
+
+/datum/unit_test/voidcrew_outpost_prison_shiv_blows/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("shivowner")
+	TEST_ASSERT_NOTNULL(home, "The shiv test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_prisoner(prison, prison_spot(home, 8, 8), "grumpy")
+	var/mob/living/carbon/human/warden = make_player(prison_spot(home, 9, 8), "shivowner")
+	RegisterSignal(warden, COMSIG_MOB_APPLY_DAMAGE, PROC_REF(note_blow))
+	// A body that takes any wound a blow is able to give, so whether it can wound is not left to the
+	// dice. Every part: tg picks where a basic mob's blow lands (attack_zone_randomiser), mostly the chest.
+	var/list/resistances = list()
+	for(var/obj/item/bodypart/part as anything in warden.bodyparts)
+		resistances[part] = part.wound_resistance
+		part.wound_resistance = -1000
+
+	// A punch: 5-8 brute (PRISONER_PUNCH_MIN/MAX), blunt, and it never wounds.
+	var/dealt = blow(prisoner, warden)
+	TEST_ASSERT_NOTNULL(last_blow, "The punch never reached apply_damage()")
+	TEST_ASSERT(dealt >= 5 && dealt <= 8, "A punch did [dealt] brute, not 5-8")
+	TEST_ASSERT_EQUAL(last_blow["type"], BRUTE, "A punch did [last_blow["type"]] damage")
+	TEST_ASSERT_EQUAL(last_blow["sharpness"], NONE, "A punch was sharp")
+	TEST_ASSERT_EQUAL(last_blow["wound_bonus"], CANT_WOUND, "A punch could wound")
+	TEST_ASSERT(!length(warden.all_wounds), "A punch wounded")
+
+	// A shiv: 10-15 brute (PRISONER_SHIV_MIN/MAX), a stab (a puncture) or a slash (a cut), with the
+	// glass shiv's wound bonus of 5 and 15 on bare skin (PRISONER_SHIV_WOUND_BONUS, _EXPOSED_WOUND_BONUS).
+	prisoner.draw_shiv()
+	TEST_ASSERT(prisoner.has_shiv(), "The prisoner did not draw a shiv")
+	var/stabs = 0
+	var/slashes = 0
+	for(var/i in 1 to 20)
+		dealt = blow(prisoner, warden)
+		TEST_ASSERT_NOTNULL(last_blow, "A shiv blow never reached apply_damage()")
+		TEST_ASSERT(dealt >= 10 && dealt <= 15, "A shiv did [dealt] brute, not 10-15")
+		TEST_ASSERT_EQUAL(last_blow["type"], BRUTE, "A shiv did [last_blow["type"]] damage")
+		TEST_ASSERT_EQUAL(last_blow["wound_bonus"], 5, "A shiv's wound bonus was [last_blow["wound_bonus"]], not 5")
+		TEST_ASSERT_EQUAL(last_blow["exposed"], 15, "A shiv's bare skin wound bonus was [last_blow["exposed"]], not 15")
+		var/datum/wound/wound = length(warden.all_wounds) ? warden.all_wounds[1] : null
+		switch(last_blow["sharpness"])
+			if(SHARP_POINTY)
+				stabs++
+				TEST_ASSERT_EQUAL(prisoner.attack_verb_continuous, "stabs", "A stab read as [prisoner.attack_verb_continuous]")
+				TEST_ASSERT(istype(wound, /datum/wound/pierce), "A stab left [wound ? wound.type : "no wound"], not a puncture")
+			if(SHARP_EDGED)
+				slashes++
+				TEST_ASSERT_EQUAL(prisoner.attack_verb_continuous, "slashes", "A slash read as [prisoner.attack_verb_continuous]")
+				TEST_ASSERT(istype(wound, /datum/wound/slash), "A slash left [wound ? wound.type : "no wound"], not a cut")
+			else
+				TEST_FAIL("A shiv blow had sharpness [last_blow["sharpness"]], neither a stab nor a slash")
+		TEST_ASSERT(warden.is_bleeding(), "A shiv wound does not bleed")
+	TEST_ASSERT(stabs && slashes, "Twenty shiv blows were [stabs] stabs and [slashes] slashes")
+
+	// A guard takes the same blows and is still on duty after five of them (down at 30 of 120 health).
+	warden.fully_heal()
+	warden.forceMove(prison_spot(home, 12, 4))
+	var/mob/living/basic/outpost_prison_guard/guard = guard_test_spawn(prison, prison_spot(home, 9, 8), awake = FALSE)
+	TEST_ASSERT_NOTNULL(guard, "The guard did not arrive")
+	for(var/i in 1 to 5)
+		TEST_ASSERT(prisoner.strike(guard), "The prisoner could not strike the guard")
+	TEST_ASSERT(guard.health >= 45 && guard.health <= 70, "Five shiv blows left a guard at [guard.health] health, not 45-70")
+	TEST_ASSERT_EQUAL(guard.phase, "present", "Five shiv blows put a guard [guard.phase]") // OUTPOST_GUARD_PRESENT
+
+	// At another prisoner a stab stays at 7-10 (PRISONER_STAB_MIN/MAX); the mercy rule is tested with fights.
+	guard.forceMove(prison_spot(home, 13, 4))
+	var/mob/living/basic/outpost_prisoner/other = trouble_prisoner(prison, prison_spot(home, 9, 8))
+	var/health_before = other.health
+	TEST_ASSERT(prisoner.strike(other), "The prisoner could not stab another prisoner")
+	TEST_ASSERT(health_before - other.health >= 7 && health_before - other.health <= 10, "A stab at a prisoner did [health_before - other.health], not 7-10")
+	other.forceMove(prison_spot(home, 13, 8))
+
+	// The shiv put away, fists are blunt again and never wound.
+	prisoner.drop_shiv()
+	TEST_ASSERT(!prisoner.has_shiv(), "The prisoner kept the shiv")
+	warden.forceMove(prison_spot(home, 9, 8))
+	dealt = blow(prisoner, warden)
+	TEST_ASSERT(dealt >= 5 && dealt <= 8, "A punch after the shiv did [dealt] brute, not 5-8")
+	TEST_ASSERT_EQUAL(last_blow["sharpness"], NONE, "A punch after the shiv was sharp")
+	TEST_ASSERT_EQUAL(last_blow["wound_bonus"], CANT_WOUND, "A punch after the shiv could wound")
+	TEST_ASSERT(!length(warden.all_wounds), "A punch after the shiv wounded")
+
+	for(var/obj/item/bodypart/part as anything in resistances)
+		part.wound_resistance = resistances[part]
+	UnregisterSignal(warden, COMSIG_MOB_APPLY_DAMAGE)
 	settle_prison_air(home)

@@ -238,18 +238,26 @@
 	TEST_ASSERT_NULL(prisoner.change_mob_type(/mob/living/basic/mouse, delete_old_mob = TRUE), "A prisoner was turned into another mob")
 	TEST_ASSERT(!QDELETED(prisoner), "Changing a prisoner's type deleted them")
 
-	// Strange reagent on a dead prisoner: they stay dead and the body is collected at once.
+	// Strange reagent on a dead prisoner: they stay dead, the attempt is logged, and nobody comes for the body.
 	var/mob/living/basic/outpost_prisoner/body = test_prisoner(prison, prison_spot(home, 12, 10))
 	body.death()
 	TEST_ASSERT_EQUAL(body.stat, DEAD, "The prisoner did not die")
-	var/datum/weakref/body_ref = WEAKREF(body)
 	var/datum/reagent/medicine/strange_reagent/instant/strange = allocate(__IMPLIED_TYPE__)
 	strange.expose_mob(body, TOUCH, 20)
 	TEST_ASSERT_EQUAL(body.stat, DEAD, "Strange reagent brought a dead prisoner back")
-	TEST_ASSERT_EQUAL(body.phase, "leaving", "A revival attempt did not get the body collected") // PRISONER_LEAVING
+	TEST_ASSERT(!QDELETED(body) && body.phase == "present" && (body in prison.prisoners), "A revival attempt took the body away") // PRISONER_PRESENT
 	var/list/newest = prison.entries[1]
 	TEST_ASSERT(findtext(newest["text"], "already logged the death"), "The revival attempt was not logged: [newest["text"]]")
-	TEST_ASSERT(wait_until(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(is_qdeleted_ref), body_ref), 6 SECONDS), "The body was never beamed out")
+	// Carried out of the cell block, the body leaves the roster, and it still stays dead.
+	var/turf/outside = prison.outside_spot_near(body)
+	TEST_ASSERT_NOTNULL(outside, "Nowhere outside the cell block to carry the body")
+	body.forceMove(outside)
+	prison.tick(1)
+	TEST_ASSERT(!(body in prison.prisoners), "The body carried out of the cell block stayed on the roster")
+	TEST_ASSERT(!body.can_be_revived(), "A dead prisoner off the roster could be revived")
+	strange.expose_mob(body, TOUCH, 20)
+	TEST_ASSERT_EQUAL(body.stat, DEAD, "Strange reagent brought back a dead prisoner off the roster")
+	qdel(body)
 	settle_prison_air(home)
 
 // ===== BREACHES =====

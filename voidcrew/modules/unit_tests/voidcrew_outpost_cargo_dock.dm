@@ -40,7 +40,8 @@
 
 /**
  * Stamps a cargo dock beside the claim's shell, trying each rotation's side in turn, without
- * going through the console. Returns the placed upgrade, or the last placement error.
+ * going through the console. Returns the placed upgrade, or the last placement error, which
+ * names the first tile that refused and what stood on it.
  */
 /datum/unit_test/proc/place_test_cargo_dock(obj/structure/overmap/dynamic/player_outpost/home, list/rotations = list(0, 90, 180, 270), mob/user)
 	var/datum/outpost_upgrade/cargo_dock/blueprint = home.outpost_upgrades["cargo_dock"]
@@ -55,7 +56,34 @@
 		error = home.place_outpost_upgrade(blueprint, corner, rotation, user)
 		if(!error)
 			return blueprint
+		error = "[error] [cargo_dock_blocker(home, blueprint, corner, rotation)]"
 	return error
+
+/**
+ * The first tile of a cargo dock footprint that refuses placement, and why. Placement here has
+ * failed rarely and at random rotations with "Position obstructed." (never reproduced in 168
+ * isolated placements), so a refusal reports what was in the way.
+ */
+/datum/unit_test/proc/cargo_dock_blocker(obj/structure/overmap/dynamic/player_outpost/home, datum/outpost_upgrade/blueprint, turf/corner, rotation)
+	var/list/footprint = blueprint.footprint_at(corner, rotation)
+	if(!footprint)
+		return "(no footprint at [rotation] degrees)"
+	var/list/protected = home.upgrade_protected_rects(corner.z)
+	for(var/turf/tile as anything in footprint["turfs"])
+		if(home.is_upgrade_turf_clear(tile, protected))
+			continue
+		var/list/why = list()
+		if(!home.is_turf_buildable(tile))
+			why += "outside the build area"
+		if(isclosedturf(tile))
+			why += "[tile.type]"
+		if(home.is_upgrade_ground_reserved(tile, protected))
+			why += "reserved ground"
+		for(var/atom/movable/thing as anything in tile)
+			if(thing.density || thing.anchored || isliving(thing))
+				why += "[thing] ([thing.type])"
+		return "(at [rotation] degrees, [tile.x],[tile.y]: [jointext(why, ", ")])"
+	return "(at [rotation] degrees, every tile is clear now)"
 
 /// Fresh rooms trade air for a while. Let it settle before the claim is torn down under SSair.
 /datum/unit_test/proc/settle_cargo_dock_air(list/room_turfs)

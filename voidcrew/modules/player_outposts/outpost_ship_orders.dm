@@ -315,6 +315,11 @@ GLOBAL_LIST_INIT(ship_order_refused_hulls, typecacheof(list(
 		log_game("[build_noun] of [ship_name] carried leftovers from the hidden copy: [names.Join(", ")]")
 		swept_leftovers = names
 
+/// A ship map can have fittings outside its rooms; nothing carries them out of the hidden copy.
+/datum/checkpoint_construction/order/discard_source()
+	clear_off_hull()
+	return ..()
+
 /// Batteries and fuel stay as the ship spawned with them.
 /datum/checkpoint_construction/order/provision_machine(obj/machinery/machine)
 	return

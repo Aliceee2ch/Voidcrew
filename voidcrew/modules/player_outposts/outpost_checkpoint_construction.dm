@@ -1171,7 +1171,6 @@
 
 /// Discards whatever is still hidden; before the frame moves that is the whole copy.
 /datum/checkpoint_construction/proc/discard_source()
-	clear_off_hull()
 	if(!frame_done && !QDELETED(port))
 		var/obj/docking_port/mobile/voidcrew/discarded = port
 		var/list/rooms = discarded.shuttle_areas?.Copy()
@@ -1192,7 +1191,8 @@
 /**
  * Objects mapped around the hull but outside its rooms are what a landing leaves behind. A
  * saved checkpoint has none; a ship map can (signs on the outer face of a wall). Nobody can
- * reach them here, so they are deleted rather than flung into space when the reservation goes.
+ * reach them here, so shipyard orders delete them rather than fling them into space when the
+ * reservation goes.
  */
 /datum/checkpoint_construction/proc/clear_off_hull()
 	var/datum/turf_reservation/space = source_reservation

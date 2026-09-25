@@ -568,6 +568,8 @@
 	TEST_ASSERT(!hulk.subdued, "Stamina put down a hulk that was not worn out")
 	hulk.adjustBruteLoss(hulk.maxHealth * 0.8)
 	TEST_ASSERT(hulk.exhausted, "A hulk at a fifth of its health was not exhausted") // OUTPOST_HULK_EXHAUSTED_AT
+	// The crew's batons: stamina is no damage on the ledger, so the recent blow is what counts.
+	hulk_ledger.note_attacker(owner)
 	hulk.apply_damage(120, STAMINA)
 	TEST_ASSERT(hulk.subdued, "Two baton hits' worth of stamina did not put the exhausted hulk down") // OUTPOST_HULK_STAMINA
 	TEST_ASSERT(hulk.stat != DEAD, "Subduing the hulk killed it")
@@ -634,6 +636,7 @@
 	var/datum/outpost_prison/prison = test_prison(home)
 	var/datum/bank_account/treasury = trouble_fund(home, 0)
 	var/turf/yard = prison_spot(home, 8, 8)
+	var/mob/living/carbon/human/crew = make_player(prison_spot(home, 12, 3), "apiowner")
 
 	// A specimen host: the changeling event runs it.
 	var/mob/living/basic/outpost_prisoner/host = test_prisoner(prison, yard)
@@ -673,18 +676,44 @@
 	qdel(slug)
 	TEST_ASSERT(prison.experiment_active(), "Losing the headslug ended the specimen")
 
-	// The horror put down by the crew: 3,900.
+	// The horror put down by the crew: 3,900. Nothing is on its ledger, so the crew's recent blow is what counts.
+	var/datum/component/experiment_damage_ledger/horror_ledger = horror.GetComponent(/datum/component/experiment_damage_ledger)
+	horror_ledger.note_attacker(crew)
 	TEST_ASSERT(prison.experiment_creature_down(horror), "Putting the horror down did not count")
 	TEST_ASSERT_EQUAL(treasury.account_balance, 4500, "The horror's bonus came to [treasury.account_balance - 600], not 3900") // OUTPOST_EXPERIMENT_BONUS_HORROR
 	TEST_ASSERT_EQUAL(prison.experiment_payload()["stage"], "contained", "The console does not show the horror contained")
 
-	// A headslug caught before it grows: 900.
+	// A headslug caught before it grows, after a blow from the crew: 900.
 	var/mob/living/basic/outpost_prisoner/second_host = test_prisoner(prison, yard)
 	TEST_ASSERT(prison.start_experiment("changeling", second_host, forced = TRUE), "The second specimen could not start")
 	var/mob/living/basic/headslug/early = allocate(/mob/living/basic/headslug/beakless, prison_spot(home, 8, 9))
 	prison.experiment_creature_appeared(early, "headslug")
+	var/datum/component/experiment_damage_ledger/early_ledger = early.GetComponent(/datum/component/experiment_damage_ledger)
+	early_ledger.note_attacker(crew)
 	early.death()
 	TEST_ASSERT_EQUAL(treasury.account_balance, 6000, "A caught headslug paid [treasury.account_balance - 5100], not 900") // OUTPOST_EXPERIMENT_BONUS_HEADSLUG
+
+	// Dead with nothing on its ledger and no blow from the crew: no bonus.
+	var/mob/living/basic/outpost_prisoner/unhit_host = test_prisoner(prison, yard)
+	TEST_ASSERT(prison.start_experiment("changeling", unhit_host, forced = TRUE), "The unhit specimen could not start")
+	var/mob/living/basic/headslug/unhit = allocate(/mob/living/basic/headslug/beakless, prison_spot(home, 8, 9))
+	prison.experiment_creature_appeared(unhit, "headslug")
+	var/balance = treasury.account_balance
+	unhit.death()
+	TEST_ASSERT_EQUAL(treasury.account_balance, balance, "A headslug nobody touched paid a containment bonus")
+
+	// Blown apart after one small hit from the crew: the blast did the rest, so no bonus.
+	var/mob/living/basic/outpost_prisoner/bombed_host = test_prisoner(prison, yard)
+	TEST_ASSERT(prison.start_experiment("changeling", bombed_host, forced = TRUE), "The bombed specimen could not start")
+	var/mob/living/basic/headslug/bombed = allocate(/mob/living/basic/headslug/beakless, prison_spot(home, 8, 9))
+	prison.experiment_creature_appeared(bombed, "headslug")
+	var/datum/component/experiment_damage_ledger/bombed_ledger = bombed.GetComponent(/datum/component/experiment_damage_ledger)
+	bombed_ledger.note_attacker(crew)
+	bombed_ledger.add_damage(1, TRUE)
+	balance = treasury.account_balance
+	bombed.gib()
+	TEST_ASSERT_EQUAL(treasury.account_balance, balance, "A headslug blown apart after one small hit paid a containment bonus")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "The blown apart headslug did not end the specimen")
 
 	// A host killed before the burst does not end the specimen: it bursts from the body.
 	var/mob/living/basic/outpost_prisoner/third_host = test_prisoner(prison, yard)
@@ -696,7 +725,7 @@
 	// The horror recovered by Kessler: 2,500.
 	var/mob/living/basic/late_horror = allocate(/mob/living/basic/mouse, prison_spot(home, 9, 9))
 	prison.experiment_creature_appeared(late_horror, "horror")
-	var/balance = treasury.account_balance
+	balance = treasury.account_balance
 	prison.experiment_recover()
 	TEST_ASSERT_EQUAL(balance - treasury.account_balance, 2500, "Recovering the horror cost [balance - treasury.account_balance], not 2500") // OUTPOST_EXPERIMENT_RECOVERY_HORROR
 

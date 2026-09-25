@@ -326,9 +326,15 @@
 		resolve_experiment("contained")
 	return TRUE
 
-/// A tracked creature died: that is it put down
+/**
+ * A tracked creature died: that is it put down. Gibbed or dusted (a bomb, a shuttle), it never took
+ * the health it still had as damage, so that goes on its ledger as damage that was not the players'.
+ */
 /datum/outpost_prison/proc/on_creature_death(mob/living/creature, gibbed)
 	SIGNAL_HANDLER
+	if(gibbed && creature.health > 0)
+		var/datum/component/experiment_damage_ledger/ledger = creature.GetComponent(/datum/component/experiment_damage_ledger)
+		ledger?.add_damage(creature.health, FALSE)
 	INVOKE_ASYNC(src, PROC_REF(experiment_creature_down), creature, FALSE)
 
 /// A tracked creature is gone. A serum creature deleted before it was put down or recovered takes the experiment with it.
@@ -949,12 +955,15 @@
 	else
 		other_damage += amount
 
-/// The players' share of its damage, 0 to 1; 1 if none is on record
+/**
+ * The players' share of its damage, 0 to 1. With no damage on record, 1 only if a player attacked
+ * it in the last OUTPOST_EXPERIMENT_PLAYER_RECENT (a hulk worn down with batons alone), else 0.
+ */
 /datum/component/experiment_damage_ledger/proc/player_share()
 	settle()
 	var/total = player_damage + other_damage + pending
 	if(total <= 0)
-		return 1
+		return (last_player_time && world.time - last_player_time <= OUTPOST_EXPERIMENT_PLAYER_RECENT) ? 1 : 0
 	return player_damage / total
 
 /// The player who hurt it last, if within `within`

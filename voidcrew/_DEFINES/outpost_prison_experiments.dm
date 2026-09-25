@@ -69,6 +69,8 @@
 
 // ----- Pay (fee when the creature shows, bonus when it is put down with the crew doing half the damage) -----
 #define OUTPOST_EXPERIMENT_PLAYER_SHARE 0.5
+/// A creature put down with no damage on record pays the bonus only if a player attacked it this recently
+#define OUTPOST_EXPERIMENT_PLAYER_RECENT (30 SECONDS)
 #define OUTPOST_EXPERIMENT_FEE_FLY 300
 #define OUTPOST_EXPERIMENT_FEE_HULK 600
 #define OUTPOST_EXPERIMENT_FEE_NIGHTMARE 600

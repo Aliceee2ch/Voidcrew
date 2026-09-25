@@ -365,8 +365,8 @@
 /**
  * A prisoner is being released after a stay that averaged `average` care x conditions. A stay kept
  * well ends with a wave at the nearest member and thanks; a poor one with a bitter word. Friends in
- * sight say goodbye, a second or so apart, and feel it; the leaver answers. Returns TRUE if any of
- * that replaced the usual release line.
+ * sight say goodbye, a second or so apart, and feel it; the leaver answers the first before the beam
+ * takes them. Returns TRUE if any of that replaced the usual release line.
  */
 /datum/outpost_prison/proc/on_prisoner_releasing(mob/living/basic/outpost_prisoner/prisoner, average)
 	var/spoke = FALSE
@@ -388,15 +388,18 @@
 			friends += other
 	if(!length(friends))
 		return spoke
-	// Goodbyes a second or two apart. The leaver answers the first before the beam
-	// (OUTPOST_PRISON_BEAM_TIME) takes them; later friends call after them anyway.
-	var/delay = 0.5 SECONDS
+	// The first goodbye and the leaver's answer come before the beam starts, since nobody talks while
+	// beaming out; later friends call after them anyway, a second or two apart.
+	var/delay = 0
 	for(var/mob/living/basic/outpost_prisoner/friend as anything in friends)
 		friend.adjust_mood(-PRISON_FAREWELL_MOOD)
 		friend.face_atom(prisoner)
-		addtimer(CALLBACK(src, PROC_REF(say_life_line), WEAKREF(friend), "farewell", WEAKREF(prisoner)), delay)
+		if(friend == friends[1])
+			say_life_line(WEAKREF(friend), "farewell", WEAKREF(prisoner))
+			say_life_line(WEAKREF(prisoner), "farewell_reply", WEAKREF(friend))
+		else
+			addtimer(CALLBACK(src, PROC_REF(say_life_line), WEAKREF(friend), "farewell", WEAKREF(prisoner)), delay)
 		delay += rand(10, 20)
-	addtimer(CALLBACK(src, PROC_REF(say_life_line), WEAKREF(prisoner), "farewell_reply", WEAKREF(friends[1])), OUTPOST_PRISON_BEAM_TIME - 1 SECONDS)
 	return TRUE
 
 /// The nearest member of the wing awake in sight of `prisoner`, or null

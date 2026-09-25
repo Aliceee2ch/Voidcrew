@@ -103,9 +103,16 @@
 			return TRUE
 	return FALSE
 
+/**
+ * Whether they may say anything now: awake and all the way here. Never while beaming in or out,
+ * when they are invisible or only half there.
+ */
+/mob/living/basic/outpost_prisoner/proc/may_speak()
+	return !QDELETED(src) && stat == CONSCIOUS && phase == PRISONER_PRESENT
+
 /// Says a line for `context`. Returns TRUE if they said something.
 /mob/living/basic/outpost_prisoner/proc/say_context(context, mob/living/basic/outpost_prisoner/other)
-	if(stat != CONSCIOUS || QDELETED(src))
+	if(!may_speak())
 		return FALSE
 	var/line = pick_line(context, other)
 	if(!line)
@@ -128,7 +135,7 @@
  * opener's replies. Returns TRUE if it started.
  */
 /mob/living/basic/outpost_prisoner/proc/start_conversation(mob/living/basic/outpost_prisoner/partner)
-	if(stat != CONSCIOUS || QDELETED(partner) || partner.stat != CONSCIOUS)
+	if(!may_speak() || QDELETED(partner) || !partner.may_speak())
 		return FALSE
 	var/list/conversations = outpost_prisoner_dialogue("conversations")
 	if(!length(conversations))
@@ -148,7 +155,7 @@
 /// The second half of a conversation
 /mob/living/basic/outpost_prisoner/proc/reply_in_conversation(line, datum/weakref/opener_ref)
 	var/mob/living/basic/outpost_prisoner/opener = opener_ref?.resolve()
-	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || QDELETED(opener) || get_dist(src, opener) > 5)
+	if(!may_speak() || QDELETED(opener) || get_dist(src, opener) > 5)
 		return FALSE
 	face_atom(opener)
 	last_line = line

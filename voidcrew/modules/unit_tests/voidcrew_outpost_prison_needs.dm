@@ -1084,7 +1084,9 @@
 		qdel(left_out)
 	for(var/obj/effect/decal/cleanable/food/crumbs/crumb in seat)
 		qdel(crumb)
-	// After a meal: the wrapper carried to the bin and put in.
+	// After a meal: the wrapper carried to the bin and put in. They finish on the stool, within
+	// reach of the wrapper on the table; nothing is picked up from further off.
+	prisoner.forceMove(seat)
 	var/datum/prisoner_activity/eat/meal = prisoner.start_activity(new /datum/prisoner_activity/eat(prisoner))
 	var/obj/item/trash/wrapper = new /obj/item/trash/fleet_ration(table)
 	TEST_ASSERT_EQUAL(meal.carry_to_bin(wrapper), 2, "The prisoner did not set off for the bin") // ACTIVITY_MOVE
@@ -1199,4 +1201,180 @@
 	TEST_ASSERT_EQUAL(prisoner.activity, game, "Catching the ball ended the game")
 	prisoner.end_activity(cancel_ai = FALSE)
 	TEST_ASSERT(isturf(ball.loc), "The ball stayed with the prisoner after the game")
+	settle_prison_air(home)
+
+// ===== NOTHING WARPS INTO THEIR HANDS =====
+
+/**
+ * Prisoners only take what is within arm's reach. Food two tiles away can't be reached or taken,
+ * and a meal set on it gives up rather than taking it; a hatch two tiles away stays shut. Beside
+ * the hatch, they wait for the window door to finish opening, face the counter and hold out a hand
+ * for a tick before the food is theirs. With someone on the level and their AI blinking off after a
+ * plan that queued nothing, they never help themselves off the hatch without walking over.
+ */
+/datum/unit_test/voidcrew_outpost_prison_reach
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_reach/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("reachowner")
+	TEST_ASSERT_NOTNULL(home, "The reach test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/turf/hatch_turf = prison_spot(home, 5, 6)
+	var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in hatch_turf
+	TEST_ASSERT_NOTNULL(hatch, "The serving hatch is not where the map puts it")
+	var/obj/machinery/door/window/yard_door = hatch.yard_windoor()
+	TEST_ASSERT_NOTNULL(yard_door, "The serving hatch has no yard-side window door")
+	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, prison_spot(home, 8, 8))
+	prison.refresh_reach()
+
+	// Two tiles away on the yard floor: out of reach, not taken, and it stays put.
+	var/turf/far_turf = prison_spot(home, 10, 8)
+	var/obj/item/food/prison_ration/far = allocate(__IMPLIED_TYPE__, far_turf)
+	TEST_ASSERT(prisoner.reachable[far_turf], "The far food is not somewhere the prisoner could walk to")
+	TEST_ASSERT_EQUAL(prisoner.try_reach(far), 0, "Food two tiles away was within reach") // PRISONER_REACH_FAILED
+	TEST_ASSERT(!prisoner.take_item(far), "The prisoner took food from two tiles away")
+	TEST_ASSERT_EQUAL(far.loc, far_turf, "Food two tiles away moved")
+	TEST_ASSERT_NULL(prisoner.held_item, "The prisoner holds food they could not reach")
+	// A meal already set on it gives up instead of taking it.
+	prisoner.set_hunger(30)
+	var/datum/prisoner_activity/eat/meal = prisoner.start_activity(new /datum/prisoner_activity/eat(prisoner))
+	meal.food_ref = WEAKREF(far)
+	meal.started = TRUE
+	TEST_ASSERT_EQUAL(meal.tick(1), 1, "A meal two tiles off did not give up") // ACTIVITY_DONE
+	prisoner.end_activity(cancel_ai = FALSE)
+	TEST_ASSERT_EQUAL(far.loc, far_turf, "A meal two tiles off was taken anyway")
+	qdel(far)
+
+	// Two tiles from the hatch: out of reach, and the yard side stays shut.
+	var/obj/item/food/prison_ration/hatch_food = allocate(__IMPLIED_TYPE__, hatch_turf)
+	prisoner.forceMove(prison_spot(home, 5, 8))
+	prison.refresh_prisoner_reach(prisoner)
+	TEST_ASSERT_EQUAL(prisoner.try_reach(hatch_food), 0, "The hatch was within reach from two tiles away") // PRISONER_REACH_FAILED
+	TEST_ASSERT(!prisoner.take_item(hatch_food), "The prisoner took food off the hatch from two tiles away")
+	TEST_ASSERT(yard_door.density && !yard_door.operating, "Reaching from two tiles away opened the hatch")
+	TEST_ASSERT_EQUAL(hatch_food.loc, hatch_turf, "Food on the hatch moved while nobody was beside it")
+
+	// Beside it: the door opens all the way first, then a hand goes out, then the food is taken.
+	prisoner.forceMove(prison_spot(home, 5, 7))
+	prison.refresh_prisoner_reach(prisoner)
+	TEST_ASSERT_EQUAL(prisoner.reach_for(hatch_food), 2, "Reaching for the shut hatch did not wait for it to open") // PRISONER_REACH_WAIT
+	TEST_ASSERT_EQUAL(prisoner.reach_for(hatch_food), 2, "Food was in reach while the window door was still opening") // PRISONER_REACH_WAIT
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_management, windoor_open), yard_door)), "The yard-side window door never opened")
+	TEST_ASSERT_EQUAL(prisoner.reach_for(hatch_food), 2, "The food was taken with no moment reaching for it") // PRISONER_REACH_WAIT
+	TEST_ASSERT_EQUAL(prisoner.dir, SOUTH, "The prisoner is not facing the hatch they reach into")
+	TEST_ASSERT_EQUAL(prisoner.reach_for(hatch_food), 1, "The food was out of reach after the hand went out") // PRISONER_REACH_OK
+	TEST_ASSERT(prisoner.take_item(hatch_food, announce = TRUE), "The prisoner could not take the food beside them")
+	TEST_ASSERT_EQUAL(prisoner.held_item, hatch_food, "The food is not in the prisoner's hands")
+	qdel(hatch_food)
+	TEST_ASSERT_NULL(prisoner.held_item, "The prisoner still holds the deleted food")
+
+	// Someone on the level while tg has their AI switched off after a failed plan: that is not
+	// "nobody here", so they don't help themselves off the hatch from across the yard.
+	prisoner.forceMove(prison_spot(home, 12, 8))
+	prison.refresh_prisoner_reach(prisoner)
+	prisoner.set_hunger(30)
+	var/obj/item/food/prison_ration/unwatched_food = allocate(__IMPLIED_TYPE__, hatch_turf)
+	TEST_ASSERT_NOTEQUAL(prisoner.ai_controller.ai_status, AI_STATUS_ON, "The prisoner's AI runs in a world with no players")
+	var/turf/level_turf = get_turf(prisoner)
+	var/mob/living/carbon/human/consistent/onlooker = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 8, 3))
+	SSmobs.clients_by_zlevel[level_turf.z] += onlooker
+	var/counted_running = prisoner.ai_running()
+	prison.tick(5)
+	var/ate_watched = QDELETED(unwatched_food)
+	SSmobs.clients_by_zlevel[level_turf.z] -= onlooker
+	TEST_ASSERT(counted_running, "A prisoner whose AI blinked off with someone on the level counted as asleep")
+	TEST_ASSERT(!ate_watched, "A prisoner ate food off the hatch from across the yard with someone on the level")
+	// With nobody on the level, nobody sees it: they still help themselves.
+	TEST_ASSERT(!prisoner.ai_running(), "A prisoner's AI counted as running with nobody on the level")
+	prison.tick(5)
+	TEST_ASSERT(QDELETED(unwatched_food), "A prisoner left alone on an empty level did not eat off the hatch")
+	settle_prison_air(home)
+
+// ===== NOTHING UNTIL THEY ARE ALL THE WAY IN =====
+
+/**
+ * A prisoner beaming in is arriving, and does nothing at all, until they have finished knitting back
+ * together: the beam's 3 seconds (OUTPOST_PRISON_BEAM_TIME) and then the knit's 1.2
+ * (TRANSPORTER_MATERIALISE_TIME). Until then the routine plans nothing, they say nothing, show no
+ * thought bubble and are held still; after it they are solid, free and able to talk. Beaming out,
+ * the same holds from the start. Guards and Kessler staff beaming in keep quiet too.
+ */
+/datum/unit_test/voidcrew_outpost_prison_beam_gates
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/knitting(mob/living/basic/outpost_prisoner/prisoner)
+	return !!prisoner.get_filter("transporter_dissolve")
+
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/all_in(mob/living/basic/outpost_prisoner/prisoner, mob/living/basic/outpost_prison_guard/guard, mob/living/basic/outpost_kessler_staff/doctor)
+	return prisoner.phase == "present" && guard.phase == "present" && !doctor.beaming
+
+/// Whether nothing about the prisoner can act, talk or show: the gates an arriving or leaving prisoner must fail
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/check_held(mob/living/basic/outpost_prisoner/prisoner, when)
+	var/datum/ai_planning_subtree/outpost_prisoner_routine/routine = GLOB.ai_subtrees[/datum/ai_planning_subtree/outpost_prisoner_routine]
+	TEST_ASSERT(!prisoner.routine_allowed(), "The routine was allowed [when]")
+	TEST_ASSERT_NULL(routine.SelectBehaviors(prisoner.ai_controller, 1), "The routine planned something [when]")
+	TEST_ASSERT_NULL(prisoner.activity, "The prisoner started an activity [when]")
+	TEST_ASSERT(!prisoner.may_speak(), "The prisoner could speak [when]")
+	TEST_ASSERT(!prisoner.say_context("arrival"), "The prisoner said something [when]")
+	TEST_ASSERT(HAS_TRAIT(prisoner, TRAIT_IMMOBILIZED), "The prisoner could move [when]")
+	TEST_ASSERT_NULL(prisoner.bubble, "A thought bubble was due [when]")
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "A thought bubble showed [when]")
+
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("beamgateowner")
+	TEST_ASSERT_NOTNULL(home, "The beam gate test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/basic/outpost_prisoner/other = test_prisoner(prison, prison_spot(home, 9, 8))
+	REMOVE_TRAIT(prisoner, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	prison.refresh_reach()
+	// Hungry (PRISONER_HUNGER_HUNGRY 40), so a meal and a thought bubble would both be due.
+	prisoner.arrival_brute = 0
+	prisoner.set_hunger(20)
+	prisoner.beam_in()
+	var/datum/outpost_guard_record/record = prison.add_guard_record(TRUE, /mob/living/basic/outpost_prison_guard)
+	var/mob/living/basic/outpost_prison_guard/guard = record?.guard
+	TEST_ASSERT_NOTNULL(guard, "The test guard did not beam in")
+	var/mob/living/basic/outpost_kessler_staff/researcher/doctor = allocate(/mob/living/basic/outpost_kessler_staff/researcher, prison_spot(home, 12, 3), null)
+	doctor.beam_in()
+
+	// In the beam: arriving, and held.
+	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "Beaming in did not make the prisoner arriving") // PRISONER_ARRIVING
+	check_held(prisoner, "in the beam")
+	TEST_ASSERT(!other.start_conversation(prisoner), "A prisoner opened a conversation with one still beaming in")
+	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard skipped the beam") // OUTPOST_GUARD_ARRIVING
+	TEST_ASSERT(!guard.say_guard("arrival"), "A guard still beaming in spoke")
+	TEST_ASSERT(!guard.on_duty(), "A guard still beaming in was on duty")
+	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher still beaming in spoke")
+
+	// The beam is over (OUTPOST_PRISON_BEAM_TIME 3 s) and they are knitting together: still arriving, still held.
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(knitting), prisoner), 5 SECONDS), "The prisoner never started knitting together after the beam")
+	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "The prisoner was present before they finished knitting together")
+	check_held(prisoner, "while knitting together")
+	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard was on duty before they finished knitting together")
+	TEST_ASSERT(!guard.say_guard("arrival"), "A guard spoke while knitting together")
+	TEST_ASSERT(doctor.beaming, "The researcher finished beaming in before the knit was over")
+	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher spoke while knitting together")
+
+	// All the way in: solid, free and able to talk.
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(all_in), prisoner, guard, doctor), 3 SECONDS), "The arrivals never finished beaming in")
+	TEST_ASSERT_EQUAL(prisoner.alpha, 255, "The prisoner is not solid once in")
+	TEST_ASSERT_NULL(prisoner.get_filter("transporter_dissolve"), "The prisoner still wears the knit once in")
+	TEST_ASSERT(!HAS_TRAIT(prisoner, TRAIT_IMMOBILIZED), "The prisoner is still held once in")
+	TEST_ASSERT(prisoner.routine_allowed(), "The prisoner's routine did not start once in")
+	TEST_ASSERT(prisoner.may_speak(), "The prisoner cannot speak once in")
+	TEST_ASSERT_EQUAL(prisoner.bubble, "hungry", "The hungry arrival has no thought bubble once in")
+	TEST_ASSERT(guard.on_duty(), "The guard is not on duty once in")
+	TEST_ASSERT_EQUAL(guard.alpha, 255, "The guard is not solid once in")
+	TEST_ASSERT(!HAS_TRAIT(doctor, TRAIT_IMMOBILIZED), "The researcher is still held once in")
+
+	// Beaming out: held, silent and without a bubble from the start.
+	prisoner.beam_out()
+	TEST_ASSERT_EQUAL(prisoner.phase, "leaving", "Beaming out did not make the prisoner leaving") // PRISONER_LEAVING
+	check_held(prisoner, "beaming out")
+	TEST_ASSERT(!other.start_conversation(prisoner), "A prisoner opened a conversation with one beaming out")
+	guard.beam_out()
+	TEST_ASSERT(!guard.say_guard("recalled"), "A guard beaming out spoke")
+	doctor.beam_out()
+	TEST_ASSERT_NULL(doctor.say_line("researcher_leave"), "A researcher beaming out spoke")
 	settle_prison_air(home)

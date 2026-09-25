@@ -162,12 +162,16 @@
 
 /**
  * A prisoner reaching for the counter: opens the yard side if it is shut. Returns TRUE once it is
- * open (or missing), FALSE while it is opening or when it cannot open (no power).
+ * all the way open (or missing), FALSE while it is opening or closing, or when it cannot open (no
+ * power). A window door stops blocking partway through its opening animation; nothing is taken
+ * across the counter until the animation has finished.
  */
 /obj/structure/table/reinforced/prison_hatch/proc/open_for_prisoner(mob/living/prisoner)
 	var/obj/machinery/door/window/yard_door = yard_windoor()
-	if(!yard_door || !yard_door.density)
+	if(!yard_door)
 		return TRUE
+	if(!yard_door.density)
+		return !yard_door.operating
 	if(!yard_door.operating && yard_door.hasPower() && yard_door.allowed(prisoner))
 		// Opens, then shuts itself a few seconds later.
 		INVOKE_ASYNC(yard_door, TYPE_PROC_REF(/obj/machinery/door/window, open_and_close))

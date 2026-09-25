@@ -232,6 +232,13 @@ GLOBAL_LIST_INIT(transporter_mass_blacklist, typecacheof(list(
 	QDEL_IN(motes, TRANSPORTER_MATERIALISE_TIME)
 	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(transporter_restore), target, original_alpha), TRANSPORTER_MATERIALISE_TIME)
 
+/**
+ * How long transporter_materialise() takes to knit an atom back together, for code included before
+ * this file that has to wait for it (the outpost prison's arrivals).
+ */
+/proc/transporter_materialise_time()
+	return TRANSPORTER_MATERIALISE_TIME
+
 /// Strips every beam effect and puts the atom back to the alpha it started with.
 /proc/transporter_restore(atom/movable/target, original_alpha = 255)
 	if(QDELETED(target))

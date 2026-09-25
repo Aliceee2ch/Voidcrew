@@ -7,9 +7,10 @@
  * in voidcrew_outpost_prison_helpers.dm.
  */
 
-/// A turned wing comes with its yard bin and its office kit: the baton instead of handcuffs, the
-/// recharger, light tubes, flashlights, the cleaning kit, eight uniforms, the mailbag on an office
-/// table by a serving hatch and a crowbar on the rack for the cell cisterns.
+/// A turned wing comes with a tiny fan under its entrance, its yard bin and its office kit: the
+/// baton instead of handcuffs, the recharger, light tubes, flashlights, the cleaning kit, eight
+/// uniforms, the mailbag on an office table by a serving hatch and a crowbar on the rack for the
+/// cell cisterns.
 /datum/unit_test/voidcrew_outpost_prison_map_kit
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -39,6 +40,21 @@
 	TEST_ASSERT_NOTNULL(prison, "The turned wing did not start a prison")
 	STOP_PROCESSING(SSprocessing, prison)
 	TEST_ASSERT(length(prison.cell_block), "The turned wing has no cell block")
+
+	// The one door out, the entrance, has a tiny fan: it can open onto vacuum or a planet. The
+	// cell, staff and hatch doors are all inside the wing and have none.
+	var/list/footprint = blueprint.footprint_at(bottom_left, 90)
+	var/list/doors_out = upgrade_exterior_doors(footprint["turfs"])
+	var/list/exterior = doors_out[1]
+	var/list/unfanned = doors_out[2]
+	TEST_ASSERT_EQUAL(length(exterior), 1, "The wing should have one door out, not [length(exterior)]")
+	TEST_ASSERT(get_turf(exterior[1]) in footprint["entrance"], "The wing's door out is not on its entrance edge")
+	TEST_ASSERT(!length(unfanned), "The wing's entrance has no tiny fan")
+	var/fans = 0
+	for(var/turf/tile as anything in footprint["turfs"])
+		for(var/obj/structure/fans/tiny/fan in tile)
+			fans++
+	TEST_ASSERT_EQUAL(fans, 1, "The wing should have one tiny fan, at its entrance, not [fans]")
 
 	// The yard bin: one, empty, beside a mess table and on the prisoners' side, with ground to stand on.
 	var/list/bins = wing_things(prison, /obj/structure/closet/crate/bin)

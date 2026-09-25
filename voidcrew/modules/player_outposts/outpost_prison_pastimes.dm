@@ -1221,10 +1221,13 @@
 			diners += guest
 	party_diners = list()
 	for(var/mob/living/basic/outpost_prisoner/diner as anything in diners)
-		var/obj/item/food/slice = new slice_type(center)
-		slice.pixel_x = rand(-6, 6)
-		slice.pixel_y = rand(-4, 6)
 		diner.drop_held_item()
+		// Beside the table they take theirs off it; further round, the slice is passed along to them.
+		// Nobody picks anything up from further off than they can reach (take_item()).
+		var/obj/item/food/slice = new slice_type(get_dist(diner, center) <= 1 ? center : diner)
+		if(slice.loc == center)
+			slice.pixel_x = rand(-6, 6)
+			slice.pixel_y = rand(-4, 6)
 		if(!diner.take_item(slice))
 			qdel(slice)
 			continue

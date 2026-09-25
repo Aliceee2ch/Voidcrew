@@ -435,7 +435,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	// Whoever wants it drops what they were idling at and comes over.
 	for(var/mob/living/basic/outpost_prisoner/wanting in prisoners)
 		var/datum/prisoner_activity/idle = wanting.activity
-		if(wanting.ai_controller?.ai_status != AI_STATUS_ON || !idle?.leisure || !idle.interruptible || idle.sleeping)
+		if(!wanting.ai_running() || !idle?.leisure || !idle.interruptible || idle.sleeping)
 			continue
 		if((food && wanting.wants_food()) || (suits && wanting.wants_clean_uniform()))
 			wanting.end_activity()
@@ -650,7 +650,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		if(prisoner.trouble != PRISONER_TROUBLE_LOOSE && SPT_PROB(OUTPOST_PRISON_MESS_CHANCE / 60, seconds_per_tick))
 			prisoner.make_mess()
 		// Nobody on the level, nobody to hear it.
-		if(prisoner.ai_controller?.ai_status == AI_STATUS_ON)
+		if(prisoner.ai_running())
 			prisoner.speech_tick()
 
 /**

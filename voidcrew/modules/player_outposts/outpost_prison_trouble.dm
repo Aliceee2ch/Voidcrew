@@ -119,9 +119,28 @@
 	RegisterSignal(src, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_projectile_prehit))
 	RegisterSignal(src, COMSIG_ATOM_ATTACK_HAND, PROC_REF(on_hand_used))
 
+/**
+ * Whether an outpost prison NPC's AI is running, which it is only while someone is on the level to
+ * see them. tg's controller also switches itself off for AI_FAILED_PLANNING_COOLDOWN after any plan
+ * that queued nothing (an activity that would not start, a walk given up, a prisoner knocked down),
+ * and that blink still counts as running while anyone is on the level. Counted as asleep, it let
+ * the empty-level shortcuts run in front of people: fend_for_self() had prisoners eat food and
+ * change into uniforms off a hatch across the yard, without walking over.
+ */
+/proc/outpost_prison_ai_running(mob/living/basic/npc)
+	var/datum/ai_controller/controller = npc?.ai_controller
+	if(!controller || npc.stat == DEAD)
+		return FALSE
+	if(controller.ai_status == AI_STATUS_ON)
+		return TRUE
+	var/turf/here = get_turf(npc)
+	if(!here || here.z > length(SSmobs.clients_by_zlevel))
+		return FALSE
+	return length(SSmobs.clients_by_zlevel[here.z]) > 0
+
 /// Whether their AI is running, which it is only while someone is on the level to see them
 /mob/living/basic/outpost_prisoner/proc/ai_running()
-	return ai_controller?.ai_status == AI_STATUS_ON
+	return outpost_prison_ai_running(src)
 
 /// Whether anything about trouble has them busy, so their routine waits: trouble itself, being talked to, or cuffs going on or off
 /mob/living/basic/outpost_prisoner/proc/in_trouble()

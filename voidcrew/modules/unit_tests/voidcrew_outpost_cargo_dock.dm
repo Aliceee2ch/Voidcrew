@@ -10,6 +10,33 @@
 
 // ===== SHARED HELPERS =====
 
+/**
+ * The doors of a placed upgrade room that lead out of it (a tile beside them is off the footprint)
+ * as list(exterior doors, those of them with no tiny fan on their tile). An upgrade's entrance can
+ * open onto vacuum or a planet, so every door out needs a fan to hold the air in while it is open.
+ */
+/datum/unit_test/proc/upgrade_exterior_doors(list/footprint_turfs)
+	var/list/inside = list()
+	for(var/turf/tile as anything in footprint_turfs)
+		inside[tile] = TRUE
+	var/list/exterior = list()
+	var/list/unfanned = list()
+	for(var/turf/tile as anything in footprint_turfs)
+		var/obj/machinery/door/door = locate() in tile
+		if(!door)
+			continue
+		var/leads_out = FALSE
+		for(var/direction in GLOB.cardinals)
+			if(!inside[get_step(tile, direction)])
+				leads_out = TRUE
+				break
+		if(!leads_out)
+			continue
+		exterior += door
+		if(!(locate(/obj/structure/fans/tiny) in tile))
+			unfanned += door
+	return list(exterior, unfanned)
+
 /// A docking port's landing rectangle as list(min_x, min_y, max_x, max_y)
 /datum/unit_test/proc/cargo_dock_rect(obj/docking_port/port)
 	var/list/coords = port.return_coords()
@@ -262,6 +289,11 @@
 		TEST_ASSERT_EQUAL(length(edge_airlocks), 1, "The cargo dock should have exactly one airlock at [rotation] degrees")
 		var/obj/machinery/door/airlock/entrance = edge_airlocks[1]
 		TEST_ASSERT(get_turf(entrance) in footprint["entrance"], "The airlock is not on the entrance edge at [rotation] degrees")
+		// The way in can open onto vacuum or a planet: a tiny fan under every door out holds the air.
+		var/list/doors_out = upgrade_exterior_doors(footprint["turfs"])
+		TEST_ASSERT(entrance in doors_out[1], "The entrance airlock does not count as a door out at [rotation] degrees")
+		var/list/unfanned = doors_out[2]
+		TEST_ASSERT(!length(unfanned), "[length(unfanned)] door(s) out of the cargo dock have no tiny fan at [rotation] degrees")
 
 		// One dock per claim: forget this one so the next rotation can be placed.
 		room_turfs += footprint["turfs"]

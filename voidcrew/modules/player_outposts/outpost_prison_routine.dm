@@ -47,6 +47,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 		return
 	var/datum/prisoner_activity/old = activity
 	activity = null
+	reaching_ref = null
 	last_activity_type = old.type
 	old.finish()
 	qdel(old)
@@ -213,7 +214,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
  * every few seconds by the prison while anyone is on the level. Returns TRUE if they went.
  */
 /mob/living/basic/outpost_prisoner/proc/check_sick_call()
-	if(ai_controller?.ai_status != AI_STATUS_ON)
+	if(!ai_running())
 		return FALSE
 	return start_sick_call()
 
@@ -1206,12 +1207,14 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	switch(stage)
 		if("fetch")
 			if(prisoner.held_item != meal)
-				switch(prisoner.try_reach(meal))
+				// Beside the hatch or the food, facing it, the window door all the way open: a hand
+				// goes out, and the tick after, they take it.
+				switch(prisoner.reach_for(meal))
 					if(PRISONER_REACH_WAIT)
 						return ++waited > 6 ? ACTIVITY_DONE : ACTIVITY_CONTINUE
 					if(PRISONER_REACH_FAILED)
 						return ACTIVITY_DONE
-				if(!prisoner.take_item(meal))
+				if(!prisoner.take_item(meal, announce = TRUE))
 					return ACTIVITY_DONE
 				if(prob(50))
 					prisoner.thank("thanks_food")
@@ -1293,7 +1296,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	var/obj/item/clothing/under/rank/prisoner/outpost/fresh = uniform_ref?.resolve()
 	if(!fresh || !prisoner.would_change_into(fresh))
 		return ACTIVITY_DONE
-	switch(prisoner.try_reach(fresh))
+	switch(prisoner.reach_for(fresh))
 		if(PRISONER_REACH_WAIT)
 			return ++waited > 6 ? ACTIVITY_DONE : ACTIVITY_CONTINUE
 		if(PRISONER_REACH_FAILED)
@@ -1431,12 +1434,12 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	if(QDELETED(litter))
 		return ACTIVITY_DONE
 	if(prisoner.held_item != litter)
-		switch(prisoner.try_reach(litter))
+		switch(prisoner.reach_for(litter))
 			if(PRISONER_REACH_WAIT)
 				return ++waited > 6 ? ACTIVITY_DONE : ACTIVITY_CONTINUE
 			if(PRISONER_REACH_FAILED)
 				return ACTIVITY_DONE
-		if(!prisoner.take_item(litter))
+		if(!prisoner.take_item(litter, announce = TRUE))
 			return ACTIVITY_DONE
 	var/obj/structure/closet/crate/bin/bin = bin_ref?.resolve()
 	spot = bin ? prisoner.approach_turf(bin) : null

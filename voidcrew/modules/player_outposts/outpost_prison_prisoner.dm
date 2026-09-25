@@ -96,6 +96,8 @@
 	var/grime_stage = 0
 	/// What they are carrying, held in their contents
 	var/obj/item/held_item
+	/// What they are holding a hand out for, one activity tick before they take it (see reach_for())
+	var/datum/weakref/reaching_ref
 	/// What they are doing now
 	var/datum/prisoner_activity/activity
 	/// The type of the last thing they did, so they vary it
@@ -221,7 +223,11 @@
 
 // ===== BEAMING IN AND OUT =====
 
-/// Materialises them where they stand, with the transporter's column, sounds and knit-together
+/**
+ * Materialises them where they stand, with the transporter's column, sounds and knit-together.
+ * They stay PRISONER_ARRIVING, and so do nothing at all (no walking, routine, trouble, speech or
+ * thought bubble), until finish_beam_in() at the very end of the knit.
+ */
 /mob/living/basic/outpost_prisoner/proc/beam_in()
 	phase = PRISONER_ARRIVING
 	alpha = 0
@@ -232,23 +238,34 @@
 		arrived_hurt = TRUE
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
+	// A bubble ignores their alpha: one already up would hang over an empty tile.
+	drop_bubble()
 	var/turf/spot = get_turf(src)
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_PRISON_BEAM_TIME + 1.7 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), OUTPOST_PRISON_BEAM_TIME)
+	addtimer(CALLBACK(src, PROC_REF(knit_in)), OUTPOST_PRISON_BEAM_TIME)
 
-/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
+/// The beam delivers them: the flash, and they knit back together from the feet up, still arriving
+/mob/living/basic/outpost_prisoner/proc/knit_in()
 	if(phase != PRISONER_ARRIVING)
 		return
-	phase = PRISONER_PRESENT
-	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	var/turf/spot = get_turf(src)
 	if(spot)
 		new /obj/effect/temp_visual/transporter_flash(spot)
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
 	transporter_materialise(src, 255)
+	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), transporter_materialise_time())
+
+/// Fully there: only now are they present, free to move, and say hello
+/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
+	if(phase != PRISONER_ARRIVING)
+		return
+	// Whatever is left of the knit, gone: they are solid from here on.
+	transporter_restore(src, 255)
+	phase = PRISONER_PRESENT
+	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
 	// How they came in, if it shows; otherwise hello.
 	if(arrived_hurt && say_context("arrival_hurt"))
@@ -257,7 +274,10 @@
 		return
 	say_context("arrival")
 
-/// Dematerialises them where they stand and deletes them at the end of the beam
+/**
+ * Dematerialises them where they stand and deletes them at the end of the beam. From the start
+ * they are PRISONER_LEAVING: held still, with no routine, trouble, speech or thought bubble.
+ */
 /mob/living/basic/outpost_prisoner/proc/beam_out()
 	if(phase == PRISONER_LEAVING)
 		return
@@ -270,6 +290,7 @@
 	pulledby?.stop_pulling()
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
+	drop_bubble()
 	var/turf/spot = get_turf(src)
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
@@ -555,6 +576,11 @@
 	if(thought)
 		vis_contents -= thought
 
+/// Takes any bubble down at once, with no fade: for when they beam in or out
+/mob/living/basic/outpost_prisoner/proc/drop_bubble()
+	deltimer(bubble_timer)
+	end_bubble()
+
 /mob/living/basic/outpost_prisoner/update_overlays()
 	. = ..()
 	if(grime_stage)
@@ -668,16 +694,46 @@
 
 // ===== HANDS =====
 
-/// Picks up an item within reach and carries it
-/mob/living/basic/outpost_prisoner/proc/take_item(obj/item/thing)
+/**
+ * Picks up `thing` and carries it. Only within arm's reach: on their own tile or beside them (and
+ * through an open window door, for a serving hatch), or in something or someone beside them. They
+ * turn to it, lean in, and it visibly goes into their hand. With `announce`, the room is told what
+ * they took and from where. Returns TRUE if they hold it.
+ */
+/mob/living/basic/outpost_prisoner/proc/take_item(obj/item/thing, announce = FALSE)
 	if(held_item || QDELETED(thing))
 		return FALSE
+	if(thing.loc != src)
+		var/turf/from = get_turf(thing)
+		// Never from further off: nothing flies into their hand.
+		if(!from || get_dist(src, from) > 1)
+			return FALSE
+		if(isturf(thing.loc) && thing.loc != loc && !Adjacent(thing))
+			return FALSE
+		face_atom(thing)
+		if(from != loc)
+			reach_animation(from)
+		thing.do_pickup_animation(src, from)
+		if(announce)
+			var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in from
+			var/message = hatch ? "[src] takes [thing] off [hatch]." : "[src] picks up [thing]."
+			visible_message(span_notice(message))
 	thing.forceMove(src)
 	if(thing.loc != src)
 		return FALSE
 	held_item = thing
 	update_appearance(UPDATE_OVERLAYS)
 	return TRUE
+
+/// Leans towards `target` for a moment, as a hand goes out to it
+/mob/living/basic/outpost_prisoner/proc/reach_animation(atom/target)
+	var/direction = get_dir(src, target)
+	if(!direction)
+		return
+	var/shift_x = (direction & EAST) ? 4 : ((direction & WEST) ? -4 : 0)
+	var/shift_y = (direction & NORTH) ? 4 : ((direction & SOUTH) ? -4 : 0)
+	animate(src, pixel_x = pixel_x + shift_x, pixel_y = pixel_y + shift_y, time = 1, easing = SINE_EASING, flags = ANIMATION_PARALLEL)
+	animate(pixel_x = pixel_x - shift_x, pixel_y = pixel_y - shift_y, time = 2, easing = SINE_EASING, flags = ANIMATION_PARALLEL)
 
 /// Puts down whatever they carry, on `where` or their own tile
 /mob/living/basic/outpost_prisoner/proc/drop_held_item(atom/where)
@@ -703,6 +759,23 @@
 		var/obj/machinery/door/window/yard_door = hatch.yard_windoor()
 		return (yard_door?.operating || yard_door?.hasPower()) ? PRISONER_REACH_WAIT : PRISONER_REACH_FAILED
 	return Adjacent(thing) ? PRISONER_REACH_OK : PRISONER_REACH_FAILED
+
+/**
+ * An activity reaching for `thing` where they stand, as try_reach() does, but never in one go: the
+ * first time it is in reach they turn to it and hold out a hand (PRISONER_REACH_WAIT), and only on
+ * the next call, about a second later, is it PRISONER_REACH_OK to take it.
+ */
+/mob/living/basic/outpost_prisoner/proc/reach_for(obj/item/thing)
+	var/result = try_reach(thing)
+	if(result != PRISONER_REACH_OK)
+		reaching_ref = null
+		return result
+	face_atom(thing)
+	if(reaching_ref?.resolve() == thing)
+		reaching_ref = null
+		return PRISONER_REACH_OK
+	reaching_ref = WEAKREF(thing)
+	return PRISONER_REACH_WAIT
 
 /// Sits on a chair, stool or toilet, facing `facing` if given
 /mob/living/basic/outpost_prisoner/proc/sit_on(obj/structure/seat, facing)
@@ -915,7 +988,8 @@
 		note_carer(user)
 		return NONE
 	var/obj/item/clothing/under/rank/prisoner/outpost/offered = tool
-	if(!istype(offered) || user.combat_mode || stat != CONSCIOUS)
+	// Not while they beam in or out, invisible or half there.
+	if(!istype(offered) || user.combat_mode || stat != CONSCIOUS || phase != PRISONER_PRESENT)
 		return NONE
 	if(cuffs)
 		balloon_alert(user, "cuffed")
@@ -933,13 +1007,22 @@
 	INVOKE_ASYNC(src, PROC_REF(thank), "thanks_uniform")
 	return ITEM_INTERACT_SUCCESS
 
-/// Picks up a cleaner uniform within reach and changes, leaving the old one in its place
+/**
+ * Picks up a cleaner uniform within arm's reach (their own tile or beside them) and changes, leaving
+ * the old one in its place. They turn to it, lean in, and it visibly leaves the floor or the hatch.
+ */
 /mob/living/basic/outpost_prisoner/proc/take_uniform(obj/item/clothing/under/rank/prisoner/outpost/fresh)
 	if(!would_change_into(fresh) || !isturf(fresh.loc) || !(fresh.loc == loc || Adjacent(fresh)))
 		return FALSE
 	var/turf/spot = fresh.loc
+	face_atom(fresh)
+	if(spot != loc)
+		reach_animation(spot)
+	fresh.do_pickup_animation(src, spot)
+	var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in spot
+	var/message = hatch ? "[src] takes a clean jumpsuit off [hatch], changes into it and leaves the old one there." : "[src] changes into a clean jumpsuit and leaves the old one behind."
 	swap_uniform(fresh, spot)
-	visible_message(span_notice("[src] changes into a clean jumpsuit and leaves the old one behind."))
+	visible_message(span_notice(message))
 	return TRUE
 
 /**
@@ -990,12 +1073,15 @@
 // ===== LEFT ALONE =====
 
 /**
- * tg AI sleeps while no player is on the level, but hunger and grime keep ticking. So while
- * their AI is not running, a prisoner helps themself to food and clean uniforms on a serving
- * hatch within reach, or food they carry, without the walk. Called every few seconds by the prison.
+ * tg AI sleeps while no player is on the level, but hunger and grime keep ticking. So with nobody
+ * on the level, a prisoner who is up and free helps themself to food and clean uniforms on a
+ * serving hatch they could walk to, or food they carry, without the walk: nobody is there to see
+ * it. Called every few seconds by the prison. With anyone on the level, and that includes the
+ * moments tg switches the AI off after a plan that queued nothing (ai_running()), they walk over
+ * and take things by hand instead.
  */
 /mob/living/basic/outpost_prisoner/proc/fend_for_self()
-	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison || ai_controller?.ai_status == AI_STATUS_ON || in_trouble() || cuffs)
+	if(!routine_allowed() || ai_running())
 		return
 	if(wants_food())
 		// A held cake saved for a party is not a meal (outpost_prison_pastimes.dm).

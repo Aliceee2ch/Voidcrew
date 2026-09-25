@@ -160,9 +160,9 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 /mob/living/basic/outpost_prison_guard/proc/on_duty()
 	return !QDELETED(src) && phase == OUTPOST_GUARD_PRESENT && stat == CONSCIOUS
 
-/// Whether their AI is running, which it is only while someone is on the level to see them
+/// Whether their AI is running, which it is only while someone is on the level to see them (see outpost_prison_ai_running())
 /mob/living/basic/outpost_prison_guard/proc/ai_running()
-	return ai_controller?.ai_status == AI_STATUS_ON
+	return outpost_prison_ai_running(src)
 
 /mob/living/basic/outpost_prison_guard/update_overlays()
 	. = ..()
@@ -284,7 +284,11 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 
 // ===== BEAMING IN AND OUT =====
 
-/// Materialises them where they stand, with the transporter's column and sounds, like a prisoner
+/**
+ * Materialises them where they stand, with the transporter's column and sounds, like a prisoner.
+ * They stay OUTPOST_GUARD_ARRIVING (held still, no routine, no responses, no speech) until
+ * finish_beam_in() at the very end of the knit.
+ */
 /mob/living/basic/outpost_prison_guard/proc/beam_in()
 	phase = OUTPOST_GUARD_ARRIVING
 	alpha = 0
@@ -293,19 +297,28 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_PRISON_BEAM_TIME + 1.7 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), OUTPOST_PRISON_BEAM_TIME)
+	addtimer(CALLBACK(src, PROC_REF(knit_in)), OUTPOST_PRISON_BEAM_TIME)
 
-/mob/living/basic/outpost_prison_guard/proc/finish_beam_in()
+/// The beam delivers them: the flash, and they knit back together from the feet up, still arriving
+/mob/living/basic/outpost_prison_guard/proc/knit_in()
 	if(phase != OUTPOST_GUARD_ARRIVING)
-		return FALSE
-	phase = OUTPOST_GUARD_PRESENT
-	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, OUTPOST_GUARD_BEAM_TRAIT)
+		return
 	var/turf/spot = get_turf(src)
 	if(spot)
 		new /obj/effect/temp_visual/transporter_flash(spot)
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
 	transporter_materialise(src, 255)
+	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), transporter_materialise_time())
+
+/// Fully there: only now are they on duty, and say so
+/mob/living/basic/outpost_prison_guard/proc/finish_beam_in()
+	if(phase != OUTPOST_GUARD_ARRIVING)
+		return FALSE
+	// Whatever is left of the knit, gone: they are solid from here on.
+	transporter_restore(src, 255)
+	phase = OUTPOST_GUARD_PRESENT
+	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, OUTPOST_GUARD_BEAM_TRAIT)
 	if(say_guard("arrival"))
 		prison?.note_speech()
 	return TRUE
@@ -406,9 +419,9 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 			usable += line
 	return usable
 
-/// Says a line for `context`. Returns TRUE if they said something.
+/// Says a line for `context`. Returns TRUE if they said something. Never while beaming in or out, invisible or half there.
 /mob/living/basic/outpost_prison_guard/proc/say_guard(context, list/values)
-	if(QDELETED(src) || stat == DEAD)
+	if(QDELETED(src) || stat == DEAD || phase == OUTPOST_GUARD_ARRIVING || phase == OUTPOST_GUARD_LEAVING)
 		return FALSE
 	var/line = pick_guard_line(context, values)
 	if(!line)

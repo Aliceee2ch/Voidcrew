@@ -6,8 +6,9 @@
  * doors and bolt buttons are protected outpost property; the airlocks can be broken, and one built
  * where a staff or cell door stood becomes that door again. Staff doors and the office side of a
  * hatch open for members of the wing, or for anyone but prisoners while the warden lets visitors
- * in; bolt buttons work for members only. Who counts as a member, where prisoners can stand and
- * what counts as their cell are in outpost_prison_containment.dm.
+ * in; bolt buttons work for members only. A prisoner passes a staff door only dragged by a member,
+ * down or cuffed (outpost_prisoner_escorted()). Who counts as a member, where prisoners can stand
+ * and what counts as their cell are in outpost_prison_containment.dm.
  */
 
 // ===== SERVING HATCH WINDOW DOORS =====
@@ -80,12 +81,14 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/door/window/brigdoor/outpost_prison_s
 		if(!(frame in frames_before) && !QDELETED(frame))
 			frame.deconstruct(FALSE)
 
-// Open or closed, a prisoner cannot walk through, even dragged.
+// Open or closed, a prisoner cannot walk through on their own. A member of the wing may drag one
+// through who is down or cuffed; nobody else may, visitors let in included.
 /obj/machinery/door/airlock/security/prison_staff/CanAllowThrough(atom/movable/mover, border_dir)
-	if(is_outpost_prisoner(mover))
+	if(is_outpost_prisoner(mover) && !outpost_prisoner_escorted(src, mover))
 		return FALSE
 	return ..()
 
+// Their own AI never paths through, dragged or not.
 /obj/machinery/door/airlock/security/prison_staff/CanAStarPass(to_dir, datum/can_pass_info/pass_info)
 	if(is_outpost_prisoner(pass_info.requester_ref?.resolve()))
 		return FALSE

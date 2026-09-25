@@ -487,7 +487,7 @@
 		var/obj/structure/checkpoint_drone_bay/cradle = length(cradles) ? cradles[(i - 1) % length(cradles) + 1] : null
 		drones += new /obj/effect/checkpoint_build_drone(cradle ? get_turf(cradle) : fallback, cradle)
 
-/// The survey is over: the drones leave their bays and the yard gets loud.
+/// The survey is over: the drones leave their bays.
 /datum/checkpoint_construction/proc/launch_drones()
 	if(!length(drones))
 		return
@@ -499,7 +499,6 @@
 		if(cradle && !(cradle in launched))
 			launched += cradle
 			cradle.launch()
-	start_yard_noise(bay.reservation)
 	play_to_checkpoint_yard(bay.reservation, CHECKPOINT_YARD_LAUNCH_SOUND)
 
 /// One bounded pass over the drones: travel, finish work, or take the next visit.
@@ -1298,8 +1297,6 @@
 		qdel(markers[marked])
 	markers.Cut()
 	var/site_remains = !QDELETED(bay) && !QDELETED(home)
-	if(bay)
-		stop_yard_noise(bay.reservation)
 	var/datum/checkpoint_drone_flock/flock = site_remains && length(drones) ? new(bay.reservation) : null
 	for(var/obj/effect/checkpoint_build_drone/drone as anything in drones)
 		if(drone?.visit)

@@ -111,6 +111,17 @@
 	record.care_times = null
 	first.note_carer(owner)
 	TEST_ASSERT(rep_score_is(record, 4), "note_carer() did not reach the record: [record.score], not 4")
+	// A dressing held to someone unhurt is not care; held to someone hurt, it is.
+	record.care_times = null
+	var/obj/item/stack/medical/gauze/dressing = allocate(/obj/item/stack/medical/gauze)
+	TEST_ASSERT(owner.put_in_active_hand(dressing), "The owner could not hold the dressing")
+	first.note_carer(owner)
+	TEST_ASSERT(rep_score_is(record, 4), "A dressing held to an unhurt prisoner counted: [record.score], not 4")
+	first.adjustBruteLoss(10)
+	first.note_carer(owner)
+	TEST_ASSERT(rep_score_is(record, 5), "A dressing for a hurt prisoner did not count: [record.score], not 5")
+	first.adjustBruteLoss(-10)
+	qdel(dressing)
 
 	// Stocking a hatch: +0.5, once per 5 minutes (PRISON_REP_STOCK, PRISON_REP_STOCK_GAP).
 	record.score = 0
@@ -582,11 +593,16 @@
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A second ask inside a minute did something")
 	TEST_ASSERT_EQUAL(length(prisoner.order_times), 1, "An ask inside the minute was counted")
 	prisoner.order_cooldown = 0
+	// Sitting on their own bed when asked: the old activity lets the bed go, the new one keeps it.
+	var/datum/prisoner_activity/sit_bed/sitting = new(prisoner)
+	TEST_ASSERT(sitting.setup(), "The prisoner could not sit on their bed")
+	prisoner.start_activity(sitting)
 	TEST_ASSERT(prisoner.talk_menu_order(owner), "A chatty prisoner at 45 did not go back to the cell")
 	var/datum/prisoner_activity/sent_to_cell/going = prisoner.activity
 	TEST_ASSERT(istype(going), "Going back to the cell is not what they're doing")
 	TEST_ASSERT(going.spot && prisoner.cell.contains(going.spot), "They're not headed into their own cell")
 	TEST_ASSERT(!going.leisure && !going.interruptible, "Being sent back is leisure or can be interrupted")
+	TEST_ASSERT_EQUAL(prison.claimant(prisoner.cell.bed()), prisoner, "Being sent back lost the claim on their own bed")
 	// The third ask inside five minutes costs 2 mood and is refused (PRISON_TALK_ORDER_SPAM_*).
 	prisoner.end_activity(cancel_ai = FALSE)
 	prisoner.order_cooldown = 0

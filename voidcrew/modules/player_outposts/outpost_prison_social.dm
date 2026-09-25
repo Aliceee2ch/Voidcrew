@@ -201,7 +201,10 @@
 
 /// `person` fed, clothed or treated `prisoner` by hand: once per prisoner per PRISON_REP_CARE_GAP
 /datum/outpost_prison/proc/note_staff_care(mob/person, mob/living/basic/outpost_prisoner/prisoner)
-	if(!prisoner)
+	if(!prisoner || !ismob(person))
+		return FALSE
+	// note_carer() runs as a dressing is offered, so a dressing held to someone unhurt is not care.
+	if(prisoner.health >= prisoner.maxHealth && istype(person.get_active_held_item(), /obj/item/stack/medical))
 		return FALSE
 	var/datum/prison_staff_record/record = rep_record_for(person, TRUE)
 	if(!record)

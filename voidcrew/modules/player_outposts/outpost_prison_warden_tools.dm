@@ -237,6 +237,8 @@
 	if(mood < talk_menu_order_line(user))
 		say_context("order_refuse")
 		return FALSE
+	// Done with what they were doing first: its claims go with it, not the new activity's bed.
+	end_activity()
 	var/datum/prisoner_activity/sent_to_cell/going = new(src)
 	if(!going.setup())
 		qdel(going)

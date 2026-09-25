@@ -573,9 +573,13 @@
 	appearance_flags = KEEP_APART | RESET_COLOR | RESET_ALPHA | RESET_TRANSFORM | PIXEL_SCALE
 	vis_flags = NONE
 	plane = POINT_PLANE
-	pixel_w = 14
-	pixel_z = 22
+	// Over their head, its trailing dots pointing down at it
+	pixel_w = 8
+	pixel_z = 26
 	alpha = 0
+	/// Size and height it settles at; it bobs 2 pixels above that
+	var/rest_scale = 0.6
+	var/rest_z = 26
 
 /// Shows a need's item and bounces up: it grows past full size, settles, bobs and fades
 /obj/effect/abstract/outpost_thought/proc/pop(need, atom/movable/owner)
@@ -594,18 +598,18 @@
 		overlays += inset
 	SET_PLANE_EXPLICIT(src, POINT_PLANE, owner)
 	alpha = 0
-	pixel_z = 14
-	transform = matrix().Scale(0.3)
+	pixel_z = rest_z - 6
+	transform = matrix().Scale(rest_scale * 0.3)
 	var/bob = max(1, (PRISONER_BUBBLE_SHOW - 0.5 SECONDS) / 2)
-	animate(src, alpha = 230, pixel_z = 22, transform = matrix().Scale(1.15), time = 0.3 SECONDS, easing = BACK_EASING | EASE_OUT)
-	animate(transform = matrix(), time = 0.2 SECONDS, easing = SINE_EASING)
-	animate(pixel_z = 24, time = bob, easing = SINE_EASING)
-	animate(pixel_z = 22, time = bob, easing = SINE_EASING)
-	animate(alpha = 0, pixel_z = 27, transform = matrix().Scale(0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
+	animate(src, alpha = 230, pixel_z = rest_z, transform = matrix().Scale(rest_scale * 1.15), time = 0.3 SECONDS, easing = BACK_EASING | EASE_OUT)
+	animate(transform = matrix().Scale(rest_scale), time = 0.2 SECONDS, easing = SINE_EASING)
+	animate(pixel_z = rest_z + 2, time = bob, easing = SINE_EASING)
+	animate(pixel_z = rest_z, time = bob, easing = SINE_EASING)
+	animate(alpha = 0, pixel_z = rest_z + 5, transform = matrix().Scale(rest_scale * 0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
 
 /// Fades out from wherever it is
 /obj/effect/abstract/outpost_thought/proc/fade()
-	animate(src, alpha = 0, pixel_z = 27, transform = matrix().Scale(0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
+	animate(src, alpha = 0, pixel_z = rest_z + 5, transform = matrix().Scale(rest_scale * 0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
 
 /// The item a thought bubble shows for a need
 /proc/outpost_prisoner_bubble_item_type(need)

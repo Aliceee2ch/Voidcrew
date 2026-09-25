@@ -50,6 +50,16 @@
 	TEST_ASSERT(!staff_door.allowed(prisoner), "The staff side opens for prisoners")
 	TEST_ASSERT(staff_door.allowed(warden), "The staff side wants an ID")
 	TEST_ASSERT(!hatch.both_sides_open(), "A shut hatch reads as open")
+	// Staff can throw onto the counter through the shut office window; a prisoner's throw and an item
+	// that isn't flying can't get through.
+	var/obj/item/food/prison_ration/tossed = allocate(__IMPLIED_TYPE__, prison_spot(home, 5, 4))
+	tossed.throwing = new /datum/thrownthing(tossed, hatch, get_dir(tossed, hatch), 5, 1, warden)
+	TEST_ASSERT(staff_door.CanAllowThrough(tossed, staff_door.dir), "A member's throw did not get through the shut office window")
+	tossed.throwing.thrower = WEAKREF(prisoner)
+	TEST_ASSERT(!staff_door.CanAllowThrough(tossed, staff_door.dir), "A prisoner's throw got through the office window")
+	QDEL_NULL(tossed.throwing)
+	TEST_ASSERT(!staff_door.CanAllowThrough(tossed, staff_door.dir), "An item that was not thrown got through the office window")
+	qdel(tossed)
 
 	// Food they can reach: on the hatch, yes, through their own window door; on the office floor, no.
 	prisoner.set_hunger(30)

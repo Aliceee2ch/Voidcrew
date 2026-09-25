@@ -121,7 +121,8 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	RegisterSignal(src, COMSIG_ATOM_CAN_BE_PULLED, PROC_REF(refuse_pull))
 	ADD_TRAIT(src, TRAIT_NO_CONTAINMENT, INNATE_TRAIT)
 	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, INNATE_TRAIT)
-	INVOKE_ASYNC(src, PROC_REF(guard_build_look))
+	// Next tick: spawn_guard() calls join() right after new, which sets the record's gender and face.
+	addtimer(CALLBACK(src, PROC_REF(guard_build_look)), 1)
 
 /mob/living/basic/outpost_prison_guard/Destroy()
 	end_response(cancel_ai = FALSE)
@@ -137,13 +138,11 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	leave_spot = null
 	return ..()
 
-/**
- * The guard's look. Until the lead merges the main-branch fixes this uses tg's outfit appearance,
- * the same body for every guard; then it switches to M1's set_outpost_npc_look() with
- * `record.look_number` and the guard's gender.
- */
+/// Dresses them as their own person in the guard's outfit (outpost_npc_looks.dm): the record's face and gender. Can sleep.
 /mob/living/basic/outpost_prison_guard/proc/guard_build_look()
-	set_dynamic_human_appearance(list(src, /datum/outfit/outpost_prison_guard))
+	set_outpost_npc_look(src, /datum/outfit/outpost_prison_guard, gender, record ? record.look_number : 1)
+	if(QDELETED(src))
+		return
 	update_appearance(UPDATE_OVERLAYS)
 
 /// Takes on the name, rank, gender and personality of the guard on the payroll
@@ -742,7 +741,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	var/surname = "Hale"
 	var/gender = MALE
 	var/personality = "by_the_book"
-	/// Which face they have, for M1's look helper once it is merged
+	/// Which face they have (set_outpost_npc_look())
 	var/look_number = 1
 	/// An admin's guard: no fee, no wage, not counted against OUTPOST_GUARD_MAX
 	var/free = FALSE
@@ -765,7 +764,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	var/list/personalities = outpost_guard_dialogue("guard_personalities")
 	if(length(personalities))
 		personality = pick(personalities)
-	look_number = rand(1, 1000)
+	look_number = random_outpost_npc_look_number()
 
 /datum/outpost_guard_record/Destroy()
 	if(guard?.record == src)

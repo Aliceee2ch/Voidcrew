@@ -19,6 +19,13 @@
  * - outpost_prison_trouble.dm and outpost_prison_riot.dm: mood, fights, riots and escapes;
  * - outpost_prison_experiments.dm: the researcher's experiments.
  *
+ * Supplies: prisoners take food and clean uniforms only from the serving hatches (or from a
+ * person's hand), never off a floor or a table, so the hatches, OUTPOST_PRISON_HATCH_CAPACITY
+ * items each, are the wing's only stockpile. The office supply dispenser (outpost_prison_fixtures.dm)
+ * sells rations, a round of rations straight onto a hatch, bruise packs and uniforms. Stocking a
+ * hatch gets a call-out from the yard; a hatch left empty while prisoners wait for it is reported
+ * on the outpost radio.
+ *
  * Everything that advances with time goes through tick(seconds), which process() calls every
  * second, so tests can advance a prison by minutes in one call. The random mess prisoners leave,
  * drips of blood and what they say come from process() alone. Beams run on timers.
@@ -47,7 +54,22 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	var/list/fixtures = list()
 	/// REF() of anything a prisoner is using -> that prisoner
 	var/list/claims = list()
+	/// Prisoners waiting for food and for a clean uniform that no hatch in their reach has, as of the last supply check
+	var/waiting_for_food = 0
+	var/waiting_for_suits = 0
+	/// Seconds until the outpost radio may report an empty hatch again
+	var/hatch_warning_left = 0
+	/// Prisoners who sat down to eat at a mess table -> world.time, for shared meals
+	var/list/table_eaters = list()
+	/// world.time of each item residents ordered from the supply dispenser, within the order window
+	var/list/resident_orders = list()
 	COOLDOWN_DECLARE(wing_speech_cooldown)
+	/// Between "Food's up!" call-outs
+	COOLDOWN_DECLARE(hatch_call_cooldown)
+	/// Between "mess hall" lines
+	COOLDOWN_DECLARE(mess_hall_cooldown)
+	/// Between the mood a staff member's basket gives the players
+	COOLDOWN_DECLARE(staff_basket_cooldown)
 
 /datum/outpost_prison/New(datum/outpost_upgrade/prison/owner)
 	. = ..()
@@ -78,6 +100,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	claims.Cut()
 	fixtures.Cut()
 	cell_block.Cut()
+	table_eaters.Cut()
 	if(upgrade?.prison == src)
 		upgrade.prison = null
 	upgrade = null
@@ -232,44 +255,144 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 // ===== SUPPLIES AND FURNITURE =====
 
-/// Advances supplies by `seconds`: every PRISON_SUPPLY_REFRESH_SECONDS, prisoners whose AI is asleep help themselves
+/**
+ * Advances supplies by `seconds`: every PRISON_SUPPLY_REFRESH_SECONDS, prisoners whose AI is asleep
+ * help themselves, hurt prisoners go to anyone holding dressings, and the hatches are checked for
+ * prisoners left waiting (reported on the radio at most every OUTPOST_PRISON_HATCH_WARNING_GAP).
+ */
 /datum/outpost_prison/proc/supply_tick(seconds)
+	hatch_warning_left = max(0, hatch_warning_left - seconds)
 	supply_clock += seconds
 	if(supply_clock < PRISON_SUPPLY_REFRESH_SECONDS)
 		return
 	supply_clock = 0
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
 		prisoner.fend_for_self()
+		prisoner.check_sick_call()
+	check_hatch_shortage()
+
+/// The serving hatches, as of the last furniture refresh
+/datum/outpost_prison/proc/hatches()
+	var/list/found = list()
+	for(var/obj/structure/table/reinforced/prison_hatch/hatch in fixtures_of("hatch"))
+		if(!QDELETED(hatch) && isturf(hatch.loc))
+			found += hatch
+	return found
 
 /// What the serving hatches hold: list("meals", "clean_suits", "dirty_suits", "capacity", "lasts_minutes")
 /datum/outpost_prison/proc/hatch_stock()
+	var/meals = 0
+	var/clean_suits = 0
+	var/dirty_suits = 0
+	var/list/all_hatches = hatches()
+	for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in all_hatches)
+		for(var/obj/item/thing in hatch.loc)
+			if(istype(thing, /obj/item/food))
+				meals++
+				continue
+			var/obj/item/clothing/under/rank/prisoner/outpost/suit = thing
+			if(!istype(suit))
+				continue
+			if(suit.grime < PRISONER_GRIME_DIRTY)
+				clean_suits++
+			else
+				dirty_suits++
+	// How long it lasts at the usual rates, for the prisoners here (or a full wing while intake is open).
+	var/eaters = 0
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.phase != PRISONER_ARRIVING && prisoner.stat != DEAD && prisoner.trouble != PRISONER_TROUBLE_LOOSE)
+			eaters++
+	if(!eaters && intake_open)
+		eaters = capacity
+	var/lasts
+	if(eaters)
+		lasts = round(min(meals / (OUTPOST_PRISON_MEAL_RATE * eaters), clean_suits / (OUTPOST_PRISON_SUIT_RATE * eaters)))
 	return list(
-		"meals" = 0,
-		"clean_suits" = 0,
-		"dirty_suits" = 0,
-		"capacity" = 0,
-		"lasts_minutes" = null,
+		"meals" = meals,
+		"clean_suits" = clean_suits,
+		"dirty_suits" = dirty_suits,
+		"capacity" = length(all_hatches) * OUTPOST_PRISON_HATCH_CAPACITY,
+		"lasts_minutes" = lasts,
 	)
 
-/// Whether someone is waiting at a serving hatch that has nothing they need
+/// Whether someone is waiting for food or a clean uniform that no serving hatch in their reach has
 /datum/outpost_prison/proc/hatch_shortage()
-	return FALSE
-
-/// Fills every serving hatch, meals first, then clean uniforms. For the admin panel.
-/datum/outpost_prison/proc/fill_hatches()
-	return
+	return waiting_for_food > 0 || waiting_for_suits > 0
 
 /**
- * The nearest thing a prisoner can reach that they want: food, or a cleaner uniform when
- * `want_uniform` is set. Things another prisoner is already fetching are left alone.
+ * Counts who is waiting on the hatches: hungry (not well fed) with no food on a hatch they can
+ * reach, or in a dirty uniform with no clean one there. Only prisoners who can reach a hatch
+ * count, and only while they are well and out of trouble. Reports it on the outpost radio.
+ */
+/datum/outpost_prison/proc/check_hatch_shortage()
+	waiting_for_food = 0
+	waiting_for_suits = 0
+	var/list/all_hatches = hatches()
+	if(!length(all_hatches))
+		return
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.stat != CONSCIOUS || prisoner.phase != PRISONER_PRESENT || prisoner.trouble)
+			continue
+		var/reaches_hatch = FALSE
+		for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in all_hatches)
+			if(prisoner.reachable?[hatch.loc])
+				reaches_hatch = TRUE
+				break
+		if(!reaches_hatch)
+			continue
+		if(prisoner.hunger < PRISONER_HUNGER_HUNGRY && prisoner.well_fed_left <= 0 && !istype(prisoner.held_item, /obj/item/food) && !find_supply(prisoner))
+			waiting_for_food++
+		if(prisoner.wants_clean_uniform() && !find_supply(prisoner, TRUE))
+			waiting_for_suits++
+	if(hatch_shortage() && hatch_warning_left <= 0)
+		hatch_warning_left = OUTPOST_PRISON_HATCH_WARNING_GAP / (1 SECONDS)
+		announce(hatch_warning_text())
+
+/// "Prison wing: the hatch is out of food and 2 prisoners are waiting."
+/datum/outpost_prison/proc/hatch_warning_text()
+	var/missing
+	if(waiting_for_food && waiting_for_suits)
+		missing = "food and clean uniforms"
+	else
+		missing = waiting_for_food ? "food" : "clean uniforms"
+	var/waiting = max(waiting_for_food, waiting_for_suits)
+	return "Prison wing: the hatch is out of [missing] and [waiting] prisoner[waiting == 1 ? " is" : "s are"] waiting."
+
+/**
+ * Fills every serving hatch to capacity for free: meals up to OUTPOST_PRISON_FILL_MEAL_SHARE of
+ * it, then clean uniforms. For the admin panel. Returns the items added.
+ */
+/datum/outpost_prison/proc/fill_hatches()
+	var/added = 0
+	var/meal_target = round(OUTPOST_PRISON_HATCH_CAPACITY * OUTPOST_PRISON_FILL_MEAL_SHARE, 1)
+	for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in hatches())
+		var/meals = 0
+		for(var/obj/item/food/meal in hatch.loc)
+			meals++
+		while(hatch.room_left() > 0 && meals < meal_target)
+			new /obj/item/food/prison_ration(hatch.loc)
+			meals++
+			added++
+		while(hatch.room_left() > 0)
+			new /obj/item/clothing/under/rank/prisoner/outpost(hatch.loc)
+			added++
+	return added
+
+/**
+ * The nearest thing on a serving hatch in the prisoner's reach that they want: food, or a cleaner
+ * uniform when `want_uniform` is set. Supplies anywhere else (the floor, a mess table, a cell) are
+ * left alone, and so is anything another prisoner is already fetching.
  */
 /datum/outpost_prison/proc/find_supply(mob/living/basic/outpost_prisoner/prisoner, want_uniform = FALSE)
 	if(!prisoner.reachable)
 		refresh_prisoner_reach(prisoner)
 	var/obj/item/best
 	var/best_distance = INFINITY
-	for(var/turf/spot as anything in prisoner.reachable)
-		for(var/obj/item/thing in spot)
+	for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in hatches())
+		var/turf/counter = hatch.loc
+		if(!prisoner.reachable?[counter])
+			continue
+		for(var/obj/item/thing in counter)
 			if(want_uniform ? !prisoner.would_change_into(thing) : !istype(thing, /obj/item/food))
 				continue
 			if(claimed_by_other(thing, prisoner))
@@ -280,8 +403,144 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 				best_distance = distance
 	return best
 
-/// A basketball the prisoner can get at: loose within reach, or in another player's hands
+/**
+ * Staff put something on a serving hatch. Prisoners who want it leave whatever they were idling
+ * at to go and get it, one prisoner who can see it and wants it calls it out ("Food's up!", "Clean
+ * suits!"), and someone already waiting at that hatch for it thanks them. Returns the prisoner who
+ * called it out, or null.
+ */
+/datum/outpost_prison/proc/on_hatch_stocked(obj/structure/table/reinforced/prison_hatch/hatch, list/stocked, mob/user)
+	if(!hatch || !length(stocked) || (user && !is_member(user)))
+		return null
+	var/food = FALSE
+	var/suits = FALSE
+	for(var/obj/item/thing as anything in stocked)
+		if(istype(thing, /obj/item/food))
+			food = TRUE
+		else if(istype(thing, /obj/item/clothing/under/rank/prisoner/outpost))
+			var/obj/item/clothing/under/rank/prisoner/outpost/suit = thing
+			if(suit.grime < PRISONER_GRIME_DIRTY)
+				suits = TRUE
+	if(!food && !suits)
+		return null
+	// Whoever wants it drops what they were idling at and comes over.
+	for(var/mob/living/basic/outpost_prisoner/wanting in prisoners)
+		var/datum/prisoner_activity/idle = wanting.activity
+		if(wanting.ai_controller?.ai_status != AI_STATUS_ON || !idle?.leisure || !idle.interruptible || idle.sleeping)
+			continue
+		if((food && wanting.wants_food()) || (suits && wanting.wants_clean_uniform()))
+			wanting.end_activity()
+	var/mob/living/basic/outpost_prisoner/thanker
+	for(var/mob/living/basic/outpost_prisoner/waiting in prisoners)
+		var/datum/prisoner_activity/hatch_wait/wait = waiting.activity
+		if(!istype(wait) || wait.hatch_ref?.resolve() != hatch)
+			continue
+		if((food && waiting.wants_food()) || (suits && waiting.wants_clean_uniform()))
+			thanker = waiting
+			if(user)
+				waiting.note_carer(user)
+			INVOKE_ASYNC(waiting, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, thank), (food && waiting.wants_food()) ? "thanks_food" : "thanks_uniform")
+			break
+	if(!COOLDOWN_FINISHED(src, hatch_call_cooldown))
+		return null
+	for(var/mob/living/basic/outpost_prisoner/crier as anything in shuffle(prisoners))
+		if(crier == thanker || crier.stat != CONSCIOUS || crier.phase != PRISONER_PRESENT || crier.in_trouble() || crier.activity?.sleeping)
+			continue
+		var/context
+		if(food && crier.wants_food())
+			context = "food_up"
+		else if(suits && crier.wants_clean_uniform())
+			context = "suits_up"
+		if(!context || !(hatch in view(7, crier)))
+			continue
+		COOLDOWN_START(src, hatch_call_cooldown, OUTPOST_PRISON_HATCH_CALL_GAP)
+		note_speech()
+		INVOKE_ASYNC(crier, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), context)
+		return crier
+	return null
+
+/**
+ * A prisoner sat down to eat at a mess table. PRISONER_SHARED_MEAL_COUNT or more doing so within
+ * PRISONER_SHARED_MEAL_WINDOW makes a shared meal: each of them cheers up a little, once, and one
+ * of them says so. Returns the prisoners who got the lift.
+ */
+/datum/outpost_prison/proc/note_table_meal(mob/living/basic/outpost_prisoner/eater)
+	for(var/mob/living/basic/outpost_prisoner/earlier as anything in table_eaters.Copy())
+		if(QDELETED(earlier) || !(earlier in prisoners) || world.time - table_eaters[earlier] > PRISONER_SHARED_MEAL_WINDOW)
+			table_eaters -= earlier
+	table_eaters[eater] = world.time
+	var/list/lifted = list()
+	if(length(table_eaters) < PRISONER_SHARED_MEAL_COUNT)
+		return lifted
+	for(var/mob/living/basic/outpost_prisoner/diner as anything in table_eaters)
+		if(diner.shared_meal_at && world.time - diner.shared_meal_at <= PRISONER_SHARED_MEAL_WINDOW)
+			continue
+		diner.shared_meal_at = world.time
+		diner.adjust_mood(PRISONER_MOOD_SHARED_MEAL)
+		lifted += diner
+	if(length(lifted) && COOLDOWN_FINISHED(src, mess_hall_cooldown))
+		COOLDOWN_START(src, mess_hall_cooldown, OUTPOST_PRISON_MESS_HALL_GAP)
+		var/mob/living/basic/outpost_prisoner/speaker = pick(lifted)
+		INVOKE_ASYNC(speaker, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "mess_hall")
+	return lifted
+
+/**
+ * A member of staff sank a shot while two or more prisoners were playing: each player cheers up,
+ * at most once per OUTPOST_PRISON_STAFF_BASKET_GAP. Returns TRUE if it counted.
+ */
+/datum/outpost_prison/proc/staff_basket(mob/living/shooter, obj/structure/hoop/hoop)
+	if(!is_member(shooter) || !COOLDOWN_FINISHED(src, staff_basket_cooldown))
+		return FALSE
+	var/list/players = list()
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.stat == CONSCIOUS && prisoner.phase == PRISONER_PRESENT && istype(prisoner.activity, /datum/prisoner_activity/basketball))
+			players += prisoner
+	if(length(players) < 2)
+		return FALSE
+	COOLDOWN_START(src, staff_basket_cooldown, OUTPOST_PRISON_STAFF_BASKET_GAP)
+	for(var/mob/living/basic/outpost_prisoner/player as anything in players)
+		player.adjust_mood(PRISONER_MOOD_STAFF_BASKET)
+		player.face_atom(hoop)
+	var/mob/living/basic/outpost_prisoner/cheering = pick(players)
+	INVOKE_ASYNC(cheering, TYPE_PROC_REF(/atom, manual_emote), pick("whistles.", "claps.", "cheers."))
+	return TRUE
+
+/// The nearest trash bin the prisoner can reach
+/datum/outpost_prison/proc/find_bin(mob/living/basic/outpost_prisoner/prisoner)
+	if(!prisoner.reachable)
+		refresh_prisoner_reach(prisoner)
+	var/obj/structure/closet/crate/bin/best
+	var/best_distance = INFINITY
+	for(var/turf/spot as anything in prisoner.reachable)
+		for(var/obj/structure/closet/crate/bin/bin in spot)
+			var/distance = get_dist(prisoner, bin)
+			if(distance < best_distance)
+				best = bin
+				best_distance = distance
+	return best
+
+/// The nearest litter lying where the prisoner may walk, off the serving hatches and out of other cells
+/datum/outpost_prison/proc/find_litter(mob/living/basic/outpost_prisoner/prisoner)
+	if(!prisoner.walkable)
+		refresh_prisoner_reach(prisoner)
+	var/obj/item/trash/best
+	var/best_distance = INFINITY
+	for(var/turf/spot as anything in prisoner.reachable)
+		if(locate(/obj/structure/table/reinforced/prison_hatch) in spot)
+			continue
+		var/obj/item/trash/litter = locate() in spot
+		if(!litter || claimed_by_other(litter, prisoner) || !prisoner.may_loiter(spot))
+			continue
+		var/distance = get_dist(prisoner, litter)
+		if(distance < best_distance)
+			best = litter
+			best_distance = distance
+	return best
+
+/// A basketball the prisoner can get at: their own, loose within reach, or in another player's hands
 /datum/outpost_prison/proc/find_ball(mob/living/basic/outpost_prisoner/prisoner)
+	if(istype(prisoner.held_item, /obj/item/toy/basketball))
+		return prisoner.held_item
 	if(!prisoner.reachable)
 		refresh_prisoner_reach(prisoner)
 	for(var/turf/spot as anything in prisoner.reachable)
@@ -439,6 +698,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	for(var/key in claims.Copy())
 		if(claims[key] == prisoner)
 			claims -= key
+	table_eaters -= prisoner
 	on_cell_emptied(emptied, prisoner.stat == DEAD)
 
 /datum/outpost_prison/proc/add_log(text)

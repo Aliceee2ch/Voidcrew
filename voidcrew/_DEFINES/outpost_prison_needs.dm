@@ -1,18 +1,16 @@
 // ===== OUTPOST PRISON: NEEDS (see outpost_prison_prisoner.dm, outpost_prison_routine.dm, outpost_prison_core.dm, outpost_prison_fixtures.dm) =====
 // Hunger, uniforms, injuries, supplies and the routine, on 0-100 scales.
 
-/// Hunger lost per minute: full to empty in 10 minutes, so an 8-15 minute stay needs a meal or two
-#define PRISONER_HUNGER_DECAY 10
-/// Hunger any one piece of food restores
-#define PRISONER_FOOD_VALUE 50
+/// Hunger lost per minute: full to empty in 20 minutes. Arrivals come in hungry, so a stay needs about one meal, early.
+#define PRISONER_HUNGER_DECAY 5
 /// Below this a prisoner goes looking for food
 #define PRISONER_HUNGER_SEEK 50
 /// At or above this a prisoner refuses food
 #define PRISONER_HUNGER_FULL 90
 #define PRISONER_HUNGER_HUNGRY 40
 #define PRISONER_HUNGER_STARVING 15
-/// Uniform grime gained per minute: clean to filthy-through in 12 minutes (dirty at 6), about one change a stay
-#define PRISONER_GRIME_RATE (100 / 12)
+/// Uniform grime gained per minute at rest (x PRISONER_GRIME_SPORT_MULT at sport): about half of prisoners need one change a stay
+#define PRISONER_GRIME_RATE 2.5
 #define PRISONER_GRIME_DIRTY 50
 #define PRISONER_GRIME_FILTHY 80
 /// Below this health percent a prisoner shows the hurt bubble and the roster calls them injured
@@ -22,7 +20,7 @@
 /// How long stamina crit holds after the last stamina hit, long enough to drag one to a cell
 #define PRISONER_STAMCRIT_TIME (20 SECONDS)
 /// Percent chance per minute that a prisoner drops some mess
-#define OUTPOST_PRISON_MESS_CHANCE 10
+#define OUTPOST_PRISON_MESS_CHANCE 4
 /// Pause between spontaneous prisoner lines anywhere in one wing (deciseconds)
 #define OUTPOST_PRISON_SPEECH_GAP (6 SECONDS)
 
@@ -32,9 +30,9 @@
 /// Mood lost per minute in a dirty uniform, or instead a filthy one
 #define PRISONER_MOOD_DIRTY 2
 #define PRISONER_MOOD_FILTHY 5
-/// Mood lost per minute with no health left, scaled by the missing fraction (4 x missing x 2)
+/// Mood lost per minute at no health, scaled: PRISONER_MOOD_HURT x (PRISONER_HURT_MOOD_BELOW - health%) / PRISONER_HURT_MOOD_BELOW
 #define PRISONER_MOOD_HURT 8
-/// Mood gained at once from a meal, a clean uniform and treatment
+/// Mood gained at once from a ration, a clean uniform and treatment (cooked food and snacks: below; poor food: none)
 #define PRISONER_MOOD_FED 10
 #define PRISONER_MOOD_CLEAN_UNIFORM 8
 #define PRISONER_MOOD_TREATED 8
@@ -86,7 +84,7 @@
 #define PRISONER_SPORT_INJURY_MAX 15
 /// Injuries cost mood only below this health percent
 #define PRISONER_HURT_MOOD_BELOW 75
-/// Items one serving hatch holds
+/// Items one serving hatch holds; staff can't put more on it. Two hatches hold about a 30-minute restock.
 #define OUTPOST_PRISON_HATCH_CAPACITY 10
 /// Percent chance a meal at a table leaves crumbs
 #define PRISONER_TABLE_CRUMB_CHANCE 50
@@ -106,3 +104,22 @@
 #define OUTPOST_PRISON_SUIT_RATE 0.045
 /// Least time between radio lines about prisoners waiting at an empty hatch
 #define OUTPOST_PRISON_HATCH_WARNING_GAP (10 MINUTES)
+/// Below this mood a prisoner drops their wrapper on the floor instead of leaving it where they ate
+#define PRISONER_LITTER_MOOD 40
+/// Prisoners eating at the tables within PRISONER_SHARED_MEAL_WINDOW that make it a shared meal
+#define PRISONER_SHARED_MEAL_COUNT 3
+/// Sport injuries only happen above this health percent: a hurt prisoner plays carefully
+#define PRISONER_SPORT_INJURY_ABOVE 50
+/// How far a hurt prisoner looks for someone holding dressings, how long they wait by them, and the pause before they ask again
+#define PRISONER_SICK_CALL_RANGE 7
+#define PRISONER_SICK_CALL_TIME (40 SECONDS)
+#define PRISONER_SICK_CALL_COOLDOWN (90 SECONDS)
+/// Least time between "Food's up!" call-outs in one wing
+#define OUTPOST_PRISON_HATCH_CALL_GAP (20 SECONDS)
+/// Least time between "mess hall" lines in one wing
+#define OUTPOST_PRISON_MESS_HALL_GAP (3 MINUTES)
+/// Mood each player gets when a member of staff sinks a shot while two or more prisoners play, and how often
+#define PRISONER_MOOD_STAFF_BASKET 10
+#define OUTPOST_PRISON_STAFF_BASKET_GAP (5 MINUTES)
+/// Share of each hatch the admin fill puts meals on; clean uniforms take the rest
+#define OUTPOST_PRISON_FILL_MEAL_SHARE 0.7

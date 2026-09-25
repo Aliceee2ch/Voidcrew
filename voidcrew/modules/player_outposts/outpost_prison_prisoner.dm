@@ -6,10 +6,13 @@
  * routine in outpost_prison_routine.dm. They talk (outpost_prison_dialogue.dm), and when unhappy
  * they threaten, fight, riot and escape (outpost_prison_trouble.dm, outpost_prison_riot.dm).
  *
- * Needs, on 0-100 scales: `hunger` falls over time and food restores it; `uniform_grime` rises
- * over time and a cleaner prison uniform resets it. Health does not come back on its own; brute
- * medical stacks treat it. A thought bubble with the item they need shows when one needs
- * attention. They bleed when hit, and drip while badly hurt.
+ * Needs, on 0-100 scales: `hunger` falls over time and food restores it, by how good the food
+ * is; `uniform_grime` rises over time, three times as fast at sport, and a cleaner prison uniform
+ * resets it. Health does not come back on its own; brute medical stacks treat it. Arrivals come in
+ * hungry, a third in a stained uniform and a fifth roughed up in transfer. A thought bubble with
+ * the item they need shows when one needs attention, cycling when they need several. They bleed
+ * when hit, and drip while badly hurt. They take supplies only from a serving hatch or from a
+ * person's hand (outpost_prison_core.dm).
  *
  * Awake, they cannot be pulled, dragged onto things or boxed. Knocked down, in stamina crit or
  * dead, staff can drag them; stamina crit lasts PRISONER_STAMCRIT_TIME after the last hit.
@@ -97,18 +100,37 @@
 	var/said_release_soon = FALSE
 	/// Health at the last update, to notice treatment
 	var/last_health = 100
+	/// Seconds of "well fed" left after cooked food: hunger does not fall meanwhile
+	var/well_fed_left = 0
+	/// Came in wearing a stained transfer uniform
+	var/arrived_stained = FALSE
+	/// Brute damage they carry from transfer, applied when they beam in, and whether they came in hurt
+	var/arrival_brute = 0
+	var/arrived_hurt = FALSE
+	/// Seconds the thought bubble has shown the current set of needs, for cycling through them
+	var/bubble_clock = 0
+	/// The needs the bubble cycles through, as text, so a change starts the cycle at the most urgent
+	var/shown_needs = ""
+	/// Who last fed, clothed or treated them by hand, and when (world.time)
+	var/datum/weakref/last_carer_ref
+	var/last_cared_at = 0
+	/// world.time they last got the lift of a shared meal
+	var/shared_meal_at = 0
 	COOLDOWN_DECLARE(speech_cooldown)
 	COOLDOWN_DECLARE(thanks_cooldown)
 	/// Running while someone is putting a dressing on them
 	COOLDOWN_DECLARE(treatment_window)
+	/// Running after they tidied up, so they don't go round the yard doing it
+	COOLDOWN_DECLARE(tidy_cooldown)
+	/// Running after they asked for the medic
+	COOLDOWN_DECLARE(sick_call_cooldown)
 
 /mob/living/basic/outpost_prisoner/Initialize(mapload)
 	gender = pick(MALE, FEMALE)
 	. = ..()
 	real_name = generate_random_name_species_based(gender, TRUE, /datum/species/human)
 	name = real_name
-	hunger = rand(70, 100)
-	uniform_grime = rand(0, 20)
+	roll_arrival()
 	var/list/personalities = outpost_prisoner_dialogue("personalities")
 	personality = length(personalities) ? pick(personalities) : "quiet"
 	var/list/crimes = outpost_prisoner_dialogue("crimes")
@@ -156,6 +178,16 @@
 	set_dynamic_human_appearance(list(src, outfit_path))
 	update_appearance(UPDATE_OVERLAYS)
 
+/**
+ * How they come in: hungry, a third in a stained transfer uniform, a fifth roughed up in transfer.
+ * The injury waits for beam_in(), so a prisoner made any other way (an admin, a test) starts whole.
+ */
+/mob/living/basic/outpost_prisoner/proc/roll_arrival()
+	hunger = rand(PRISONER_ARRIVAL_HUNGER_MIN, PRISONER_ARRIVAL_HUNGER_MAX)
+	arrived_stained = prob(PRISONER_STAINED_CHANCE)
+	uniform_grime = arrived_stained ? rand(PRISONER_STAINED_GRIME_MIN, PRISONER_STAINED_GRIME_MAX) : rand(0, PRISONER_ARRIVAL_GRIME_MAX)
+	arrival_brute = prob(PRISONER_HURT_ARRIVAL_CHANCE) ? round(maxHealth * (100 - rand(PRISONER_HURT_ARRIVAL_MIN, PRISONER_HURT_ARRIVAL_MAX)) / 100) : 0
+
 /// Their first name, for dialogue. (Not called first_name(): inside it, that would call itself.)
 /mob/living/basic/outpost_prisoner/proc/speech_name()
 	return first_name(real_name)
@@ -166,6 +198,11 @@
 /mob/living/basic/outpost_prisoner/proc/beam_in()
 	phase = PRISONER_ARRIVING
 	alpha = 0
+	if(arrival_brute > 0)
+		// Roughed up in transfer: no attacker, so no blame, no blood and no collapse.
+		adjustBruteLoss(arrival_brute)
+		arrival_brute = 0
+		arrived_hurt = TRUE
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
 	var/turf/spot = get_turf(src)
@@ -186,6 +223,11 @@
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
 	transporter_materialise(src, 255)
 	update_bubble()
+	// How they came in, if it shows; otherwise hello.
+	if(arrived_hurt && say_context("arrival_hurt"))
+		return
+	if(arrived_stained && say_context("arrival_stained"))
+		return
 	say_context("arrival")
 
 /// Dematerialises them where they stand and deletes them at the end of the beam
@@ -277,13 +319,54 @@
 
 // ===== NEEDS =====
 
-/// Time passing: hunger falls and the uniform gets dirtier
+/**
+ * Time passing: hunger falls (not while well fed after cooked food) and the uniform gets dirtier,
+ * three times as fast at sport, where they sometimes get hurt.
+ */
 /mob/living/basic/outpost_prisoner/proc/adjust_needs(seconds)
 	if(stat == DEAD)
 		return
-	hunger = clamp(hunger - PRISONER_HUNGER_DECAY * seconds / 60, 0, 100)
-	uniform_grime = clamp(uniform_grime + PRISONER_GRIME_RATE * seconds / 60, 0, 100)
+	var/hungry_seconds = seconds
+	if(well_fed_left > 0)
+		var/paused = min(seconds, well_fed_left)
+		well_fed_left -= paused
+		hungry_seconds -= paused
+	hunger = clamp(hunger - PRISONER_HUNGER_DECAY * hungry_seconds / 60, 0, 100)
+	var/sport = playing_sport()
+	var/grime_rate = PRISONER_GRIME_RATE * (sport ? PRISONER_GRIME_SPORT_MULT : 1)
+	uniform_grime = clamp(uniform_grime + grime_rate * seconds / 60, 0, 100)
+	bubble_clock += seconds
 	update_bubble()
+	if(sport && prob(PRISONER_SPORT_INJURY_CHANCE * seconds / 60))
+		sport_injury()
+
+/// Shooting hoops or working out: sweaty, and now and then painful
+/mob/living/basic/outpost_prisoner/proc/playing_sport()
+	if(!activity?.started)
+		return FALSE
+	if(istype(activity, /datum/prisoner_activity/basketball))
+		return TRUE
+	var/datum/prisoner_activity/pace/workout = activity
+	return istype(workout) && workout.exercising
+
+/**
+ * Hurt at sport: a turned ankle or the ball in the face, PRISONER_SPORT_INJURY_MIN to _MAX brute,
+ * and they stop playing. No attacker, so no blame and no blood. Never while already badly hurt,
+ * and never enough to put them down.
+ */
+/mob/living/basic/outpost_prisoner/proc/sport_injury()
+	if(stat != CONSCIOUS || health_factor() <= PRISONER_SPORT_INJURY_ABOVE)
+		return FALSE
+	var/damage = min(rand(PRISONER_SPORT_INJURY_MIN, PRISONER_SPORT_INJURY_MAX), health - 1)
+	if(damage < 1)
+		return FALSE
+	if(istype(activity, /datum/prisoner_activity/basketball))
+		manual_emote(pick("goes down clutching an ankle.", "takes the ball to the face.", "lands badly and hops off the court."))
+	else
+		manual_emote(pick("goes down clutching an ankle.", "pulls something and sits down hard.", "grabs at [p_their()] back mid push-up."))
+	adjustBruteLoss(damage)
+	end_activity()
+	return TRUE
 
 /mob/living/basic/outpost_prisoner/proc/set_hunger(amount)
 	hunger = clamp(amount, 0, 100)
@@ -293,13 +376,13 @@
 	uniform_grime = clamp(amount, 0, 100)
 	update_bubble()
 
-/// Fed, 0-100: full marks until they are hungry, then down to nothing when empty
+/// Fed, 0-100: full marks until they are hungry, then down to nothing once they are starving
 /mob/living/basic/outpost_prisoner/proc/fed_factor()
-	return hunger >= PRISONER_HUNGER_HUNGRY ? 100 : 100 * hunger / PRISONER_HUNGER_HUNGRY
+	return clamp(100 * (hunger - PRISONER_HUNGER_STARVING) / (PRISONER_HUNGER_HUNGRY - PRISONER_HUNGER_STARVING), 0, 100)
 
-/// Clean, 0-100: full marks until the uniform is dirty, then down to nothing at full grime
+/// Clean, 0-100: full marks until the uniform is dirty, then down to nothing once it is filthy
 /mob/living/basic/outpost_prisoner/proc/clean_factor()
-	return uniform_grime < PRISONER_GRIME_DIRTY ? 100 : 100 * (100 - uniform_grime) / (100 - PRISONER_GRIME_DIRTY)
+	return clamp(100 * (PRISONER_GRIME_FILTHY - uniform_grime) / (PRISONER_GRIME_FILTHY - PRISONER_GRIME_DIRTY), 0, 100)
 
 /mob/living/basic/outpost_prisoner/proc/health_factor()
 	return stat == DEAD ? 0 : clamp(100 * health / maxHealth, 0, 100)
@@ -319,13 +402,14 @@
 		loss += PRISONER_MOOD_FILTHY
 	else if(uniform_grime >= PRISONER_GRIME_DIRTY)
 		loss += PRISONER_MOOD_DIRTY
-	var/missing = 1 - health_factor() / 100
-	if(missing > 0)
-		loss += PRISONER_MOOD_HURT * missing
+	// Scrapes cost pay and show a bubble; only real injuries sour them.
+	var/health_percent = health_factor()
+	if(health_percent < PRISONER_HURT_MOOD_BELOW)
+		loss += PRISONER_MOOD_HURT * (PRISONER_HURT_MOOD_BELOW - health_percent) / PRISONER_HURT_MOOD_BELOW
 	return list(0, loss)
 
 /mob/living/basic/outpost_prisoner/proc/wants_food()
-	return stat == CONSCIOUS && hunger < PRISONER_HUNGER_SEEK
+	return stat == CONSCIOUS && hunger < PRISONER_HUNGER_SEEK && well_fed_left <= 0
 
 /mob/living/basic/outpost_prisoner/proc/wants_clean_uniform()
 	return stat == CONSCIOUS && uniform_grime >= PRISONER_GRIME_DIRTY
@@ -337,27 +421,44 @@
 
 // ===== THOUGHT BUBBLE =====
 
+/// The needs that want attention now, most urgent first: hungry, hurt, dirty
+/mob/living/basic/outpost_prisoner/proc/bubble_needs()
+	var/list/needs = list()
+	if(hunger < PRISONER_HUNGER_HUNGRY)
+		needs += "hungry"
+	if(health_factor() < PRISONER_INJURED_BELOW)
+		needs += "hurt"
+	if(uniform_grime >= PRISONER_GRIME_DIRTY)
+		needs += "dirty"
+	return needs
+
 /**
- * The need their thought bubble shows, if any. One at a time, most urgent first, and only when
- * something needs attention: rioting or loose (a shiv), then hungry, hurt and dirty. Step 4's
- * experiments ("experiment", a syringe) go between the shiv and hunger.
+ * The need their thought bubble shows, if any, and only when something needs attention. Rioting
+ * or loose (a shiv) and being an experiment's subject (a syringe) show on their own. Otherwise it
+ * cycles through their needs every PRISONER_BUBBLE_CYCLE, most urgent first.
  */
-/mob/living/basic/outpost_prisoner/proc/wanted_bubble()
+/mob/living/basic/outpost_prisoner/proc/wanted_bubble(list/needs)
 	if(stat == DEAD || phase != PRISONER_PRESENT)
 		return null
 	if(is_rioting() || trouble == PRISONER_TROUBLE_LOOSE)
 		return "riot"
-	if(hunger < PRISONER_HUNGER_HUNGRY)
-		return "hungry"
-	if(health_factor() < PRISONER_INJURED_BELOW)
-		return "hurt"
-	if(uniform_grime >= PRISONER_GRIME_DIRTY)
-		return "dirty"
-	return null
+	if(experiment_subject)
+		return "experiment"
+	if(isnull(needs))
+		needs = bubble_needs()
+	if(!length(needs))
+		return null
+	var/cycle_seconds = PRISONER_BUBBLE_CYCLE / (1 SECONDS)
+	return needs[(round(bubble_clock / cycle_seconds) % length(needs)) + 1]
 
-/// Redraws only when the bubble or the grime stage changes
+/// Redraws only when the bubble or the grime stage changes. A new set of needs starts at the most urgent.
 /mob/living/basic/outpost_prisoner/proc/update_bubble()
-	var/new_bubble = wanted_bubble()
+	var/list/needs = bubble_needs()
+	var/needs_text = jointext(needs, ",")
+	if(needs_text != shown_needs)
+		shown_needs = needs_text
+		bubble_clock = 0
+	var/new_bubble = wanted_bubble(needs)
 	var/new_stage = 0
 	if(stat != DEAD)
 		if(uniform_grime >= PRISONER_GRIME_FILTHY)
@@ -511,49 +612,159 @@
 
 // ===== FOOD =====
 
+/**
+ * How good a piece of food is: "ration" (the prison's own), "cooked" (anything from a real
+ * recipe), "snack" (simple food and junk food) or "poor" (raw, rotten, poisonous or plain produce).
+ */
+/proc/outpost_prisoner_food_tier(obj/item/food/meal)
+	if(istype(meal, /obj/item/food/prison_ration))
+		return "ration"
+	if(!istype(meal) || (meal.foodtypes & (RAW | GROSS | TOXIC)))
+		return "poor"
+	// Junk food is a snack however much went into it.
+	if(meal.foodtypes & JUNKFOOD)
+		return "snack"
+	if(meal.crafting_complexity >= FOOD_COMPLEXITY_2)
+		return "cooked"
+	if(meal.crafting_complexity >= FOOD_COMPLEXITY_1)
+		return "snack"
+	return "poor"
+
 /mob/living/basic/outpost_prisoner/proc/on_pre_eat(datum/source, atom/food, mob/living/feeder)
 	SIGNAL_HANDLER
-	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || hunger >= PRISONER_HUNGER_FULL)
+	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || hunger >= PRISONER_HUNGER_FULL || well_fed_left > 0)
 		if(feeder)
 			balloon_alert(feeder, "not hungry")
 		return COMSIG_MOB_CANCEL_EAT
 	return NONE
 
+/**
+ * Eats `meal`: hunger and mood by how good it is, and cooked food keeps them full for
+ * PRISONER_WELL_FED_TIME. Returns the tier.
+ */
+/mob/living/basic/outpost_prisoner/proc/eat_food(obj/item/food/meal)
+	var/tier = outpost_prisoner_food_tier(meal)
+	switch(tier)
+		if("ration")
+			set_hunger(hunger + PRISONER_FOOD_RATION)
+			adjust_mood(PRISONER_MOOD_FED)
+		if("cooked")
+			set_hunger(hunger + PRISONER_FOOD_COOKED)
+			adjust_mood(PRISONER_MOOD_FED_COOKED)
+			well_fed_left = PRISONER_WELL_FED_TIME / (1 SECONDS)
+		if("snack")
+			set_hunger(hunger + PRISONER_FOOD_SNACK)
+			adjust_mood(PRISONER_MOOD_FED_SNACK)
+		else
+			set_hunger(hunger + PRISONER_FOOD_POOR)
+	return tier
+
+/// What they say about a meal: praise for cooking, a complaint about poor food, else thanks to whoever fed them
+/mob/living/basic/outpost_prisoner/proc/react_to_food(tier, mob/living/feeder)
+	switch(tier)
+		if("cooked")
+			if(thank("good_food") || !feeder)
+				return
+		if("poor")
+			say_context("poor_food")
+			return
+	if(feeder)
+		thank("thanks_food")
+
 /// Fed by hand
 /mob/living/basic/outpost_prisoner/proc/on_ate(datum/source, atom/food, mob/living/feeder)
 	SIGNAL_HANDLER
-	set_hunger(hunger + PRISONER_FOOD_VALUE)
-	adjust_mood(PRISONER_MOOD_FED)
+	var/tier = eat_food(food)
 	if(isturf(loc) && prob(50))
 		new /obj/effect/decal/cleanable/food/crumbs(loc)
 	if(feeder)
-		INVOKE_ASYNC(src, PROC_REF(thank), "thanks_food")
+		note_carer(feeder)
+	INVOKE_ASYNC(src, PROC_REF(react_to_food), tier, feeder)
 
 /**
- * Finishes a meal: crumbs where they sat and, often, the wrapper or a tray left on the table.
- * `table_turf` is null when they ate standing up.
+ * Finishes a meal: crumbs where they sat and, often, the wrapper or a tray (see leave_meal_mess()).
+ * `table_turf` is null when they ate standing up. Returns the wrapper when they mean to take it
+ * to the bin, else null.
  */
 /mob/living/basic/outpost_prisoner/proc/finish_meal(obj/item/food/meal, turf/seat_turf, turf/table_turf)
 	if(QDELETED(meal))
-		return FALSE
-	set_hunger(hunger + PRISONER_FOOD_VALUE)
-	adjust_mood(PRISONER_MOOD_FED)
+		return null
+	var/tier = eat_food(meal)
 	playsound(src, 'sound/items/eatfood.ogg', 30, TRUE)
 	visible_message(span_notice("[src] finishes [meal]."))
-	leave_meal_mess(meal, seat_turf || get_turf(src), table_turf || seat_turf || get_turf(src))
+	var/obj/item/trash = leave_meal_mess(meal, seat_turf || get_turf(src), table_turf)
 	qdel(meal)
+	if(tier == "cooked" || tier == "poor")
+		INVOKE_ASYNC(src, PROC_REF(react_to_food), tier, null)
+	return trash
+
+/**
+ * What a meal leaves: crumbs (half the time at a table, always standing up) and often the food's
+ * wrapper or a tray. A content prisoner (PRISONER_BIN_MOOD) usually means to bin it, and the
+ * wrapper is returned for them to carry there; if the bin is full they say so and leave it. An
+ * unhappy one (below PRISONER_LITTER_MOOD) drops it on the floor; anyone else leaves it where
+ * they ate.
+ */
+/mob/living/basic/outpost_prisoner/proc/leave_meal_mess(obj/item/food/meal, turf/floor, turf/table_turf)
+	if(isopenturf(floor) && (!table_turf || prob(PRISONER_TABLE_CRUMB_CHANCE)))
+		new /obj/effect/decal/cleanable/food/crumbs(floor)
+	var/trash_type
+	if(meal?.trash_type && prob(75))
+		trash_type = meal.trash_type
+	else if(table_turf && prob(40))
+		trash_type = /obj/item/trash/tray
+	if(!ispath(trash_type, /obj/item))
+		return null
+	var/turf/drop = table_turf || floor
+	if(mood < PRISONER_LITTER_MOOD && isopenturf(floor))
+		drop = floor
+	if(!drop)
+		return null
+	var/obj/item/trash = new trash_type(drop)
+	if(mood < PRISONER_BIN_MOOD || !prob(PRISONER_BIN_CHANCE))
+		return null
+	var/obj/structure/closet/crate/bin/bin = prison?.find_bin(src)
+	if(!bin)
+		return null
+	if(!outpost_bin_has_room(bin))
+		INVOKE_ASYNC(src, PROC_REF(say_context), "bin_full")
+		return null
+	return trash
+
+/// Puts `trash` in `bin` (or the nearest bin in reach) straight away. Returns TRUE if it went in.
+/mob/living/basic/outpost_prisoner/proc/bin_litter(obj/item/trash, obj/structure/closet/crate/bin/bin)
+	if(QDELETED(trash))
+		return FALSE
+	bin = bin || prison?.find_bin(src)
+	if(!bin || !outpost_bin_has_room(bin))
+		return FALSE
+	if(trash == held_item)
+		drop_held_item(get_turf(bin))
+	if(bin.opened)
+		trash.forceMove(get_turf(bin))
+	else if(bin.insert(trash) != TRUE)
+		return FALSE
+	face_atom(bin)
+	bin.do_animate()
 	return TRUE
 
-/// Crumbs on the floor, and often the food's wrapper or a tray where they ate
-/mob/living/basic/outpost_prisoner/proc/leave_meal_mess(obj/item/food/meal, turf/floor, turf/table_turf)
-	if(isopenturf(floor))
-		new /obj/effect/decal/cleanable/food/crumbs(floor)
-	if(!table_turf)
+/// Whether a trash bin can take another piece
+/proc/outpost_bin_has_room(obj/structure/closet/crate/bin/bin)
+	if(QDELETED(bin))
+		return FALSE
+	if(!bin.opened)
+		return length(bin.contents) < bin.storage_capacity
+	var/count = 0
+	for(var/obj/item/thing in get_turf(bin))
+		count++
+	return count < bin.storage_capacity
+
+/// Someone fed, clothed or treated them by hand
+/mob/living/basic/outpost_prisoner/proc/note_carer(mob/living/carer)
+	if(!istype(carer) || is_outpost_prisoner(carer))
 		return
-	if(meal?.trash_type && prob(75))
-		new meal.trash_type(table_turf)
-	else if(prob(40))
-		new /obj/item/trash/tray(table_turf)
+	last_carer_ref = WEAKREF(carer)
+	last_cared_at = world.time
 
 // ===== UNIFORMS =====
 
@@ -563,6 +774,7 @@
 	if(istype(tool, /obj/item/stack/medical))
 		// Treatment only shows as health coming back once the dressing is on.
 		COOLDOWN_START(src, treatment_window, 20 SECONDS)
+		note_carer(user)
 		return NONE
 	var/obj/item/clothing/under/rank/prisoner/outpost/offered = tool
 	if(!istype(offered) || user.combat_mode || stat != CONSCIOUS)
@@ -573,6 +785,7 @@
 	if(!user.temporarilyRemoveItemFromInventory(offered))
 		return ITEM_INTERACT_BLOCKING
 	var/obj/item/clothing/under/rank/prisoner/outpost/old = swap_uniform(offered, drop_location())
+	note_carer(user)
 	// put_in_hands() can sleep (stack merging), which a signal handler must not.
 	INVOKE_ASYNC(user, TYPE_PROC_REF(/mob, put_in_hands), old)
 	visible_message(span_notice("[src] changes into the clean jumpsuit and hands [user] the old one."))
@@ -588,13 +801,18 @@
 	visible_message(span_notice("[src] changes into a clean jumpsuit and leaves the old one behind."))
 	return TRUE
 
-/// Changes into `fresh` and returns their old uniform, created at `drop_spot`
+/**
+ * Changes into `fresh` and returns their old uniform, created at `drop_spot`. The clean one goes
+ * before the old one appears, so a swap on a full serving hatch never pushes it over capacity.
+ */
 /mob/living/basic/outpost_prisoner/proc/swap_uniform(obj/item/clothing/under/rank/prisoner/outpost/fresh, atom/drop_spot)
-	var/obj/item/clothing/under/rank/prisoner/outpost/old = new(drop_spot)
-	old.set_grime(uniform_grime)
-	set_uniform_grime(fresh.grime)
-	adjust_mood(PRISONER_MOOD_CLEAN_UNIFORM)
+	var/fresh_grime = fresh.grime
+	var/old_grime = uniform_grime
 	qdel(fresh)
+	var/obj/item/clothing/under/rank/prisoner/outpost/old = new(drop_spot)
+	old.set_grime(old_grime)
+	set_uniform_grime(fresh_grime)
+	adjust_mood(PRISONER_MOOD_CLEAN_UNIFORM)
 	return old
 
 // ===== HURT AND TREATED =====
@@ -632,8 +850,8 @@
 
 /**
  * tg AI sleeps while no player is on the level, but hunger and grime keep ticking. So while
- * their AI is not running, a prisoner helps themself to food and clean uniforms within reach
- * without the walk. Called every few seconds by the prison.
+ * their AI is not running, a prisoner helps themself to food and clean uniforms on a serving
+ * hatch within reach, or food they carry, without the walk. Called every few seconds by the prison.
  */
 /mob/living/basic/outpost_prisoner/proc/fend_for_self()
 	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison || ai_controller?.ai_status == AI_STATUS_ON || in_trouble())
@@ -641,7 +859,9 @@
 	if(wants_food())
 		var/obj/item/food/meal = istype(held_item, /obj/item/food) ? held_item : prison.find_supply(src)
 		if(meal)
-			finish_meal(meal, get_turf(src), null)
+			var/obj/item/trash = finish_meal(meal, get_turf(src), null)
+			if(trash)
+				bin_litter(trash)
 	if(wants_clean_uniform())
 		var/obj/item/clothing/under/rank/prisoner/outpost/fresh = prison.find_supply(src, TRUE)
 		if(fresh && isturf(fresh.loc))

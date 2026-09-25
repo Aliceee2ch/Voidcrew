@@ -4,10 +4,11 @@
  * Prisoners live by activities. Each one picks something to do by its needs, its personality and
  * what is free, walks there with JPS pathing, does it for 30 to 120 seconds and picks again:
  * resting or sleeping on their bed, sitting on it, the cell toilet and sink, carrying a meal from
- * the hatch to a mess table, shooting hoops, reading in the chair by the bookcase, the water
- * cooler, chatting with another prisoner, pacing, looking out of a window, and waiting at the
- * hatch when hungry or dirty. Bolted into a cell, they make do with what is inside it and call
- * out through the door.
+ * the hatch to a mess table (and the wrapper to the bin after), shooting hoops, reading in the
+ * chair by the bookcase, the water cooler, chatting with another prisoner, pacing and working out,
+ * looking out of a window, tidying up litter when in a good mood, waiting at the hatch when
+ * hungry or dirty, and going over to anyone holding dressings when hurt. Bolted into a cell, they
+ * make do with what is inside it and call out through the door.
  *
  * The AI controller only plans walks and ticks; all the logic sits on the activity datums, so
  * tests can drive an activity by hand while the AI sleeps. While nobody is on the level the AI is
@@ -90,6 +91,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 		duties += /datum/prisoner_activity/eat
 	if(wants_clean_uniform())
 		duties += /datum/prisoner_activity/change
+	if(health_factor() < PRISONER_INJURED_BELOW && COOLDOWN_FINISHED(src, sick_call_cooldown))
+		duties += /datum/prisoner_activity/sick_call
 	if((hunger < PRISONER_HUNGER_HUNGRY || uniform_grime >= PRISONER_GRIME_DIRTY) && prob(60))
 		duties += /datum/prisoner_activity/hatch_wait
 	for(var/duty_type in duties)
@@ -183,6 +186,80 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 		if(cell?.contains(fixture))
 			return fixture
 	return pick(options)
+
+/// Whether `person` is a member of the wing awake in the cell block, close by, holding dressings
+/mob/living/basic/outpost_prisoner/proc/is_medic(mob/living/person)
+	if(!istype(person) || QDELETED(person) || person.stat != CONSCIOUS || is_outpost_prisoner(person))
+		return FALSE
+	if(get_dist(src, person) > PRISONER_SICK_CALL_RANGE || !prison?.in_cell_block(person) || !prison.is_member(person))
+		return FALSE
+	return !!person.is_holding_item_of_type(/obj/item/stack/medical)
+
+/// The nearest medic they can see and walk up to
+/mob/living/basic/outpost_prisoner/proc/find_medic()
+	var/mob/living/best
+	var/best_distance = INFINITY
+	for(var/mob/living/person in view(PRISONER_SICK_CALL_RANGE, src))
+		if(!is_medic(person) || !approach_turf(person))
+			continue
+		var/distance = get_dist(src, person)
+		if(distance < best_distance)
+			best = person
+			best_distance = distance
+	return best
+
+/**
+ * Hurt, with a medic in sight: drops whatever idle thing they were doing and goes over. Called
+ * every few seconds by the prison while anyone is on the level. Returns TRUE if they went.
+ */
+/mob/living/basic/outpost_prisoner/proc/check_sick_call()
+	if(ai_controller?.ai_status != AI_STATUS_ON)
+		return FALSE
+	return start_sick_call()
+
+/// Starts a sick call if they are hurt, free and someone holding dressings is near. Returns TRUE if it started.
+/mob/living/basic/outpost_prisoner/proc/start_sick_call()
+	if(!routine_allowed() || health_factor() >= PRISONER_INJURED_BELOW || !COOLDOWN_FINISHED(src, sick_call_cooldown))
+		return FALSE
+	// A need, a duty or sleep comes first; anything idle can wait.
+	if(activity && (!activity.leisure || activity.sleeping || !activity.interruptible))
+		return FALSE
+	var/datum/prisoner_activity/sick_call/asking = new(src)
+	if(!asking.setup())
+		qdel(asking)
+		return FALSE
+	start_activity(asking)
+	return TRUE
+
+/**
+ * A ball thrown at them: caught by anyone in a game, and by an idle prisoner when staff throw it,
+ * who then starts shooting hoops. Returns TRUE if they caught it.
+ */
+/mob/living/basic/outpost_prisoner/proc/try_catch_ball(atom/movable/thrown_thing, datum/thrownthing/throwing)
+	var/obj/item/toy/basketball/ball = thrown_thing
+	if(!istype(ball) || held_item || !routine_allowed() || activity?.sleeping)
+		return FALSE
+	var/mob/thrower = throwing?.get_thrower()
+	if(thrower == src)
+		return FALSE
+	var/playing = istype(activity, /datum/prisoner_activity/basketball)
+	if(!playing && (is_outpost_prisoner(thrower) || (activity && (!activity.leisure || !activity.interruptible))))
+		return FALSE
+	if(!take_item(ball))
+		return FALSE
+	visible_message(span_notice("[src] catches [ball]."))
+	if(!playing)
+		var/datum/prisoner_activity/basketball/game = new(src)
+		if(game.setup())
+			start_activity(game)
+		else
+			qdel(game)
+	return TRUE
+
+/mob/living/basic/outpost_prisoner/hitby(atom/movable/AM, skipcatch, hitpush = TRUE, blocked = FALSE, datum/thrownthing/throwingdatum)
+	if(try_catch_ball(AM, throwingdatum))
+		return TRUE
+	return ..()
 
 // ===== AI =====
 
@@ -704,6 +781,10 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	var/aim = 0
 	/// A shot is in the air
 	var/in_flight = FALSE
+	/// Ticks spent waiting on someone who picked the ball up
+	var/waited_on_staff = 0
+	/// The hoop's score when the ball was last thrown, to tell when someone else sinks one
+	var/score_at_throw = 0
 
 /datum/prisoner_activity/basketball/get_weight()
 	. = ..()
@@ -717,7 +798,29 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 		return FALSE
 	hoop_ref = WEAKREF(hoop)
 	ball_ref = WEAKREF(ball)
+	RegisterSignal(ball, COMSIG_MOVABLE_POST_THROW, PROC_REF(on_ball_thrown))
+	RegisterSignal(ball, COMSIG_MOVABLE_THROW_LANDED, PROC_REF(on_ball_landed))
 	return TRUE
+
+/datum/prisoner_activity/basketball/Destroy()
+	var/obj/item/toy/basketball/ball = ball_ref?.resolve()
+	if(ball)
+		UnregisterSignal(ball, list(COMSIG_MOVABLE_POST_THROW, COMSIG_MOVABLE_THROW_LANDED))
+	return ..()
+
+/datum/prisoner_activity/basketball/proc/on_ball_thrown(datum/source, datum/thrownthing/thrown, spin)
+	SIGNAL_HANDLER
+	var/obj/structure/hoop/hoop = hoop_ref?.resolve()
+	score_at_throw = hoop?.total_score || 0
+
+/// Someone else's shot came down: if staff sank it, the players cheer
+/datum/prisoner_activity/basketball/proc/on_ball_landed(datum/source, datum/thrownthing/thrown)
+	SIGNAL_HANDLER
+	var/obj/structure/hoop/hoop = hoop_ref?.resolve()
+	var/mob/living/thrower = thrown?.get_thrower()
+	if(!hoop || !istype(thrower) || is_outpost_prisoner(thrower) || hoop.total_score <= score_at_throw)
+		return
+	prisoner?.prison?.staff_basket(thrower, hoop)
 
 /datum/prisoner_activity/basketball/tick(seconds)
 	var/obj/structure/hoop/hoop = hoop_ref?.resolve()
@@ -749,7 +852,9 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 		return spot ? ACTIVITY_MOVE : ACTIVITY_DONE
 	if(is_outpost_prisoner(ball.loc))
 		return wait_near(hoop)
-	// Someone walked off with it.
+	// Staff picked it up: they wait a while to see if it comes back.
+	if(ismob(ball.loc) && get_dist(prisoner, ball) <= 7 && ++waited_on_staff <= 20)
+		return wait_near(hoop)
 	return ACTIVITY_DONE
 
 /// Standing near the hoop while the other player shoots
@@ -782,6 +887,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	return length(options) ? pick(options) : null
 
 /datum/prisoner_activity/basketball/proc/shoot(obj/structure/hoop/hoop, obj/item/toy/basketball/ball)
+	waited_on_staff = 0
 	prisoner.drop_held_item(prisoner.loc)
 	// Whoever is closer gets the rebound.
 	unclaim(ball)
@@ -1016,7 +1122,10 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 
 // ----- needs and duties -----
 
-/// Hungry: gets food from the hatch or wherever it is, carries it to a mess table and eats
+/**
+ * Hungry: gets food from a serving hatch (or eats what they carry), takes it to a mess table and
+ * eats. In a good mood they take the wrapper to the bin afterwards.
+ */
 /datum/prisoner_activity/eat
 	name = "eating"
 	context = "eating"
@@ -1026,10 +1135,13 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	var/datum/weakref/seat_ref
 	/// The table in front of their seat, if they found one
 	var/turf/table_turf
-	/// "fetch", "seat" or "eating"
+	/// "fetch", "seat", "eating", "bin" or "done"
 	var/stage = "fetch"
 	var/waited = 0
 	var/eat_until = 0
+	/// The wrapper they are taking to the bin, and the bin
+	var/datum/weakref/trash_ref
+	var/datum/weakref/bin_ref
 
 /datum/prisoner_activity/eat/setup()
 	var/obj/item/food/meal = istype(prisoner.held_item, /obj/item/food) ? prisoner.held_item : null
@@ -1048,6 +1160,15 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	if(!started)
 		started = TRUE
 		ends_at = INFINITY
+	if(stage == "bin")
+		var/obj/item/trash = trash_ref?.resolve()
+		var/obj/structure/closet/crate/bin/bin = bin_ref?.resolve()
+		if(trash && prisoner.held_item == trash && !prisoner.bin_litter(trash, bin))
+			// Filled up while they walked over.
+			prisoner.say_context("bin_full")
+			prisoner.drop_held_item()
+		stage = "done"
+		return TRUE
 	if(stage == "seat")
 		var/obj/structure/chair/seat = seat_ref?.resolve()
 		var/obj/item/food/meal = food_ref?.resolve()
@@ -1059,6 +1180,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	return TRUE
 
 /datum/prisoner_activity/eat/tick(seconds)
+	if(stage == "bin" || stage == "done")
+		return ACTIVITY_DONE
 	var/obj/item/food/meal = food_ref?.resolve()
 	if(QDELETED(meal))
 		return ACTIVITY_DONE
@@ -1082,9 +1205,22 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 				playsound(prisoner, 'sound/items/eatfood.ogg', 20, TRUE)
 			if(world.time < eat_until)
 				return ACTIVITY_CONTINUE
-			prisoner.finish_meal(meal, get_turf(prisoner), table_turf)
-			return ACTIVITY_DONE
+			return carry_to_bin(prisoner.finish_meal(meal, get_turf(prisoner), table_turf))
 	return ACTIVITY_CONTINUE
+
+/// After the meal: takes the wrapper over to the bin, if they meant to and can get there
+/datum/prisoner_activity/eat/proc/carry_to_bin(obj/item/trash)
+	if(QDELETED(trash))
+		return ACTIVITY_DONE
+	var/obj/structure/closet/crate/bin/bin = prisoner.prison.find_bin(prisoner)
+	var/turf/stand = bin ? prisoner.approach_turf(bin) : null
+	if(!stand || !prisoner.take_item(trash))
+		return ACTIVITY_DONE
+	trash_ref = WEAKREF(trash)
+	bin_ref = WEAKREF(bin)
+	stage = "bin"
+	spot = stand
+	return ACTIVITY_MOVE
 
 /// A free stool at a mess table, or eating where they stand when there is none
 /datum/prisoner_activity/eat/proc/go_to_seat()
@@ -1108,15 +1244,18 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	stage = "eating"
 	spot = null
 	eat_until = world.time + rand(8, 15) SECONDS
+	if(table_turf)
+		prisoner.prison?.note_table_meal(prisoner)
 
 /datum/prisoner_activity/eat/finish()
 	var/obj/item/food/meal = food_ref?.resolve()
-	if(meal && prisoner?.held_item == meal)
+	var/obj/item/trash = trash_ref?.resolve()
+	if(prisoner?.held_item && (prisoner.held_item == meal || prisoner.held_item == trash))
 		prisoner.drop_held_item()
 	table_turf = null
 	return ..()
 
-/// Dirty: fetches a cleaner uniform from the hatch or the floor and changes
+/// Dirty: fetches a cleaner uniform from a serving hatch and changes
 /datum/prisoner_activity/change
 	name = "changing"
 	weight = 0
@@ -1180,6 +1319,118 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 		return ACTIVITY_DONE
 	if(prisoner.wants_clean_uniform() && prisoner.prison.find_supply(prisoner, TRUE))
 		return ACTIVITY_DONE
+	return ..()
+
+/**
+ * Hurt, with someone holding dressings in the yard: goes over to them and asks. Ends once they are
+ * treated, or when the medic walks off.
+ */
+/datum/prisoner_activity/sick_call
+	name = "asking for the medic"
+	weight = 0
+	interruptible = FALSE
+	var/datum/weakref/medic_ref
+	/// Whether they have asked yet
+	var/asked = FALSE
+
+/datum/prisoner_activity/sick_call/setup()
+	var/mob/living/medic = prisoner.find_medic()
+	if(!medic)
+		return FALSE
+	medic_ref = WEAKREF(medic)
+	spot = prisoner.approach_turf(medic)
+	if(!spot)
+		return FALSE
+	COOLDOWN_START(prisoner, sick_call_cooldown, PRISONER_SICK_CALL_COOLDOWN)
+	return TRUE
+
+/datum/prisoner_activity/sick_call/begin()
+	started = TRUE
+	ends_at = world.time + PRISONER_SICK_CALL_TIME
+
+/datum/prisoner_activity/sick_call/tick(seconds)
+	var/mob/living/medic = medic_ref?.resolve()
+	if(prisoner.health_factor() >= PRISONER_INJURED_BELOW || world.time >= ends_at || !prisoner.is_medic(medic))
+		return ACTIVITY_DONE
+	if(get_dist(prisoner, medic) > 1)
+		spot = prisoner.approach_turf(medic)
+		return spot ? ACTIVITY_MOVE : ACTIVITY_DONE
+	prisoner.face_atom(medic)
+	if(!asked)
+		asked = TRUE
+		prisoner.say_context("sick_call")
+	return ACTIVITY_CONTINUE
+
+/// Content and idle: picks up a piece of litter and puts it in the bin
+/datum/prisoner_activity/tidy
+	name = "tidying up"
+	leisure = TRUE
+	weight = 3
+	personality_weights = list("cheerful" = 1.5, "nervous" = 1.3, "grumpy" = 0.4)
+	var/datum/weakref/litter_ref
+	var/datum/weakref/bin_ref
+	/// "fetch", "carry" or "done"
+	var/stage = "fetch"
+	var/waited = 0
+
+/datum/prisoner_activity/tidy/get_weight()
+	if(prisoner.mood < PRISONER_TIDY_MOOD || !COOLDOWN_FINISHED(prisoner, tidy_cooldown))
+		return 0
+	return ..()
+
+/datum/prisoner_activity/tidy/setup()
+	var/obj/structure/closet/crate/bin/bin = prisoner.prison.find_bin(prisoner)
+	if(!outpost_bin_has_room(bin) || !prisoner.approach_turf(bin))
+		return FALSE
+	var/obj/item/trash/litter = prisoner.prison.find_litter(prisoner)
+	if(!litter || !claim(litter))
+		return FALSE
+	spot = prisoner.approach_turf(litter)
+	if(!spot)
+		return FALSE
+	litter_ref = WEAKREF(litter)
+	bin_ref = WEAKREF(bin)
+	COOLDOWN_START(prisoner, tidy_cooldown, PRISONER_TIDY_COOLDOWN)
+	return TRUE
+
+/datum/prisoner_activity/tidy/arrive()
+	spot = null
+	if(!started)
+		started = TRUE
+		ends_at = world.time + 60 SECONDS
+	if(stage == "carry")
+		var/obj/item/trash/litter = litter_ref?.resolve()
+		var/obj/structure/closet/crate/bin/bin = bin_ref?.resolve()
+		if(litter && prisoner.held_item == litter && prisoner.bin_litter(litter, bin))
+			prisoner.say_context("tidy")
+		stage = "done"
+	return TRUE
+
+/datum/prisoner_activity/tidy/tick(seconds)
+	if(stage != "fetch" || world.time >= ends_at)
+		return ACTIVITY_DONE
+	var/obj/item/trash/litter = litter_ref?.resolve()
+	if(QDELETED(litter))
+		return ACTIVITY_DONE
+	if(prisoner.held_item != litter)
+		switch(prisoner.try_reach(litter))
+			if(PRISONER_REACH_WAIT)
+				return ++waited > 6 ? ACTIVITY_DONE : ACTIVITY_CONTINUE
+			if(PRISONER_REACH_FAILED)
+				return ACTIVITY_DONE
+		if(!prisoner.take_item(litter))
+			return ACTIVITY_DONE
+	var/obj/structure/closet/crate/bin/bin = bin_ref?.resolve()
+	spot = bin ? prisoner.approach_turf(bin) : null
+	if(!spot)
+		return ACTIVITY_DONE
+	stage = "carry"
+	return ACTIVITY_MOVE
+
+/datum/prisoner_activity/tidy/finish()
+	var/obj/item/trash/litter = litter_ref?.resolve()
+	if(litter && prisoner?.held_item == litter)
+		prisoner.drop_held_item()
 	return ..()
 
 /// The end of their sentence: back to their cell to be beamed out

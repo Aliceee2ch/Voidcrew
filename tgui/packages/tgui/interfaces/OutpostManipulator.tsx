@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Box,
   Button,
@@ -169,6 +170,82 @@ type PrisonAdminData = {
   lit_samples?: number | null;
   /** seconds of outage counted against power */
   outage_debt?: number;
+  extras?: PrisonAdminExtras | null;
+};
+
+type AdminGuard = {
+  ref: string;
+  name: string;
+  health: number;
+  status: string;
+  activity: string;
+  response: string;
+};
+
+type AdminTurret = { ref: string; state: string; mounted: BooleanLike };
+
+type AdminRep = { key: string; name: string; score: number; label: string };
+
+type AdminLife = {
+  pairs: {
+    a_ref: string;
+    b_ref: string;
+    a_name: string;
+    b_name: string;
+    affinity: number;
+  }[];
+  birthdays: string[];
+  scene: string | null;
+};
+
+type AdminContraband = {
+  cells: { number: number; shiv: BooleanLike; pruno: string }[];
+  drunk: string[];
+  carrying: string[];
+};
+
+type AdminMail = {
+  letters: {
+    ref: string;
+    to_ref: string;
+    to_name: string;
+    kind: string;
+    opened: BooleanLike;
+    contraband: BooleanLike;
+    /** seconds */
+    age: number;
+  }[];
+  /** seconds until the next letter, null when the clock is stopped */
+  next_in: number | null;
+};
+
+type AdminLeads = {
+  /** seconds until the wing can give a lead, null when ready */
+  ready_in: number | null;
+  carriers: string[];
+  open: {
+    teller: string;
+    ship: string;
+    name: string;
+    lie: BooleanLike;
+    exposed: BooleanLike;
+    /** seconds */
+    age: number;
+  }[];
+};
+
+/**
+ * The extras packages' blocks (outpost_prison_extras.dm). Each is an empty list until its
+ * package lands; the object-shaped ones render nothing until then.
+ */
+type PrisonAdminExtras = {
+  guards?: AdminGuard[];
+  security?: AdminTurret[];
+  social?: AdminRep[];
+  life?: AdminLife | [];
+  contraband?: AdminContraband | [];
+  mail?: AdminMail | [];
+  leads?: AdminLeads | [];
 };
 
 type SelectedOutpost = {
@@ -1032,6 +1109,7 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
         : '',
     isNum(data.lit_samples) ? `${data.lit_samples} light samples` : '',
   ].filter(Boolean);
+  const extras = extrasBlock<PrisonAdminExtras>(data.extras);
 
   return (
     <Section title="Prison">
@@ -1329,6 +1407,16 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
         ) : null}
       </LabeledList>
 
+      {extras ? (
+        <PrisonExtrasTools
+          extras={extras}
+          prisoners={prisoners}
+          names={names}
+          busy={busy}
+          act={act}
+        />
+      ) : null}
+
       <Stack align="center" wrap mt={1}>
         <Stack.Item width="90px" bold>
           All prisoners
@@ -1353,6 +1441,7 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
           <PrisonerRow
             key={prisoner.ref}
             prisoner={prisoner}
+            extras={extras}
             busy={busy}
             act={act}
           />
@@ -1364,11 +1453,12 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
 
 type PrisonerRowProps = {
   prisoner: PrisonAdminPrisoner;
+  extras?: PrisonAdminExtras | null;
   busy: boolean;
   act: DetailsProps['act'];
 };
 
-const PrisonerRow = ({ prisoner, busy, act }: PrisonerRowProps) => {
+const PrisonerRow = ({ prisoner, extras, busy, act }: PrisonerRowProps) => {
   const dead = !!prisoner.dead;
   const locked = busy || dead;
   const ref = prisoner.ref;
@@ -1617,6 +1707,531 @@ const PrisonerRow = ({ prisoner, busy, act }: PrisonerRowProps) => {
           ))}
         </Stack.Item>
       </Stack>
+      {extras ? (
+        <PrisonerExtras
+          prisoner={prisoner}
+          extras={extras}
+          locked={locked}
+          act={act}
+        />
+      ) : null}
     </Box>
+  );
+};
+
+// ===== Prison extras (outpost_prison_extras.dm): guards, turrets, reputation, life, contraband, mail, leads =====
+
+/** An extras block sent as an object; an empty list means its package has not landed yet. */
+function extrasBlock<T>(value: T | unknown[] | null | undefined): T | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as T)
+    : null;
+}
+
+/** An extras block sent as a list, without holes; anything else is empty. */
+function extrasRows<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
+/** prison_rep: -10 to 10; brute at -5 or less, fair at 5 or more */
+const REP_PRESETS = [-10, -5, 0, 5, 10];
+
+/** prison_affinity: -100 to 100; friends at 25 or more, rivals at -25 or less */
+const AFFINITY_PRESETS: [number, string][] = [
+  [50, 'Friends'],
+  [0, 'Neutral'],
+  [-50, 'Rivals'],
+];
+
+/** prison_mail kinds */
+const LETTER_KINDS = [
+  { value: 'good', displayText: 'Good news' },
+  { value: 'kid', displayText: "Kid's drawing" },
+  { value: 'news', displayText: 'News' },
+  { value: 'bad', displayText: 'Bad news' },
+  { value: 'contraband', displayText: 'Contraband' },
+];
+
+type ExtrasToolsProps = {
+  extras: PrisonAdminExtras;
+  prisoners: PrisonAdminPrisoner[];
+  names: Record<string, string>;
+  busy: boolean;
+  act: DetailsProps['act'];
+};
+
+/** The wing-wide extras controls, under the prison's own list */
+const PrisonExtrasTools = ({
+  extras,
+  prisoners,
+  names,
+  busy,
+  act,
+}: ExtrasToolsProps) => {
+  const guards = extrasRows(extras.guards);
+  const turrets = extrasRows(extras.security);
+  const reps = extrasRows(extras.social);
+  const life = extrasBlock<AdminLife>(extras.life);
+  const contraband = extrasBlock<AdminContraband>(extras.contraband);
+  const mail = extrasBlock<AdminMail>(extras.mail);
+  const leads = extrasBlock<AdminLeads>(extras.leads);
+  const pairs = extrasRows(life?.pairs);
+  const cells = extrasRows(contraband?.cells);
+  const letters = extrasRows(mail?.letters);
+  const openLeads = extrasRows(leads?.open);
+  return (
+    <Box
+      className="OutpostPrisonAdmin__extras"
+      mt={1}
+      pt={1}
+      style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}
+    >
+      <LabeledList>
+        {Array.isArray(extras.guards) ? (
+          <LabeledList.Item label="Guards">
+            <Button
+              compact
+              icon="user-plus"
+              disabled={busy}
+              tooltip="Free, ignores the cap"
+              onClick={() => act('prison_guard_spawn', {})}
+            >
+              Spawn
+            </Button>
+            {guards.map((guard) => (
+              <Box
+                key={guard.ref}
+                className="OutpostPrisonAdmin__guard"
+                mt={0.5}
+              >
+                <Box inline bold mr={1}>
+                  {guard.name}
+                </Box>
+                <Box inline color="label" mr={1}>
+                  {[
+                    `${Math.round(guard.health || 0)} HP`,
+                    guard.status,
+                    guard.activity,
+                    guard.response,
+                  ]
+                    .filter(Boolean)
+                    .join(' / ')}
+                </Box>
+                <Button
+                  compact
+                  icon="user-injured"
+                  disabled={busy}
+                  onClick={() => act('prison_guard_down', { ref: guard.ref })}
+                >
+                  Down
+                </Button>
+                <Button.Confirm
+                  compact
+                  icon="trash"
+                  color="bad"
+                  confirmContent="Remove?"
+                  disabled={busy}
+                  onClick={() => act('prison_guard_remove', { ref: guard.ref })}
+                >
+                  Remove
+                </Button.Confirm>
+              </Box>
+            ))}
+          </LabeledList.Item>
+        ) : null}
+        {Array.isArray(extras.security) ? (
+          <LabeledList.Item label="Turrets">
+            <Button
+              compact
+              icon="plus"
+              disabled={busy}
+              tooltip="Loose, at the warden's console"
+              onClick={() => act('prison_turret_spawn', {})}
+            >
+              Spawn
+            </Button>
+            {turrets.map((turret, index) => (
+              <Box
+                inline
+                key={turret.ref}
+                className="OutpostPrisonAdmin__turret"
+                ml={1.5}
+              >
+                {`${index + 1}: ${turret.state || '?'}${
+                  turret.mounted ? '' : ', loose'
+                }`}
+              </Box>
+            ))}
+          </LabeledList.Item>
+        ) : null}
+        {reps.length > 0 ? (
+          <LabeledList.Item label="Reputation">
+            {reps.map((rep) => (
+              <Box key={rep.key} className="OutpostPrisonAdmin__rep" mb={0.5}>
+                <Box inline bold mr={1}>
+                  {rep.name || rep.key}
+                </Box>
+                <Box inline color="label" mr={1}>
+                  {rep.label}
+                </Box>
+                <NumberInput
+                  value={Math.round((rep.score || 0) * 10) / 10}
+                  minValue={-10}
+                  maxValue={10}
+                  step={0.5}
+                  stepPixelSize={4}
+                  width="44px"
+                  disabled={busy}
+                  onChange={(next) =>
+                    act('prison_rep', {
+                      key: rep.key,
+                      score: Math.max(-10, Math.min(10, next)),
+                    })
+                  }
+                />
+                {REP_PRESETS.map((score) => (
+                  <Button
+                    key={score}
+                    compact
+                    disabled={busy}
+                    onClick={() => act('prison_rep', { key: rep.key, score })}
+                  >
+                    {`${score}`}
+                  </Button>
+                ))}
+              </Box>
+            ))}
+          </LabeledList.Item>
+        ) : null}
+        {life ? (
+          <LabeledList.Item label="Affinity">
+            {pairs.map((pair) => (
+              <Box
+                key={`${pair.a_ref}|${pair.b_ref}`}
+                className="OutpostPrisonAdmin__pair"
+                mb={0.5}
+              >
+                <Box inline mr={1}>
+                  {`${pair.a_name || names[pair.a_ref] || '?'} / ${
+                    pair.b_name || names[pair.b_ref] || '?'
+                  }`}
+                </Box>
+                <NumberInput
+                  value={Math.round(pair.affinity || 0)}
+                  minValue={-100}
+                  maxValue={100}
+                  step={5}
+                  stepPixelSize={2}
+                  width="44px"
+                  disabled={busy}
+                  onChange={(next) =>
+                    act('prison_affinity', {
+                      a_ref: pair.a_ref,
+                      b_ref: pair.b_ref,
+                      value: Math.max(-100, Math.min(100, Math.round(next))),
+                    })
+                  }
+                />
+                {AFFINITY_PRESETS.map(([value, label]) => (
+                  <Button
+                    key={label}
+                    compact
+                    disabled={busy}
+                    onClick={() =>
+                      act('prison_affinity', {
+                        a_ref: pair.a_ref,
+                        b_ref: pair.b_ref,
+                        value,
+                      })
+                    }
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </Box>
+            ))}
+            <AffinityPicker prisoners={prisoners} busy={busy} act={act} />
+          </LabeledList.Item>
+        ) : null}
+        {life ? (
+          <LabeledList.Item label="Scenes">
+            <Button
+              compact
+              icon="clone"
+              disabled={busy}
+              tooltip="A card game at the table with the deck"
+              onClick={() => act('prison_cards', {})}
+            >
+              Cards
+            </Button>
+            {life.scene ? (
+              <Box inline color="average" ml={1}>
+                {life.scene}
+              </Box>
+            ) : null}
+          </LabeledList.Item>
+        ) : null}
+        {contraband ? (
+          <LabeledList.Item label="Stashes">
+            {cells.map((cell) => {
+              const pruno = cell.pruno || 'none';
+              const stocked = !!cell.shiv || pruno !== 'none';
+              const stash = (kind: string) =>
+                act('prison_stash', { cell: cell.number, kind });
+              return (
+                <Box
+                  key={cell.number}
+                  className="OutpostPrisonAdmin__stash"
+                  mb={0.5}
+                >
+                  <Box inline bold mr={1}>
+                    {`Cell ${cell.number}`}
+                  </Box>
+                  <Button
+                    compact
+                    selected={!!cell.shiv}
+                    disabled={busy}
+                    onClick={() => stash('shiv')}
+                  >
+                    Shiv
+                  </Button>
+                  <Button
+                    compact
+                    selected={pruno !== 'none'}
+                    disabled={busy}
+                    onClick={() => stash('pruno')}
+                  >
+                    {pruno === 'none' ? 'Pruno' : `Pruno (${pruno})`}
+                  </Button>
+                  <Button
+                    compact
+                    disabled={busy || !stocked}
+                    onClick={() => stash('clear')}
+                  >
+                    Clear
+                  </Button>
+                </Box>
+              );
+            })}
+          </LabeledList.Item>
+        ) : null}
+        {mail ? (
+          <LabeledList.Item label="Mail">
+            <Box color="label">
+              {isNum(mail.next_in)
+                ? `Next letter in ${clock(mail.next_in)}`
+                : 'Mail clock stopped'}
+            </Box>
+            {letters.map((letter) => (
+              <Box key={letter.ref} className="OutpostPrisonAdmin__letter">
+                {`${letter.to_name || names[letter.to_ref] || '?'}: ${
+                  letter.kind
+                }, ${clock(letter.age)}`}
+                {letter.opened ? (
+                  <Box inline color="average" ml={1}>
+                    opened
+                  </Box>
+                ) : null}
+                {letter.contraband ? (
+                  <Box inline color="bad" ml={1}>
+                    contraband
+                  </Box>
+                ) : null}
+              </Box>
+            ))}
+          </LabeledList.Item>
+        ) : null}
+        {leads ? (
+          <LabeledList.Item label="Leads">
+            <Box color="label">
+              {isNum(leads.ready_in) && leads.ready_in > 0
+                ? `Next lead in ${clock(leads.ready_in)}`
+                : 'Ready'}
+            </Box>
+            {openLeads.map((lead, index) => (
+              <Box key={index} className="OutpostPrisonAdmin__lead">
+                {`${lead.teller} to ${lead.ship}: ${lead.name}, ${clock(
+                  lead.age,
+                )}`}
+                {lead.lie ? (
+                  <Box inline bold color="bad" ml={1}>
+                    lie
+                  </Box>
+                ) : null}
+                {lead.exposed ? (
+                  <Box inline color="label" ml={1}>
+                    exposed
+                  </Box>
+                ) : null}
+              </Box>
+            ))}
+          </LabeledList.Item>
+        ) : null}
+      </LabeledList>
+    </Box>
+  );
+};
+
+type AffinityPickerProps = {
+  prisoners: PrisonAdminPrisoner[];
+  busy: boolean;
+  act: DetailsProps['act'];
+};
+
+/** Two prisoners and a preset: makes a pair that has no affinity yet */
+const AffinityPicker = ({ prisoners, busy, act }: AffinityPickerProps) => {
+  const [first, setFirst] = useState('');
+  const [second, setSecond] = useState('');
+  const living = prisoners.filter((prisoner) => !prisoner.dead);
+  const names: Record<string, string> = {};
+  for (const prisoner of living) {
+    names[prisoner.ref] = prisoner.name;
+  }
+  const options = living.map((prisoner) => ({
+    value: prisoner.ref,
+    displayText: prisoner.name,
+  }));
+  const ready = !!names[first] && !!names[second] && first !== second;
+  return (
+    <Stack
+      className="OutpostPrisonAdmin__pick-pair"
+      align="center"
+      wrap
+      mt={0.5}
+    >
+      <Dropdown
+        width="130px"
+        disabled={busy || living.length < 2}
+        selected={first}
+        displayText={names[first] || undefined}
+        placeholder="Prisoner"
+        options={options}
+        onSelected={(ref) => setFirst(ref)}
+      />
+      <Dropdown
+        width="130px"
+        disabled={busy || living.length < 2}
+        selected={second}
+        displayText={names[second] || undefined}
+        placeholder="Prisoner"
+        options={options}
+        onSelected={(ref) => setSecond(ref)}
+      />
+      {AFFINITY_PRESETS.map(([value, label]) => (
+        <Button
+          key={label}
+          compact
+          disabled={busy || !ready}
+          onClick={() =>
+            act('prison_affinity', { a_ref: first, b_ref: second, value })
+          }
+        >
+          {label}
+        </Button>
+      ))}
+    </Stack>
+  );
+};
+
+type PrisonerExtrasProps = {
+  prisoner: PrisonAdminPrisoner;
+  extras: PrisonAdminExtras;
+  locked: boolean;
+  act: DetailsProps['act'];
+};
+
+/** One prisoner's extras: badges, then birthday, party, a letter and a lead */
+const PrisonerExtras = ({
+  prisoner,
+  extras,
+  locked,
+  act,
+}: PrisonerExtrasProps) => {
+  const life = extrasBlock<AdminLife>(extras.life);
+  const contraband = extrasBlock<AdminContraband>(extras.contraband);
+  const mail = extrasBlock<AdminMail>(extras.mail);
+  const leads = extrasBlock<AdminLeads>(extras.leads);
+  if (!life && !contraband && !mail && !leads) {
+    return null;
+  }
+  const ref = prisoner.ref;
+  const birthday = extrasRows(life?.birthdays).includes(ref);
+  // [label, icon, colour]
+  const badges: [string, string, string][] = [];
+  if (birthday) {
+    badges.push(['Birthday', 'cake-candles', 'good']);
+  }
+  if (extrasRows(contraband?.drunk).includes(ref)) {
+    badges.push(['Drunk', 'wine-bottle', 'average']);
+  }
+  if (extrasRows(contraband?.carrying).includes(ref)) {
+    badges.push(['Carrying', 'hand', 'average']);
+  }
+  if (extrasRows(leads?.carriers).includes(ref)) {
+    badges.push(['Has a lead', 'map-location-dot', 'good']);
+  }
+  return (
+    <Stack
+      className="OutpostPrisonAdmin__prisoner-extras"
+      align="center"
+      wrap
+      mt={0.5}
+    >
+      {badges.map(([label, icon, color]) => (
+        <Box
+          inline
+          key={label}
+          className="OutpostPrisonAdmin__badge"
+          color={color}
+          mr={1}
+        >
+          <Icon name={icon} mr={0.5} />
+          {label}
+        </Box>
+      ))}
+      {life ? (
+        <>
+          <Button
+            compact
+            icon="cake-candles"
+            disabled={locked || birthday}
+            onClick={() => act('prison_birthday', { ref })}
+          >
+            Birthday
+          </Button>
+          <Button
+            compact
+            icon="champagne-glasses"
+            disabled={locked || !birthday}
+            tooltip={birthday ? undefined : 'Birthday first'}
+            onClick={() => act('prison_party', { ref })}
+          >
+            Party
+          </Button>
+        </>
+      ) : null}
+      {mail ? (
+        <Dropdown
+          width="110px"
+          disabled={locked}
+          selected={null}
+          displayText="Send letter"
+          icon="envelope"
+          options={LETTER_KINDS}
+          onSelected={(kind) => act('prison_mail', { ref, kind })}
+        />
+      ) : null}
+      {leads ? (
+        <Button
+          compact
+          icon="map-location-dot"
+          disabled={locked}
+          tooltip="Carries a lead, and the wing is ready"
+          onClick={() => act('prison_lead', { ref })}
+        >
+          Lead
+        </Button>
+      ) : null}
+    </Stack>
   );
 };

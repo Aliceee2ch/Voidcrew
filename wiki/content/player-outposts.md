@@ -41,6 +41,8 @@ Order supplies through the ordinary **cargo console**, or buy sheets through a *
 
 Load eligible goods onto the ferry and dispatch it to export them. Payment goes to the outpost bank. Everyone must leave the ferry before it can depart. Failed deliveries refund undelivered purchases.
 
+The Upgrades tab also sells a **prison wing**, where the outpost is paid to hold prisoners. See [Prison Wing](prison-wing.md).
+
 ## Research and manufacturing
 
 Build an **R&D server** and install its source-code disk. Copy its link with a multitool, then link R&D consoles, experiment equipment, and fabricators. Link fabricators to the local silo too, and supply materials. See [Research](research.md) for experiments and technologies.

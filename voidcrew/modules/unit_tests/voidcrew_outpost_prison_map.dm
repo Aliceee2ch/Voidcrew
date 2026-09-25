@@ -8,7 +8,8 @@
  */
 
 /// A turned wing comes with its yard bin and its office kit: the baton instead of handcuffs, the
-/// recharger, light tubes, flashlights, the cleaning kit and eight uniforms.
+/// recharger, light tubes, flashlights, the cleaning kit, eight uniforms, the mailbag on an office
+/// table by a serving hatch and a crowbar on the rack for the cell cisterns.
 /datum/unit_test/voidcrew_outpost_prison_map_kit
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -91,5 +92,28 @@
 	for(var/obj/item/clothing/under/rank/prisoner/outpost/uniform as anything in uniforms)
 		TEST_ASSERT(istype(uniform.loc, /obj/structure/closet) && !istype(uniform.loc, /obj/structure/closet/crate), "A prison uniform is not in the locker")
 	TEST_ASSERT(all_in_office(prison, uniforms), "The uniform locker is on the prisoners' side of the wing")
+
+	// The mailbag: one, on an office table (not a serving hatch) beside a hatch.
+	var/list/mailbags = wing_things(prison, /obj/structure/outpost_prison_mailbag)
+	TEST_ASSERT_EQUAL(length(mailbags), 1, "The wing should have one mailbag")
+	var/obj/structure/outpost_prison_mailbag/mailbag = mailbags[1]
+	TEST_ASSERT(isturf(mailbag.loc), "The mailbag is inside something")
+	var/turf/mail_tile = mailbag.loc
+	TEST_ASSERT_NULL(locate(/obj/structure/table/reinforced/prison_hatch) in mail_tile, "The mailbag is on a serving hatch")
+	TEST_ASSERT_NOTNULL(locate(/obj/structure/table) in mail_tile, "The mailbag is not on a table")
+	var/hatch_beside = FALSE
+	for(var/turf/near in range(1, mail_tile))
+		if(locate(/obj/structure/table/reinforced/prison_hatch) in near)
+			hatch_beside = TRUE
+	TEST_ASSERT(hatch_beside, "The mailbag's table is not beside a serving hatch")
+
+	// A plain crowbar on the rack, for lifting the cell cistern lids.
+	var/list/crowbars = list()
+	for(var/obj/item/crowbar/bar as anything in wing_things(prison, /obj/item/crowbar))
+		if(bar.type == /obj/item/crowbar)
+			crowbars += bar
+	TEST_ASSERT_EQUAL(length(crowbars), 1, "The wing should have one crowbar")
+	TEST_ASSERT(locate(/obj/structure/rack) in get_turf(crowbars[1]), "The crowbar is not on the rack")
+	TEST_ASSERT(all_in_office(prison, mailbags + crowbars), "The mailbag or the crowbar is on the prisoners' side of the wing")
 
 	settle_prison_air(home)

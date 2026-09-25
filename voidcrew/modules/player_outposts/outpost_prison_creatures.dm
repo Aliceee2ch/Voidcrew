@@ -114,6 +114,8 @@
 	damage_coeff = list(BRUTE = 1, BURN = 1, TOX = 0, STAMINA = 0, OXY = 0)
 	environment_smash = ENVIRONMENT_SMASH_NONE
 	ai_controller = /datum/ai_controller/basic_controller/outpost_experiment
+	// tg's human deathgasp
+	death_message = "seizes up and falls limp, their eyes dead and lifeless..."
 	/// What the log calls it: "a hulk"
 	var/form_name = "a creature"
 	/// Health with one player on the level, and per extra player

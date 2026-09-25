@@ -309,6 +309,8 @@
 	basic_mob_flags = NONE
 	status_flags = NONE
 	move_resist = INFINITY
+	// tg's human deathgasp
+	death_message = "seizes up and falls limp, their eyes dead and lifeless..."
 	density = TRUE
 	maxHealth = 100
 	health = 100

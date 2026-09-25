@@ -38,6 +38,8 @@
 	move_resist = MOVE_FORCE_VERY_STRONG
 	density = TRUE
 	basic_mob_flags = NONE
+	// tg's human deathgasp
+	death_message = "seizes up and falls limp, their eyes dead and lifeless..."
 	// They lie down on beds, when knocked down and when dead.
 	mobility_flags = MOBILITY_FLAGS_REST_CAPABLE_DEFAULT
 	rotate_on_lying = TRUE

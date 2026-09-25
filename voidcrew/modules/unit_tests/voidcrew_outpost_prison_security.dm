@@ -229,8 +229,9 @@
 	var/mob/living/carbon/human/stranger = make_player(prison_spot(home, 2, 5), "xbcontrolstranger")
 	TEST_ASSERT(prison.is_member(owner) && !prison.is_member(stranger), "The owner and the stranger are the wrong way round")
 
-	// The mount rule: a cell block wall, looking into the cell block
-	var/obj/machinery/porta_turret/ship_defense/outpost_prison/loose = prison.make_stun_turret(prison_spot(home, 4, 7))
+	// The mount rule: a cell block wall, looking into the cell block. The loose turret waits in the
+	// office, since a turret standing on the yard tile it would look over blocks that tile.
+	var/obj/machinery/porta_turret/ship_defense/outpost_prison/loose = prison.make_stun_turret(prison_spot(home, 4, 5))
 	TEST_ASSERT(loose.mount_spot_ok(prison, prison_spot(home, 4, 6), NORTH), "The yard's south wall, facing the yard, was refused")
 	TEST_ASSERT(!loose.mount_spot_ok(prison, prison_spot(home, 4, 6), SOUTH), "A turret facing out of the cell block into the office was allowed")
 	TEST_ASSERT(!loose.mount_spot_ok(prison, prison_spot(home, 1, 7), WEST), "A turret facing out of the wing was allowed")
@@ -238,6 +239,7 @@
 	TEST_ASSERT_EQUAL(loose.console_state(), "loose", "A loose turret does not read as loose")
 
 	// Dragging it into a wall: refused for a stranger, and refused facing out, before any bolting
+	loose.forceMove(prison_spot(home, 4, 7))
 	loose.mouse_drop_dragged(prison_spot(home, 4, 6), stranger)
 	TEST_ASSERT(!loose.anchored, "A stranger mounted the wing's turret")
 	loose.mouse_drop_dragged(prison_spot(home, 4, 6), owner)

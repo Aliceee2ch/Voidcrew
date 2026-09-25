@@ -14,18 +14,6 @@
 	icon_state = "cargo_bay"
 
 /**
- * Registers once per level. A template load registers every area it touched
- * (initTemplateBounds()), then the new area registers itself again in Initialize(), and the
- * parent appends without checking. /area/Destroy() removes one entry per level, so the second
- * one kept SSmapping.areas_in_z holding the dock's area after its claim was torn down, and the
- * area could never be garbage collected.
- */
-/area/voidcrew/player_outpost/cargo_dock/reg_in_areas_in_z()
-	if(z && (src in SSmapping.areas_in_z["[z]"]))
-		return
-	return ..()
-
-/**
  * The landing pad. The mapped values are the cargo ferry's own mobile port: the box ferry is
  * 7x12 with its port on an airlock in the middle of its long side, facing inboard. The map puts
  * this port on the pad's edge beside the apron, facing into the pad, so the ferry lands with that

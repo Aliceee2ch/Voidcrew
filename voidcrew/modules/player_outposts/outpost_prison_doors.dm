@@ -42,6 +42,17 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/door/window/outpost_prison_yard, 0)
 		return FALSE
 	return ..()
 
+/**
+ * Staff can toss things onto the counter from the office: an item thrown by someone this window opens
+ * for gets through it shut, and the yard side, if shut, stops it on the counter. Never a thrown person.
+ */
+/obj/machinery/door/window/brigdoor/outpost_prison_staff/CanAllowThrough(atom/movable/mover, border_dir)
+	. = ..()
+	if(. || border_dir != dir || !isitem(mover) || !mover.throwing)
+		return
+	var/mob/thrower = mover.throwing.get_thrower()
+	return !isnull(thrower) && may_use_outpost_prison_staff_door(src, thrower)
+
 MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/door/window/brigdoor/outpost_prison_staff, 0)
 
 // ===== STAFF DOORS =====

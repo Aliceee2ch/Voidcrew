@@ -78,8 +78,17 @@
 	var/locked_in_seconds = 0
 	/// Outfit whose look they wear
 	var/outfit_path
-	/// Which thought bubble shows, if any
+	/// Which of the people wearing that outfit they look like (outpost_npc_looks.dm)
+	var/look_number = 1
+	/// The need their thought bubble is about, if any; see update_bubble()
 	var/bubble
+	/// The bubble that is up now, if one is; it pops up now and then rather than staying
+	var/popped_bubble
+	/// world.time the bubble next pops up
+	var/bubble_next_pop = 0
+	/// What draws the popped bubble, in their vis_contents while it is up, and the timer that takes it down
+	var/obj/effect/abstract/outpost_thought/thought
+	var/bubble_timer
 	/// Which grime overlay they show: 0 none, 1 dirty, 2 filthy
 	var/grime_stage = 0
 	/// What they are carrying, held in their contents
@@ -136,10 +145,12 @@
 	var/list/crimes = outpost_prisoner_dialogue("crimes")
 	crime = length(crimes) ? pick(crimes) : "unpaid docking fees"
 	outfit_path = pick(/datum/outfit/outpost_prisoner, /datum/outfit/outpost_prisoner/glasses, /datum/outfit/outpost_prisoner/beanie)
+	look_number = random_outpost_npc_look_number()
 	INVOKE_ASYNC(src, PROC_REF(build_look))
 	// One shared list: element arguments are keyed by list reference.
 	var/static/list/edible_types = list(/obj/item/food)
 	AddElement(/datum/element/basic_eating, food_types = edible_types)
+	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SHOE)
 	RegisterSignal(src, COMSIG_MOB_PRE_EAT, PROC_REF(on_pre_eat))
 	RegisterSignal(src, COMSIG_MOB_ATE, PROC_REF(on_ate))
 	RegisterSignal(src, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interaction))
@@ -167,6 +178,10 @@
 	cell = null
 	walkable = null
 	reachable = null
+	deltimer(bubble_timer)
+	if(thought)
+		vis_contents -= thought
+		QDEL_NULL(thought)
 	return ..()
 
 /mob/living/basic/outpost_prisoner/Exited(atom/movable/gone, direction)
@@ -175,8 +190,11 @@
 		held_item = null
 		update_appearance(UPDATE_OVERLAYS)
 
+/// Dresses them as their own person in their outfit, with a body to match their gender. Can sleep.
 /mob/living/basic/outpost_prisoner/proc/build_look()
-	set_dynamic_human_appearance(list(src, outfit_path))
+	set_outpost_npc_look(src, outfit_path, gender, look_number)
+	if(QDELETED(src))
+		return
 	update_appearance(UPDATE_OVERLAYS)
 
 /**
@@ -452,25 +470,74 @@
 	var/cycle_seconds = PRISONER_BUBBLE_CYCLE / (1 SECONDS)
 	return needs[(round(bubble_clock / cycle_seconds) % length(needs)) + 1]
 
-/// Redraws only when the bubble or the grime stage changes. A new set of needs starts at the most urgent.
+/**
+ * Picks the bubble's need and the grime stage, redrawing only when the grime changes. A new set of needs
+ * starts at the most urgent. The bubble itself pops up now and then (see schedule_bubble()); a need that
+ * has just come up, a riot or a dose pops it soon.
+ */
 /mob/living/basic/outpost_prisoner/proc/update_bubble()
 	var/list/needs = bubble_needs()
 	var/needs_text = jointext(needs, ",")
+	var/fresh = FALSE
 	if(needs_text != shown_needs)
+		fresh = length(needs - splittext(shown_needs, ",")) > 0
 		shown_needs = needs_text
 		bubble_clock = 0
 	var/new_bubble = wanted_bubble(needs)
+	if(new_bubble != bubble && (new_bubble == "riot" || new_bubble == "experiment"))
+		fresh = TRUE
+	bubble = new_bubble
 	var/new_stage = 0
 	if(stat != DEAD)
 		if(uniform_grime >= PRISONER_GRIME_FILTHY)
 			new_stage = 2
 		else if(uniform_grime >= PRISONER_GRIME_DIRTY)
 			new_stage = 1
-	if(new_bubble == bubble && new_stage == grime_stage)
+	if(new_stage != grime_stage)
+		grime_stage = new_stage
+		update_appearance(UPDATE_OVERLAYS)
+	schedule_bubble(needs, fresh)
+
+/// Pops the bubble when it is due. One that no longer holds fades early, and a riot takes over at once.
+/mob/living/basic/outpost_prisoner/proc/schedule_bubble(list/needs, fresh)
+	if(popped_bubble && popped_bubble != bubble && (!(popped_bubble in needs) || bubble == "riot"))
+		fade_bubble()
+	if(!bubble)
 		return
-	bubble = new_bubble
-	grime_stage = new_stage
-	update_appearance(UPDATE_OVERLAYS)
+	if(fresh)
+		bubble_next_pop = min(bubble_next_pop, world.time + rand(0, PRISONER_BUBBLE_FRESH_DELAY))
+	if(!popped_bubble && world.time >= bubble_next_pop)
+		pop_bubble()
+
+/// Pops the bubble up with a little bounce; it bobs, then fades on its own
+/mob/living/basic/outpost_prisoner/proc/pop_bubble()
+	if(!bubble || QDELETED(src))
+		return
+	popped_bubble = bubble
+	var/gap = bubble == "riot" ? rand(PRISONER_BUBBLE_RIOT_GAP_MIN, PRISONER_BUBBLE_RIOT_GAP_MAX) : rand(PRISONER_BUBBLE_GAP_MIN, PRISONER_BUBBLE_GAP_MAX)
+	bubble_next_pop = world.time + PRISONER_BUBBLE_SHOW + PRISONER_BUBBLE_FADE + gap
+	if(!thought)
+		thought = new(null)
+	thought.pop(bubble, src)
+	vis_contents |= thought
+	deltimer(bubble_timer)
+	bubble_timer = addtimer(CALLBACK(src, PROC_REF(end_bubble)), PRISONER_BUBBLE_SHOW + PRISONER_BUBBLE_FADE, TIMER_STOPPABLE | TIMER_DELETE_ME)
+
+/// Fades the bubble out early
+/mob/living/basic/outpost_prisoner/proc/fade_bubble()
+	popped_bubble = null
+	if(!thought)
+		return
+	thought.fade()
+	deltimer(bubble_timer)
+	bubble_timer = addtimer(CALLBACK(src, PROC_REF(end_bubble)), PRISONER_BUBBLE_FADE, TIMER_STOPPABLE | TIMER_DELETE_ME)
+
+/// Takes the faded bubble down
+/mob/living/basic/outpost_prisoner/proc/end_bubble()
+	bubble_timer = null
+	popped_bubble = null
+	if(thought)
+		vis_contents -= thought
 
 /mob/living/basic/outpost_prisoner/update_overlays()
 	. = ..()
@@ -488,22 +555,42 @@
 		carried.dir = SOUTH
 		carried.pixel_x = 0
 		carried.pixel_y = 0
-		carried.pixel_w = 7
+		// The same hand whichever way they face: to the right facing south or east, the left facing north or west
+		carried.pixel_w = ((dir & WEST) || dir == NORTH) ? -7 : 7
 		carried.pixel_z = -4
 		carried.transform = matrix().Scale(0.6)
 		. += carried
-	if(bubble)
-		. += thought_bubble(bubble)
 
-/// tg's thought bubble, as a point uses, with the needed item's own sprite inset
-/mob/living/basic/outpost_prisoner/proc/thought_bubble(need)
-	var/mutable_appearance/bubble_look = mutable_appearance(
-		'icons/effects/effects.dmi',
-		"thought_bubble",
-		offset_spokesman = src,
-		plane = POINT_PLANE,
-		appearance_flags = KEEP_APART | RESET_COLOR | RESET_ALPHA | RESET_TRANSFORM,
-	)
+/// Turning moves what they carry to the other side
+/mob/living/basic/outpost_prisoner/setDir(newdir)
+	var/old_dir = dir
+	. = ..()
+	if(held_item && dir != old_dir)
+		update_appearance(UPDATE_OVERLAYS)
+
+/**
+ * tg's thought bubble, as a point uses, with the needed item's own sprite inset. A prisoner's pops up
+ * now and then through their vis_contents, so it animates apart from them.
+ */
+/obj/effect/abstract/outpost_thought
+	name = "thought"
+	icon = 'icons/effects/effects.dmi'
+	icon_state = "thought_bubble"
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	appearance_flags = KEEP_APART | RESET_COLOR | RESET_ALPHA | RESET_TRANSFORM | PIXEL_SCALE
+	vis_flags = NONE
+	plane = POINT_PLANE
+	// Over their head, its trailing dots pointing down at it
+	pixel_w = 8
+	pixel_z = 26
+	alpha = 0
+	/// Size and height it settles at; it bobs 2 pixels above that
+	var/rest_scale = 0.6
+	var/rest_z = 26
+
+/// Shows a need's item and bounces up: it grows past full size, settles, bobs and fades
+/obj/effect/abstract/outpost_thought/proc/pop(need, atom/movable/owner)
+	overlays.Cut()
 	var/mutable_appearance/item_look = outpost_prisoner_bubble_item(need)
 	if(item_look)
 		var/mutable_appearance/inset = new(item_look)
@@ -515,11 +602,21 @@
 		inset.pixel_y = 0
 		inset.pixel_w = 0
 		inset.pixel_z = 0
-		bubble_look.overlays += inset
-	bubble_look.pixel_w = 14
-	bubble_look.pixel_z = 22
-	bubble_look.alpha = 220
-	return bubble_look
+		overlays += inset
+	SET_PLANE_EXPLICIT(src, POINT_PLANE, owner)
+	alpha = 0
+	pixel_z = rest_z - 6
+	transform = matrix().Scale(rest_scale * 0.3)
+	var/bob = max(1, (PRISONER_BUBBLE_SHOW - 0.5 SECONDS) / 2)
+	animate(src, alpha = 230, pixel_z = rest_z, transform = matrix().Scale(rest_scale * 1.15), time = 0.3 SECONDS, easing = BACK_EASING | EASE_OUT)
+	animate(transform = matrix().Scale(rest_scale), time = 0.2 SECONDS, easing = SINE_EASING)
+	animate(pixel_z = rest_z + 2, time = bob, easing = SINE_EASING)
+	animate(pixel_z = rest_z, time = bob, easing = SINE_EASING)
+	animate(alpha = 0, pixel_z = rest_z + 5, transform = matrix().Scale(rest_scale * 0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
+
+/// Fades out from wherever it is
+/obj/effect/abstract/outpost_thought/proc/fade()
+	animate(src, alpha = 0, pixel_z = rest_z + 5, transform = matrix().Scale(rest_scale * 0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
 
 /// The item a thought bubble shows for a need
 /proc/outpost_prisoner_bubble_item_type(need)

@@ -99,6 +99,16 @@
 #define PRISONER_SHARED_MEAL_WINDOW (60 SECONDS)
 /// Time each need's thought bubble shows before the next
 #define PRISONER_BUBBLE_CYCLE (4 SECONDS)
+/// A thought bubble pops up now and then: it stays this long, then fades over PRISONER_BUBBLE_FADE
+#define PRISONER_BUBBLE_SHOW (3 SECONDS)
+#define PRISONER_BUBBLE_FADE (0.5 SECONDS)
+/// Time between pops for needs and an experiment's syringe, and for the riot shiv
+#define PRISONER_BUBBLE_GAP_MIN (20 SECONDS)
+#define PRISONER_BUBBLE_GAP_MAX (40 SECONDS)
+#define PRISONER_BUBBLE_RIOT_GAP_MIN (6 SECONDS)
+#define PRISONER_BUBBLE_RIOT_GAP_MAX (12 SECONDS)
+/// A need that has just come up pops within this long, so a wing's bubbles don't all pop at once
+#define PRISONER_BUBBLE_FRESH_DELAY (3 SECONDS)
 /// Meals and uniforms used per prisoner-minute, for the console's "lasts about N min"
 #define OUTPOST_PRISON_MEAL_RATE 0.11
 #define OUTPOST_PRISON_SUIT_RATE 0.045

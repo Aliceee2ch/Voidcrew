@@ -414,3 +414,98 @@
 	// outage, power on, kill, wreck, riot, transfer.
 	TEST_ASSERT_EQUAL(length(panel.operations), 18 + rat_logged, "The manipulator logged [length(panel.operations)] actions: [jointext(panel.operations, "; ")]")
 	settle_prison_air(home)
+
+// ===== EXPERIMENT ADMIN TOOLS =====
+
+/**
+ * The experiment admin actions and the experiment block. The experiments core and the changeling
+ * event are other packages, so every accepted path is checked both ways: refused and unlogged
+ * without them, logged once with them. Each refusal holds either way.
+ */
+/datum/unit_test/voidcrew_outpost_prison_admin_experiments
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_admin_experiments/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("prisonexperimentsowner")
+	TEST_ASSERT_NOTNULL(home, "The experiment admin test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/carbon/human/operator = make_player(prison_spot(home, 8, 4), "prisonexperiments")
+	var/datum/outpost_manipulator/unit_test/prison/panel = allocate(__IMPLIED_TYPE__, operator)
+	panel.selected = home
+	var/mob/living/basic/outpost_prisoner/first = test_prisoner(prison, prison_spot(home, 7, 8))
+	var/mob/living/basic/outpost_prisoner/second = test_prisoner(prison, prison_spot(home, 9, 8))
+	var/mob/living/basic/outpost_prisoner/third = test_prisoner(prison, prison_spot(home, 12, 8))
+
+	// The admin section and the warden console both carry the block, null while nothing runs.
+	var/list/section = panel.ui_data(operator)["selected"]["prison"]
+	TEST_ASSERT("experiment" in section, "The prison section sends no experiment")
+	TEST_ASSERT_NULL(section["experiment"], "An idle wing's section sends an experiment")
+	var/list/console = prison.ui_payload(operator)
+	TEST_ASSERT("experiment" in console, "The warden console sends no experiment")
+	TEST_ASSERT_NULL(console["experiment"], "An idle wing's console shows an experiment")
+
+	// Only admins.
+	var/datum/outpost_manipulator/unauthorized = allocate(/datum/outpost_manipulator, operator)
+	unauthorized.selected = home
+	unauthorized.manage_outpost(home, operator, "prison_researcher", list())
+	unauthorized.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(first), "form" = "hulk"))
+	unauthorized.manage_outpost(home, operator, "prison_changeling_stage", list("stage" = "horror"))
+	unauthorized.manage_outpost(home, operator, "prison_experiment_end", list())
+	TEST_ASSERT(!first.experiment_subject && isnull(prison.experiment_block()), "A non-admin started an experiment or called the researcher")
+
+	// Dosing, validated: the form, the reference, a body, a loose prisoner, a subject already.
+	for(var/bad_form in list("banana", "unknown", "HULK", 3, null))
+		panel.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(first), "form" = bad_form))
+		TEST_ASSERT(panel.error && !first.experiment_subject, "An experiment of form [bad_form] was accepted")
+	panel.manage_outpost(home, operator, "prison_experiment", list("ref" = "not a ref", "form" = "hulk"))
+	TEST_ASSERT(panel.error, "An experiment on a bad reference was accepted")
+	panel.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(operator), "form" = "hulk"))
+	TEST_ASSERT(panel.error, "An experiment on a non-prisoner was accepted")
+	third.death()
+	panel.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(third), "form" = "fly"))
+	TEST_ASSERT(panel.error && !third.experiment_subject, "A body was dosed")
+	second.trouble = "loose"
+	panel.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(second), "form" = "nightmare"))
+	TEST_ASSERT(panel.error && !second.experiment_subject, "A loose prisoner was dosed")
+	second.trouble = null
+	second.experiment_subject = TRUE
+	panel.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(second), "form" = "changeling"))
+	TEST_ASSERT(panel.error, "A subject was dosed again")
+	second.experiment_subject = FALSE
+
+	// The changeling stage, validated; refused with no changeling event running.
+	for(var/bad_stage in list("vents", "done", "incubating", "", 1))
+		panel.manage_outpost(home, operator, "prison_changeling_stage", list("stage" = bad_stage))
+		TEST_ASSERT(panel.error, "Changeling stage [bad_stage] was accepted")
+	for(var/stage in list("burst", "horror"))
+		panel.manage_outpost(home, operator, "prison_changeling_stage", list("stage" = stage))
+		TEST_ASSERT(panel.error, "Forcing the [stage] stage with no changeling event was accepted")
+
+	// Nothing to end.
+	panel.manage_outpost(home, operator, "prison_experiment_end", list())
+	TEST_ASSERT(panel.error, "Ending an experiment with none running was accepted")
+	TEST_ASSERT_EQUAL(length(panel.operations), 0, "Refused experiment actions were logged: [jointext(panel.operations, "; ")]")
+
+	// A dosing that is taken is logged once, blocks a second one and the researcher, and ends.
+	panel.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(first), "form" = "hulk"))
+	var/dosed = !panel.error
+	TEST_ASSERT_EQUAL(length(panel.operations), dosed ? 1 : 0, "A [dosed ? "started" : "refused"] experiment was logged [length(panel.operations)] times")
+	if(dosed)
+		TEST_ASSERT(islist(prison.experiment_block()), "A started experiment sends no block")
+		panel.manage_outpost(home, operator, "prison_experiment", list("ref" = REF(second), "form" = "fly"))
+		TEST_ASSERT(panel.error && !second.experiment_subject, "A second experiment started while one was under way")
+		panel.manage_outpost(home, operator, "prison_researcher", list())
+		TEST_ASSERT(panel.error, "The researcher was called in during an experiment")
+		panel.manage_outpost(home, operator, "prison_experiment_end", list())
+		TEST_ASSERT(!panel.error, "Ending the experiment was refused: [panel.error]")
+		TEST_ASSERT(!prison.admin_experiment_running(), "The experiment ran on after it was ended")
+		TEST_ASSERT_EQUAL(length(panel.operations), 2, "Start and end were logged [length(panel.operations)] times")
+
+	// The researcher: logged once when they come, not at all when refused.
+	var/logs_before = length(panel.operations)
+	panel.manage_outpost(home, operator, "prison_researcher", list())
+	var/came = !panel.error
+	TEST_ASSERT_EQUAL(length(panel.operations) - logs_before, came ? 1 : 0, "A [came ? "summoned" : "refused"] researcher was logged [length(panel.operations) - logs_before] times")
+	if(came)
+		panel.manage_outpost(home, operator, "prison_experiment_end", list())
+	settle_prison_air(home)

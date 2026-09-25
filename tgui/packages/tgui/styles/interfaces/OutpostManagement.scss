@@ -424,6 +424,21 @@ $bad: #e7a296;
   > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   &:empty { display: none; }
 }
+// The researcher's experiment: stage, subject (or the offer's form) and its clock
+.OutpostPrison__experiment {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  font-size: 12px;
+  .Outpost__person strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.OutpostPrison__experiment-stage {
+  font: bold 11px 'Consolas', monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
 .OutpostPrison__loose { padding-top: 4px; }
 .OutpostPrison__loose-row {
   display: grid;
@@ -494,6 +509,7 @@ $bad: #e7a296;
 .OutpostPrison__tone--good { color: $good; }
 .OutpostPrison__tone--average { color: $amber; }
 .OutpostPrison__tone--bad { color: $bad; }
+.OutpostPrison__tone--label { color: $muted; }
 // Guards and turrets (the extras): one row per guard, turrets on one wrapping line, then the buy row
 .OutpostPrison__staff-row {
   display: grid;

@@ -175,4 +175,5 @@
 		"alarm" = alarm[1],
 		"alarm_text" = alarm[2],
 		"extras" = extras_payload(user),
+		"experiment" = experiment_block(),
 	)

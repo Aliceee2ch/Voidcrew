@@ -133,6 +133,31 @@ type Extras = {
   mail?: { waiting: number } | null;
 };
 
+type ExperimentForm = 'unknown' | 'hulk' | 'fly' | 'nightmare' | 'changeling';
+
+type ExperimentStage =
+  | 'offered'
+  | 'dosed'
+  | 'twitching'
+  | 'incubating'
+  | 'live'
+  | 'vents'
+  | 'horror'
+  | 'contained'
+  | 'failed';
+
+type Experiment = {
+  /** "unknown" for a blind serum until the creature shows */
+  form: ExperimentForm;
+  stage: ExperimentStage;
+  subject: string | null;
+  /** seconds; a paused clock keeps its value */
+  time_left: number | null;
+  researcher_present: BooleanLike;
+  fee_paid: number;
+  bonus_paid: number;
+};
+
 export type OutpostPrisonData = {
   linked: BooleanLike;
   powered: BooleanLike;
@@ -164,6 +189,8 @@ export type OutpostPrisonData = {
   hatch?: HatchStock;
   trouble?: Trouble;
   extras?: Extras | null;
+  /** null with no experiment */
+  experiment?: Experiment | null;
 };
 
 type Act = (action: string, params?: Record<string, unknown>) => unknown;
@@ -254,6 +281,33 @@ const TURRET_STATES: Record<
   no_power: { label: 'No power', icon: 'plug-circle-xmark', tone: 'bad' },
   loose: { label: 'Not mounted', icon: 'box-open', tone: 'average' },
 };
+
+/** A blind serum reads Serum until its creature shows. */
+const EXPERIMENT_FORMS: Record<ExperimentForm, string> = {
+  unknown: 'Serum',
+  hulk: 'Hulk',
+  fly: 'Fly',
+  nightmare: 'Nightmare',
+  changeling: 'Changeling',
+};
+
+const EXPERIMENT_STAGES: Record<
+  ExperimentStage,
+  { label: string; tone: string }
+> = {
+  offered: { label: 'Offered', tone: 'average' },
+  dosed: { label: 'Dosed', tone: 'average' },
+  twitching: { label: 'Twitching', tone: 'average' },
+  incubating: { label: 'Incubating', tone: 'average' },
+  live: { label: 'Loose', tone: 'bad' },
+  vents: { label: 'In vents', tone: 'bad' },
+  horror: { label: 'Horror', tone: 'bad' },
+  contained: { label: 'Contained', tone: 'good' },
+  failed: { label: 'Failed', tone: 'label' },
+};
+
+/** Only a changeling has these; a serum still unknown reads Dosed instead. */
+const CHANGELING_STAGES: string[] = ['incubating', 'vents', 'horror'];
 
 /** m:ss */
 function clock(seconds: number) {
@@ -480,6 +534,64 @@ function MoneyLine({ data, act }: Props) {
         </span>
       ) : null}
     </div>
+  );
+}
+
+function ExperimentPanel({ data }: Props) {
+  const experiment = data.experiment;
+  if (!experiment) {
+    return null;
+  }
+  const form = experiment.form || 'unknown';
+  // A blind serum's outcome stays hidden until the server names its form.
+  const stageKey =
+    form === 'unknown' && CHANGELING_STAGES.includes(experiment.stage)
+      ? 'dosed'
+      : experiment.stage;
+  const stage = EXPERIMENT_STAGES[stageKey] || {
+    label: stageKey || '?',
+    tone: 'label',
+  };
+  const formLabel = EXPERIMENT_FORMS[form] || form;
+  const present = !!experiment.researcher_present;
+  const fee = isNumber(experiment.fee_paid) ? experiment.fee_paid : 0;
+  const bonus = isNumber(experiment.bonus_paid) ? experiment.bonus_paid : 0;
+  return (
+    <>
+      <div className="Outpost__section-label">Experiment</div>
+      <div className="OutpostPrison__experiment">
+        <span
+          className={`OutpostPrison__experiment-stage OutpostPrison__tone--${stage.tone}`}
+        >
+          {stage.label}
+        </span>
+        <div className="Outpost__person">
+          <strong>{experiment.subject || formLabel}</strong>
+          {experiment.subject ? <small>{formLabel}</small> : null}
+        </div>
+        <span className="OutpostPrison__number">
+          {isNumber(experiment.time_left) ? clock(experiment.time_left) : ''}
+        </span>
+      </div>
+      <div className="OutpostPrison__flags OutpostPrison__flags--experiment">
+        <span className={`OutpostPrison__tone--${present ? 'good' : 'label'}`}>
+          <Icon name="user-doctor" />
+          {present ? 'Researcher here' : 'Researcher away'}
+        </span>
+        {fee > 0 ? (
+          <span className="OutpostPrison__tone--good">
+            <Icon name="coins" />
+            {`Fee ${credits(fee)} cr`}
+          </span>
+        ) : null}
+        {bonus > 0 ? (
+          <span className="OutpostPrison__tone--good">
+            <Icon name="award" />
+            {`Bonus ${credits(bonus)} cr`}
+          </span>
+        ) : null}
+      </div>
+    </>
   );
 }
 
@@ -948,6 +1060,7 @@ export function OutpostPrisonPanel({ data, act }: Props) {
           <Stats data={data} act={act} />
           <Note data={data} act={act} />
           <MoneyLine data={data} act={act} />
+          <ExperimentPanel data={data} act={act} />
           <Tension data={data} act={act} />
           <Conditions data={data} act={act} />
           <Hatch data={data} act={act} />

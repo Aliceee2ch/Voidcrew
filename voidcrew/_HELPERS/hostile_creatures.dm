@@ -69,6 +69,10 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
 	// once loose outside it they are fair game. Interim rule until guards and turrets are designed.
 	if(istype(creature, /mob/living/basic/outpost_prisoner))
 		return is_loose_outpost_prisoner(creature)
+	// Prison experiment creatures (outpost_prison_creatures.dm): fair game anywhere, like the
+	// headslug, whose stock AI already reads as hostile. Their custom AI does not.
+	if(istype(creature, /mob/living/basic/outpost_experiment))
+		return is_outpost_experiment_turret_target(creature)
 
 	// The /hostile branch of the old simple animal tree is aggressive by definition; its
 	// retaliate-only subtypes were all moved over to /mob/living/basic long ago.

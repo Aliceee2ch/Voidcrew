@@ -50,6 +50,16 @@
 	TEST_ASSERT(!staff_door.allowed(prisoner), "The staff side opens for prisoners")
 	TEST_ASSERT(staff_door.allowed(warden), "The staff side wants an ID")
 	TEST_ASSERT(!hatch.both_sides_open(), "A shut hatch reads as open")
+	// Staff can throw onto the counter through the shut office window; a prisoner's throw and an item
+	// that isn't flying can't get through.
+	var/obj/item/food/prison_ration/tossed = allocate(__IMPLIED_TYPE__, prison_spot(home, 5, 4))
+	tossed.throwing = new /datum/thrownthing(tossed, hatch, get_dir(tossed, hatch), 5, 1, warden)
+	TEST_ASSERT(staff_door.CanAllowThrough(tossed, staff_door.dir), "A member's throw did not get through the shut office window")
+	tossed.throwing.thrower = WEAKREF(prisoner)
+	TEST_ASSERT(!staff_door.CanAllowThrough(tossed, staff_door.dir), "A prisoner's throw got through the office window")
+	QDEL_NULL(tossed.throwing)
+	TEST_ASSERT(!staff_door.CanAllowThrough(tossed, staff_door.dir), "An item that was not thrown got through the office window")
+	qdel(tossed)
 
 	// Food they can reach: on the hatch, yes, through their own window door; on the office floor, no.
 	prisoner.set_hunger(30)
@@ -210,6 +220,25 @@
 	prisoner.set_hunger(45)
 	prisoner.set_uniform_grime(45)
 	TEST_ASSERT_NULL(prisoner.bubble, "A prisoner above every threshold showed a bubble")
+
+	// The bubble pops up now and then rather than staying: a need that has just come up pops it within
+	// 3 seconds (PRISONER_BUBBLE_FRESH_DELAY), the next pop is 20 seconds or more away
+	// (PRISONER_BUBBLE_GAP_MIN), and a need dealt with fades its bubble at once.
+	prisoner.set_hunger(10)
+	if(!prisoner.popped_bubble)
+		TEST_ASSERT(prisoner.bubble_next_pop <= world.time + 3 SECONDS, "A new need did not bring the bubble forward")
+		prisoner.bubble_next_pop = world.time
+		prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.popped_bubble, "hungry", "The bubble did not pop up when it was due")
+	TEST_ASSERT(prisoner.thought in prisoner.vis_contents, "The popped bubble is not drawn")
+	TEST_ASSERT(prisoner.bubble_next_pop >= world.time + 20 SECONDS, "The next pop is under 20 seconds away")
+	prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.popped_bubble, "hungry", "The bubble popped again while it was up")
+	prisoner.set_hunger(100)
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "The bubble stayed up after the need was dealt with")
+	prisoner.end_bubble()
+	TEST_ASSERT(!(prisoner.thought in prisoner.vis_contents), "The faded bubble was not taken down")
+	prisoner.set_hunger(45)
 
 	// Medical: the advanced med HUD tracks their health bar, and a bruise pack treats them.
 	var/datum/atom_hud/medhud = GLOB.huds[DATA_HUD_MEDICAL_ADVANCED]

@@ -12,9 +12,11 @@
  * Doors come from the outpost's own area and every installed upgrade's area on the main level
  * (outpost_owned_turfs()). Each outpost has one path list, shared by all of its patrollers and
  * rebuilt in place when the doors change. The path holds at most OUTPOST_PATROL_MAX_STOPS doors,
- * the ones nearest the prison wing, and a rebuild yields on a big outpost. A door or locker that
- * is deleted is dropped from the path and the room tables straight away, so nothing keeps it from
- * being garbage collected.
+ * the ones nearest the prison wing. Looking for doors and rebuilding walk every tile the outpost
+ * owns, so both yield whenever the tick is full; callers on a subsystem use
+ * assign_mob_to_outpost_patrol_async(), since a sleep there stalls the whole subsystem. A door or
+ * locker that is deleted is dropped from the path and the room tables straight away, so nothing
+ * keeps it from being garbage collected.
  */
 
 /// Other code can test for this API with #ifdef. Keep it defined.
@@ -33,7 +35,8 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 /**
  * Puts `pawn` on its outpost's door-to-door patrol. The pawn needs a controller that runs the
  * patrol subtrees, such as /datum/ai_controller/basic_controller/outpost_breakout.
- * Returns TRUE when the pawn is patrolling; FALSE when the outpost has no interior doors to visit.
+ * Returns TRUE when the pawn is patrolling; FALSE when the outpost has no interior doors to visit,
+ * or when the pawn changed controller while the doors were being found. Sleeps on a big outpost.
  */
 /proc/assign_mob_to_outpost_patrol(mob/living/pawn, obj/structure/overmap/dynamic/player_outpost/outpost)
 	if(QDELETED(pawn) || QDELETED(outpost))
@@ -42,6 +45,9 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	if(!controller)
 		return FALSE
 	var/list/path = get_outpost_patrol_path(outpost)
+	// Recaptured (a new controller) or deleted while the lookup yielded: not wanted on patrol any more.
+	if(QDELETED(pawn) || pawn.ai_controller != controller || QDELETED(outpost))
+		return FALSE
 	if(!length(path))
 		return FALSE
 	var/key = REF(outpost)
@@ -78,6 +84,10 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 		controller.set_blackboard_key(BB_LAST_KNOWN_ROOM, starting_room)
 		maybe_start_room_exploration(controller, starting_room, key)
 	return TRUE
+
+/// assign_mob_to_outpost_patrol() without holding up the caller while the doors are found
+/proc/assign_mob_to_outpost_patrol_async(mob/living/pawn, obj/structure/overmap/dynamic/player_outpost/outpost)
+	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(assign_mob_to_outpost_patrol), pawn, outpost)
 
 /**
  * Takes `pawn` off whatever patrol it is on: stops what it is doing and clears every blackboard
@@ -229,7 +239,14 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	if(QDELETED(outpost))
 		return null
 	// A rebuild that runtimed never finished: after a minute, it no longer holds the others up.
-	if((rebuilding && world.time < rebuilding + 1 MINUTES) || (!dirty && !force_check && world.time < checked_at + OUTPOST_PATROL_RECHECK))
+	if(rebuilding && world.time < rebuilding + 1 MINUTES)
+		// Someone else is looking. Use the current path, or with none yet, wait for theirs, so a
+		// crowd breaking out together all get the first one.
+		var/started = rebuilding
+		while(!length(path) && rebuilding == started && world.time < started + 1 MINUTES && !QDELETED(src))
+			stoplag()
+		return QDELETED(src) ? null : path
+	if(!dirty && !force_check && world.time < checked_at + OUTPOST_PATROL_RECHECK)
 		return path
 	checked_at = world.time
 	rebuilding = world.time
@@ -237,6 +254,9 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	for(var/turf/owned_turf as anything in outpost.outpost_owned_turfs())
 		if(!isspaceturf(owned_turf))
 			owned[owned_turf] = TRUE
+		CHECK_TICK
+	if(QDELETED(src))
+		return null
 	var/list/found = find_interior_doors(owned)
 	if(QDELETED(src))
 		return null
@@ -312,12 +332,15 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 		var/turf/door_turf = get_turf(door)
 		if(door_turf && !door_turfs[door_turf])
 			door_turfs[door_turf] = door
+		CHECK_TICK
 
 	// Rooms: flood fills that stop at doors, walls, windows and grilles (compute_ship_rooms() rules)
 	var/list/cardinal_dirs = GLOB.cardinals
 	var/list/placed = list()
 	var/room_count = 0
 	for(var/turf/start_turf as anything in owned)
+		// Most tiles are already placed or are wall; skipping tens of thousands still takes time.
+		CHECK_TICK
 		if(placed[start_turf] || door_turfs[start_turf] || start_turf.density || room_divider_on(start_turf))
 			continue
 		room_count++
@@ -371,10 +394,14 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 		for(var/obj/machinery/door/door as anything in room["doors"])
 			if(QDELETED(door))
 				room["doors"] -= door
+		CHECK_TICK
+	if(QDELETED(src))
+		return
 
 	// Which rooms each door joins, and which stops each room holds
 	var/list/stops = list()
 	for(var/obj/machinery/door/door as anything in interior)
+		CHECK_TICK
 		if(QDELETED(door))
 			continue
 		watch(door)
@@ -389,6 +416,8 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 			door_rooms[REF(door)] = joined
 		if(!door_on_furniture(door))
 			stops += door
+	if(QDELETED(src))
+		return
 	stops = nearest_stops(stops)
 	var/list/room_stops = list()
 	for(var/obj/machinery/door/door as anything in stops)
@@ -455,7 +484,9 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	var/atom/origin = patrol_origin() || stops[1]
 	var/list/by_distance = list()
 	for(var/obj/machinery/door/door as anything in stops)
-		by_distance[door] = get_dist(origin, door)
+		// Gone while the rebuild yielded
+		if(!QDELETED(door))
+			by_distance[door] = get_dist(origin, door)
 	sortTim(by_distance, cmp = GLOBAL_PROC_REF(cmp_numeric_asc), associative = TRUE)
 	var/list/nearest = list()
 	for(var/obj/machinery/door/door as anything in by_distance)

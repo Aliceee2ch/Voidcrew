@@ -36,6 +36,10 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_spawn_rat", // {}
 	"prison_outage", // {seconds}: the power outage debt
 	"prison_wreck", // {ref}: that prisoner starts wrecking their cell
+	"prison_researcher", // {}: the researcher beams in with an offer, past the visit's gates
+	"prison_experiment", // {ref, form: hulk|fly|nightmare|changeling}: that prisoner is dosed now
+	"prison_changeling_stage", // {stage: burst|horror}: the changeling event skips ahead
+	"prison_experiment_end", // {}: ends the experiment with no fee
 	// The extras (outpost_prison_extras.dm); each package validates its own params
 	"prison_guard_spawn", // {}: a free guard, ignoring the cap
 	"prison_guard_remove", // {ref}
@@ -251,6 +255,84 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 			prison.outage_debt = seconds
 			prison.refresh_conditions()
 			record(user, home, "set the prison wing's outage debt to [seconds] s")
+		if("prison_researcher")
+			if(!hascall(prison, "spawn_researcher"))
+				error = "Experiments are not installed."
+				return
+			var/list/block = prison.experiment_block()
+			if(islist(block) && block["researcher_present"])
+				error = "The researcher is already here."
+				return
+			if(prison.admin_experiment_running())
+				error = "An experiment is under way."
+				return
+			// Forced: past the visit's gates (conditions, a member on the level, the wait between visits)
+			if(!call(prison, "spawn_researcher")(TRUE) && !prison.admin_researcher_present())
+				error = "The researcher did not come."
+				return
+			record(user, home, "beam in the prison researcher")
+		if("prison_experiment")
+			var/form = params["form"]
+			if(!istext(form) || !(form in list("hulk", "fly", "nightmare", "changeling")))
+				error = "Invalid experiment form."
+				return
+			var/mob/living/basic/outpost_prisoner/subject = locate(params["ref"]) in prison.prisoners
+			if(QDELETED(subject))
+				error = "That prisoner is gone."
+				return
+			if(subject.stat == DEAD || subject.phase != PRISONER_PRESENT || subject.trouble == PRISONER_TROUBLE_LOOSE)
+				error = "Only a living prisoner in the wing can be dosed."
+				return
+			if(subject.experiment_subject)
+				error = "That prisoner is already a subject."
+				return
+			if(prison.admin_experiment_running())
+				error = "An experiment is under way."
+				return
+			if(!hascall(prison, "start_experiment"))
+				error = "Experiments are not installed."
+				return
+			if(!call(prison, "start_experiment")(form, subject, TRUE) && !subject.experiment_subject)
+				error = "The experiment did not start."
+				return
+			record(user, home, "start a [form] experiment on prisoner [subject.real_name]")
+		if("prison_changeling_stage")
+			var/stage = params["stage"]
+			if(!istext(stage) || !(stage in list("burst", "horror")))
+				error = "Invalid changeling stage."
+				return
+			var/datum/changeling = prison.admin_changeling_event()
+			if(!changeling)
+				error = "No changeling event is running."
+				return
+			var/stage_before = changeling.vars["stage"]
+			if(stage_before == "done")
+				error = "The changeling event is over."
+				return
+			if(stage_before == "horror")
+				error = "The horror is already out."
+				return
+			if(stage == "burst" && stage_before != "incubating")
+				error = "The host has already burst."
+				return
+			if(!hascall(changeling, "force_stage"))
+				error = "The changeling event can't skip ahead."
+				return
+			if(!call(changeling, "force_stage")(stage) && changeling.vars["stage"] == stage_before)
+				error = "The changeling event did not move on."
+				return
+			record(user, home, "force the changeling event to its [stage] stage")
+		if("prison_experiment_end")
+			if(!islist(prison.experiment_block()))
+				error = "No experiment to end."
+				return
+			if(!hascall(prison, "experiment_end_admin"))
+				error = "Experiments are not installed."
+				return
+			if(!call(prison, "experiment_end_admin")() && prison.admin_experiment_running())
+				error = "The experiment did not end."
+				return
+			record(user, home, "end the prison experiment without a fee")
 		else
 			// The extras' own actions: a log line when done, list("error" = text) when refused
 			var/result = prison.extras_admin_act(action, params, user)
@@ -342,7 +424,47 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 		"lit_samples" = lit_samples,
 		"outage_debt" = round(outage_debt),
 		"extras" = extras_admin_payload(),
+		"experiment" = experiment_block(),
 	)
+
+// ===== EXPERIMENTS =====
+// The experiments core (outpost_prison_experiments.dm) and the changeling event
+// (outpost_prison_changeling.dm) own these procs. This file calls them by name through hascall()
+// and call(), so it builds with or without them and never declares a proc of theirs.
+
+/// The experiments core's console block (experiment_payload()), or null with no experiment
+/datum/outpost_prison/proc/experiment_block()
+	return hascall(src, "experiment_payload") ? call(src, "experiment_payload")() : null
+
+/// Whether an experiment is under way: dosed through a live creature, not offered, contained or failed
+/datum/outpost_prison/proc/admin_experiment_running()
+	var/list/block = experiment_block()
+	return islist(block) && (block["stage"] in list("dosed", "twitching", "incubating", "live", "vents", "horror"))
+
+/// Whether the researcher is in the wing now, by the console block
+/datum/outpost_prison/proc/admin_researcher_present()
+	var/list/block = experiment_block()
+	return islist(block) && !!block["researcher_present"]
+
+/**
+ * The wing's running changeling event, or null. The experiments core decides where it keeps it,
+ * so this looks through the prison's vars and, one step down, the vars of the datums they hold.
+ */
+/datum/outpost_prison/proc/admin_changeling_event()
+	var/event_type = text2path("/datum/outpost_changeling_event")
+	if(!event_type)
+		return null
+	var/list/holders = list(src)
+	for(var/name in vars)
+		var/datum/held = vars[name]
+		if(istype(held, /datum) && !isatom(held))
+			holders |= held
+	for(var/datum/holder as anything in holders)
+		for(var/name in holder.vars)
+			var/datum/held = holder.vars[name]
+			if(istype(held, event_type) && !QDELETED(held))
+				return held
+	return null
 
 /// Where their care falls between no pay and full pay, 0 to 1 (section 1's G(care))
 /mob/living/basic/outpost_prisoner/proc/admin_care_grade()

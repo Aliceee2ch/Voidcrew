@@ -14,8 +14,9 @@
  * when hit, and drip while badly hurt. They take supplies only from a serving hatch or from a
  * person's hand (outpost_prison_core.dm).
  *
- * Awake, they cannot be pulled, dragged onto things or boxed. Knocked down, in stamina crit or
- * dead, staff can drag them; stamina crit lasts PRISONER_STAMCRIT_TIME after the last hit.
+ * Awake, they cannot be pulled, dragged onto things or boxed. Knocked down, in stamina crit,
+ * cuffed or dead, staff can drag them; stamina crit lasts PRISONER_STAMCRIT_TIME after the last
+ * hit. Cuffs and lockdown are in outpost_prison_capture.dm.
  */
 
 /// Trait source for the beam holding a prisoner still
@@ -38,6 +39,8 @@
 	move_resist = MOVE_FORCE_VERY_STRONG
 	density = TRUE
 	basic_mob_flags = NONE
+	// tg's human deathgasp
+	death_message = "seizes up and falls limp, their eyes dead and lifeless..."
 	// They lie down on beds, when knocked down and when dead.
 	mobility_flags = MOBILITY_FLAGS_REST_CAPABLE_DEFAULT
 	rotate_on_lying = TRUE
@@ -173,6 +176,7 @@
 	clear_trouble()
 	if(held_item)
 		held_item.forceMove(drop_location())
+	remove_cuffs()
 	prison?.forget(src)
 	prison = null
 	cell = null
@@ -189,6 +193,10 @@
 	if(gone == held_item)
 		held_item = null
 		update_appearance(UPDATE_OVERLAYS)
+	else if(gone == cuffs)
+		// Cuffs taken or destroyed some other way than remove_cuffs()
+		cuffs = null
+		uncuffed()
 
 /// Dresses them as their own person in their outfit, with a body to match their gender. Can sleep.
 /mob/living/basic/outpost_prisoner/proc/build_look()
@@ -257,6 +265,7 @@
 	end_activity()
 	clear_trouble()
 	drop_held_item()
+	remove_cuffs()
 	stand_up()
 	pulledby?.stop_pulling()
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
@@ -289,10 +298,14 @@
 
 // ===== DRAGGING =====
 
-/// Staff may drag them only while they are down: knocked down, in stamina crit, out or dead
-/mob/living/basic/outpost_prisoner/proc/can_be_dragged()
+/// Whether they are down: knocked down, in stamina crit, beaten, out or dead
+/mob/living/basic/outpost_prisoner/proc/is_down()
 	// Floored but not buckled is on the floor; a bed floors them too, and that doesn't count.
 	return stat != CONSCIOUS || HAS_TRAIT(src, TRAIT_INCAPACITATED) || (HAS_TRAIT(src, TRAIT_FLOORED) && !buckled)
+
+/// Staff may drag them only while they are down or cuffed (outpost_prison_capture.dm)
+/mob/living/basic/outpost_prisoner/proc/can_be_dragged()
+	return is_down() || !!cuffs
 
 /mob/living/basic/outpost_prisoner/proc/check_pullable(datum/source, mob/living/puller)
 	SIGNAL_HANDLER
@@ -322,18 +335,21 @@
 	. = ..()
 	update_drag_resistance()
 
-/// Heavy while awake, so nobody shoves or pulls them about; ordinary while they are down
+/// Heavy while awake and free, so nobody shoves or pulls them about; ordinary while they are down or cuffed
 /mob/living/basic/outpost_prisoner/proc/update_drag_resistance()
 	var/draggable = can_be_dragged()
 	move_resist = draggable ? MOVE_RESIST_DEFAULT : MOVE_FORCE_VERY_STRONG
 	if(!draggable)
 		pulledby?.stop_pulling()
+		if(is_rioting() && stat == CONSCIOUS)
+			// Up and free again: a rioter riots on until shut in a cell.
+			INVOKE_ASYNC(src, PROC_REF(back_to_rioting))
 		return
 	if(stat != DEAD && activity)
-		// Knocked down mid-activity: whatever they were doing is over.
+		// Knocked down or cuffed mid-activity: whatever they were doing is over.
 		INVOKE_ASYNC(src, PROC_REF(end_activity))
 	if(in_trouble())
-		// Stunned, beaten or dead: threats, climbs, fights and rioting stop too.
+		// Stunned, beaten, cuffed or dead: threats, climbs, fights and blows stop too.
 		INVOKE_ASYNC(src, PROC_REF(on_downed))
 
 // ===== NEEDS =====
@@ -548,6 +564,9 @@
 		. += grime
 	if(grime_stage == 2)
 		. += mutable_appearance('icons/effects/effects.dmi', "fly-surrounding", ABOVE_MOB_LAYER)
+	if(cuffs)
+		// tg's own cuff overlay, as people wear it
+		. += mutable_appearance('icons/mob/simple/mob.dmi', "handcuff1")
 	if(held_item)
 		var/mutable_appearance/carried = new(held_item.appearance)
 		carried.plane = FLOAT_PLANE
@@ -702,9 +721,17 @@
 	remove_offsets(PRISONER_SITTING_OFFSET)
 	buckled?.unbuckle_mob(src, force = TRUE)
 
-/// Perches on the edge of the bed under them
+/**
+ * Settles on the bed under them. There is no sitting pose for a bed, and a standing sprite shifted down
+ * reads as someone standing on it, so they lie on it, awake. With no bed to lie on, they crouch.
+ */
 /mob/living/basic/outpost_prisoner/proc/sit_on_edge(facing)
-	add_offsets(PRISONER_SITTING_OFFSET, y_add = -4)
+	var/obj/structure/bed/bed = locate() in loc
+	if(bed && buckled != bed)
+		stand_up()
+		bed.buckle_mob(src, force = TRUE)
+	if(!buckled)
+		add_offsets(PRISONER_SITTING_OFFSET, y_add = -4)
 	if(facing)
 		setDir(facing)
 
@@ -730,6 +757,10 @@
 
 /mob/living/basic/outpost_prisoner/proc/on_pre_eat(datum/source, atom/food, mob/living/feeder)
 	SIGNAL_HANDLER
+	if(cuffs)
+		if(feeder)
+			balloon_alert(feeder, "cuffed")
+		return COMSIG_MOB_CANCEL_EAT
 	if(prison?.pastime_pre_eat(src, food, feeder))
 		return COMSIG_MOB_CANCEL_EAT
 	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || hunger >= PRISONER_HUNGER_FULL || well_fed_left > 0)
@@ -869,9 +900,11 @@
 
 // ===== UNIFORMS =====
 
-/// Handing them a cleaner prison uniform: they change and hand the old one back
+/// Cuffs go on them (outpost_prison_capture.dm); handed a cleaner prison uniform, they change and hand the old one back
 /mob/living/basic/outpost_prisoner/proc/on_item_interaction(datum/source, mob/living/user, obj/item/tool, list/modifiers)
 	SIGNAL_HANDLER
+	if(istype(tool, /obj/item/restraints/handcuffs))
+		return on_cuffs_used(user, tool)
 	if(istype(tool, /obj/item/stack/medical))
 		// Treatment only shows as health coming back once the dressing is on.
 		COOLDOWN_START(src, treatment_window, 20 SECONDS)
@@ -880,6 +913,9 @@
 	var/obj/item/clothing/under/rank/prisoner/outpost/offered = tool
 	if(!istype(offered) || user.combat_mode || stat != CONSCIOUS)
 		return NONE
+	if(cuffs)
+		balloon_alert(user, "cuffed")
+		return ITEM_INTERACT_BLOCKING
 	if(offered.grime >= uniform_grime)
 		balloon_alert(user, "no cleaner than theirs")
 		return ITEM_INTERACT_BLOCKING
@@ -955,7 +991,7 @@
  * hatch within reach, or food they carry, without the walk. Called every few seconds by the prison.
  */
 /mob/living/basic/outpost_prisoner/proc/fend_for_self()
-	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison || ai_controller?.ai_status == AI_STATUS_ON || in_trouble())
+	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison || ai_controller?.ai_status == AI_STATUS_ON || in_trouble() || cuffs)
 		return
 	if(wants_food())
 		// A held cake saved for a party is not a meal (outpost_prison_pastimes.dm).
@@ -986,6 +1022,7 @@
 	if(was_alive && stat == DEAD)
 		end_activity()
 		drop_held_item()
+		remove_cuffs()
 		prison?.on_prisoner_death(src)
 		update_bubble()
 

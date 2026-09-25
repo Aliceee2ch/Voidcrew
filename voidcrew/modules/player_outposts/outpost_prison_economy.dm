@@ -44,9 +44,12 @@
 /datum/outpost_prison/proc/care_grade(care)
 	return clamp((care - OUTPOST_PRISON_GRADE_FLOOR) / (OUTPOST_PRISON_GRADE_FULL - OUTPOST_PRISON_GRADE_FLOOR), 0, 1)
 
-/// Whether a prisoner has been shut in their cell long enough to stop paying. Not while it is for their own safety.
+/**
+ * Whether a prisoner has been shut in their cell, or kept in cuffs (outpost_prison_capture.dm),
+ * long enough to stop paying. Not while it is for their own safety or for lockdown they owe.
+ */
 /datum/outpost_prison/proc/confined_unpaid(mob/living/basic/outpost_prisoner/prisoner)
-	return prisoner.locked_in_seconds > OUTPOST_PRISON_CONFINED_PAY_AFTER && !protective_custody()
+	return (prisoner.locked_in_seconds > OUTPOST_PRISON_CONFINED_PAY_AFTER && !protective_custody()) || prisoner.cuffs_souring()
 
 /**
  * The share of full pay a prisoner earns the treasury right now, 0 to 1: G(care) x F(conditions).
@@ -193,12 +196,15 @@
 	incident_open = FALSE
 	incident_fined = 0
 
-/// Whether anyone is still rioting, breaking out or loose, so the incident goes on
+/**
+ * Whether anyone is still rioting, breaking out or loose and not yet caught, so the incident goes
+ * on. A runner left in cuffs keeps no incident, and its fine cap, open.
+ */
 /datum/outpost_prison/proc/incident_ongoing()
 	if(riot_active)
 		return TRUE
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && (prisoner.is_rioting() || prisoner.trouble == PRISONER_TROUBLE_LOOSE))
+		if(prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && (prisoner.is_rioting() || (prisoner.trouble == PRISONER_TROUBLE_LOOSE && !prisoner.cuffs)))
 			return TRUE
 	return FALSE
 
@@ -255,11 +261,11 @@
 		log_game("PLAYER OUTPOST: [key_name(user)] [intake_open ? "opened" : "closed"] prison intake at '[outpost?.name]'")
 	return TRUE
 
-/// Whether prisoners may arrive now: intake open, no debt, power, and no experiment under way
+/// Whether prisoners may arrive now: intake open, no debt and power. An experiment does not hold them up.
 /datum/outpost_prison/proc/arrivals_allowed()
-	return intake_open && treasury_debt() <= 0 && is_powered() && !experiment_active()
+	return intake_open && treasury_debt() <= 0 && is_powered()
 
-/// Why prisoners are or are not arriving: "open", "closed", "suspended", "debt", "no_power" or "experiment"
+/// Why prisoners are or are not arriving: "open", "closed", "suspended", "debt" or "no_power"
 /datum/outpost_prison/proc/intake_state()
 	if(treasury_debt() > 0)
 		return "debt"
@@ -267,8 +273,6 @@
 		return intake_suspended ? "suspended" : "closed"
 	if(!is_powered())
 		return "no_power"
-	if(experiment_active())
-		return "experiment"
 	return "open"
 
 /// A line for the warden console about intake, or null
@@ -280,8 +284,6 @@
 			return "Suspended after [suspended_after] prisoners were lost. Reopen when ready."
 		if("no_power")
 			return "The wing has no power. Arrivals wait for it."
-		if("experiment")
-			return "Arrivals wait until the experiment is over."
 	return null
 
 /// Whether a cell could take a new arrival once it is ready: empty, with somewhere to stand, and its door not bolted or welded
@@ -318,12 +320,12 @@
 	arrival_countdown = next_arrival_in()
 
 /**
- * Beams a new prisoner into the lowest-numbered cell that can take one: empty, ready, its door not
- * bolted or welded, and no experiment under way. `forced` (for the admin panel) skips the wait,
- * the door and the experiment. Returns the prisoner, or null.
+ * Beams a new prisoner into the lowest-numbered cell that can take one: empty, ready and its door
+ * not bolted or welded. `forced` (for the admin panel) skips the wait and the door. Returns the
+ * prisoner, or null.
  */
 /datum/outpost_prison/proc/admit_next(forced = FALSE)
-	if(!free_slots() || (!forced && experiment_active()))
+	if(!free_slots())
 		return null
 	for(var/datum/outpost_prison_cell/cell as anything in cells)
 		if(cell.occupant)

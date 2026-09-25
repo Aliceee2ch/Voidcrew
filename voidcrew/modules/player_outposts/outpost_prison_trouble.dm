@@ -30,6 +30,7 @@
 #define PRISONER_BEATEN_TRAIT "outpost_prisoner_beaten"
 /// Offset source for a prisoner half way over a serving hatch
 #define PRISONER_CLIMB_OFFSET "outpost_prisoner_climb"
+#define PRISONER_CLIMB_HOP_OFFSET "outpost_prisoner_climb_hop"
 /// How long after a staff hit a collapse or death is put down to staff (deciseconds)
 #define PRISONER_STAFF_BLAME_TIME (5 SECONDS)
 /// Blackboard key: what a prisoner in trouble is going for
@@ -122,9 +123,9 @@
 /mob/living/basic/outpost_prisoner/proc/ai_running()
 	return ai_controller?.ai_status == AI_STATUS_ON
 
-/// Whether anything about trouble has them busy, so their routine waits
+/// Whether anything about trouble has them busy, so their routine waits: trouble itself, being talked to, or cuffs going on or off
 /mob/living/basic/outpost_prisoner/proc/in_trouble()
-	return trouble || threat_ref || swing_ref || climb_ref || beaten_left > 0 || talking
+	return trouble || threat_ref || swing_ref || climb_ref || beaten_left > 0 || talking || cuff_work
 
 /// Whether they are on their feet and able to go after a target
 /mob/living/basic/outpost_prisoner/proc/trouble_can_act()
@@ -192,6 +193,9 @@
 		loss += from_wing[2]
 	if(locked_in_seconds > OUTPOST_PRISON_LOCKED_IN_COMPLAINT)
 		loss += PRISONER_MOOD_LOCKED_IN + round((locked_in_seconds - OUTPOST_PRISON_LOCKED_IN_COMPLAINT) / 60)
+	// Cuffs kept on without good reason sour them like a lock-in (outpost_prison_capture.dm).
+	if(cuffs_souring())
+		loss += PRISONER_MOOD_CUFFED + round((cuffed_seconds - PRISONER_CUFFED_GRACE) / 60)
 	if(activity?.mood_activity)
 		gain += PRISONER_MOOD_ACTIVITY
 	if(sentence_left <= PRISONER_RELEASE_SOON_TIME)
@@ -215,7 +219,8 @@
  */
 /mob/living/basic/outpost_prisoner/adjust_health(amount, updating_health = TRUE, forced = FALSE)
 	var/spared = FALSE
-	if(amount > 0 && !forced && stat == CONSCIOUS && phase == PRISONER_PRESENT && !can_be_dragged())
+	// Cuffed but on their feet still counts as on their feet.
+	if(amount > 0 && !forced && stat == CONSCIOUS && phase == PRISONER_PRESENT && !is_down())
 		var/health_left = maxHealth - bruteloss
 		if(amount >= health_left)
 			amount = max(0, health_left - 1)
@@ -373,8 +378,9 @@
 	update_bubble()
 
 /**
- * Knocked down, stunned, beaten or dead: whatever trouble they were making stops. A rioter drops
- * their shiv and calms down, losing any breakout clock; a fight is over; a wreck stops.
+ * Knocked down, stunned, beaten, cuffed or dead: whatever trouble they were making stops. A rioter
+ * drops their shiv and stops swinging, but stays a rioter until shut in a cell: up and free again,
+ * they riot on (back_to_rioting()). A fight is over; a wreck stops.
  */
 /mob/living/basic/outpost_prisoner/proc/on_downed()
 	if(QDELETED(src))
@@ -382,7 +388,10 @@
 	cancel_threat()
 	stop_climb(fell = TRUE)
 	if(is_rioting())
-		calm_down()
+		drop_shiv()
+		riot_target_ref = null
+		riot_target_hits = 0
+		riot_victim_ref = null
 	if(fight)
 		prison?.end_fight(fight)
 	if(trouble == PRISONER_TROUBLE_WRECK)
@@ -412,7 +421,21 @@
 		REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEATEN_TRAIT)
 	update_bubble()
 
-/// A rioter stops: the shiv drops, any breakout clock stops, and they settle at PRISONER_RIOT_CALM_MOOD
+/**
+ * Up and free again, a rioter grabs their shiv back if it lies at their feet. Returns TRUE if
+ * they did. Staff who kick it away or pick it up leave them their fists.
+ */
+/mob/living/basic/outpost_prisoner/proc/back_to_rioting()
+	if(QDELETED(src) || !is_rioting() || stat != CONSCIOUS || can_be_dragged() || has_shiv() || held_item || !isturf(loc))
+		return FALSE
+	var/obj/item/knife/shiv/shiv = locate() in loc
+	if(!shiv || !take_item(shiv))
+		return FALSE
+	update_melee()
+	visible_message(span_warning("[src] snatches [shiv] back up!"))
+	return TRUE
+
+/// A rioter stops, when the riot is over: the shiv drops, any breakout clock stops, and they settle at PRISONER_RIOT_CALM_MOOD
 /mob/living/basic/outpost_prisoner/proc/calm_down()
 	if(!is_rioting())
 		return
@@ -704,11 +727,17 @@
 	var/when = LAZYACCESS(helped_by, REF(person))
 	return when && world.time - when <= PRISONER_HELPED_GRACE
 
-/// A member of the wing using an empty hand on them, not in combat mode, talks to them instead of patting them
+/**
+ * A member of the wing using an empty hand on them, not in combat mode, talks to them instead of
+ * patting them; on a cuffed prisoner it takes the cuffs off instead (outpost_prison_capture.dm).
+ */
 /mob/living/basic/outpost_prisoner/proc/on_hand_used(datum/source, mob/living/user, list/modifiers)
 	SIGNAL_HANDLER
 	if(!istype(user) || user.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK) || is_outpost_prisoner(user))
 		return NONE
+	if(cuffs && prison?.is_member(user))
+		INVOKE_ASYNC(src, PROC_REF(uncuff_by), user)
+		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison?.is_member(user))
 		return NONE
 	INVOKE_ASYNC(src, PROC_REF(talk_down), user)
@@ -776,7 +805,10 @@
 
 // ===== CLIMBING OUT =====
 
-/// Starts over a serving hatch left open on both sides, from the yard side. Takes PRISONER_CLIMB_TIME seconds.
+/**
+ * Starts over a serving hatch left open on both sides, from the yard side. Takes PRISONER_CLIMB_TIME
+ * seconds: they scramble up onto the counter halfway through, then drop down on the office side.
+ */
 /mob/living/basic/outpost_prisoner/proc/start_climb(obj/structure/table/reinforced/prison_hatch/hatch)
 	if(climb_ref || !hatch?.both_sides_open() || loc != hatch.yard_side_turf() || !trouble_can_act())
 		return FALSE
@@ -784,27 +816,47 @@
 	climb_ref = WEAKREF(hatch)
 	climb_left = PRISONER_CLIMB_TIME
 	face_atom(hatch)
-	add_offsets(PRISONER_CLIMB_OFFSET, y_add = 8)
+	// Leaning onto the counter
+	var/lean = get_dir(src, hatch)
+	add_offsets(PRISONER_CLIMB_OFFSET, x_add = ((lean & EAST) ? 8 : ((lean & WEST) ? -8 : 0)), y_add = ((lean & NORTH) ? 8 : ((lean & SOUTH) ? -8 : 0)))
 	playsound(hatch, 'sound/effects/footstep/catwalk1.ogg', 30, TRUE)
 	visible_message(span_warning("[src] starts climbing over [hatch]!"))
 	return TRUE
 
-/// Advances a climb; over the counter when the time is up, back down if a side shuts or they are stopped
+/// Whether a climber is up on the counter
+/mob/living/basic/outpost_prisoner/proc/on_hatch_counter(obj/structure/table/reinforced/prison_hatch/hatch)
+	return hatch && loc == hatch.loc
+
+/// Advances a climb: up onto the counter halfway, down the office side when the time is up; back down to the yard if a side shuts or they are stopped
 /mob/living/basic/outpost_prisoner/proc/climb_tick(seconds)
 	var/obj/structure/table/reinforced/prison_hatch/hatch = climb_ref?.resolve()
 	if(!hatch || !hatch.both_sides_open() || stat != CONSCIOUS || can_be_dragged() || pulledby || get_dist(src, hatch) > 1)
 		stop_climb(fell = TRUE)
 		return FALSE
 	climb_left -= seconds
+	if(!on_hatch_counter(hatch) && climb_left <= PRISONER_CLIMB_TIME / 2)
+		remove_offsets(PRISONER_CLIMB_OFFSET, animate = FALSE)
+		hop_to(get_turf(hatch))
+		playsound(hatch, 'sound/effects/footstep/catwalk1.ogg', 40, TRUE)
+		visible_message(span_warning("[src] scrambles up onto [hatch]!"))
 	if(climb_left > 0)
 		return FALSE
 	var/turf/over = hatch.staff_side_turf()
 	stop_climb()
 	if(!over)
 		return FALSE
-	forceMove(over)
-	visible_message(span_warning("[src] climbs over [hatch]!"))
+	hop_to(over)
+	visible_message(span_warning("[src] drops down off [hatch] on the far side!"))
 	return TRUE
+
+/// Moves them onto `destination` next to them, gliding over from where they stood rather than blinking there
+/mob/living/basic/outpost_prisoner/proc/hop_to(turf/destination)
+	var/turf/from = get_turf(src)
+	forceMove(destination)
+	if(!from || loc != destination)
+		return
+	add_offsets(PRISONER_CLIMB_HOP_OFFSET, x_add = (from.x - destination.x) * ICON_SIZE_X, y_add = (from.y - destination.y) * ICON_SIZE_Y, animate = FALSE)
+	remove_offsets(PRISONER_CLIMB_HOP_OFFSET)
 
 /mob/living/basic/outpost_prisoner/proc/stop_climb(fell = FALSE)
 	if(!climb_ref)
@@ -814,6 +866,11 @@
 	climb_left = 0
 	note_trouble_ended()
 	remove_offsets(PRISONER_CLIMB_OFFSET)
+	// Stopped up on the counter: back down on the yard side
+	if(fell && on_hatch_counter(hatch))
+		var/turf/yard_side = hatch.yard_side_turf()
+		if(yard_side)
+			hop_to(yard_side)
 	if(fell && hatch && stat == CONSCIOUS)
 		visible_message(span_notice("[src] slides back down off [hatch]."))
 
@@ -1088,6 +1145,7 @@
 
 #undef PRISONER_BEATEN_TRAIT
 #undef PRISONER_CLIMB_OFFSET
+#undef PRISONER_CLIMB_HOP_OFFSET
 #undef PRISONER_STAFF_BLAME_TIME
 #undef BB_OUTPOST_PRISONER_TROUBLE_TARGET
 #undef ACTIVITY_CONTINUE

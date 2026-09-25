@@ -137,9 +137,9 @@
 #define PRISON_RIOT_BREAKOUT_TIME 180
 /// Seconds of riot before the crew is told the rioters are at the doors
 #define PRISON_RIOT_BREAKOUT_WARNING 120
-/// Seconds of sit-in with no crew home before the corrections service transfers the rioters out
+/// Seconds of sit-in (no crew home, or no rioter free) before the corrections service transfers the rioters still at large
 #define PRISON_RIOT_TRANSFER_TIME 600
-/// Mood of a rioter who is stunned or beaten and calms down: the riot vented it
+/// Mood every rioter settles at when the riot is over: the riot vented it
 #define PRISONER_RIOT_CALM_MOOD 50
 /// After a riot: no riots or fights, no mood lost to the wing's state and half the rest, for this long
 #define PRISON_SUBDUED_TIME (6 MINUTES)
@@ -178,6 +178,23 @@
 #define PRISONER_WRECK_AFTER 360
 #define PRISONER_WRECK_MOOD 10
 #define PRISONER_WRECK_TIME 180
+
+// Cuffs (outpost_prison_capture.dm)
+/// Seconds cuffing takes: a prisoner who is down, and one on their feet and out of trouble
+#define PRISONER_CUFF_TIME_DOWN (2 SECONDS)
+#define PRISONER_CUFF_TIME_STANDING (4 SECONDS)
+/// Seconds taking the cuffs off takes
+#define PRISONER_UNCUFF_TIME (2 SECONDS)
+/// Seconds cuffed without good reason before it starts to sour them and stop their pay
+#define PRISONER_CUFFED_GRACE 90
+/// Mood lost per minute cuffed past PRISONER_CUFFED_GRACE, plus 1 per extra minute
+#define PRISONER_MOOD_CUFFED 6
+
+// Lockdown after a riot (outpost_prison_capture.dm)
+/// Seconds a rioter shut in a cell, or a runner caught after a riot, must serve shut in a cell
+#define PRISON_RIOT_LOCKDOWN_TIME 240
+/// Seconds out of a cell, on their feet and uncuffed, before a prisoner who owes lockdown riots again
+#define PRISON_LOCKDOWN_GRACE 30
 
 // What trouble a prisoner is in (/mob/living/basic/outpost_prisoner/var/trouble); null is none
 #define PRISONER_TROUBLE_FIGHT "fight"

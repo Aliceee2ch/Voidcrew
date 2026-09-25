@@ -7255,6 +7255,7 @@
 #include "voidcrew\modules\player_outposts\outpost_npc_looks.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_ambience.dm"
+#include "voidcrew\modules\player_outposts\outpost_prison_capture.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_changeling.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_conditions.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_containment.dm"

@@ -170,12 +170,15 @@
 	return null
 
 /**
- * What to talk about now, as list(context, other), most pressing first: being locked in, needs,
- * the state of the wing, staff in sight, what they are doing, then small talk.
+ * What to talk about now, as list(context, other), most pressing first: cuffs, trouble, lockdown,
+ * being locked in, needs, the state of the wing, staff in sight, what they are doing, then small talk.
  */
 /mob/living/basic/outpost_prisoner/proc/pick_speech()
 	if(activity?.sleeping)
 		return prob(25) ? list("sleeping", null) : null
+	// Cuffed, they complain about it (outpost_prison_capture.dm).
+	if(cuffs && prob(50))
+		return list("cuffed", null)
 	// Trouble has its own lines, said as it happens (outpost_prison_trouble.dm).
 	if(trouble == PRISONER_TROUBLE_LOOSE)
 		return prob(50) ? list("breakout", null) : null
@@ -183,6 +186,9 @@
 		return list("riot", null)
 	if(trouble || beaten_left > 0 || threat_ref || climb_ref)
 		return null
+	// Sullen while they serve a lockdown
+	if(lockdown_left > 0 && prob(50))
+		return list("lockdown", null)
 	if(locked_in_seconds >= OUTPOST_PRISON_LOCKED_IN_COMPLAINT && prob(60))
 		return list("locked_in", null)
 	// The wing's mood shows before it turns: complaints, then shouting at staff.

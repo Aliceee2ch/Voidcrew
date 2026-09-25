@@ -111,6 +111,22 @@
 	var/datum/outpost_prison/prison = get_outpost_prison(door)
 	return !prison || prison.visitors_allowed || prison.is_member(accessor)
 
+/**
+ * Whether a prisoner is being taken through a staff door: down or cuffed (can_be_dragged()) and
+ * pulled by a member of the wing who may use the door. Visitors let in may use the door, but
+ * never take a prisoner with them, so nobody but the wing's own people can drag one off the outpost.
+ */
+/proc/outpost_prisoner_escorted(atom/door, mob/living/basic/outpost_prisoner/prisoner)
+	if(!istype(prisoner) || !prisoner.can_be_dragged())
+		return FALSE
+	var/mob/living/puller = prisoner.pulledby
+	if(!istype(puller) || !may_use_outpost_prison_staff_door(door, puller))
+		return FALSE
+	if(isAdminGhostAI(puller))
+		return TRUE
+	var/datum/outpost_prison/prison = get_outpost_prison(door) || prisoner.prison
+	return !!prison?.is_member(puller)
+
 // ===== THE PRISON'S OWN MOBS =====
 
 /**

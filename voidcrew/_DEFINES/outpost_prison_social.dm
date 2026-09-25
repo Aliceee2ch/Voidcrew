@@ -74,10 +74,15 @@
 
 /// The menu's own choices, as the radial names them
 #define PRISON_TALK_HOW "How are you doing?"
-#define PRISON_TALK_CRIME "What are you in for?"
-#define PRISON_TALK_CELL "Back to your cell"
+#define PRISON_TALK_CRIME "Crime"
+/// Back to their cell; not offered in cuffs
+#define PRISON_TALK_CELL "Home"
 /// Offered only while they lie, sit or crouch
-#define PRISON_TALK_GET_UP "On your feet"
+#define PRISON_TALK_GET_UP "Get up"
+/// A talk-down (talk_down()), offered while they will listen
+#define PRISON_TALK_CALM "Calm down"
+/// Offered only while they are cuffed
+#define PRISON_TALK_UNCUFF "Uncuff"
 /// How long each choice's talk takes
 #define PRISON_TALK_MENU_TIME (1.5 SECONDS)
 /// Between answers to each question, per prisoner

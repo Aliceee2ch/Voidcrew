@@ -7,7 +7,7 @@
  * draw when they do (decision 8 unchanged: every rioter still has a shiv, and shivs only come out
  * in riots). Pruno cheers the drinker and makes them quarrelsome for a while. Members search a
  * cell's mattress by hand, lift the cistern lid with a crowbar, or pat a prisoner down from the
- * talk menu; searching costs the yard's goodwill either way. Numbers in
+ * talk menu ("Search"); searching costs the yard's goodwill either way. Numbers in
  * voidcrew/_DEFINES/outpost_prison_contraband.dm.
  *
  * Every stash is made where someone could have seen it: only while the prisoner's AI runs (someone
@@ -24,9 +24,8 @@
 // What an activity's tick() wants next, as in outpost_prison_routine.dm (which undefines its own)
 #define ACTIVITY_CONTINUE 0
 #define ACTIVITY_DONE 1
-/// The talk menu's pat-down choice, and its name for someone in cuffs, whose hands stay behind them
-#define CONTRABAND_PATDOWN_CHOICE "Hands on the wall"
-#define CONTRABAND_PATDOWN_CUFFED_CHOICE "Pat down"
+/// The talk menu's pat-down choice
+#define CONTRABAND_PATDOWN_CHOICE "Search"
 /// The prison's own pruno bag
 #define CONTRABAND_PRUNO_TYPE /obj/item/reagent_containers/cup/glass/bottle/pruno/outpost_prison
 
@@ -451,24 +450,21 @@
 
 // ===== THE PAT-DOWN =====
 
-/// The pat-down choice for the talk menu: name -> image
+/// The pat-down choice for the talk menu: name -> image. Hands on the wall, or held still in cuffs.
 /datum/outpost_prison/proc/contraband_talk_choices(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	if(!prisoner || !user || !is_member(user))
 		return list()
-	if(prisoner.cuffs)
-		return list(CONTRABAND_PATDOWN_CUFFED_CHOICE = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_examine"))
-	return list(CONTRABAND_PATDOWN_CHOICE = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_examine"))
+	return list((CONTRABAND_PATDOWN_CHOICE) = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_search"))
 
 /// Runs a talk menu choice of this package; TRUE if it was one. May sleep.
 /datum/outpost_prison/proc/contraband_talk_act(mob/living/basic/outpost_prisoner/prisoner, mob/living/user, choice)
-	// Either name: cuffs may have gone on or come off while the menu was open.
-	if(choice != CONTRABAND_PATDOWN_CHOICE && choice != CONTRABAND_PATDOWN_CUFFED_CHOICE)
+	if(choice != CONTRABAND_PATDOWN_CHOICE)
 		return FALSE
 	contraband_pat_down(prisoner, user)
 	return TRUE
 
 /**
- * "Hands on the wall": a member pats a prisoner down for OUTPOST_CONTRABAND_SEARCH_TIME. It finds
+ * "Search": a member pats a prisoner down for OUTPOST_CONTRABAND_SEARCH_TIME. It finds
  * what they carry from the mail; for nothing, they lose mood (once per OUTPOST_CONTRABAND_SEARCH_GAP)
  * and someone watching may speak up. Same gate as a talk, except that someone in cuffs has no say
  * in it: rioting, loose or sour, they hold still and are searched, unless someone is already
@@ -897,5 +893,4 @@
 #undef ACTIVITY_CONTINUE
 #undef ACTIVITY_DONE
 #undef CONTRABAND_PATDOWN_CHOICE
-#undef CONTRABAND_PATDOWN_CUFFED_CHOICE
 #undef CONTRABAND_PRUNO_TYPE

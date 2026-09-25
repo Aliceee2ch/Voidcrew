@@ -17,7 +17,7 @@
  * - who gets threatened (threat_mood_for()): a fair member only by the unhappiest, a brute sooner;
  * - how well a talk-down works (talk_mood_for()), and a brute gets turned away (refuses_talk_from());
  * - whom rioters go for (riot_victim_distance()): a brute seems nearer, a fair member farther;
- * - the talk menu's "Back to your cell" (outpost_prison_warden_tools.dm);
+ * - the talk menu's "Home" (outpost_prison_warden_tools.dm);
  * - greetings (social_extra_speech()) and what arrivals say they heard (social_tick()).
  * Mood and pay never move with it.
  */

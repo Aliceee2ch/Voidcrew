@@ -245,9 +245,9 @@
 	owner.set_mood(70)
 	neighbour.set_mood(70)
 	prison.contraband_force_rolls = TRUE
-	TEST_ASSERT(("Hands on the wall" in prison.contraband_talk_choices(owner, member)), "The talk menu offers members no pat-down")
+	TEST_ASSERT(("Search" in prison.contraband_talk_choices(owner, member)), "The talk menu offers members no pat-down") // CONTRABAND_PATDOWN_CHOICE
 	TEST_ASSERT(!length(prison.contraband_talk_choices(owner, visitor)), "The talk menu offers a visitor a pat-down")
-	TEST_ASSERT(!prison.contraband_talk_act(owner, member, "What are you in for?"), "The pat-down took another package's choice")
+	TEST_ASSERT(!prison.contraband_talk_act(owner, member, "Crime"), "The pat-down took another package's choice") // PRISON_TALK_CRIME
 	TEST_ASSERT_NULL(prison.contraband_pat_down(owner, visitor), "A visitor patted a prisoner down")
 	// Nothing on them: 3 mood once per five minutes (OUTPOST_CONTRABAND_PATDOWN_MOOD), and someone may speak up for them
 	TEST_ASSERT_EQUAL(prison.contraband_pat_down(owner, member), "empty", "A pat-down of a prisoner carrying nothing found something")

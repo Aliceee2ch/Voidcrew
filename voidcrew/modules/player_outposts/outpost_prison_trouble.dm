@@ -19,7 +19,7 @@
  * Staff who hit a prisoner making trouble, or one who just struck them, cost that prisoner no mood.
  * A player's blow on a calm prisoner on their feet makes them hit back for a while, or back off
  * (react_to_hit()); one already making trouble turns on whoever hit them.
- * A member of the wing can talk an unhappy prisoner down with an empty hand.
+ * A member of the wing can talk an unhappy prisoner down ("Calm down" on the talk menu).
  * The wing-wide side (tension, stages, fights, riots, escapes, wrecked cells) is in
  * outpost_prison_riot.dm.
  *
@@ -119,7 +119,7 @@
 	RegisterSignal(src, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(on_attacked))
 	RegisterSignal(src, COMSIG_MOB_BATONED, PROC_REF(on_batoned))
 	RegisterSignal(src, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_projectile_prehit))
-	RegisterSignal(src, COMSIG_ATOM_ATTACK_HAND, PROC_REF(on_hand_used))
+	// A member's empty hand opens the talk menu (on_talk_menu_click() in outpost_prison_warden_tools.dm), where the talk-down is.
 
 /**
  * Whether an outpost prison NPC's AI is running, which it is only while someone is on the level to
@@ -987,22 +987,6 @@
 /mob/living/basic/outpost_prisoner/proc/recently_helped_by(mob/living/person)
 	var/when = LAZYACCESS(helped_by, REF(person))
 	return when && world.time - when <= PRISONER_HELPED_GRACE
-
-/**
- * A member of the wing using an empty hand on them, not in combat mode, talks to them instead of
- * patting them; on a cuffed prisoner it takes the cuffs off instead (outpost_prison_capture.dm).
- */
-/mob/living/basic/outpost_prisoner/proc/on_hand_used(datum/source, mob/living/user, list/modifiers)
-	SIGNAL_HANDLER
-	if(!istype(user) || user.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK) || is_outpost_prisoner(user))
-		return NONE
-	if(cuffs && prison?.is_member(user))
-		INVOKE_ASYNC(src, PROC_REF(uncuff_by), user)
-		return COMPONENT_CANCEL_ATTACK_CHAIN
-	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison?.is_member(user))
-		return NONE
-	INVOKE_ASYNC(src, PROC_REF(talk_down), user)
-	return COMPONENT_CANCEL_ATTACK_CHAIN
 
 /// Whether they will listen to anyone right now
 /mob/living/basic/outpost_prisoner/proc/will_listen()

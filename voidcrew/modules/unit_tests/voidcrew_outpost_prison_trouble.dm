@@ -1308,9 +1308,6 @@
 /datum/unit_test/voidcrew_outpost_prison_talk
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
-/datum/unit_test/voidcrew_outpost_prison_talk/proc/mood_above(mob/living/basic/outpost_prisoner/prisoner, threshold)
-	return prisoner.mood > threshold
-
 /datum/unit_test/voidcrew_outpost_prison_talk/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("talkowner")
 	TEST_ASSERT_NOTNULL(home, "The talk test prison did not load")
@@ -1322,10 +1319,9 @@
 	warden.drop_all_held_items()
 	warden.set_combat_mode(FALSE)
 
-	// An empty hand, not in combat mode: a few seconds of talk, +8 (PRISONER_MOOD_TALK).
+	// "Calm down" on the talk menu (an empty hand, not in combat mode): a few seconds of talk, +8 (PRISONER_MOOD_TALK).
 	prisoner.set_mood(30)
-	click_wrapper(warden, prisoner)
-	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(mood_above), prisoner, 37), 6 SECONDS), "Talking to a prisoner left mood at [prisoner.mood], not 38")
+	TEST_ASSERT(prisoner.talk_menu_act(warden, "Calm down"), "Picking the talk-down from the talk menu did nothing") // PRISON_TALK_CALM
 	TEST_ASSERT(abs(prisoner.mood - 38) < 0.01, "Talking to a prisoner left mood at [prisoner.mood], not 38")
 	TEST_ASSERT(!prisoner.talking, "The talk never finished")
 	// Once per three minutes each (PRISONER_TALK_COOLDOWN).

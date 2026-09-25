@@ -57,13 +57,18 @@ A turret behind the office glass covers the yard: its stun shots go through glas
 
 Examine a prisoner to see how they seem to be feeling and who they get on with. The yard also remembers how each of you treats it: prisoners warm to people who feed and look after them, and turn on people who hit them.
 
-If you're one of the outpost's members, right-click a prisoner with an empty hand, out of combat mode, to talk to them:
+If you're one of the outpost's members, click a prisoner with an empty hand, out of combat mode, to talk to them:
 
+- **Calm down.** A few quiet words. It cheers them up, and it stops a prisoner squaring up to you or an argument before it comes to blows. Prisoners who are rioting or too miserable won't listen.
 - **How are you doing?** They tell you what's bothering them most.
-- **What are you in for?**
-- **Back to your cell.** A request, not an order. Unhappy prisoners refuse, and nagging makes it worse.
-- **Hands on the wall.** A pat-down for anything they're carrying.
-- **What do you know?** Some prisoners know of a place out on the [overmap](overmap.md). If they tell you, it is marked on your ship's helm. Unhappy prisoners sometimes lie. Watch how they answer, check the spot against your charts, or ask another prisoner about the tip.
+- **Crime.** What they're in for.
+- **Home.** Asks them back to their cell. A request, not an order. Unhappy prisoners refuse, and nagging makes it worse.
+- **Uncuff.** Takes their cuffs off. It takes the place of Home while they're cuffed.
+- **Get up.** Gets them up when they're lying or sitting down.
+- **Search.** A pat-down for anything they're carrying.
+- **Rumour.** Some prisoners know of a place out on the [overmap](overmap.md). If they tell you, it is marked on your ship's helm. Unhappy prisoners sometimes lie. Watch how they answer, check the spot against your charts, or ask another prisoner who saw it about the **Tip**.
+
+Clicking a prisoner asleep in bed shakes them awake, which they don't like. Clicking one who is knocked down takes their cuffs off, if they have any.
 
 ## Searches
 

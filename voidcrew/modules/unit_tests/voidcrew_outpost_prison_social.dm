@@ -12,10 +12,23 @@
  * tick call are called directly.
  */
 
-/// A prisoner whose talk menu has one more choice, standing in for other packages' (XF's pat-down, XG's questions)
+/// A prisoner whose talk menu has one more choice, standing in for other packages' (XF's search, XG's questions)
 /mob/living/basic/outpost_prisoner/talk_menu_stub
 	/// The last extra choice that reached this prisoner
 	var/stub_picked
+	/// What a member's left click last did to them: "menu", "uncuff" or "shake"; the real procs sleep or need a client
+	var/stub_clicked
+
+/mob/living/basic/outpost_prisoner/talk_menu_stub/talk_menu_open(mob/living/user)
+	stub_clicked = "menu"
+
+/mob/living/basic/outpost_prisoner/talk_menu_stub/uncuff_by(mob/living/user)
+	stub_clicked = "uncuff"
+	return FALSE
+
+/mob/living/basic/outpost_prisoner/talk_menu_stub/shake_awake(mob/living/user)
+	stub_clicked = "shake"
+	return FALSE
 
 /mob/living/basic/outpost_prisoner/talk_menu_stub/talk_menu_other_choices(mob/living/user)
 	var/list/choices = ..()
@@ -483,30 +496,58 @@
 	visitor.drop_all_held_items()
 	visitor.set_combat_mode(FALSE)
 
-	// A visitor gets no menu: the right click passes through, and a pick does nothing.
-	TEST_ASSERT(!(SEND_SIGNAL(prisoner, COMSIG_ATOM_ATTACK_HAND_SECONDARY, visitor, list()) & COMPONENT_CANCEL_ATTACK_CHAIN), "A visitor's right click was taken as the talk menu")
+	// A visitor gets no menu, and a pick does nothing.
+	TEST_ASSERT(!(SEND_SIGNAL(prisoner, COMSIG_ATOM_ATTACK_HAND, visitor, list()) & COMPONENT_CANCEL_ATTACK_CHAIN), "A visitor's click was taken as the talk menu")
 	TEST_ASSERT(!prisoner.talk_menu_allowed(visitor), "A visitor may use the talk menu")
-	TEST_ASSERT(!prisoner.talk_menu_act(visitor, "What are you in for?"), "A visitor's pick did something") // PRISON_TALK_CRIME
+	TEST_ASSERT(!prisoner.talk_menu_act(visitor, "Crime"), "A visitor's pick did something") // PRISON_TALK_CRIME
 	TEST_ASSERT(!prisoner.asked_crime && abs(prisoner.mood - 70) < 0.01, "A visitor's pick changed the prisoner")
-	// A member's right click is the menu (the radial itself needs a client); in combat mode it is not.
-	TEST_ASSERT(SEND_SIGNAL(prisoner, COMSIG_ATOM_ATTACK_HAND_SECONDARY, owner, list()) & COMPONENT_CANCEL_ATTACK_CHAIN, "A member's right click did not open the talk menu")
-	owner.set_combat_mode(TRUE)
-	TEST_ASSERT(!(SEND_SIGNAL(prisoner, COMSIG_ATOM_ATTACK_HAND_SECONDARY, owner, list()) & COMPONENT_CANCEL_ATTACK_CHAIN), "A right click in combat mode opened the talk menu")
-	owner.set_combat_mode(FALSE)
 
-	// Its own three choices first, then other packages', and a pick of theirs reaches them.
 	var/mob/living/basic/outpost_prisoner/talk_menu_stub/stubbed = new(prison_spot(home, 10, 8))
 	prison.admit(stubbed)
 	stubbed.sentence_left = 3600
 	stubbed.set_hunger(100)
 	stubbed.set_uniform_grime(0)
+	stubbed.set_mood(70)
 	ADD_TRAIT(stubbed, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+
+	// A member's left click is the menu (the radial itself needs a client).
+	click_wrapper(owner, stubbed)
+	TEST_ASSERT_EQUAL(stubbed.stub_clicked, "menu", "A member's click did [stubbed.stub_clicked || "nothing"], not open the talk menu")
+	stubbed.stub_clicked = null
+	TEST_ASSERT(SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND, owner, list()) & COMPONENT_CANCEL_ATTACK_CHAIN, "A member's click went on to a pat")
+	TEST_ASSERT_EQUAL(stubbed.stub_clicked, "menu", "A member's click did [stubbed.stub_clicked || "nothing"], not open the talk menu")
+	// Not for a visitor, not in combat mode, and a right click is tg's own again.
+	stubbed.stub_clicked = null
+	TEST_ASSERT(!(SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND, visitor, list()) & COMPONENT_CANCEL_ATTACK_CHAIN), "A visitor's click was taken")
+	TEST_ASSERT(!(SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND, owner, list(RIGHT_CLICK = 1)) & COMPONENT_CANCEL_ATTACK_CHAIN), "A member's right click was taken")
+	TEST_ASSERT(!(SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND_SECONDARY, owner, list(RIGHT_CLICK = 1)) & COMPONENT_CANCEL_ATTACK_CHAIN), "A member's right click still opens something")
+	owner.set_combat_mode(TRUE)
+	TEST_ASSERT(!(SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND, owner, list()) & COMPONENT_CANCEL_ATTACK_CHAIN), "A click in combat mode was taken")
+	owner.set_combat_mode(FALSE)
+	TEST_ASSERT_NULL(stubbed.stub_clicked, "A visitor's, right or combat mode click did [stubbed.stub_clicked]")
+	// Cuffed, the menu still opens; down in cuffs, there is no talk, and the click takes the cuffs off.
+	TEST_ASSERT(stubbed.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The stub prisoner could not be cuffed")
+	SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND, owner, list())
+	TEST_ASSERT_EQUAL(stubbed.stub_clicked, "menu", "A click on a cuffed prisoner on their feet did [stubbed.stub_clicked || "nothing"], not open the talk menu")
+	ADD_TRAIT(stubbed, TRAIT_INCAPACITATED, TRAIT_SOURCE_UNIT_TESTS)
+	TEST_ASSERT(!stubbed.talk_menu_allowed(owner), "A prisoner who is down has a talk menu")
+	TEST_ASSERT(SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND, owner, list()) & COMPONENT_CANCEL_ATTACK_CHAIN, "A click on a cuffed prisoner who is down went on to a pat")
+	TEST_ASSERT_EQUAL(stubbed.stub_clicked, "uncuff", "A click on a cuffed prisoner who is down did [stubbed.stub_clicked || "nothing"], not take the cuffs off")
+	stubbed.remove_cuffs()
+	stubbed.stub_clicked = null
+	TEST_ASSERT(SEND_SIGNAL(stubbed, COMSIG_ATOM_ATTACK_HAND, owner, list()) & COMPONENT_CANCEL_ATTACK_CHAIN, "A click on a prisoner who is down went on to a pat")
+	TEST_ASSERT_NULL(stubbed.stub_clicked, "A click on an uncuffed prisoner who is down did [stubbed.stub_clicked]")
+	REMOVE_TRAIT(stubbed, TRAIT_INCAPACITATED, TRAIT_SOURCE_UNIT_TESTS)
+
+	// Its own choices first, then other packages', and a pick of theirs reaches them.
 	var/list/choices = stubbed.talk_menu_choices(owner)
-	TEST_ASSERT(length(choices) >= 4, "The menu has [length(choices)] choices, not the three and the extra")
-	TEST_ASSERT_EQUAL(choices[1], "How are you doing?", "The menu's first choice is [choices[1]]") // PRISON_TALK_HOW
-	TEST_ASSERT_EQUAL(choices[2], "What are you in for?", "The menu's second choice is [choices[2]]") // PRISON_TALK_CRIME
-	TEST_ASSERT_EQUAL(choices[3], "Back to your cell", "The menu's third choice is [choices[3]]") // PRISON_TALK_CELL
-	TEST_ASSERT(choices.Find("Stub choice") > 3, "Another package's choice is missing or ahead of the menu's own")
+	TEST_ASSERT(length(choices) >= 5, "The menu has [length(choices)] choices, not its own four and the extra")
+	TEST_ASSERT_EQUAL(choices[1], "Calm down", "The menu's first choice is [choices[1]]") // PRISON_TALK_CALM
+	TEST_ASSERT_EQUAL(choices[2], "How are you doing?", "The menu's second choice is [choices[2]]") // PRISON_TALK_HOW
+	TEST_ASSERT_EQUAL(choices[3], "Crime", "The menu's third choice is [choices[3]]") // PRISON_TALK_CRIME
+	TEST_ASSERT_EQUAL(choices[4], "Home", "The menu's fourth choice is [choices[4]]") // PRISON_TALK_CELL
+	TEST_ASSERT(!("Uncuff" in choices), "A prisoner without cuffs was offered them off") // PRISON_TALK_UNCUFF
+	TEST_ASSERT(choices.Find("Stub choice") > 4, "Another package's choice is missing or ahead of the menu's own")
 	TEST_ASSERT(stubbed.talk_menu_act(owner, "Stub choice"), "Another package's choice was not run")
 	TEST_ASSERT_EQUAL(stubbed.stub_picked, "Stub choice", "Another package's choice did not reach it")
 	TEST_ASSERT(!stubbed.talk_menu_act(owner, "Nobody's choice"), "A choice nobody has was taken")
@@ -561,14 +602,14 @@
 	TEST_ASSERT(!prisoner.talk_menu_ask_how(owner), "Asking again inside 30 seconds got an answer")
 	TEST_ASSERT(abs(prisoner.mood - 70) < 0.01, "Asking how they were changed mood to [prisoner.mood]")
 
-	// "What are you in for?": +3 the first time in a stay (PRISON_TALK_CRIME_MOOD), not after.
+	// "Crime": +3 the first time in a stay (PRISON_TALK_CRIME_MOOD), not after.
 	TEST_ASSERT(prisoner.talk_menu_ask_crime(owner), "Asking what they were in for did nothing")
 	TEST_ASSERT(abs(prisoner.mood - 73) < 0.01, "Asking what they were in for left mood at [prisoner.mood], not 73")
 	prisoner.ask_crime_cooldown = 0
 	TEST_ASSERT(prisoner.talk_menu_ask_crime(owner), "Asking again after the wait did nothing")
 	TEST_ASSERT(abs(prisoner.mood - 73) < 0.01, "Asking twice in a stay lifted mood again, to [prisoner.mood]")
 
-	// "Back to your cell": the line by personality (PRISON_TALK_ORDER_LINE_*), moved by who asks.
+	// "Home": the line by personality (PRISON_TALK_ORDER_LINE_*), moved by who asks.
 	var/datum/prison_staff_record/record = rep_known_record(prison, owner, 2)
 	var/list/lines = list("grumpy" = 55, "chatty" = 45, "quiet" = 40, "cheerful" = 35, "nervous" = 30)
 	for(var/personality in lines)
@@ -616,20 +657,85 @@
 	TEST_ASSERT(prisoner.talk_menu_order(owner), "An ask after five quiet minutes was refused")
 	prisoner.end_activity(cancel_ai = FALSE)
 
-	// Rioters (anyone in trouble) won't hear any of it.
+	// Rioters (anyone in trouble) won't hear any of it, and aren't offered a talk-down.
 	prisoner.order_cooldown = 0
 	prisoner.order_times = null
 	prisoner.ask_how_cooldown = 0
+	TEST_ASSERT("Calm down" in prisoner.talk_menu_choices(owner), "A prisoner at 70 was not offered a talk-down") // PRISON_TALK_CALM
 	prisoner.start_rioting(FALSE)
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A rioter went back to the cell")
 	TEST_ASSERT(!prisoner.talk_menu_ask_how(owner), "A rioter answered how they were")
 	TEST_ASSERT(!istype(prisoner.activity, /datum/prisoner_activity/sent_to_cell), "A rioter was sent back")
 	TEST_ASSERT(!length(prisoner.order_times), "A rioter's refusal counted as an ask")
+	TEST_ASSERT(!("Calm down" in prisoner.talk_menu_choices(owner)), "A rioter was offered a talk-down")
 	prisoner.calm_down()
 	// Nor anyone below mood 10 (PRISONER_TALK_MIN_MOOD).
 	prisoner.set_mood(5)
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A prisoner at mood 5 went back to the cell")
+	TEST_ASSERT(!("Calm down" in prisoner.talk_menu_choices(owner)), "A prisoner at mood 5 was offered a talk-down")
+	TEST_ASSERT(!prisoner.talk_menu_act(owner, "Calm down"), "A prisoner at mood 5 was talked down")
 	qdel(visitor)
+	settle_prison_air(home)
+
+// ===== "CALM DOWN" AND "UNCUFF" =====
+
+/datum/unit_test/voidcrew_outpost_prison_social_talk_calm
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_social_talk_calm/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("calmowner")
+	TEST_ASSERT_NOTNULL(home, "The calm down test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.rep_word_chance = 0
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_awake_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/basic/outpost_prisoner/first = trouble_awake_prisoner(prison, prison_spot(home, 12, 8))
+	var/mob/living/basic/outpost_prisoner/second = trouble_awake_prisoner(prison, prison_spot(home, 13, 8))
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 9, 8), "calmowner")
+	owner.drop_all_held_items()
+	owner.set_combat_mode(FALSE)
+
+	// Squaring up to the member: the menu still opens with the talk-down on it, and the threat waits while it is open.
+	prisoner.set_mood(25)
+	prison.tick(1)
+	TEST_ASSERT_EQUAL(prisoner.threat_ref?.resolve(), owner, "A prisoner at mood 25 did not threaten the member beside them")
+	TEST_ASSERT(prisoner.talk_menu_allowed(owner), "A threatening prisoner's talk menu is shut")
+	TEST_ASSERT("Calm down" in prisoner.talk_menu_choices(owner), "A threatening prisoner was not offered a talk-down") // PRISON_TALK_CALM
+	var/datum/weakref/hold = prisoner.hold_for_talk_menu(owner)
+	var/threat_before = prisoner.threat_left
+	prison.tick(4) // PRISONER_THREAT_TIME
+	TEST_ASSERT_EQUAL(prisoner.threat_ref?.resolve(), owner, "The threat ran out while the talk menu was open")
+	TEST_ASSERT_EQUAL(prisoner.threat_left, threat_before, "The threat counted down while the talk menu was open")
+	TEST_ASSERT_EQUAL(owner.getBruteLoss(), 0, "The prisoner swung while the talk menu was open")
+	// Picked from the menu, the talk-down ends it (PRISONER_TALK_TIME), and cheers them up.
+	TEST_ASSERT(prisoner.talk_menu_act(owner, "Calm down"), "Picking the talk-down on a threatening prisoner did nothing")
+	TEST_ASSERT_NULL(prisoner.threat_ref, "The talk-down from the menu did not end the threat")
+	TEST_ASSERT(prisoner.mood > 25, "The talk-down from the menu left mood at [prisoner.mood]")
+	prisoner.release_talk_menu(hold)
+
+	// Arguing: the menu opens on them too, and the talk-down ends the argument.
+	owner.forceMove(prison_spot(home, 12, 9))
+	set_moods(list(first, second), 30)
+	var/datum/outpost_prison_fight/brawl = prison.start_fight(first, second)
+	TEST_ASSERT_NOTNULL(brawl, "The test fight did not start")
+	TEST_ASSERT(first.talk_menu_allowed(owner), "An arguing prisoner's talk menu is shut")
+	TEST_ASSERT("Calm down" in first.talk_menu_choices(owner), "An arguing prisoner was not offered a talk-down")
+	TEST_ASSERT(first.talk_menu_act(owner, "Calm down"), "Picking the talk-down on an arguing prisoner did nothing")
+	TEST_ASSERT(isnull(first.fight) && isnull(second.fight), "The talk-down from the menu did not end the argument")
+
+	// The cuffs off: offered only in cuffs, in place of Home, and picked it takes them off into the member's hand.
+	owner.forceMove(prison_spot(home, 9, 8))
+	prisoner.set_mood(70)
+	var/list/choices = prisoner.talk_menu_choices(owner)
+	TEST_ASSERT(("Home" in choices) && !("Uncuff" in choices), "A free prisoner's menu has [english_list(choices)]") // PRISON_TALK_CELL, PRISON_TALK_UNCUFF
+	var/obj/item/restraints/handcuffs/cuffs = allocate(/obj/item/restraints/handcuffs)
+	TEST_ASSERT(prisoner.apply_cuffs(cuffs), "The prisoner could not be cuffed")
+	choices = prisoner.talk_menu_choices(owner)
+	TEST_ASSERT(("Uncuff" in choices) && !("Home" in choices), "A cuffed prisoner's menu has [english_list(choices)]")
+	TEST_ASSERT(prisoner.talk_menu_act(owner, "Uncuff"), "Picking Uncuff did not take the cuffs off")
+	TEST_ASSERT_NULL(prisoner.cuffs, "The prisoner is still cuffed")
+	TEST_ASSERT(owner.is_holding(cuffs), "The cuffs did not go to the member's hand")
+	TEST_ASSERT(!("Uncuff" in prisoner.talk_menu_choices(owner)), "An uncuffed prisoner was still offered the cuffs off")
+	owner.drop_all_held_items()
 	settle_prison_air(home)
 
 // ===== THE TALK MENU IN CUFFS =====
@@ -648,35 +754,35 @@
 	owner.drop_all_held_items()
 	owner.set_combat_mode(FALSE)
 
-	// Free and on their feet: the walk back to the cell and the hands on the wall.
+	// Free and on their feet: the walk back to the cell and the search, and no cuffs to take off.
 	var/list/choices = prisoner.talk_menu_choices(owner)
-	TEST_ASSERT("Back to your cell" in choices, "A free prisoner's menu has no walk back to the cell") // PRISON_TALK_CELL
-	TEST_ASSERT("Hands on the wall" in choices, "A free prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CHOICE
-	TEST_ASSERT(!("On your feet" in choices), "A prisoner already on their feet was offered getting up") // PRISON_TALK_GET_UP
+	TEST_ASSERT("Home" in choices, "A free prisoner's menu has no walk back to the cell") // PRISON_TALK_CELL
+	TEST_ASSERT("Search" in choices, "A free prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CHOICE
+	TEST_ASSERT(!("Get up" in choices), "A prisoner already on their feet was offered getting up") // PRISON_TALK_GET_UP
+	TEST_ASSERT(!("Uncuff" in choices), "A free prisoner was offered the cuffs off") // PRISON_TALK_UNCUFF
 
-	// Cuffed, the menu still opens: talk, questions and a pat-down, but no walking anywhere.
+	// Cuffed, the menu still opens: talk, questions, a search and the cuffs off, but no walking anywhere.
 	TEST_ASSERT(prisoner.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The prisoner could not be cuffed")
 	TEST_ASSERT(prisoner.talk_menu_allowed(owner), "A cuffed prisoner's talk menu is shut")
 	choices = prisoner.talk_menu_choices(owner)
 	TEST_ASSERT("How are you doing?" in choices, "A cuffed prisoner can't be asked how they are") // PRISON_TALK_HOW
-	TEST_ASSERT("Pat down" in choices, "A cuffed prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CUFFED_CHOICE
-	TEST_ASSERT(!("Hands on the wall" in choices), "A cuffed prisoner was asked to put their hands on the wall")
-	TEST_ASSERT("What do you know?" in choices, "A cuffed prisoner can't be asked what they know") // LEAD_ASK_CHOICE
-	TEST_ASSERT(!("Back to your cell" in choices), "A cuffed prisoner was offered a walk back to the cell")
+	TEST_ASSERT("Calm down" in choices, "A cuffed prisoner who will listen can't be talked down") // PRISON_TALK_CALM
+	TEST_ASSERT("Search" in choices, "A cuffed prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CHOICE
+	TEST_ASSERT("Rumour" in choices, "A cuffed prisoner can't be asked what they know") // LEAD_ASK_CHOICE
+	TEST_ASSERT("Uncuff" in choices, "A cuffed prisoner's menu has no way to take the cuffs off") // PRISON_TALK_UNCUFF
+	TEST_ASSERT(!("Home" in choices), "A cuffed prisoner was offered a walk back to the cell")
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A cuffed prisoner was sent back to the cell")
 	TEST_ASSERT(!istype(prisoner.activity, /datum/prisoner_activity/sent_to_cell), "A cuffed prisoner has somewhere to walk to")
 
 	// The pat-down, picked from the menu, finds what they carry.
 	var/obj/item/outpost_prison_contraband/razor_blade/blade = allocate(/obj/item/outpost_prison_contraband/razor_blade, get_turf(prisoner))
 	TEST_ASSERT(prisoner.contraband_carry(blade), "The cuffed prisoner could not carry a razor blade")
-	TEST_ASSERT(prisoner.talk_menu_act(owner, "Pat down"), "The pat-down was not run from a cuffed prisoner's menu")
+	TEST_ASSERT(prisoner.talk_menu_act(owner, "Search"), "The pat-down was not run from a cuffed prisoner's menu")
 	TEST_ASSERT(owner.is_holding(blade), "Patting down a cuffed prisoner did not find the razor blade")
 	TEST_ASSERT_NULL(prisoner.carried_contraband, "The cuffed prisoner still carries what was found")
 	TEST_ASSERT(!prisoner.talking, "The pat-down left the cuffed prisoner held")
 	TEST_ASSERT(prisoner.cuffs, "The pat-down took the cuffs off")
 	owner.drop_all_held_items()
-	// Either name of the choice works, since cuffs can go on or come off while the menu is open.
-	TEST_ASSERT(prison.contraband_talk_act(prisoner, owner, "Hands on the wall"), "The pat-down under its other name was not taken")
 	// Cuffed, they have no say in it, however sour.
 	prisoner.set_mood(5)
 	TEST_ASSERT_EQUAL(prison.contraband_pat_down(prisoner, owner), "empty", "A cuffed prisoner at mood 5 could refuse a pat-down")
@@ -705,7 +811,7 @@
 	prison.contraband_force_rolls = null
 	settle_prison_air(home)
 
-// ===== "ON YOUR FEET" =====
+// ===== "GET UP" =====
 
 /datum/unit_test/voidcrew_outpost_prison_social_get_up
 	parent_type = /datum/unit_test/voidcrew_outpost_management
@@ -728,7 +834,7 @@
 	member.set_combat_mode(FALSE)
 
 	// Standing, there is nothing to get up from.
-	TEST_ASSERT(!("On your feet" in prisoner.talk_menu_choices(member)), "A standing prisoner was offered getting up") // PRISON_TALK_GET_UP
+	TEST_ASSERT(!("Get up" in prisoner.talk_menu_choices(member)), "A standing prisoner was offered getting up") // PRISON_TALK_GET_UP
 	TEST_ASSERT(!prisoner.talk_menu_get_up(member), "A standing prisoner got up")
 
 	// Lying on the bed making a shiv: the mattress can't be searched, and getting up is on the menu.
@@ -739,10 +845,10 @@
 	sharpening.arrive()
 	TEST_ASSERT_EQUAL(prisoner.buckled, bed, "Making a shiv did not put the prisoner on their bed")
 	TEST_ASSERT_NULL(prison.contraband_search_mattress(member, bed), "A mattress with someone lying on it was searched")
-	TEST_ASSERT("On your feet" in prisoner.talk_menu_choices(member), "A prisoner lying on their bed was not offered getting up")
+	TEST_ASSERT("Get up" in prisoner.talk_menu_choices(member), "A prisoner lying on their bed was not offered getting up")
 
 	// Told to get up: off the bed onto a tile beside it in the cell, the shiv left unmade, nothing else changed.
-	TEST_ASSERT(prisoner.talk_menu_act(member, "On your feet"), "The prisoner did not get up")
+	TEST_ASSERT(prisoner.talk_menu_act(member, "Get up"), "The prisoner did not get up")
 	TEST_ASSERT_NULL(prisoner.buckled, "The prisoner is still on the bed")
 	TEST_ASSERT(prisoner.loc != bed_turf, "The prisoner got up but stayed on the bed's tile")
 	TEST_ASSERT(cell.contains(prisoner) && get_dist(prisoner, bed_turf) == 1, "The prisoner did not step off onto a tile beside the bed in the cell")
@@ -758,7 +864,7 @@
 	TEST_ASSERT(standing.ends_at > world.time && standing.ends_at <= world.time + 10 SECONDS, "Standing aside ends [(standing.ends_at - world.time) / 10] seconds from now, not within 10")
 	TEST_ASSERT(!standing.leisure && !standing.interruptible, "Standing aside is leisure or can be interrupted")
 	TEST_ASSERT_EQUAL(prison.claimant(bed), prisoner, "Standing aside did not keep the bed")
-	TEST_ASSERT(!("On your feet" in prisoner.talk_menu_choices(member)), "A prisoner already up was offered getting up again")
+	TEST_ASSERT(!("Get up" in prisoner.talk_menu_choices(member)), "A prisoner already up was offered getting up again")
 
 	// Now the mattress can be searched.
 	cell.stash_shiv = TRUE
@@ -787,15 +893,15 @@
 	TEST_ASSERT(bed.buckle_mob(prisoner, force = TRUE), "The cuffed prisoner could not be laid on the bed")
 	TEST_ASSERT(prisoner.talk_menu_allowed(member), "A cuffed prisoner lying on the bed has no talk menu")
 	var/list/choices = prisoner.talk_menu_choices(member)
-	TEST_ASSERT("On your feet" in choices, "A cuffed prisoner lying on the bed was not offered getting up")
-	TEST_ASSERT(!("Back to your cell" in choices), "A cuffed prisoner was offered a walk back to the cell") // PRISON_TALK_CELL
-	TEST_ASSERT(prisoner.talk_menu_act(member, "On your feet"), "A cuffed prisoner did not get up")
+	TEST_ASSERT("Get up" in choices, "A cuffed prisoner lying on the bed was not offered getting up")
+	TEST_ASSERT(!("Home" in choices), "A cuffed prisoner was offered a walk back to the cell") // PRISON_TALK_CELL
+	TEST_ASSERT(prisoner.talk_menu_act(member, "Get up"), "A cuffed prisoner did not get up")
 	TEST_ASSERT(!prisoner.buckled && prisoner.loc != bed_turf, "A cuffed prisoner stayed on the bed")
 	TEST_ASSERT_NULL(prisoner.activity, "A cuffed prisoner was given something to do")
 	TEST_ASSERT(!bed.has_buckled_mobs(), "Someone is still lying on the mattress")
 	prisoner.remove_cuffs()
 
-	// Asleep in bed, a shake wakes them: they get up as if told to, a little sore about it.
+	// Asleep in bed, a member's click shakes them awake: they get up as if told to, a little sore about it.
 	prisoner.forceMove(bed_turf)
 	var/datum/prisoner_activity/rest/sleep/nap = new(prisoner)
 	TEST_ASSERT(nap.setup(), "The prisoner could not get into bed to sleep")
@@ -803,7 +909,10 @@
 	nap.arrive()
 	TEST_ASSERT(prisoner.activity?.sleeping && prisoner.buckled == bed, "The prisoner is not asleep in bed")
 	TEST_ASSERT_NULL(prison.contraband_search_mattress(member, bed), "A mattress with someone asleep on it was searched")
-	TEST_ASSERT(prisoner.shake_awake(member), "Shaking the sleeping prisoner did not wake them")
+	// A right click is no longer the shake
+	TEST_ASSERT(!(SEND_SIGNAL(prisoner, COMSIG_ATOM_ATTACK_HAND_SECONDARY, member, list(RIGHT_CLICK = 1)) & COMPONENT_CANCEL_ATTACK_CHAIN), "A right click on a sleeping prisoner was taken")
+	TEST_ASSERT(prisoner.activity?.sleeping, "A right click woke the prisoner")
+	TEST_ASSERT(SEND_SIGNAL(prisoner, COMSIG_ATOM_ATTACK_HAND, member, list()) & COMPONENT_CANCEL_ATTACK_CHAIN, "A member's click on a sleeping prisoner went on to a pat")
 	TEST_ASSERT(!prisoner.buckled && prisoner.loc != bed_turf, "The prisoner woke but stayed in bed")
 	TEST_ASSERT(istype(prisoner.activity, /datum/prisoner_activity/told_to_stand), "The woken prisoner is not standing aside")
 	TEST_ASSERT(contraband_line_for(prisoner.last_line, "woken"), "The woken prisoner said [prisoner.last_line]")
@@ -1015,13 +1124,14 @@
 /datum/unit_test/voidcrew_outpost_prison_social_menu_icons
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
-/// "icon|icon_state" of each choice -> the choices showing it; every state must exist
+/// "icon|icon_state" of each choice -> the choices showing it; every state must exist, in one of the radial icon files
 /datum/unit_test/voidcrew_outpost_prison_social_menu_icons/proc/icons_used(list/choices)
 	var/list/used = list()
 	for(var/choice in choices)
 		var/image/picture = choices[choice]
 		TEST_ASSERT(istype(picture), "The talk menu's [choice] has no image")
 		TEST_ASSERT(icon_exists(picture.icon, picture.icon_state), "The talk menu's [choice] shows [picture.icon_state], which [picture.icon] does not have")
+		TEST_ASSERT(("[picture.icon]" in list("icons/hud/radial.dmi", "voidcrew/icons/hud/radial.dmi")), "The talk menu's [choice] is drawn from [picture.icon], not a radial icon file")
 		var/key = "[picture.icon]|[picture.icon_state]"
 		LAZYADD(used[key], choice)
 	return used
@@ -1053,22 +1163,23 @@
 		tip.witnesses += WEAKREF(prisoner)
 		prison.open_leads += tip
 	var/list/choices = prisoner.talk_menu_choices(member)
-	// PRISON_TALK_HOW, _CRIME, _CELL, _GET_UP, CONTRABAND_PATDOWN_CHOICE, LEAD_ASK_CHOICE
-	for(var/expected in list("How are you doing?", "What are you in for?", "Back to your cell", "On your feet", "Hands on the wall", "What do you know?"))
+	// PRISON_TALK_CALM, _HOW, _CRIME, _CELL, _GET_UP, CONTRABAND_PATDOWN_CHOICE, LEAD_ASK_CHOICE, LEAD_TIP_CHOICE
+	for(var/expected in list("Calm down", "How are you doing?", "Crime", "Home", "Get up", "Search", "Rumour", "Tip"))
 		TEST_ASSERT(expected in choices, "The talk menu has no [expected]")
-	// Only the newest tip is asked about, so it has an icon of its own.
-	TEST_ASSERT("Ask about [other_teller.real_name]'s tip" in choices, "The newest tip is not on the menu")
-	TEST_ASSERT(!("Ask about [teller.real_name]'s tip" in choices), "An older tip is on the menu beside the newest")
+	TEST_ASSERT_EQUAL(length(choices), 8, "The talk menu has [length(choices)] choices ([english_list(choices)]), more than fit on one page of the radial")
+	// Only the newest tip is asked about.
+	var/datum/outpost_prison_lead/newest = prison.lead_newest_vouchable(prisoner)
+	TEST_ASSERT_EQUAL(newest?.teller_name, other_teller.real_name, "Tip asks about [newest?.teller_name]'s tip, not the newest")
 	var/list/used = icons_used(choices)
 	for(var/key in used)
 		var/list/names = used[key]
 		TEST_ASSERT_EQUAL(length(names), 1, "The talk menu shows [key] for [english_list(names)]")
 
-	// Cuffed: the pat-down under its other name, and still no icon twice.
+	// Cuffed: the cuffs off in place of Home, and still no icon twice.
 	prisoner.end_activity()
 	TEST_ASSERT(prisoner.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The prisoner could not be cuffed")
 	choices = prisoner.talk_menu_choices(member)
-	TEST_ASSERT("Pat down" in choices, "A cuffed prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CUFFED_CHOICE
+	TEST_ASSERT(("Uncuff" in choices) && ("Search" in choices), "A cuffed prisoner's menu has [english_list(choices)]") // PRISON_TALK_UNCUFF, CONTRABAND_PATDOWN_CHOICE
 	used = icons_used(choices)
 	for(var/key in used)
 		var/list/names = used[key]

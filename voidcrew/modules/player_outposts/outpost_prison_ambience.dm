@@ -309,6 +309,10 @@ GLOBAL_LIST_INIT(outpost_prisoner_examine_placeholders, list("{They}", "{they}",
 		if(label == "fair" || prisoner.mood >= OUTPOST_PRISONER_NOTICE_GREET_MOOD)
 			if(!spoken && prob(OUTPOST_PRISONER_NOTICE_GREET_CHANCE) && prisoner.say_to_staff("greet_staff", member))
 				spoken = TRUE
+				// That was their greeting; the reputation greeting (outpost_prison_social.dm) waits its gap.
+				var/greeted_key = rep_key(member)
+				if(greeted_key)
+					LAZYSET(prisoner.rep_greeted, greeted_key, world.time)
 			else if(emotes < OUTPOST_PRISON_NOTICE_MAX_EMOTES)
 				emotes++
 				prisoner.manual_emote(pick("nods at [member].", "waves at [member]."))

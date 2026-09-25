@@ -320,6 +320,7 @@
 	TEST_ASSERT_EQUAL(horror.event, event, "The horror does not know its experiment")
 	TEST_ASSERT(!ismegafauna(horror), "The horror counts as megafauna")
 	TEST_ASSERT(!istype(horror, /mob/living/basic/boss), "The horror is a /mob/living/basic/boss")
+	TEST_ASSERT(is_hostile_creature(horror), "Turrets would leave the horror alone") // interim turret rule
 	// Its first act, once unfolded, is the resonant shriek's windup.
 	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(winding_up), horror), 4 SECONDS), "The horror did not start a shriek once it had unfolded") // OUTPOST_HORROR_UNFOLD_TIME
 	var/datum/action/cooldown/mob_cooldown/outpost_horror/shriek = horror.abilities["resonant"]

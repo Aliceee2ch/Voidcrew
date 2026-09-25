@@ -434,6 +434,7 @@
 	TEST_ASSERT_EQUAL(prison.experiment.stage, "failed", "A recovered creature counted as contained")
 	TEST_ASSERT_EQUAL(prison.treasury_debt(), 500, "The fly's recovery was [prison.treasury_debt()] cr of debt, not 500") // OUTPOST_EXPERIMENT_RECOVERY_FLY
 	TEST_ASSERT(HAS_TRAIT(fly, TRAIT_GODMODE), "A creature Kessler is taking could still be hurt")
+	TEST_ASSERT(!is_hostile_creature(fly), "A turret would shoot a creature Kessler is taking")
 	TEST_ASSERT(wait_until(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(is_qdeleted_ref), WEAKREF(fly)), 12 SECONDS), "Kessler never took the fly away")
 	treasury.account_debt = 0
 
@@ -517,6 +518,7 @@
 		TEST_ASSERT(!QDELETED(creature), "A polymorph bolt deleted [creature_type]")
 		TEST_ASSERT_NULL(creature.change_mob_type(/mob/living/basic/mouse, delete_old_mob = TRUE), "[creature_type] was turned into another mob")
 		TEST_ASSERT(!creature.can_be_revived(), "[creature_type] could be revived")
+		TEST_ASSERT(is_hostile_creature(creature), "Turrets would leave [creature_type] alone") // interim turret rule
 		sleep(2)
 		TEST_ASSERT(!QDELETED(creature), "The megafauna ban removed [creature_type] from the prison wing")
 		qdel(creature)
@@ -574,6 +576,7 @@
 	TEST_ASSERT(hulk.subdued, "Two baton hits' worth of stamina did not put the exhausted hulk down") // OUTPOST_HULK_STAMINA
 	TEST_ASSERT(hulk.stat != DEAD, "Subduing the hulk killed it")
 	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 2400, "Subduing the hulk paid [prison.experiment.bonus_paid], not 2400") // OUTPOST_EXPERIMENT_BONUS_HULK_SUBDUED
+	TEST_ASSERT(!is_hostile_creature(hulk), "A turret would shoot a subdued hulk")
 
 	// The fly person: a flyswatter hits it thirty times harder, it eats what it finds, and it throws up.
 	var/mob/living/basic/outpost_experiment/fly/fly = allocate(/mob/living/basic/outpost_experiment/fly, prison_spot(home, 11, 8), prison, null)

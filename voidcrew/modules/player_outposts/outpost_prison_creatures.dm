@@ -183,6 +183,18 @@
 	. = ..()
 	move_resist = MOVE_RESIST_DEFAULT
 
+/**
+ * Interim turret rule (outpost_prison_riot.dm): outpost turrets shoot a creature wherever it is,
+ * until it is dead, subdued or in Kessler's hands. Turret damage is not the crew's, so a turret
+ * kill pays no containment bonus.
+ */
+/mob/living/basic/outpost_experiment/proc/turret_target()
+	return stat != DEAD && !subdued && !HAS_TRAIT(src, TRAIT_GODMODE)
+
+/proc/is_outpost_experiment_turret_target(mob/living/creature)
+	var/mob/living/basic/outpost_experiment/experiment_creature = creature
+	return istype(experiment_creature) && experiment_creature.turret_target()
+
 /// Whether its AI runs: only while someone is on the level
 /mob/living/basic/outpost_experiment/proc/awake()
 	return ai_controller?.ai_status == AI_STATUS_ON

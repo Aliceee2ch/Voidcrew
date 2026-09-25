@@ -109,6 +109,8 @@
 #define PRISONER_BUBBLE_RIOT_GAP_MAX (12 SECONDS)
 /// A need that has just come up pops within this long, so a wing's bubbles don't all pop at once
 #define PRISONER_BUBBLE_FRESH_DELAY (3 SECONDS)
+/// After a prisoner says or emotes something, no bubble for this long: as long as tg's runechat shows it (CHAT_MESSAGE_LIFESPAN)
+#define PRISONER_BUBBLE_HUSH (5 SECONDS)
 /// Meals and uniforms used per prisoner-minute, for the console's "lasts about N min"
 #define OUTPOST_PRISON_MEAL_RATE 0.11
 #define OUTPOST_PRISON_SUIT_RATE 0.045

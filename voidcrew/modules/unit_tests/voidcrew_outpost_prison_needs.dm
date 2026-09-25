@@ -223,7 +223,9 @@
 
 	// The bubble pops up now and then rather than staying: a need that has just come up pops it within
 	// 3 seconds (PRISONER_BUBBLE_FRESH_DELAY), the next pop is 20 seconds or more away
-	// (PRISONER_BUBBLE_GAP_MIN), and a need dealt with fades its bubble at once.
+	// (PRISONER_BUBBLE_GAP_MIN), and a need dealt with fades its bubble at once. They thanked the
+	// warden for the uniform above; that has had its time over their head (see below).
+	COOLDOWN_RESET(prisoner, bubble_hush)
 	prisoner.set_hunger(10)
 	if(!prisoner.popped_bubble)
 		TEST_ASSERT(prisoner.bubble_next_pop <= world.time + 3 SECONDS, "A new need did not bring the bubble forward")
@@ -238,7 +240,39 @@
 	TEST_ASSERT_NULL(prisoner.popped_bubble, "The bubble stayed up after the need was dealt with")
 	prisoner.end_bubble()
 	TEST_ASSERT(!(prisoner.thought in prisoner.vis_contents), "The faded bubble was not taken down")
+
+	// It sits off their right shoulder, not over their head where runechat goes: its top edge
+	// (16 + rest_z + 16 x rest_scale) stays under a message's first line (pixel_z 32, text from about 34).
+	var/obj/effect/abstract/outpost_thought/thought = prisoner.thought
+	TEST_ASSERT(thought.rest_scale >= 0.8, "The bubble settles at [thought.rest_scale] scale, too small to read")
+	TEST_ASSERT(16 + thought.rest_z + 16 * thought.rest_scale <= 34, "The bubble's top edge is [16 + thought.rest_z + 16 * thought.rest_scale] px up, into runechat")
+	TEST_ASSERT(thought.pixel_w >= 16, "The bubble is only [thought.pixel_w] px to the side, over their head rather than beside it")
+
+	// Talking puts it away: what they say goes up over their head, so a bubble that is up ducks out of
+	// its way, and none pops for 5 seconds after they say or emote anything (PRISONER_BUBBLE_HUSH).
+	prisoner.set_hunger(10)
+	prisoner.bubble_next_pop = world.time
+	prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.popped_bubble, "hungry", "The hungry bubble did not pop up before they spoke")
+	prisoner.say("Any chance of lunch in here?")
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "The bubble stayed up while they talked")
+	TEST_ASSERT(prisoner.bubble_next_pop <= world.time + 8 SECONDS, "Talking put the next bubble off past the words and the fresh-need delay")
+	prisoner.drop_bubble()
+	prisoner.bubble_next_pop = world.time
+	prisoner.update_bubble()
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "A bubble popped up over what they had just said")
+	COOLDOWN_RESET(prisoner, bubble_hush)
+	prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.popped_bubble, "hungry", "The bubble did not come back once what they said had gone")
+	prisoner.manual_emote("stares at the wall.")
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "The bubble stayed up through an emote")
+	prisoner.drop_bubble()
+	prisoner.bubble_next_pop = world.time
+	prisoner.update_bubble()
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "A bubble popped up over their emote")
+	COOLDOWN_RESET(prisoner, bubble_hush)
 	prisoner.set_hunger(45)
+	prisoner.drop_bubble()
 
 	// Medical: the advanced med HUD tracks their health bar, and a bruise pack treats them.
 	var/datum/atom_hud/medhud = GLOB.huds[DATA_HUD_MEDICAL_ADVANCED]

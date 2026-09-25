@@ -102,7 +102,11 @@
 	TEST_ASSERT_EQUAL(block["form"], "unknown", "The console named the serum's form")
 	TEST_ASSERT(block["researcher_present"], "The console did not show the researcher")
 	TEST_ASSERT_EQUAL(block["time_left"], 180, "The researcher does not wait 3 minutes") // OUTPOST_EXPERIMENT_STAY
-	TEST_ASSERT(findtext(prison.offer_text(), "Effects vary"), "The serum's card does not say its effects vary")
+	// The offer is the researcher talking: a line or two with the fee, no card of hazards and terms.
+	var/offer = prison.offer_text()
+	TEST_ASSERT(findtext(offer, "300 to 600 cr"), "The serum offer does not give the fee: [offer]") // OUTPOST_EXPERIMENT_FEE_FLY, _HULK and _NIGHTMARE
+	TEST_ASSERT(length(splittext(offer, " ")) <= 25, "The serum offer runs to [length(splittext(offer, " "))] words: [offer]")
+	TEST_ASSERT(!findtext(offer, "\n") && !findtext(offer, "Hazard"), "The serum offer is still a card: [offer]")
 
 	// Only managers get the offer; while one reads it nobody else can, and the researcher waits up to 5 minutes.
 	TEST_ASSERT(!doctor.talk_to(visitor), "A visitor got the researcher's offer")
@@ -133,7 +137,12 @@
 	TEST_ASSERT_NOTNULL(seller, "An admin could not send the researcher")
 	prison.offer_kind = "serum"
 	prison.offer_form = "fly"
-	TEST_ASSERT(findtext(prison.offer_text(), "390"), "The sweetened card does not show the fly's 300 cr fee raised by 30%")
+	TEST_ASSERT(findtext(prison.offer_text(), "390"), "The sweetened offer does not show the fly's 300 cr fee raised by 30%")
+	prison.offer_kind = "specimen"
+	offer = prison.offer_text()
+	TEST_ASSERT(findtext(offer, "780 cr"), "The sweetened specimen offer does not show its 600 cr fee raised by 30%: [offer]") // OUTPOST_EXPERIMENT_FEE_CHANGELING
+	TEST_ASSERT(length(splittext(offer, " ")) <= 25 && !findtext(offer, "\n"), "The specimen offer is not short: [offer]")
+	prison.offer_kind = "serum"
 	var/obj/item/outpost_experiment/serum/serum = prison.accept_offer(owner)
 	TEST_ASSERT(istype(serum), "Taking the offer gave no serum")
 	TEST_ASSERT(owner.is_holding(serum), "The serum did not go into the manager's hands")

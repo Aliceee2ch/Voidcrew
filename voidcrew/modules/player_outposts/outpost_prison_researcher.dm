@@ -170,15 +170,14 @@
 	log_game("PLAYER OUTPOST PRISON: a Kessler researcher came to '[outpost?.name]' with a [offer_kind] ([offer_form])[forced ? ", sent by an admin" : ""]")
 	return doctor
 
-/// The offer card: what it is, how dangerous, and what it pays with the sweetener in
+/// The offer, as the researcher puts it: a line or two, with the fee (sweetener in) and no more
 /datum/outpost_prison/proc/offer_text()
 	var/multiplier = 1 + sweetener
 	if(offer_kind == "specimen")
-		return "Specimen. Hazard: extreme. Recommended: two or more armed staff. The subject dies.\n\nPays [round(OUTPOST_EXPERIMENT_FEE_CHANGELING * multiplier)] cr when it hatches, and up to [round(OUTPOST_EXPERIMENT_BONUS_HORROR * multiplier)] cr more for putting it down."
+		return "I've got something nasty for one of your prisoners. [round(OUTPOST_EXPERIMENT_FEE_CHANGELING * multiplier)] cr, and a big bonus if you put down what comes out."
 	var/low = round(min(OUTPOST_EXPERIMENT_FEE_FLY, OUTPOST_EXPERIMENT_FEE_HULK, OUTPOST_EXPERIMENT_FEE_NIGHTMARE) * multiplier)
 	var/high = round(max(OUTPOST_EXPERIMENT_FEE_FLY, OUTPOST_EXPERIMENT_FEE_HULK, OUTPOST_EXPERIMENT_FEE_NIGHTMARE) * multiplier)
-	var/top = round(max(OUTPOST_EXPERIMENT_BONUS_FLY, OUTPOST_EXPERIMENT_BONUS_HULK_SUBDUED, OUTPOST_EXPERIMENT_BONUS_NIGHTMARE) * multiplier)
-	return "Serum. Hazard: moderate to high. Effects vary.\n\nPays [low]-[high] cr when it takes, and up to [top] cr more for containing the result."
+	return "Let me try something on one of your prisoners. [low] to [high] cr, and a bonus if things get out of hand."
 
 /**
  * A manager reads the offer. It is claimed for them before the prompt yields, and everything is
@@ -223,7 +222,7 @@
 		return FALSE
 	var/needed = offer_kind == "specimen" ? 2 : 1
 	if(experiment_active() || length(live_items()) || researcher_prisoner_count() < needed)
-		doctor.say("Not now. Your wing isn't ready for it.")
+		doctor.say("Your wing isn't ready for this right now.")
 		return FALSE
 	var/obj/item/outpost_experiment/item
 	if(offer_kind == "specimen")

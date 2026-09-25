@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Box,
   Button,
@@ -119,6 +120,20 @@ type PrisonStage = 'calm' | 'grumbling' | 'restless' | 'riot';
 
 type CrewMode = 'auto' | 'home' | 'away';
 
+/** The warden console's experiment block, the same for admins */
+type PrisonExperiment = {
+  /** unknown (a blind serum not yet shown), hulk, fly, nightmare or changeling */
+  form: string;
+  /** offered, dosed, twitching, incubating, live, vents, horror, contained or failed */
+  stage: string;
+  subject: string | null;
+  /** seconds */
+  time_left: number | null;
+  researcher_present: BooleanLike;
+  fee_paid: number;
+  bonus_paid: number;
+};
+
 type PrisonAdminData = {
   intake_open: BooleanLike;
   /** open, closed, suspended, debt, experiment or no_power */
@@ -169,6 +184,8 @@ type PrisonAdminData = {
   lit_samples?: number | null;
   /** seconds of outage counted against power */
   outage_debt?: number;
+  /** null with no experiment */
+  experiment?: PrisonExperiment | null;
 };
 
 type SelectedOutpost = {
@@ -969,6 +986,22 @@ const CONFINED_PRESETS = [0, 120, 360];
 /** PRISON_SUBDUED_TIME */
 const SUBDUE_SECONDS = 360;
 
+/** prison_experiment forms */
+const EXPERIMENT_FORMS = [
+  ['hulk', 'Hulk'],
+  ['fly', 'Fly'],
+  ['nightmare', 'Nightmare'],
+  ['changeling', 'Changeling'],
+] as const;
+
+type ExperimentForm = (typeof EXPERIMENT_FORMS)[number][0];
+
+/** prison_changeling_stage stages */
+const CHANGELING_STAGES = [
+  ['burst', 'Burst', 'burst'],
+  ['horror', 'Horror', 'skull-crossbones'],
+] as const;
+
 const isNum = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
@@ -981,6 +1014,10 @@ type PrisonProps = {
 };
 
 const PrisonTools = ({ data, busy, act }: PrisonProps) => {
+  // The form each prisoner's Experiment button starts
+  const [form, setForm] = useState<ExperimentForm>('hulk');
+  const experiment = data.experiment || null;
+  const changeling = !!experiment && experiment.form === 'changeling';
   const open = !!data.intake_open;
   const powered = !!data.powered;
   const conditions = data.conditions || {
@@ -1176,6 +1213,56 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
           ) : null}
         </Stack.Item>
       </Stack>
+      <Stack
+        className="OutpostPrisonAdmin__experiment"
+        align="center"
+        wrap
+        mb={1}
+      >
+        <Stack.Item width="90px" bold>
+          Experiment
+        </Stack.Item>
+        <Button
+          icon="user-doctor"
+          disabled={busy}
+          tooltip="Beam in the researcher with an offer"
+          onClick={() => act('prison_researcher', {})}
+        >
+          Researcher
+        </Button>
+        {EXPERIMENT_FORMS.map(([value, label]) => (
+          <Button
+            key={value}
+            selected={form === value}
+            disabled={busy}
+            tooltip="What a prisoner's Experiment button starts"
+            onClick={() => setForm(value)}
+          >
+            {label}
+          </Button>
+        ))}
+        {CHANGELING_STAGES.map(([stage, label, icon]) => (
+          <Button
+            key={stage}
+            icon={icon}
+            disabled={busy || !changeling}
+            tooltip="Skip the changeling ahead"
+            onClick={() => act('prison_changeling_stage', { stage })}
+          >
+            {label}
+          </Button>
+        ))}
+        <Button.Confirm
+          icon="stop"
+          color="bad"
+          confirmContent="End?"
+          disabled={busy || !experiment}
+          tooltip="No fee is paid"
+          onClick={() => act('prison_experiment_end', {})}
+        >
+          End Experiment
+        </Button.Confirm>
+      </Stack>
 
       <LabeledList>
         <LabeledList.Item label="Pay">
@@ -1253,6 +1340,23 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
         {clocks.length > 0 ? (
           <LabeledList.Item label="Clocks">
             {clocks.join(', ')}
+          </LabeledList.Item>
+        ) : null}
+        {experiment ? (
+          <LabeledList.Item label="Experiment">
+            {[
+              experiment.form || 'unknown',
+              experiment.stage || '?',
+              experiment.subject || '',
+              isNum(experiment.time_left)
+                ? `${clock(experiment.time_left)} left`
+                : '',
+              experiment.researcher_present ? 'researcher here' : '',
+              `fee ${cr(experiment.fee_paid)}`,
+              `bonus ${cr(experiment.bonus_paid)}`,
+            ]
+              .filter(Boolean)
+              .join(', ')}
           </LabeledList.Item>
         ) : null}
         {isNum(data.debt) ? (
@@ -1355,6 +1459,7 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
             prisoner={prisoner}
             busy={busy}
             act={act}
+            form={form}
           />
         ))
       )}
@@ -1366,9 +1471,11 @@ type PrisonerRowProps = {
   prisoner: PrisonAdminPrisoner;
   busy: boolean;
   act: DetailsProps['act'];
+  /** What the Experiment button starts */
+  form: ExperimentForm;
 };
 
-const PrisonerRow = ({ prisoner, busy, act }: PrisonerRowProps) => {
+const PrisonerRow = ({ prisoner, busy, act, form }: PrisonerRowProps) => {
   const dead = !!prisoner.dead;
   const locked = busy || dead;
   const ref = prisoner.ref;
@@ -1462,6 +1569,15 @@ const PrisonerRow = ({ prisoner, busy, act }: PrisonerRowProps) => {
             onClick={() => act('prison_wreck', { ref })}
           >
             Wreck
+          </Button>
+          <Button
+            compact
+            icon="flask"
+            disabled={locked}
+            tooltip={`Start a ${form} experiment`}
+            onClick={() => act('prison_experiment', { ref, form })}
+          >
+            Experiment
           </Button>
           <Button
             compact

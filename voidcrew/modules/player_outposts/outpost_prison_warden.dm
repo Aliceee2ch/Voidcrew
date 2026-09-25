@@ -170,4 +170,5 @@
 		"log" = entries.Copy(),
 		"alarm" = alarm[1],
 		"alarm_text" = alarm[2],
+		"experiment" = experiment_block(),
 	)

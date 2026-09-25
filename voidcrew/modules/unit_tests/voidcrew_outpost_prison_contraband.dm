@@ -455,7 +455,7 @@
 	TEST_ASSERT_NULL(find_landing_zone(prison), "A mail pod came with nobody home")
 
 	// Home: the clock runs out, a pod comes down, and the next is 15 to 25 minutes off
-	// (OUTPOST_MAIL_WAVE_GAP_MIN, _MAX). Its letters only count as waiting once the sack lands.
+	// (OUTPOST_MAIL_WAVE_GAP_MIN, _MAX). Its letters only count as waiting once the crate lands.
 	prison.crew_home_override = TRUE
 	prison.mail_tick(1)
 	TEST_ASSERT(prison.mail_next_in >= 900 && prison.mail_next_in <= 1500, "The next mail pod is [prison.mail_next_in] seconds off")
@@ -472,16 +472,20 @@
 			break
 	TEST_ASSERT_NOTNULL(beside_pod, "No floor beside the landing for a bystander")
 	var/mob/living/carbon/human/bystander = make_player(beside_pod, "xfmailbystander")
-	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(sack_on), pod_turf), 12 SECONDS), "The mail pod never dropped its sack")
-	var/obj/item/storage/bag/mail/outpost_prison/sack = locate() in pod_turf
-	var/letters_in_sack = 0
-	for(var/obj/item/mail/envelope/outpost_prison/envelope in sack)
-		letters_in_sack++
-	TEST_ASSERT(letters_in_sack >= 1 && letters_in_sack <= 2, "The sack holds [letters_in_sack] letters for four prisoners")
-	TEST_ASSERT_EQUAL(length(prison.mail_waiting_letters()), letters_in_sack, "The sack's letters do not all count as waiting")
-	TEST_ASSERT(findtext(contraband_last_log(prison), "Mail call: a pod dropped [letters_in_sack] letter"), "The mail call was not logged: [contraband_last_log(prison)]")
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(crate_on), pod_turf), 12 SECONDS), "The mail pod never dropped its crate")
+	// tg's mail crate, shut, holding this wave's prison letters and nothing else
+	var/obj/structure/closet/crate/mail/mail_crate = locate() in pod_turf
+	TEST_ASSERT_EQUAL(mail_crate.type, /obj/structure/closet/crate/mail, "The mail pod dropped [mail_crate.type], not tg's mail crate")
+	TEST_ASSERT(!mail_crate.opened && mail_crate.icon_state == "mailsealed", "The mail crate did not land shut")
+	var/letters_in_crate = 0
+	for(var/atom/movable/inside as anything in mail_crate.contents)
+		TEST_ASSERT(istype(inside, /obj/item/mail/envelope/outpost_prison), "The mail crate holds [inside.type]")
+		letters_in_crate++
+	TEST_ASSERT(letters_in_crate >= 1 && letters_in_crate <= 2, "The crate holds [letters_in_crate] letters for four prisoners")
+	TEST_ASSERT_EQUAL(length(prison.mail_waiting_letters()), letters_in_crate, "The crate's letters do not all count as waiting")
+	TEST_ASSERT(findtext(contraband_last_log(prison), "Mail call: a pod dropped [letters_in_crate] letter"), "The mail call was not logged: [contraband_last_log(prison)]")
 	var/list/console_block = prison.mail_payload(null)
-	TEST_ASSERT_EQUAL(console_block["waiting"], letters_in_sack, "The warden console does not count the sack's letters")
+	TEST_ASSERT_EQUAL(console_block["waiting"], letters_in_crate, "The warden console does not count the crate's letters")
 	var/lettered = 0
 	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in everyone)
 		if(prisoner.mail_had_letter)
@@ -490,13 +494,18 @@
 	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(pod_gone), pod_turf), 8 SECONDS), "The mail pod never left")
 	TEST_ASSERT_EQUAL(bystander.get_total_damage(), 0, "The mail pod hurt someone beside it")
 	TEST_ASSERT(bystander.body_position == STANDING_UP && !bystander.IsKnockdown() && !bystander.IsStun() && !bystander.IsParalyzed(), "The mail pod knocked down or stunned someone beside it")
-	TEST_ASSERT(!QDELETED(sack) && sack.loc == pod_turf, "The sack left with the pod")
+	TEST_ASSERT(!QDELETED(mail_crate) && mail_crate.loc == pod_turf, "The mail crate left with the pod")
+	// Opened, it lets the letters out onto the floor, still waiting, and stays behind as an empty crate
+	TEST_ASSERT(mail_crate.open(null, TRUE), "The mail crate would not open")
+	var/letters_out = 0
+	for(var/obj/item/mail/envelope/outpost_prison/envelope in pod_turf)
+		letters_out++
+	TEST_ASSERT_EQUAL(letters_out, letters_in_crate, "Opening the crate let out [letters_out] of [letters_in_crate] letters")
+	TEST_ASSERT_EQUAL(length(prison.mail_waiting_letters()), letters_in_crate, "Opening the crate changed the letters waiting")
+	TEST_ASSERT_EQUAL(mail_crate.icon_state, "mailopen", "The emptied mail crate does not look empty")
 
 	// prison_mail_wave calls a pod now, for those still due a letter, and starts the clock over.
-	// The first sack goes in the bystander's hands, so the next pod may come down on the same tile.
-	bystander.put_in_hands(sack)
-	TEST_ASSERT_EQUAL(sack.loc, bystander, "The bystander could not pick up the mail sack")
-	TEST_ASSERT_EQUAL(length(prison.mail_waiting_letters()), letters_in_sack, "Picking up the sack changed the letters waiting")
+	// It comes down somewhere other than the first crate.
 	prison.mail_next_in = 5
 	var/waiting_before = length(prison.mail_waiting_letters())
 	TEST_ASSERT(istext(prison.mail_admin_act("prison_mail_wave", list(), null)), "prison_mail_wave called no pod")
@@ -504,10 +513,10 @@
 	var/obj/effect/pod_landingzone/admin_zone = find_landing_zone(prison)
 	TEST_ASSERT_NOTNULL(admin_zone, "prison_mail_wave called no pod")
 	var/turf/admin_turf = get_turf(admin_zone)
-	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(sack_on), admin_turf), 12 SECONDS), "The admin's mail pod never dropped its sack")
+	TEST_ASSERT(admin_turf != pod_turf, "The admin's mail pod came down on the first crate")
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(crate_on), admin_turf), 12 SECONDS), "The admin's mail pod never dropped its crate")
 	TEST_ASSERT(length(prison.mail_waiting_letters()) > waiting_before, "The admin's mail pod brought no letters")
 	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(pod_gone), admin_turf), 8 SECONDS), "The admin's mail pod never left")
-
 	// With the office full, it comes down on the ground just outside the entrance, off the wing
 	var/turf/front = prison.mail_entrance_front()
 	TEST_ASSERT_NOTNULL(front, "The wing has no ground outside its entrance")
@@ -546,9 +555,9 @@
 			return zone
 	return null
 
-/// Whether a mail sack has come to rest on `tile`
-/datum/unit_test/voidcrew_outpost_prison_mail_arrivals/proc/sack_on(turf/tile)
-	return !!(locate(/obj/item/storage/bag/mail/outpost_prison) in tile)
+/// Whether a mail crate has come to rest on `tile`
+/datum/unit_test/voidcrew_outpost_prison_mail_arrivals/proc/crate_on(turf/tile)
+	return !!(locate(/obj/structure/closet/crate/mail) in tile)
 
 /// Whether the mail pod has gone from `tile`
 /datum/unit_test/voidcrew_outpost_prison_mail_arrivals/proc/pod_gone(turf/tile)

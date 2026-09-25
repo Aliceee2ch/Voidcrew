@@ -2,8 +2,9 @@
  * # Prison mail call
  *
  * Owner: XF (extras-plan.md 4.15). Mail comes in waves (owner, 2026-09-25): every
- * OUTPOST_MAIL_WAVE_GAP_MIN to _MAX of the crew being home, tg's supply pod drops a mail sack into
- * the warden's office, holding letters for a share of the prisoners (mail_wave_recipients()). The
+ * OUTPOST_MAIL_WAVE_GAP_MIN to _MAX of the crew being home, tg's supply pod drops tg's mail crate
+ * into the warden's office, holding letters for a share of the prisoners (mail_wave_recipients()) and
+ * nothing else (owner: "mail should come in the mail crate"). An empty crate stays a crate. The
  * pod is harmless: no explosion, damage, stun or sparks, and it never lands on anyone, on anything
  * dense or in the cell block. A member carries each letter to its prisoner, by hand or on a serving
  * hatch, and the prisoner reads it on the spot: good news, bad news, a drawing from a kid. Opening a
@@ -13,7 +14,7 @@
  *
  * A letter is tg's envelope (/obj/item/mail/envelope, so sorters and disposals treat it as mail)
  * holding the letter itself and, for a contraband letter, a razor blade or a packet of yeast. The
- * prison tracks the letter paper by weakref from arrival (the sack landing) until it is read,
+ * prison tracks the letter paper by weakref from arrival (the crate landing) until it is read,
  * returned, lost off the level or its prisoner leaves. It never calls tg's initialize_for_recipient()
  * (goodies and money).
  *
@@ -76,10 +77,10 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 
 // ===== THE MAIL POD =====
 
-/// tg's supply pod, made harmless: no explosion, damage, stun or sparks. It drops its sack and leaves.
+/// tg's supply pod, made harmless: no explosion, damage, stun or sparks. It drops its mail crate and leaves.
 /obj/structure/closet/supplypod/outpost_prison_mail
 	name = "mail pod"
-	desc = "A small drop pod from the postal service. It drops its sack and flies off again."
+	desc = "A small drop pod from the postal service. It drops its mail crate and flies off again."
 	specialised = TRUE
 	bluespace = TRUE
 	explosionSize = list(0, 0, 0, 0)
@@ -87,21 +88,6 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 	effectStun = FALSE
 	create_sparks = FALSE
 	soundVolume = 50
-
-/// What a mail pod drops: tg's mail bag with a wave's letters. They count as waiting once it lands.
-/obj/item/storage/bag/mail/outpost_prison
-	name = "mail sack"
-	desc = "A canvas sack of letters for the prison wing."
-	/// The prison its letters are for, until the sack first comes to rest on a floor
-	var/datum/weakref/prison_ref
-
-/obj/item/storage/bag/mail/outpost_prison/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
-	. = ..()
-	if(!prison_ref || !isturf(loc))
-		return
-	var/datum/outpost_prison/prison = prison_ref.resolve()
-	prison_ref = null
-	prison?.mail_wave_landed(src)
 
 // ===== THE LETTER =====
 
@@ -273,10 +259,10 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 	return picked
 
 /**
- * Mail call: a harmless supply pod drops a sack with letters for mail_wave_recipients() on
- * mail_pod_landing_turf(). The letters count as waiting from when the sack lands
- * (mail_wave_landed()). Returns how many letters are on their way, 0 when nobody is due one or the
- * pod has nowhere to land.
+ * Mail call: a harmless supply pod drops tg's mail crate, holding only letters for
+ * mail_wave_recipients(), on mail_pod_landing_turf(). tg's populate() is never called, so no station
+ * mail comes with them. The letters count as waiting from when the crate lands (mail_crate_moved()).
+ * Returns how many letters are on their way, 0 when nobody is due one or the pod has nowhere to land.
  */
 /datum/outpost_prison/proc/mail_wave()
 	var/list/recipients = mail_wave_recipients()
@@ -286,21 +272,30 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 	if(!spot)
 		return 0
 	var/obj/structure/closet/supplypod/outpost_prison_mail/pod = new()
-	var/obj/item/storage/bag/mail/outpost_prison/sack = new(pod)
-	sack.prison_ref = WEAKREF(src)
+	var/obj/structure/closet/crate/mail/crate = new(pod)
 	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in recipients)
-		mail_make_letter(prisoner, null, null, sack)
+		mail_make_letter(prisoner, null, null, crate)
+	crate.update_appearance()
+	RegisterSignal(crate, COMSIG_MOVABLE_MOVED, PROC_REF(mail_crate_moved))
 	new /obj/effect/pod_landingzone(spot, pod)
 	log_game("PLAYER OUTPOST PRISON: a mail pod with [length(recipients)] letter\s is coming down in the prison wing at '[outpost?.name]' ([spot.x],[spot.y],[spot.z])")
 	return length(recipients)
 
-/// A mail pod's sack came to rest: its letters count as waiting from now. Mail that came down off the wing's level is thrown away. Never sleeps.
-/datum/outpost_prison/proc/mail_wave_landed(obj/item/storage/bag/mail/outpost_prison/sack)
-	var/turf/spot = get_turf(sack)
+/// A mail pod dropped its crate onto the floor: it has landed. Signal handler; never sleeps.
+/datum/outpost_prison/proc/mail_crate_moved(obj/structure/closet/crate/mail/crate, atom/old_loc, dir, forced, list/old_locs)
+	SIGNAL_HANDLER
+	if(!isturf(crate.loc))
+		return
+	UnregisterSignal(crate, COMSIG_MOVABLE_MOVED)
+	mail_wave_landed(crate)
+
+/// A mail pod's crate came to rest: its letters count as waiting from now. Mail that came down off the wing's level is thrown away. Never sleeps.
+/datum/outpost_prison/proc/mail_wave_landed(obj/structure/closet/crate/mail/crate)
+	var/turf/spot = get_turf(crate)
 	var/z = wing_z()
 	var/count = 0
 	var/list/envelopes = list()
-	for(var/obj/item/mail/envelope/outpost_prison/envelope in sack)
+	for(var/obj/item/mail/envelope/outpost_prison/envelope in crate)
 		envelopes += envelope
 	for(var/obj/item/mail/envelope/outpost_prison/envelope as anything in envelopes)
 		var/obj/item/paper/outpost_prison_letter/letter = locate() in envelope

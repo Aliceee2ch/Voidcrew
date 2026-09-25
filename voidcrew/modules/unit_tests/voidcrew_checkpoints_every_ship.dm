@@ -221,8 +221,14 @@
 		for(var/obj/machinery/machine in tile)
 			for(var/datum/component/plumbing/plumber as anything in machine.GetComponents(/datum/component/plumbing))
 				state["plumbed machines"]++
+				// A mapped machine switches its plumbing on even when loose; a rebuilt one only
+				// reconnects once anchored, as in play. Only anchored machines must match.
+				if(!machine.anchored)
+					state["unanchored plumbed machines"]++
+					continue
 				if(!plumber.active)
 					state["inactive plumbed machines"]++
+					state["inactive [machine.type]"]++
 				for(var/direction in plumber.ducts)
 					state["machine connections"]++
 					nets |= plumber.ducts[direction]

@@ -41,7 +41,7 @@
 
 /// Contexts said by the researcher and the Kessler team, who have no personality or prisoner details
 /datum/unit_test/voidcrew_outpost_prison_dialogue_contexts/proc/visitor_contexts()
-	return list("researcher_sweetened", "researcher_no_data", "researcher_pigsty", "kessler_recovery")
+	return list("researcher_offer", "researcher_sweetened", "researcher_accept", "researcher_leave", "researcher_no_data", "researcher_pigsty", "kessler_recovery", "kessler_collect")
 
 /// A line with the four placeholders taken out
 /datum/unit_test/voidcrew_outpost_prison_dialogue_contexts/proc/without_placeholders(line)
@@ -66,9 +66,12 @@
 	TEST_ASSERT(length(lines), "The dialogue file has no lines")
 
 	// Every context the other files say by name is there, with at least 8 shared lines. Prisoner
-	// contexts have lines for at least two personalities; the visitors' use no placeholders.
+	// contexts have lines for at least two personalities. The visitors' lines are one plain
+	// sentence each, with no placeholders and no numbers (owner, 2026-09-25: no over-explaining).
 	var/list/prisoner_contexts = prisoner_contexts()
 	var/list/visitor_contexts = visitor_contexts()
+	var/regex/digit = regex(@"[0-9]")
+	var/regex/second_sentence = regex(@"[.?!] ")
 	for(var/context in prisoner_contexts + visitor_contexts)
 		var/list/entry = lines[context]
 		TEST_ASSERT(islist(entry), "The dialogue file has no [context] context")
@@ -81,6 +84,8 @@
 		if(context in visitor_contexts)
 			for(var/line in entry["any"])
 				TEST_ASSERT(!findtext(line, "{"), "[context] is said by a visitor but has a placeholder: [line]")
+				TEST_ASSERT(!digit.Find(line), "[context] is said by a visitor but has a number: [line]")
+				TEST_ASSERT(!second_sentence.Find(line), "[context] is said by a visitor but is more than one sentence: [line]")
 		else
 			TEST_ASSERT(own_pools >= 2, "[context] has lines for [own_pools] personalities, not 2 or more")
 

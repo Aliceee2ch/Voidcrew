@@ -12,9 +12,9 @@
  * OUTPOST_EXPERIMENT_SWEETENER, up to OUTPOST_EXPERIMENT_SWEETENER_MAX. Hurt, they beam out at once.
  * A visit whose only failed gate is the wing's state is a short one: they look round, say so, and go.
  *
- * Kessler's recovery agents (outpost_kessler_team()) beam in around a creature Kessler is taking
- * back, tranquilise it and beam out with it. Nobody from Kessler can be boxed, teleported,
- * polymorphed or made sentient, and none of them can be hurt.
+ * Kessler's agents (outpost_kessler_team()) beam in around a creature Kessler is taking away,
+ * tranquilise it if it is still on its feet, and beam out with it. Nobody from Kessler can be
+ * boxed, teleported, polymorphed or made sentient, and none of them can be hurt.
  */
 
 // ===== THE PRISON'S SIDE =====
@@ -170,15 +170,14 @@
 	log_game("PLAYER OUTPOST PRISON: a Kessler researcher came to '[outpost?.name]' with a [offer_kind] ([offer_form])[forced ? ", sent by an admin" : ""]")
 	return doctor
 
-/// The offer card: what it is, how dangerous, and what it pays with the sweetener in
+/// The offer, as the researcher puts it: a line or two, with the fee (sweetener in) and no more
 /datum/outpost_prison/proc/offer_text()
 	var/multiplier = 1 + sweetener
 	if(offer_kind == "specimen")
-		return "Specimen. Hazard: extreme. Recommended: two or more armed staff. The subject dies.\n\nPays [round(OUTPOST_EXPERIMENT_FEE_CHANGELING * multiplier)] cr when it hatches, and up to [round(OUTPOST_EXPERIMENT_BONUS_HORROR * multiplier)] cr more for putting it down."
+		return "I've got something nasty for one of your prisoners. [round(OUTPOST_EXPERIMENT_FEE_CHANGELING * multiplier)] cr, and a big bonus if you put down what comes out."
 	var/low = round(min(OUTPOST_EXPERIMENT_FEE_FLY, OUTPOST_EXPERIMENT_FEE_HULK, OUTPOST_EXPERIMENT_FEE_NIGHTMARE) * multiplier)
 	var/high = round(max(OUTPOST_EXPERIMENT_FEE_FLY, OUTPOST_EXPERIMENT_FEE_HULK, OUTPOST_EXPERIMENT_FEE_NIGHTMARE) * multiplier)
-	var/top = round(max(OUTPOST_EXPERIMENT_BONUS_FLY, OUTPOST_EXPERIMENT_BONUS_HULK_SUBDUED, OUTPOST_EXPERIMENT_BONUS_NIGHTMARE) * multiplier)
-	return "Serum. Hazard: moderate to high. Effects vary.\n\nPays [low]-[high] cr when it takes, and up to [top] cr more for containing the result."
+	return "Let me try something on one of your prisoners. [low] to [high] cr, and a bonus if things get out of hand."
 
 /**
  * A manager reads the offer. It is claimed for them before the prompt yields, and everything is
@@ -223,7 +222,7 @@
 		return FALSE
 	var/needed = offer_kind == "specimen" ? 2 : 1
 	if(experiment_active() || length(live_items()) || researcher_prisoner_count() < needed)
-		doctor.say("Not now. Your wing isn't ready for it.")
+		doctor.say("Your wing isn't ready for this right now.")
 		return FALSE
 	var/obj/item/outpost_experiment/item
 	if(offer_kind == "specimen")
@@ -518,10 +517,11 @@
 	outfit = /datum/outfit/outpost_kessler_agent
 
 /**
- * Two agents beam in around `creature`, one says what they are there for, the creature is
- * tranquilised, and they all beam out after OUTPOST_KESSLER_TEAM_TIME.
+ * Two agents beam in around `creature`, one says a line of `context` once they are all the way in,
+ * and they all beam out after OUTPOST_KESSLER_TEAM_TIME. A creature still on its feet is
+ * `tranquilise`d; one already down is simply collected.
  */
-/proc/outpost_kessler_team(mob/living/creature)
+/proc/outpost_kessler_team(mob/living/creature, context = "kessler_recovery", tranquilise = TRUE)
 	var/turf/center = get_turf(creature)
 	if(!center)
 		return
@@ -539,9 +539,12 @@
 			speaker = agent
 	// Said once they are all the way in, not from thin air.
 	if(speaker)
-		speaker.arrival_line = "kessler_recovery"
-	creature.visible_message(span_warning("Kessler Biolabs agents beam in around [creature], and a tranquilliser dart drops [creature.p_them()]."))
-	playsound(center, 'sound/items/syringeproj.ogg', 50, TRUE)
+		speaker.arrival_line = context
+	if(tranquilise)
+		creature.visible_message(span_warning("Kessler Biolabs agents beam in around [creature], and a tranquilliser dart drops [creature.p_them()]."))
+		playsound(center, 'sound/items/syringeproj.ogg', 50, TRUE)
+	else
+		creature.visible_message(span_notice("Kessler Biolabs agents beam in to collect [creature]."))
 
 /// Kessler's beam takes `target` away for good
 /proc/outpost_kessler_beam_away(mob/living/target)
@@ -549,6 +552,7 @@
 		return
 	var/turf/spot = get_turf(target)
 	if(spot)
+		target.visible_message(span_notice("A transporter beam takes [target] away."))
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_KESSLER_BEAM_TIME + 0.5 SECONDS)
 	transporter_dematerialise(target, OUTPOST_KESSLER_BEAM_TIME)

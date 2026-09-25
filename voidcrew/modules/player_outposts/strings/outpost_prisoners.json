@@ -2477,81 +2477,79 @@
 		},
 		"researcher_offer": {
 			"any": [
-				"Good day. I represent a small research firm. Might I borrow an inmate?",
-				"A generous fee, for a single dose on one of your inmates.",
-				"Nothing permanent. Very likely nothing permanent.",
-				"Our compound needs a human subject. Yours are ideal.",
-				"Think of it as a donation to science. A paid one.",
-				"Just one injection. We'll handle the paperwork.",
-				"Your prisoners look healthy. Well fed. Perfect candidates.",
-				"I hear you run a tidy wing. Care to earn a little extra?",
-				"No questions asked, on either side. Shall we?",
-				"The inmate needn't know what's in it. Simpler that way."
+				"Got a minute to talk about one of your prisoners?",
+				"I pay well for one dose on one of your inmates.",
+				"Lend me one of your inmates for a quick test.",
+				"Easy money, if you can spare a prisoner.",
+				"I'm here about a paid trial on one of your inmates.",
+				"One injection, one inmate, and a fee for your trouble.",
+				"Talk to me if you want some extra cash.",
+				"Your inmates look healthy, which is just what I need.",
+				"I've got work for one of your prisoners, if you're interested."
 			]
 		},
 		"researcher_accept": {
 			"any": [
-				"Wonderful. Here's the injector. One dose is plenty.",
-				"Splendid. Inject it anywhere. The arm is traditional.",
-				"Thank you. Your payment's already on its way.",
-				"Excellent choice. Please don't drop it.",
-				"Here you are. Do stand back afterwards.",
-				"Marvelous. We'll be watching the results with interest.",
-				"Pleasure doing business. Mind the needle.",
-				"It's single use. Choose your inmate carefully.",
-				"Keep the receipt. Actually, better not."
+				"Here you go, and stand well back once it's done.",
+				"If anything gets out of hand, knock it down and we'll collect it.",
+				"One dose is plenty, so pick your prisoner carefully.",
+				"Pleasure doing business with you.",
+				"Put down whatever comes out, and we'll pick it up.",
+				"It only works once, so don't waste it.",
+				"Good choice, and we'll be watching the results.",
+				"Your fee comes through once it takes.",
+				"Here, and please don't drop it."
 			]
 		},
 		"researcher_leave": {
 			"any": [
-				"Well. I'll be on my way.",
-				"A pity. Do call if you change your mind.",
-				"Thank you for your time.",
-				"Good day. Give my regards to the inmates.",
+				"Well, I'll be on my way.",
+				"Call me if you change your mind.",
+				"Thanks for your time.",
+				"Give my regards to the inmates.",
 				"I'll let myself out.",
 				"Until next time, then.",
-				"We'll be in touch. We always are.",
-				"My firm thanks you. Goodbye.",
-				"No matter. There are other outposts."
+				"We'll be in touch.",
+				"No matter, there are other outposts.",
+				"Goodbye for now."
 			]
 		},
 		"researcher_sweetened": {
 			"any": [
-				"I've raised the fee. I think you'll find it generous.",
-				"Let's try this again. The payment's better now.",
-				"My firm has authorized a larger fee. Just for you.",
-				"Same offer, bigger number. Interested?",
-				"You turned me down last time. I took that personally.",
-				"Other wardens say yes. I'd hate for you to miss out.",
-				"Think of your treasury. It could use this.",
-				"The money's better and the dose is the same.",
-				"I don't usually come back. Your inmates are that good.",
-				"Final offer. Well, until next time."
+				"I've raised the fee since last time.",
+				"Same offer as before, but it pays better now.",
+				"My firm has put more money on the table.",
+				"The fee's gone up, if that helps you decide.",
+				"Let's try this again with a bigger fee.",
+				"You turned me down last time, so I brought more money.",
+				"Better pay this time, and the same dose.",
+				"I can offer you more than last time.",
+				"Your treasury could use this, and the fee is higher now."
 			]
 		},
 		"researcher_no_data": {
 			"any": [
-				"You killed the subject. There's nothing to measure.",
-				"That's no data at all. No data, no fee.",
-				"A dead subject tells me nothing. Very disappointing.",
-				"Months of work, and the subject's dead before it took.",
-				"I needed the subject alive. That was the whole point.",
+				"You killed the subject, so there's nothing to measure.",
+				"No data means no fee.",
+				"A dead subject tells me nothing.",
+				"I needed the subject alive for this.",
 				"I'll have to write this one up as a loss.",
 				"My firm won't pay for a corpse.",
-				"Next time, let the compound finish its work.",
-				"Well. That was a waste of a good dose."
+				"Next time, let the dose finish its work.",
+				"That was a waste of a good dose.",
+				"The subject died before it took, so there's no fee."
 			]
 		},
 		"researcher_pigsty": {
 			"any": [
-				"I can't work in this filth. Goodbye.",
-				"This wing is a pigsty. I'll come back when it's clean.",
+				"I can't work in this filth.",
+				"This wing is a pigsty, so I'll come back when it's clean.",
 				"No study runs in conditions like these.",
-				"My firm has standards. This wing doesn't meet them.",
-				"Clean the place up. Then we'll talk.",
+				"This wing doesn't meet my firm's standards.",
+				"Clean the place up and then we'll talk.",
 				"I'm not setting foot in that mess.",
-				"Contamination risk. I'm leaving.",
-				"The results would be worthless in a wing like this.",
+				"The contamination risk in here is too high.",
+				"Results from a wing like this would be worthless.",
 				"Call me when it doesn't smell."
 			]
 		},
@@ -2615,15 +2613,27 @@
 		},
 		"kessler_recovery": {
 			"any": [
-				"Kessler recovery. Stand clear.",
-				"Specimen located. Securing it now.",
-				"Stand back, please. This one bites.",
-				"Recovery team on site. Nobody touch anything.",
+				"Kessler recovery team, please stand clear.",
+				"Specimen located, and we're securing it now.",
+				"Stand back, please, because this one bites.",
+				"Nobody touch anything while we work.",
 				"We'll take it from here.",
 				"The recovery fee goes on your account.",
-				"Specimen secured. Beaming out.",
-				"Next time, contain it yourselves. It's cheaper.",
-				"Don't worry about the paperwork. We'll bill you."
+				"Containing it yourselves would have been cheaper.",
+				"Don't worry about the paperwork, because we'll bill you."
+			]
+		},
+		"kessler_collect": {
+			"any": [
+				"Kessler Biolabs, here for the specimen.",
+				"We'll take it from here.",
+				"Stand clear while we work, please.",
+				"Specimen secured.",
+				"That's the one we're after.",
+				"We'll get it back to the lab.",
+				"Nobody touch it, please.",
+				"Thanks for keeping it in one place.",
+				"Right, let's get it out of here."
 			]
 		},
 		"vent_noise": {

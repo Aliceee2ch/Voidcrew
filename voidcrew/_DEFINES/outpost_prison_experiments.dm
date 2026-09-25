@@ -60,7 +60,7 @@
 #define OUTPOST_EXPERIMENT_OUTSIDE_LIMIT 60
 
 // ----- Kessler collection -----
-/// Seconds before Kessler collects a creature that was put down
+/// Seconds a creature that was put down lies there before Kessler's team beams in for it
 #define OUTPOST_EXPERIMENT_PICKUP 10
 /// Seconds the console keeps showing how an experiment ended
 #define OUTPOST_EXPERIMENT_RESULT_SHOWN 60
@@ -194,11 +194,23 @@
 
 // Fly person
 #define OUTPOST_FLY_HEALTH 60
-#define OUTPOST_FLY_SPEED 1
-#define OUTPOST_FLY_DODGE 30
+/// Its move delay: faster than a running person (1.5)
+#define OUTPOST_FLY_SPEED 0.7
+/// Percent of shots it jinks out of the way of while flying freely (not knocked down, held or subdued)
+#define OUTPOST_FLY_DODGE 40
 #define OUTPOST_FLY_BITE 5
-/// It flees anyone this close
+/// It darts away from anyone this close
 #define OUTPOST_FLY_FLEE_RANGE 3
+/// Its darts: tiles, the pause between random ones, and how long one may take before it gives up on it
+#define OUTPOST_FLY_DART_MIN 2
+#define OUTPOST_FLY_DART_MAX 5
+#define OUTPOST_FLY_DART_GAP_MIN (0.4 SECONDS)
+#define OUTPOST_FLY_DART_GAP_MAX (1.2 SECONDS)
+#define OUTPOST_FLY_DART_TIMEOUT (1.5 SECONDS)
+/// How long it keeps away from whoever last hit it
+#define OUTPOST_FLY_FLIT_TIME (3 SECONDS)
+/// Trait source for its flight
+#define OUTPOST_FLY_TRAIT "outpost_fly"
 /// Seconds between throwing up, and the percent chance it gets someone beside it
 #define OUTPOST_FLY_VOMIT_MIN 6
 #define OUTPOST_FLY_VOMIT_MAX 10

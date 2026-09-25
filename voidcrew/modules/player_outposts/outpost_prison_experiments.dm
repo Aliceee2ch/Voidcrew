@@ -14,7 +14,8 @@
  *   goes to the changeling event (outpost_changeling_infect(), outpost_prison_changeling.dm).
  * - The wing is paid a fee when a creature shows (experiment_creature_appeared()) and a bonus when
  *   it is put down (experiment_creature_down()) if the crew did half its damage or more
- *   (/datum/component/experiment_damage_ledger). Each is paid once per experiment.
+ *   (/datum/component/experiment_damage_ledger). Each is paid once per experiment. Put down, it
+ *   lies there, "awaiting pickup" on the console, until Kessler's team beams in for it (kessler_collect()).
  * - A creature stays until the crew puts it down or an admin ends the experiment. One that gets out
  *   of the wing sets off the containment breach alarm. One taken off the outpost (onto a ship, say)
  *   is recovered by Kessler at once, for a fee that becomes debt (experiment_recover()). The one
@@ -300,10 +301,11 @@
 	return TRUE
 
 /**
- * A creature was put down: killed, or `subdued` alive (the exhausted hulk). Pays the containment
+ * A creature was put down: killed, or `subdued` alive (worn out on stamina). Pays the containment
  * bonus, once per experiment, if players did at least OUTPOST_EXPERIMENT_PLAYER_SHARE of its
- * damage; Kessler collects it OUTPOST_EXPERIMENT_PICKUP seconds later. With no creature left the
- * experiment is over. Returns TRUE if it counted.
+ * damage. It lies there, and the console shows it awaiting pickup, until Kessler's team comes for
+ * it OUTPOST_EXPERIMENT_PICKUP seconds later. With no creature left the experiment is over.
+ * Returns TRUE if it counted.
  */
 /datum/outpost_prison/proc/experiment_creature_down(mob/living/creature, subdued = FALSE)
 	if(!experiment || !creature)
@@ -312,6 +314,7 @@
 	if(!experiment.creature_refs[key] || experiment.downed[key])
 		return FALSE
 	experiment.downed[key] = TRUE
+	experiment.awaiting[key] = subdued ? "subdued" : "down"
 	var/kind = experiment.creature_kinds[key]
 	if(!experiment.bonus_done && !experiment.resolved)
 		experiment.bonus_done = TRUE
@@ -514,25 +517,30 @@
 	experiment.creature_kills = 0
 
 /**
- * Kessler takes a creature away: its remains, or (`recovery`) a live one, with a team beaming in
- * to tranquilise it. It is held still and cannot be hurt meanwhile, then beamed out.
+ * Kessler takes a creature away: a team beams in around it, and OUTPOST_KESSLER_TEAM_TIME later
+ * the beam takes it. One that was put down is collected where it lies; one still on its feet (a
+ * `recovery` off the outpost, or an experiment called off) is tranquilised and drops first. It is
+ * held still and cannot be hurt meanwhile.
  */
 /datum/outpost_prison/proc/kessler_collect(datum/weakref/creature_ref, recovery = FALSE)
 	var/mob/living/creature = creature_ref?.resolve()
 	if(QDELETED(creature) || HAS_TRAIT_FROM(creature, TRAIT_GODMODE, OUTPOST_KESSLER_TRAIT))
 		return
+	var/already_down = creature.stat == DEAD || creature.body_position == LYING_DOWN
 	ADD_TRAIT(creature, TRAIT_GODMODE, OUTPOST_KESSLER_TRAIT)
 	ADD_TRAIT(creature, TRAIT_IMMOBILIZED, OUTPOST_KESSLER_TRAIT)
 	ADD_TRAIT(creature, TRAIT_INCAPACITATED, OUTPOST_KESSLER_TRAIT)
 	ADD_TRAIT(creature, TRAIT_HANDS_BLOCKED, OUTPOST_KESSLER_TRAIT)
+	ADD_TRAIT(creature, TRAIT_FLOORED, OUTPOST_KESSLER_TRAIT)
 	creature.ai_controller?.CancelActions()
 	creature.pulledby?.stop_pulling()
 	if(recovery)
-		outpost_kessler_team(creature)
-		addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(outpost_kessler_beam_away), creature), OUTPOST_KESSLER_TEAM_TIME, TIMER_DELETE_ME)
+		outpost_kessler_team(creature, "kessler_recovery", tranquilise = TRUE)
 	else
-		creature.visible_message(span_notice("A transporter beam takes [creature] away."))
-		outpost_kessler_beam_away(creature)
+		outpost_kessler_team(creature, "kessler_collect", tranquilise = !already_down)
+	if(already_down && !recovery)
+		add_log("Kessler Biolabs collected [creature.name].")
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(outpost_kessler_beam_away), creature), OUTPOST_KESSLER_TEAM_TIME, TIMER_DELETE_ME)
 
 // ===== PRISONERS =====
 
@@ -706,6 +714,8 @@
 	var/list/creature_kinds = list()
 	/// REF() of creatures put down, recovered or taken away -> TRUE
 	var/list/downed = list()
+	/// REF() of creatures put down and lying there until Kessler's beam takes them -> "subdued" or "down"
+	var/list/awaiting = list()
 	/// A creature has got out of the wing, and the outpost has been told
 	var/breach_announced = FALSE
 	/// The researcher's sweetener on the pay
@@ -741,6 +751,7 @@
 	creature_refs = null
 	creature_kinds = null
 	downed = null
+	awaiting = null
 	witnesses = null
 	return ..()
 
@@ -770,6 +781,19 @@
 	creature_refs -= key
 	creature_kinds -= key
 	downed -= key
+	awaiting -= key
+
+/// "subdued" or "down" while a creature that was put down still lies there for Kessler, else null
+/datum/outpost_experiment/proc/awaiting_pickup()
+	var/state
+	for(var/key in awaiting)
+		var/datum/weakref/creature_ref = creature_refs[key]
+		if(QDELETED(creature_ref?.resolve()))
+			continue
+		if(awaiting[key] == "subdued")
+			return "subdued"
+		state = "down"
+	return state
 
 /// A specimen's stage follows the changeling event while it runs
 /datum/outpost_experiment/proc/follow_changeling()
@@ -788,6 +812,7 @@
 /**
  * The console block; see /datum/outpost_prison/proc/experiment_payload(). A horror down and
  * regenerating shows as "horror" = "regenerating", with the time until it gets up as time_left.
+ * "pickup" is "subdued" or "down" while a creature that was put down lies there for Kessler.
  */
 /datum/outpost_experiment/proc/payload()
 	follow_changeling()
@@ -814,6 +839,7 @@
 		"fee_paid" = fee_paid,
 		"bonus_paid" = bonus_paid,
 		"horror" = horror ? (horror.regenerating ? "regenerating" : "up") : null,
+		"pickup" = awaiting_pickup(),
 	)
 
 // ===== TABLES =====

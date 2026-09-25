@@ -444,6 +444,7 @@
 #include "weird_food.dm"
 #include "wizard_loadout.dm"
 #include "worn_icons.dm"
+#include "../../../voidcrew/modules/unit_tests/_voidcrew_test_selection.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_puzzle_containment.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/armor_partial_modifiers.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_ship_bay.dm" // VOIDCREW EDIT ADDITION

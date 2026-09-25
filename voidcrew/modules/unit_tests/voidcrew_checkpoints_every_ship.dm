@@ -10,10 +10,13 @@
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
 	var/mob/living/carbon/human/captain = make_player(run_loc_floor_bottom_left, "everyshipcaptain")
 	var/list/report = list()
+	var/position = 0
 	for(var/label in SSmapping.ship_purchase_list)
 		var/template_type = SSmapping.ship_purchase_list[label]
 		var/datum/map_template/shuttle/voidcrew/template_path = template_type
 		if(initial(template_path.abstract) == template_type || ispath(template_type, /datum/map_template/shuttle/voidcrew/commissioned))
+			continue
+		if(!voidcrew_test_shard_takes(++position))
 			continue
 		log_world("EVERY_SHIP begin [template_type]")
 		report += "[template_type]: [check_ship(home, captain, template_type)]"
@@ -267,6 +270,7 @@
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
 	var/mob/living/carbon/human/captain = make_player(run_loc_floor_bottom_left, "everyvariantcaptain")
 	var/list/report = list()
+	var/position = 0
 	for(var/label in SSmapping.ship_purchase_list)
 		var/template_type = SSmapping.ship_purchase_list[label]
 		var/datum/map_template/shuttle/voidcrew/template_path = template_type
@@ -290,6 +294,8 @@
 				for(var/slot_key in by_slot)
 					var/list/options = by_slot[slot_key]
 					selections[slot_key] = options[(configuration - 1) % length(options) + 1]
+				if(!voidcrew_test_shard_takes(++position))
+					continue
 				var/variant = "[template_type] theme [theme_id] #[configuration]"
 				log_world("EVERY_SHIP begin [variant]")
 				report += "[variant]: [check_ship(home, captain, template_type, selections, theme)]"

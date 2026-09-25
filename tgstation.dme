@@ -7245,6 +7245,7 @@
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_machinery.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_rebuild.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_snapshot.dm"
+#include "voidcrew\modules\player_outposts\outpost_checkpoint_yard_audio.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_loading.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_build_effects.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_construction.dm"

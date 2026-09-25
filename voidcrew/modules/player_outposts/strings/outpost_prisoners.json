@@ -2669,6 +2669,255 @@
 				"No...",
 				"Help."
 			]
+		},
+		"incident_brooding": {
+			"any": [
+				"Keep looking at me, {other}. Go on.",
+				"You think I forgot, {other}? I didn't.",
+				"Some people don't know when to shut up.",
+				"I've had about enough of you.",
+				"Walk away while you can, {other}.",
+				"Nobody talks to me like that. Nobody.",
+				"I see you. I've been watching you all day.",
+				"You're going to regret that, {other}.",
+				"Just keep smiling. See where it gets you."
+			],
+			"chatty": [
+				"You know your problem, {other}? You never learned when to quit.",
+				"Funny thing. I was just thinking about you, {other}.",
+				"We should have a little talk later. Just us."
+			],
+			"grumpy": [
+				"I'm done being patient with you, {other}.",
+				"Every day, the same smug face."
+			],
+			"nervous": [
+				"I can't take it anymore. I can't.",
+				"Stop looking at me, {other}. Stop it."
+			],
+			"cheerful": [
+				"Big smile, {other}. Big smile.",
+				"Oh, you and me are going to have a chat."
+			],
+			"quiet": [
+				"You. Yeah, you.",
+				"Not long now."
+			]
+		},
+		"incident_stab": {
+			"any": [
+				"This is for you, {other}!",
+				"Told you, {other}!",
+				"You had it coming!",
+				"Nobody crosses me!",
+				"Hold still!",
+				"Should've kept your mouth shut!",
+				"I warned you!",
+				"Payback time!",
+				"Stay down this time!"
+			],
+			"chatty": [
+				"Didn't see that coming, did you, {other}?",
+				"Let's settle this right now!"
+			],
+			"grumpy": [
+				"Enough talking!",
+				"I'm done with you, {other}!"
+			],
+			"nervous": [
+				"You made me do this!",
+				"I'm sorry! I'm sorry!"
+			],
+			"quiet": [
+				"Now.",
+				"Your turn."
+			]
+		},
+		"incident_stopped": {
+			"any": [
+				"Alright. Alright. I'm done.",
+				"Fine. It can wait.",
+				"I wasn't going to do anything.",
+				"Okay. Okay. Hands off.",
+				"I just needed a minute.",
+				"Forget it. Forget I said anything.",
+				"Yeah, yeah. I'm calm.",
+				"Nothing happened. We're fine.",
+				"I'm walking away. See? Walking."
+			],
+			"grumpy": [
+				"This isn't over.",
+				"Lucky day for somebody."
+			],
+			"nervous": [
+				"I don't know what came over me.",
+				"Sorry. I'm sorry. I'm okay now."
+			],
+			"cheerful": [
+				"Just blowing off steam, honest.",
+				"Whoops. Bad moment. I'm good now."
+			],
+			"quiet": [
+				"Fine.",
+				"Later, then."
+			]
+		},
+		"incident_pacing": {
+			"any": [
+				"Can't breathe in here. Can't breathe.",
+				"Same four walls. Every single day.",
+				"Nobody listens. Nobody ever listens.",
+				"I'm going to lose it. I swear.",
+				"Keep it together. Keep it together.",
+				"I can't do this anymore.",
+				"They think I'll just sit here and take it.",
+				"Something's got to give.",
+				"Walls, walls, walls."
+			],
+			"chatty": [
+				"Anyone else feel the walls getting closer? No? Just me?",
+				"I used to be fine. I used to be fine!"
+			],
+			"grumpy": [
+				"Sick of it. Sick of all of it.",
+				"One more thing. Just one more thing."
+			],
+			"nervous": [
+				"Too loud. Everything's too loud.",
+				"Can't sleep, can't think, can't anything."
+			],
+			"cheerful": [
+				"Deep breaths. Happy thoughts. Nope, not working.",
+				"I'm fine. I'm totally fine."
+			],
+			"quiet": [
+				"Enough.",
+				"Not again."
+			]
+		},
+		"incident_snap": {
+			"any": [
+				"That's it! I've had it!",
+				"I'm done! You hear me? Done!",
+				"Get away from me! All of you!",
+				"I'm not taking this anymore!",
+				"Enough! Enough!",
+				"You want trouble? Here it is!",
+				"Nobody's locking me up again!",
+				"I'm getting out of here!",
+				"Come on then! Come on!"
+			],
+			"chatty": [
+				"Everybody listen! I am done with this place!",
+				"You all saw this coming, right? Right?"
+			],
+			"grumpy": [
+				"Every last one of you!",
+				"I've been nice long enough!"
+			],
+			"nervous": [
+				"I can't! I can't do it!",
+				"Leave me alone! Just leave me alone!"
+			],
+			"cheerful": [
+				"Sorry, everyone! I can't do this anymore!",
+				"No more smiling! I'm done smiling!"
+			],
+			"quiet": [
+				"No more!",
+				"Out of my way!"
+			]
+		},
+		"wing_lights_blown": {
+			"any": [
+				"Hey! The light just went!",
+				"Great. Now it's dark in here.",
+				"Did everyone hear that pop?",
+				"Somebody tell the crew the lights are going.",
+				"Watch your feet, there's glass.",
+				"Wonderful. Can't see a thing.",
+				"That's another bulb gone.",
+				"Lights out again. Of course.",
+				"Hey, crew! We need a new bulb!"
+			],
+			"grumpy": [
+				"Cheap bulbs in this dump.",
+				"Figures. Nothing in here works."
+			],
+			"nervous": [
+				"I don't like the dark. I really don't.",
+				"What was that? Was that the light?"
+			],
+			"cheerful": [
+				"Mood lighting! Very fancy.",
+				"Well, that's one way to save power."
+			],
+			"quiet": [
+				"Dark.",
+				"Bulb's gone."
+			]
+		},
+		"wing_vent_backup": {
+			"any": [
+				"Oh, that smell! What is that?",
+				"The vent's throwing up again!",
+				"That is disgusting.",
+				"Somebody get a mop in here!",
+				"I'm going to be sick.",
+				"Don't step in it. Don't step in it!",
+				"What's coming out of the floor?",
+				"Crew! The vent's backing up!",
+				"I just ate. Why now?"
+			],
+			"chatty": [
+				"Okay, who flushed what? Own up.",
+				"You smell that? Everybody smells that."
+			],
+			"grumpy": [
+				"Of course. Of course it does.",
+				"This place is a sewer."
+			],
+			"nervous": [
+				"Is that safe? That doesn't look safe.",
+				"Get it away from me!"
+			],
+			"cheerful": [
+				"Well, that's a new one.",
+				"Nobody panic. It's only sludge. Horrible sludge."
+			],
+			"quiet": [
+				"Gross.",
+				"Moving."
+			]
+		},
+		"wing_toilet_flood": {
+			"any": [
+				"The toilet's overflowing!",
+				"Water everywhere! Get a mop!",
+				"My socks are soaked.",
+				"Crew! The toilet's gone again!",
+				"Don't slip, it's all wet.",
+				"Who clogged it? Who?",
+				"Great. Now the floor's a pond.",
+				"Somebody shut the water off!",
+				"That's not clean water, is it?"
+			],
+			"grumpy": [
+				"Can't even trust the toilet in here.",
+				"Perfect. A flooded cell. Perfect."
+			],
+			"nervous": [
+				"It's coming up! It keeps coming up!",
+				"I didn't do it! I swear I didn't!"
+			],
+			"cheerful": [
+				"Free bath! Sort of.",
+				"At least it's mostly water."
+			],
+			"quiet": [
+				"Wet.",
+				"Great."
+			]
 		}
 	},
 	"conversations": [

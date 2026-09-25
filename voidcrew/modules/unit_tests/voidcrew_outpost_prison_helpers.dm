@@ -46,6 +46,9 @@
 	blueprint.prison.pay_clock = 0
 	blueprint.prison.pay_owed = 0
 	blueprint.prison.trouble_enabled = FALSE
+	// Random incidents and wing events would land in the middle of other tests; their own tests turn them on.
+	blueprint.prison.wildcards_enabled = FALSE
+	blueprint.prison.wing_events_enabled = FALSE
 	home.ensure_home_services()
 	return home
 

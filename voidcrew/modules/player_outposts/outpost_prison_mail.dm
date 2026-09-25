@@ -354,7 +354,7 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 			return FALSE
 		addressee.start_activity(fetch)
 		return TRUE
-	if(addressee.in_trouble())
+	if(addressee.in_trouble() || addressee.cuffs)
 		return FALSE
 	if(!addressee.reachable)
 		refresh_prisoner_reach(addressee)
@@ -387,6 +387,10 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 	if(letter.letter_prisoner_ref?.resolve() != prisoner)
 		prisoner.balloon_alert(user, "not theirs")
 		INVOKE_ASYNC(prisoner, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "mail_not_mine")
+		return ITEM_INTERACT_BLOCKING
+	// Cuffed hands take nothing, as with food and uniforms (outpost_prison_capture.dm)
+	if(prisoner.cuffs)
+		prisoner.balloon_alert(user, "cuffed")
 		return ITEM_INTERACT_BLOCKING
 	// Fighting, squaring up, climbing, lying beaten, or already busy with staff: they won't take it
 	if(prisoner.in_trouble() || !prisoner.will_listen())

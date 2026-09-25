@@ -248,7 +248,8 @@
 	for(var/mob/living/basic/outpost_prisoner/other in prisoners)
 		if(other == brawl.first || other == brawl.second || !are_friends(fighter, other))
 			continue
-		if(other.stat != CONSCIOUS || other.phase != PRISONER_PRESENT || other.in_trouble() || !other.ai_running() || other.mood < PRISON_BREAKUP_MOOD)
+		// Down or cuffed, they can't step in between anyone
+		if(other.stat != CONSCIOUS || other.phase != PRISONER_PRESENT || other.in_trouble() || other.can_be_dragged() || !other.ai_running() || other.mood < PRISON_BREAKUP_MOOD)
 			continue
 		if(get_dist(other, fighter) <= PRISON_BREAKUP_RANGE)
 			return other

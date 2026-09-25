@@ -154,9 +154,10 @@
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
 		if(prisoner.phase != PRISONER_PRESENT || prisoner.stat != CONSCIOUS)
 			continue
-		// Nobody on the level: whatever came in the mail is stashed wherever they are
+		// Nobody on the level: whatever came in the mail is stashed wherever they are, unless they are cuffed
 		if(prisoner.carried_contraband && !prisoner.ai_running())
-			contraband_stash_carried(prisoner)
+			if(!prisoner.cuffs)
+				contraband_stash_carried(prisoner)
 			continue
 		contraband_try_start(prisoner)
 

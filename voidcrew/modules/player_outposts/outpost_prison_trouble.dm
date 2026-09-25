@@ -303,7 +303,8 @@
 /**
  * Whether staff hitting them now is deserved: they are fighting, rioting, breaking out, loose,
  * climbing out, wrecking their cell or swinging at staff (hitting back included), were doing so a
- * moment ago, or struck this attacker themselves in the last PRISONER_PROVOKED_TIME.
+ * moment ago, or struck this attacker themselves in the last PRISONER_PROVOKED_TIME. Hitting back
+ * at the player who started it by hitting them while calm is no excuse for that player (provoker_ref).
  */
 /mob/living/basic/outpost_prisoner/proc/hit_justified(atom/attacker)
 	// A guard only ever strikes violence already under way (outpost_prison_guards.dm).
@@ -311,6 +312,9 @@
 		return TRUE
 	if(trouble || climb_ref)
 		return TRUE
+	// Whoever started it gets no self-defence out of the fight they picked.
+	if(provoker_ref && world.time < provoker_until && provoker_ref.resolve() == attacker)
+		return FALSE
 	// Coming at staff, before the first blow lands too: hitting them now is self-defence.
 	if(swing_ref?.resolve())
 		return TRUE
@@ -369,6 +373,9 @@
 	var/retaliate_lost = 0
 	/// Blows that land together (a baton reports its hit twice) get one reaction
 	COOLDOWN_DECLARE(hit_reaction_cooldown)
+	/// The player who hit them while they were calm, and the world.time until which that player's blows stay unprovoked (hit_justified())
+	var/datum/weakref/provoker_ref
+	var/provoker_until = 0
 
 /datum/outpost_prison
 	/// For tests: what a blow makes a calm prisoner do (PRISONER_HIT_FIGHT or _COWER) instead of rolling for it
@@ -441,6 +448,10 @@
 	if(trouble || threat_ref || swing_ref)
 		start_retaliation(attacker, quiet = TRUE)
 		return PRISONER_HIT_FIGHT
+	// Hit while calm and for nothing: that player started it, whatever the prisoner does next.
+	if(!last_hit_justified)
+		provoker_ref = WEAKREF(attacker)
+		provoker_until = world.time + PRISONER_RETALIATE_TIME SECONDS + PRISONER_PROVOKED_TIME
 	var/reaction = prison.forced_hit_reaction || pick_weight(outpost_prisoner_hit_reaction_weights(mood, personality))
 	if(reaction == PRISONER_HIT_COWER)
 		cower_from(attacker)

@@ -1402,10 +1402,14 @@
 	TEST_ASSERT(!prisoner.pull_allowed(), "A prisoner hitting back may be pulled")
 	// The blow itself keeps its penalty: unprovoked, -15 (PRISONER_MOOD_HIT_BY_STAFF).
 	TEST_ASSERT(abs(prisoner.mood - 55) < 0.01, "The blow left mood at [prisoner.mood], not 55")
-	// Hitting them back now is self-defence.
+	// The player who started it gets no self-defence out of it: their blows stay unprovoked.
 	COOLDOWN_RESET(prisoner, staff_hit_cooldown)
-	TEST_ASSERT(!prisoner.hit_by_staff(warden), "Hitting a prisoner who is hitting back cost mood")
-	TEST_ASSERT(prisoner.last_hit_justified, "Hitting a prisoner who is hitting back was unprovoked")
+	TEST_ASSERT(prisoner.hit_by_staff(warden), "The player who started it hit a prisoner hitting back for free")
+	TEST_ASSERT(!prisoner.last_hit_justified, "The player who started it was let off as self-defence")
+	// Anyone else stepping in is defending staff.
+	var/mob/living/carbon/human/deputy = make_player(prison_spot(home, 7, 8), "hitbackdeputy")
+	TEST_ASSERT(prisoner.hit_justified(deputy), "Someone else stepping in on a prisoner hitting back was unprovoked")
+	qdel(deputy)
 	// One blow does not end it.
 	var/brute_before = warden.getBruteLoss()
 	TEST_ASSERT(prisoner.confront(warden), "The prisoner hitting back could not land a blow")

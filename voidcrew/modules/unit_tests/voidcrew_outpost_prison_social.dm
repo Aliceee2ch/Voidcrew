@@ -632,6 +632,170 @@
 	qdel(visitor)
 	settle_prison_air(home)
 
+// ===== THE TALK MENU IN CUFFS =====
+
+/datum/unit_test/voidcrew_outpost_prison_social_talk_cuffed
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_social_talk_cuffed/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("cuffmenuowner")
+	TEST_ASSERT_NOTNULL(home, "The cuffed talk menu test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.rep_word_chance = 0
+	prison.contraband_force_rolls = FALSE
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 9, 8), "cuffmenuowner")
+	owner.drop_all_held_items()
+	owner.set_combat_mode(FALSE)
+
+	// Free and on their feet: the walk back to the cell and the hands on the wall.
+	var/list/choices = prisoner.talk_menu_choices(owner)
+	TEST_ASSERT("Back to your cell" in choices, "A free prisoner's menu has no walk back to the cell") // PRISON_TALK_CELL
+	TEST_ASSERT("Hands on the wall" in choices, "A free prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CHOICE
+	TEST_ASSERT(!("On your feet" in choices), "A prisoner already on their feet was offered getting up") // PRISON_TALK_GET_UP
+
+	// Cuffed, the menu still opens: talk, questions and a pat-down, but no walking anywhere.
+	TEST_ASSERT(prisoner.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The prisoner could not be cuffed")
+	TEST_ASSERT(prisoner.talk_menu_allowed(owner), "A cuffed prisoner's talk menu is shut")
+	choices = prisoner.talk_menu_choices(owner)
+	TEST_ASSERT("How are you doing?" in choices, "A cuffed prisoner can't be asked how they are") // PRISON_TALK_HOW
+	TEST_ASSERT("Pat down" in choices, "A cuffed prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CUFFED_CHOICE
+	TEST_ASSERT(!("Hands on the wall" in choices), "A cuffed prisoner was asked to put their hands on the wall")
+	TEST_ASSERT("What do you know?" in choices, "A cuffed prisoner can't be asked what they know") // LEAD_ASK_CHOICE
+	TEST_ASSERT(!("Back to your cell" in choices), "A cuffed prisoner was offered a walk back to the cell")
+	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A cuffed prisoner was sent back to the cell")
+	TEST_ASSERT(!istype(prisoner.activity, /datum/prisoner_activity/sent_to_cell), "A cuffed prisoner has somewhere to walk to")
+
+	// The pat-down, picked from the menu, finds what they carry.
+	var/obj/item/outpost_prison_contraband/razor_blade/blade = allocate(/obj/item/outpost_prison_contraband/razor_blade, get_turf(prisoner))
+	TEST_ASSERT(prisoner.contraband_carry(blade), "The cuffed prisoner could not carry a razor blade")
+	TEST_ASSERT(prisoner.talk_menu_act(owner, "Pat down"), "The pat-down was not run from a cuffed prisoner's menu")
+	TEST_ASSERT(owner.is_holding(blade), "Patting down a cuffed prisoner did not find the razor blade")
+	TEST_ASSERT_NULL(prisoner.carried_contraband, "The cuffed prisoner still carries what was found")
+	TEST_ASSERT(!prisoner.talking, "The pat-down left the cuffed prisoner held")
+	TEST_ASSERT(prisoner.cuffs, "The pat-down took the cuffs off")
+	owner.drop_all_held_items()
+	// Either name of the choice works, since cuffs can go on or come off while the menu is open.
+	TEST_ASSERT(prison.contraband_talk_act(prisoner, owner, "Hands on the wall"), "The pat-down under its other name was not taken")
+	// Cuffed, they have no say in it, however sour.
+	prisoner.set_mood(5)
+	TEST_ASSERT_EQUAL(prison.contraband_pat_down(prisoner, owner), "empty", "A cuffed prisoner at mood 5 could refuse a pat-down")
+	// The talk and the questions still need them listening.
+	prisoner.ask_how_cooldown = 0
+	TEST_ASSERT(!prisoner.talk_menu_ask_how(owner), "A cuffed prisoner at mood 5 answered how they were")
+	prisoner.set_mood(70)
+	prisoner.ask_how_cooldown = 0
+	TEST_ASSERT(prisoner.talk_menu_ask_how(owner), "A cuffed prisoner at 70 did not answer how they were")
+	// Only someone already talking to them or working on the cuffs stops it.
+	prisoner.cuff_work = TRUE
+	TEST_ASSERT_NULL(prison.contraband_pat_down(prisoner, owner), "A prisoner was patted down while their cuffs were being worked on")
+	prisoner.cuff_work = FALSE
+
+	// A cuffed rioter: the menu opens and the pat-down works; they still won't talk.
+	var/mob/living/basic/outpost_prisoner/rioter = trouble_prisoner(prison, prison_spot(home, 10, 8))
+	rioter.start_rioting(FALSE)
+	TEST_ASSERT(rioter.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The rioter could not be cuffed")
+	TEST_ASSERT(rioter.is_rioting(), "Cuffs ended the riot for the rioter")
+	TEST_ASSERT(rioter.talk_menu_allowed(owner), "A cuffed rioter's talk menu is shut")
+	TEST_ASSERT_EQUAL(prison.contraband_pat_down(rioter, owner), "empty", "A cuffed rioter could not be patted down")
+	TEST_ASSERT(!rioter.talk_menu_ask_how(owner), "A cuffed rioter answered how they were")
+	rioter.calm_down()
+	rioter.remove_cuffs()
+	prisoner.remove_cuffs()
+	prison.contraband_force_rolls = null
+	settle_prison_air(home)
+
+// ===== "ON YOUR FEET" =====
+
+/datum/unit_test/voidcrew_outpost_prison_social_get_up
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_social_get_up/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("getupowner")
+	TEST_ASSERT_NOTNULL(home, "The get up test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.rep_word_chance = 0
+	// Cell 1 of the unrotated wing is x 2-4, y 13-15, its bed at (2,15); the first prisoner booked in gets it.
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_prisoner(prison, prison_spot(home, 2, 15))
+	var/datum/outpost_prison_cell/cell = prisoner.cell
+	TEST_ASSERT(cell?.contains(prison_spot(home, 2, 15)), "The prisoner was not booked into cell 1")
+	var/obj/structure/bed/bed = cell.bed()
+	TEST_ASSERT_NOTNULL(bed, "Cell 1 has no bed")
+	var/turf/bed_turf = get_turf(bed)
+	TEST_ASSERT_EQUAL(prisoner.loc, bed_turf, "The prisoner is not on their bed's tile")
+	var/mob/living/carbon/human/member = make_player(prison_spot(home, 3, 15), "getupowner")
+	member.drop_all_held_items()
+	member.set_combat_mode(FALSE)
+
+	// Standing, there is nothing to get up from.
+	TEST_ASSERT(!("On your feet" in prisoner.talk_menu_choices(member)), "A standing prisoner was offered getting up") // PRISON_TALK_GET_UP
+	TEST_ASSERT(!prisoner.talk_menu_get_up(member), "A standing prisoner got up")
+
+	// Lying on the bed making a shiv: the mattress can't be searched, and getting up is on the menu.
+	prison.refresh_prisoner_reach(prisoner)
+	var/datum/prisoner_activity/make_shiv/sharpening = new(prisoner)
+	TEST_ASSERT(sharpening.setup(), "The prisoner could not get on their bed to make a shiv")
+	prisoner.start_activity(sharpening)
+	sharpening.arrive()
+	TEST_ASSERT_EQUAL(prisoner.buckled, bed, "Making a shiv did not put the prisoner on their bed")
+	TEST_ASSERT_NULL(prison.contraband_search_mattress(member, bed), "A mattress with someone lying on it was searched")
+	TEST_ASSERT("On your feet" in prisoner.talk_menu_choices(member), "A prisoner lying on their bed was not offered getting up")
+
+	// Told to get up: off the bed onto a tile beside it in the cell, the shiv left unmade, nothing else changed.
+	TEST_ASSERT(prisoner.talk_menu_act(member, "On your feet"), "The prisoner did not get up")
+	TEST_ASSERT_NULL(prisoner.buckled, "The prisoner is still on the bed")
+	TEST_ASSERT(prisoner.loc != bed_turf, "The prisoner got up but stayed on the bed's tile")
+	TEST_ASSERT(cell.contains(prisoner) && get_dist(prisoner, bed_turf) == 1, "The prisoner did not step off onto a tile beside the bed in the cell")
+	TEST_ASSERT(!istype(prisoner.activity, /datum/prisoner_activity/make_shiv), "Getting up did not stop the shiv")
+	TEST_ASSERT(!cell.stash_shiv, "A half-made shiv ended up under the mattress")
+	TEST_ASSERT(contraband_line_for(prisoner.last_line, "get_up"), "The prisoner said [prisoner.last_line] when told to get up")
+	TEST_ASSERT(abs(prisoner.mood - 70) < 0.01, "Getting up changed mood to [prisoner.mood]")
+	TEST_ASSERT_NULL(prison.rep_record_for(member), "Getting someone up went on the member's record")
+	// They stay put for 10 seconds (PRISON_TALK_GET_UP_HOLD), keeping the bed for themselves.
+	var/datum/prisoner_activity/told_to_stand/standing = prisoner.activity
+	TEST_ASSERT(istype(standing), "Standing aside is not what they're doing")
+	TEST_ASSERT(standing.started && !standing.spot, "Standing aside has them going somewhere")
+	TEST_ASSERT(standing.ends_at > world.time && standing.ends_at <= world.time + 10 SECONDS, "Standing aside ends [(standing.ends_at - world.time) / 10] seconds from now, not within 10")
+	TEST_ASSERT(!standing.leisure && !standing.interruptible, "Standing aside is leisure or can be interrupted")
+	TEST_ASSERT_EQUAL(prison.claimant(bed), prisoner, "Standing aside did not keep the bed")
+	TEST_ASSERT(!("On your feet" in prisoner.talk_menu_choices(member)), "A prisoner already up was offered getting up again")
+
+	// Now the mattress can be searched.
+	cell.stash_shiv = TRUE
+	TEST_ASSERT_EQUAL(prison.contraband_search_mattress(member, bed), "found", "The mattress could not be searched once the prisoner was up")
+	member.drop_all_held_items()
+	// And after the wait they carry on.
+	standing.ends_at = world.time
+	TEST_ASSERT_EQUAL(standing.tick(1), 1, "Standing aside never ended") // ACTIVITY_DONE
+	prisoner.end_activity(cancel_ai = FALSE)
+
+	// Sour, they still get up, grumbling: below their line back to the cell (45 for a chatty prisoner, PRISON_TALK_ORDER_LINE_CHATTY), even too sour to talk.
+	prisoner.forceMove(bed_turf)
+	prisoner.sit_on_edge(SOUTH)
+	TEST_ASSERT_EQUAL(prisoner.buckled, bed, "The prisoner did not lie back down on the bed")
+	prisoner.set_mood(5)
+	TEST_ASSERT(prisoner.talk_menu_get_up(member), "A sour prisoner would not get up")
+	TEST_ASSERT(!prisoner.buckled && prisoner.loc != bed_turf, "A sour prisoner stayed on the bed")
+	TEST_ASSERT(contraband_line_for(prisoner.last_line, "get_up_grumble"), "A sour prisoner said [prisoner.last_line] when told to get up")
+	TEST_ASSERT(abs(prisoner.mood - 5) < 0.01, "Getting a sour prisoner up changed mood to [prisoner.mood]")
+	prisoner.end_activity(cancel_ai = FALSE)
+	prisoner.set_mood(70)
+
+	// Cuffed and laid on the bed, they get up too, and the cuffs keep them where they step to.
+	TEST_ASSERT(prisoner.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The prisoner could not be cuffed")
+	prisoner.forceMove(bed_turf)
+	TEST_ASSERT(bed.buckle_mob(prisoner, force = TRUE), "The cuffed prisoner could not be laid on the bed")
+	TEST_ASSERT(prisoner.talk_menu_allowed(member), "A cuffed prisoner lying on the bed has no talk menu")
+	var/list/choices = prisoner.talk_menu_choices(member)
+	TEST_ASSERT("On your feet" in choices, "A cuffed prisoner lying on the bed was not offered getting up")
+	TEST_ASSERT(!("Back to your cell" in choices), "A cuffed prisoner was offered a walk back to the cell") // PRISON_TALK_CELL
+	TEST_ASSERT(prisoner.talk_menu_act(member, "On your feet"), "A cuffed prisoner did not get up")
+	TEST_ASSERT(!prisoner.buckled && prisoner.loc != bed_turf, "A cuffed prisoner stayed on the bed")
+	TEST_ASSERT_NULL(prisoner.activity, "A cuffed prisoner was given something to do")
+	TEST_ASSERT(!bed.has_buckled_mobs(), "Someone is still lying on the mattress")
+	prisoner.remove_cuffs()
+	settle_prison_air(home)
+
 // ===== AN ORDER DURING A LOCK-IN =====
 
 /datum/unit_test/voidcrew_outpost_prison_social_order_lockin

@@ -308,7 +308,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
  * Whether an upgrade may be stamped over this tile. Pass `protected_rects` from
  * upgrade_protected_rects() when checking many tiles. Lattices and catwalks are cleared by the
  * placement; decals and loose items stay. The survey passes `ignore_mobs`: mobs move, so the
- * server only checks them when the room is actually built.
+ * server only checks them when the room is actually built. Landmarks never block: a level's
+ * teardown keeps them, so a recycled level can carry invisible ones left by deleted hulls.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/is_upgrade_turf_clear(turf/tile, list/protected_rects, ignore_mobs = FALSE)
 	if(!is_turf_buildable(tile) || isclosedturf(tile))
@@ -322,7 +323,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			continue // camera eyes and observers
 		if(istype(thing, /obj/docking_port))
 			return FALSE
-		if(istype(thing, /obj/structure/lattice) || istype(thing, /obj/effect/decal))
+		if(istype(thing, /obj/structure/lattice) || istype(thing, /obj/effect/decal) || istype(thing, /obj/effect/landmark))
 			continue
 		if(thing.density || thing.anchored)
 			return FALSE

@@ -246,6 +246,10 @@
 	TEST_ASSERT(home.is_upgrade_turf_clear(open_ground), "A lattice or a loose item blocked an upgrade")
 	qdel(lattice)
 	qdel(loose)
+	// Level teardown keeps landmarks, and deleted hulls leave their job starts behind.
+	var/obj/effect/landmark/stray_start = allocate(/obj/effect/landmark/start, open_ground)
+	TEST_ASSERT(home.is_upgrade_turf_clear(open_ground), "A stray landmark blocked an upgrade")
+	qdel(stray_start)
 	var/obj/structure/grille/grille = allocate(__IMPLIED_TYPE__, open_ground)
 	TEST_ASSERT(!home.is_upgrade_turf_clear(open_ground), "An anchored structure did not block an upgrade")
 	qdel(grille)

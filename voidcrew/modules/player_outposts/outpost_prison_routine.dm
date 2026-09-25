@@ -272,6 +272,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	// Stay awake while anyone is on the level.
 	can_idle = FALSE
 	planning_subtrees = list(
+		// Cuffed, nothing at all (outpost_prison_capture.dm).
+		/datum/ai_planning_subtree/outpost_prisoner_cuffed,
 		// Threats, fights and riots come first (outpost_prison_trouble.dm).
 		/datum/ai_planning_subtree/outpost_prisoner_trouble,
 		/datum/ai_planning_subtree/outpost_prisoner_routine,

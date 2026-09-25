@@ -106,6 +106,10 @@ type PrisonAdminPrisoner = {
   confined_seconds?: number;
   /** shut in their cell right now */
   confined?: BooleanLike;
+  /** handcuffed */
+  cuffed?: BooleanLike;
+  /** seconds of lockdown still owed after a riot, 0 when none */
+  lockdown_left?: number;
 };
 
 type PrisonerState =
@@ -1704,6 +1708,24 @@ const PrisonerRow = ({ prisoner, busy, act, form }: PrisonerRowProps) => {
                 {clock(preset)}
               </Button>
             ))}
+          </Stack.Item>
+        ) : null}
+        {isNum(prisoner.lockdown_left) && prisoner.lockdown_left > 0 ? (
+          <Stack.Item
+            className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--lockdown"
+            mr={1}
+          >
+            <Box inline bold color="average" mr={0.5}>
+              <Icon name="lock" mr={0.5} />
+              {`Lockdown ${clock(prisoner.lockdown_left)}`}
+            </Box>
+            <Button
+              compact
+              disabled={locked}
+              onClick={() => set('lockdown', 0)}
+            >
+              Clear
+            </Button>
           </Stack.Item>
         ) : null}
         <Stack.Item className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--sentence">

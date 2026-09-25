@@ -10,7 +10,8 @@
 //   wing costs at most half the pay.
 // Nothing while they fight, riot, break out, are loose or wreck their cell, and nothing once they
 // have been confined to their cell for more than OUTPOST_PRISON_CONFINED_PAY_AFTER seconds, unless
-// it is for their own safety (protective custody: a riot, a loose prisoner or an experiment).
+// it is for their own safety (protective custody: a riot, a loose prisoner or an experiment), or
+// kept in cuffs past PRISONER_CUFFED_GRACE, unless it is that or lockdown they owe.
 // Stipends are deposited every OUTPOST_PRISON_DEPOSIT_INTERVAL seconds. A release pays
 // OUTPOST_PRISON_RELEASE_BONUS x (G x F averaged over the stay).
 // One cell turns over every ~13 minutes: an 11.5 minute average sentence and a 60-120 second

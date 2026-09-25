@@ -643,8 +643,9 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 /**
  * Advances the prison by `seconds`, in a fixed order: who is home, the condition scores, reach,
- * supplies; then for each prisoner body collection, pay and sentence, needs, confinement, mood,
- * and release; then trouble (outpost_prison_riot.dm), experiments, arrivals and deposits.
+ * supplies; then for each prisoner body collection, pay and sentence, needs, confinement, cuffs
+ * and lockdown (outpost_prison_capture.dm), mood, and release; then trouble
+ * (outpost_prison_riot.dm), experiments, arrivals and deposits.
  * Prisoners who are fighting earn nothing; rioting or loose, they earn nothing and their sentence
  * stops. Each part keeps its own cadence inside its own tick proc; keep this order as it is.
  */
@@ -668,6 +669,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 			prisoner.sentence_left -= served
 		prisoner.adjust_needs(seconds)
 		update_locked_in(prisoner, seconds)
+		update_cuffed(prisoner, seconds)
+		lockdown_tick(prisoner, seconds)
 		prisoner.drift_mood(seconds)
 		if(serving)
 			check_release(prisoner)

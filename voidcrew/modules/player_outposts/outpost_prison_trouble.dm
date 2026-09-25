@@ -122,9 +122,9 @@
 /mob/living/basic/outpost_prisoner/proc/ai_running()
 	return ai_controller?.ai_status == AI_STATUS_ON
 
-/// Whether anything about trouble has them busy, so their routine waits
+/// Whether anything about trouble has them busy, so their routine waits: trouble itself, being talked to, or cuffs going on or off
 /mob/living/basic/outpost_prisoner/proc/in_trouble()
-	return trouble || threat_ref || swing_ref || climb_ref || beaten_left > 0 || talking
+	return trouble || threat_ref || swing_ref || climb_ref || beaten_left > 0 || talking || cuff_work
 
 /// Whether they are on their feet and able to go after a target
 /mob/living/basic/outpost_prisoner/proc/trouble_can_act()
@@ -192,6 +192,9 @@
 		loss += from_wing[2]
 	if(locked_in_seconds > OUTPOST_PRISON_LOCKED_IN_COMPLAINT)
 		loss += PRISONER_MOOD_LOCKED_IN + round((locked_in_seconds - OUTPOST_PRISON_LOCKED_IN_COMPLAINT) / 60)
+	// Cuffs kept on without good reason sour them like a lock-in (outpost_prison_capture.dm).
+	if(cuffs_souring())
+		loss += PRISONER_MOOD_CUFFED + round((cuffed_seconds - PRISONER_CUFFED_GRACE) / 60)
 	if(istype(activity, /datum/prisoner_activity/basketball) || istype(activity, /datum/prisoner_activity/read) || istype(activity, /datum/prisoner_activity/chat))
 		gain += PRISONER_MOOD_ACTIVITY
 	if(sentence_left <= PRISONER_RELEASE_SOON_TIME)
@@ -215,7 +218,8 @@
  */
 /mob/living/basic/outpost_prisoner/adjust_health(amount, updating_health = TRUE, forced = FALSE)
 	var/spared = FALSE
-	if(amount > 0 && !forced && stat == CONSCIOUS && phase == PRISONER_PRESENT && !can_be_dragged())
+	// Cuffed but on their feet still counts as on their feet.
+	if(amount > 0 && !forced && stat == CONSCIOUS && phase == PRISONER_PRESENT && !is_down())
 		var/health_left = maxHealth - bruteloss
 		if(amount >= health_left)
 			amount = max(0, health_left - 1)
@@ -366,8 +370,9 @@
 	update_bubble()
 
 /**
- * Knocked down, stunned, beaten or dead: whatever trouble they were making stops. A rioter drops
- * their shiv and calms down, losing any breakout clock; a fight is over; a wreck stops.
+ * Knocked down, stunned, beaten, cuffed or dead: whatever trouble they were making stops. A rioter
+ * drops their shiv and stops swinging, but stays a rioter until shut in a cell: up and free again,
+ * they riot on (back_to_rioting()). A fight is over; a wreck stops.
  */
 /mob/living/basic/outpost_prisoner/proc/on_downed()
 	if(QDELETED(src))
@@ -375,7 +380,10 @@
 	cancel_threat()
 	stop_climb(fell = TRUE)
 	if(is_rioting())
-		calm_down()
+		drop_shiv()
+		riot_target_ref = null
+		riot_target_hits = 0
+		riot_victim_ref = null
 	if(fight)
 		prison?.end_fight(fight)
 	if(trouble == PRISONER_TROUBLE_WRECK)
@@ -405,7 +413,21 @@
 		REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEATEN_TRAIT)
 	update_bubble()
 
-/// A rioter stops: the shiv drops, any breakout clock stops, and they settle at PRISONER_RIOT_CALM_MOOD
+/**
+ * Up and free again, a rioter grabs their shiv back if it lies at their feet. Returns TRUE if
+ * they did. Staff who kick it away or pick it up leave them their fists.
+ */
+/mob/living/basic/outpost_prisoner/proc/back_to_rioting()
+	if(QDELETED(src) || !is_rioting() || stat != CONSCIOUS || can_be_dragged() || has_shiv() || held_item || !isturf(loc))
+		return FALSE
+	var/obj/item/knife/shiv/shiv = locate() in loc
+	if(!shiv || !take_item(shiv))
+		return FALSE
+	update_melee()
+	visible_message(span_warning("[src] snatches [shiv] back up!"))
+	return TRUE
+
+/// A rioter stops, when the riot is over: the shiv drops, any breakout clock stops, and they settle at PRISONER_RIOT_CALM_MOOD
 /mob/living/basic/outpost_prisoner/proc/calm_down()
 	if(!is_rioting())
 		return
@@ -694,11 +716,17 @@
 	var/when = LAZYACCESS(helped_by, REF(person))
 	return when && world.time - when <= PRISONER_HELPED_GRACE
 
-/// A member of the wing using an empty hand on them, not in combat mode, talks to them instead of patting them
+/**
+ * A member of the wing using an empty hand on them, not in combat mode, talks to them instead of
+ * patting them; on a cuffed prisoner it takes the cuffs off instead (outpost_prison_capture.dm).
+ */
 /mob/living/basic/outpost_prisoner/proc/on_hand_used(datum/source, mob/living/user, list/modifiers)
 	SIGNAL_HANDLER
 	if(!istype(user) || user.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK) || is_outpost_prisoner(user))
 		return NONE
+	if(cuffs && prison?.is_member(user))
+		INVOKE_ASYNC(src, PROC_REF(uncuff_by), user)
+		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || !prison?.is_member(user))
 		return NONE
 	INVOKE_ASYNC(src, PROC_REF(talk_down), user)

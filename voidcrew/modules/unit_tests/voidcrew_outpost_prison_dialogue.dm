@@ -25,6 +25,7 @@
 		"riot_bystander", "rat", "no_air", "lights_flicker", "arrival_stained", "arrival_hurt",
 		"creature_panic", "vent_noise", "horror", "absorbed",
 		"hatch_empty", "subdued", "fight_argue_none", "threat_backed_down",
+		"cuffed", "cuffs_off", "lockdown", "lockdown_over",
 	)
 
 /// Contexts said by the researcher and the Kessler team, who have no personality or prisoner details

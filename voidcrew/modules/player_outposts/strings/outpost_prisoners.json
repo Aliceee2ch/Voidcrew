@@ -2201,6 +2201,141 @@
 				"Next time I'm taking the ball with me."
 			]
 		},
+		"cuffed": {
+			"any": [
+				"Are these really necessary?",
+				"Shitcurity. Cuffing a guy for nothing.",
+				"My wrists are going numb here.",
+				"How long do I have to wear these?",
+				"Take these off. I'm not going anywhere.",
+				"Real professional. Cuffs in the yard.",
+				"I can't even scratch my nose.",
+				"This is some real shitcurity, you know that?",
+				"Come on, these are way too tight.",
+				"I wasn't doing anything! Why the cuffs?"
+			],
+			"chatty": [
+				"You know I talk with my hands, right? This is torture.",
+				"Cuffs? Really? I'm telling every crew about this shitcurity.",
+				"Hey, can you loosen these a bit? Just a notch?"
+			],
+			"grumpy": [
+				"Get these damn things off me.",
+				"Shitcurity. Every last one of you.",
+				"Cuff me again and see what happens."
+			],
+			"nervous": [
+				"Please, they're really tight. I'll behave.",
+				"Am I in trouble? I'm sorry, whatever it was.",
+				"I can't feel my fingers. Is that bad?"
+			],
+			"cheerful": [
+				"Well, this is a new look for me.",
+				"Cuffs! Fancy. Can I have them off now?"
+			],
+			"quiet": [
+				"Cuffs. Great.",
+				"Take them off.",
+				"Too tight."
+			]
+		},
+		"cuffs_off": {
+			"any": [
+				"Finally. My wrists thank you.",
+				"About time.",
+				"Oh, that's better.",
+				"I can feel my hands again.",
+				"Thanks. Don't do that again.",
+				"Much better.",
+				"Free hands. Wonderful.",
+				"Took you long enough.",
+				"Right. Where was I?"
+			],
+			"chatty": [
+				"Oh, that's so much better. You have no idea.",
+				"Hands back! Now I can finish my story properly."
+			],
+			"grumpy": [
+				"Should never have been on.",
+				"Don't try that again."
+			],
+			"nervous": [
+				"Thank you. Thank you so much.",
+				"I'll be good, I promise."
+			],
+			"cheerful": [
+				"Ah, freedom! Well, some of it.",
+				"Thanks, crew!"
+			],
+			"quiet": [
+				"Better.",
+				"Thanks."
+			]
+		},
+		"lockdown": {
+			"any": [
+				"Fine. I'll sit here.",
+				"How long is this lockdown going to last?",
+				"Yeah, yeah. Lockdown. I heard you.",
+				"Not like I've got anywhere to be.",
+				"Staring at the same four walls again.",
+				"This lockdown is some real shitcurity.",
+				"I'm not saying sorry.",
+				"Worth it. Mostly.",
+				"Wake me up when it's over.",
+				"Great. More time with this bunk."
+			],
+			"chatty": [
+				"So, lockdown. Anyone want to hear about the riot? No? Fine.",
+				"You'd think they'd give us a deck of cards in here."
+			],
+			"grumpy": [
+				"Lock me up all you like. Won't change a thing.",
+				"Shitcurity. Lockdown for a little noise."
+			],
+			"nervous": [
+				"I didn't even want to riot. I just got swept up.",
+				"Is this going on my record?"
+			],
+			"cheerful": [
+				"Lockdown! Time for a nap, I suppose.",
+				"Could be worse. Could be raining."
+			],
+			"quiet": [
+				"Fine.",
+				"Whatever."
+			]
+		},
+		"lockdown_over": {
+			"any": [
+				"Finally. Back to the yard.",
+				"Lockdown's over. I'm stretching my legs.",
+				"That's my time served. Open up.",
+				"About time. Can I go now?",
+				"Done. I'm done.",
+				"Free again. Yard free, anyway.",
+				"Lesson learned. Probably.",
+				"Out of lockdown. What did I miss?"
+			],
+			"chatty": [
+				"Lockdown's over! Did anyone miss me? Anyone at all?"
+			],
+			"grumpy": [
+				"Took long enough.",
+				"Don't expect me to thank you."
+			],
+			"nervous": [
+				"I'll be good now. Really.",
+				"Is it really over?"
+			],
+			"cheerful": [
+				"Lockdown over! Hello again, yard!"
+			],
+			"quiet": [
+				"Done.",
+				"Good."
+			]
+		},
 		"researcher_offer": {
 			"any": [
 				"Good day. I represent a small research firm. Might I borrow an inmate?",

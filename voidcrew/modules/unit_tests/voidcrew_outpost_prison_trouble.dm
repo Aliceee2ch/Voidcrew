@@ -806,19 +806,20 @@
 	warden.forceMove(prison_spot(home, 8, 4))
 	warden.fully_heal()
 
-	// Stunned or beaten, a rioter drops a real shiv and calms to 50 (PRISONER_RIOT_CALM_MOOD).
+	// Stunned or beaten, a rioter drops a real shiv but stays a rioter, their mood as it was: only
+	// a cell ends it (voidcrew_outpost_prison_capture.dm has the rest of capture).
+	var/first_mood = first.mood
 	first.adjustStaminaLoss(200)
-	TEST_ASSERT(isnull(first.trouble), "A stunned rioter kept rioting")
+	TEST_ASSERT_EQUAL(first.trouble, "riot", "A stunned rioter stopped rioting")
 	TEST_ASSERT(!istype(first.held_item, /obj/item/knife/shiv), "A stunned rioter kept the shiv")
 	TEST_ASSERT_NOTNULL(locate(/obj/item/knife/shiv) in first.loc, "A stunned rioter dropped no shiv")
-	TEST_ASSERT(abs(first.mood - 50) < 0.01, "A stunned rioter calmed to [first.mood], not 50")
+	TEST_ASSERT(abs(first.mood - first_mood) < 0.01, "Stunning a rioter moved their mood to [first.mood]")
 	second.apply_damage(90, BRUTE)
 	TEST_ASSERT(second.beaten_left > 0, "A rioter at 10 health did not collapse")
-	TEST_ASSERT(isnull(second.trouble), "A beaten rioter kept rioting")
+	TEST_ASSERT_EQUAL(second.trouble, "riot", "A beaten rioter stopped rioting")
 	TEST_ASSERT_NOTNULL(locate(/obj/item/knife/shiv) in second.loc, "A beaten rioter dropped no shiv")
 
-	// The riot is over once no rioter is standing and free: shut in a cell does not count.
-	TEST_ASSERT(prison.riot_active, "The riot ended with a rioter still going")
+	// The riot is over only once every rioter is shut in a cell: down in the yard is still at large.
 	var/datum/outpost_prison_cell/cell_three = prison.cells[3]
 	var/obj/machinery/door/airlock/cell_door = cell_three.door()
 	third.forceMove(prison_spot(home, 11, 14))
@@ -826,18 +827,40 @@
 		cell_door.close()
 	cell_door.bolt()
 	prison.refresh_reach()
+	prison.tick(1)
+	TEST_ASSERT(prison.riot_active, "The riot ended with two rioters down in the yard")
+	TEST_ASSERT_EQUAL(third.trouble, "riot", "A rioter bolted in a cell stopped rioting before the riot was over")
+	var/list/cell_doors = list(cell_door)
+	for(var/list/pair as anything in list(list(first, prison.cells[1], prison_spot(home, 3, 14)), list(second, prison.cells[2], prison_spot(home, 7, 14))))
+		var/mob/living/basic/outpost_prisoner/downed = pair[1]
+		var/datum/outpost_prison_cell/downed_cell = pair[2]
+		var/obj/machinery/door/airlock/downed_door = downed_cell.door()
+		downed.forceMove(pair[3])
+		if(!downed_door.density)
+			downed_door.close()
+		downed_door.bolt()
+		cell_doors += downed_door
+	prison.refresh_reach()
 	prison.tension_spike = 40
 	prison.tick(1)
-	TEST_ASSERT(!prison.riot_active, "The riot went on with its last rioter bolted in a cell")
-	TEST_ASSERT(isnull(third.trouble), "The bolted-in rioter kept rioting after the riot")
-	TEST_ASSERT(abs(third.mood - 50) < 1, "The last rioter calmed to [third.mood], not 50")
+	TEST_ASSERT(!prison.riot_active, "The riot went on with every rioter bolted in a cell")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second, third))
+		TEST_ASSERT(isnull(rioter.trouble), "[rioter] kept rioting after the riot")
+		TEST_ASSERT(abs(rioter.mood - 50) < 1, "[rioter] calmed to [rioter.mood], not 50")
+		TEST_ASSERT(rioter.lockdown_left > 0, "[rioter] was shut in a cell and owes no lockdown")
 	TEST_ASSERT_EQUAL(prison.tension_spike, 0, "The end of the riot left a [prison.tension_spike] spike")
 	TEST_ASSERT_EQUAL(prison.subdued_left, 360, "The end of the riot subdued the wing for [prison.subdued_left] s, not 360") // PRISON_SUBDUED_TIME
 	TEST_ASSERT_EQUAL(prison.trouble_payload()["subdued_left"], 360, "The console does not show the subdued time")
 	TEST_ASSERT(!prison.incident_open, "The incident outlived the riot")
 	TEST_ASSERT(!prison.riot_lights_on, "The riot lights stayed on")
 	TEST_ASSERT_NULL(console.ui_data(warden)["alarm"], "The alarm outlasted the riot")
-	cell_door.unbolt()
+	// Their lockdown is the capture test's; out they come, clear of it.
+	for(var/obj/machinery/door/airlock/bolted as anything in cell_doors)
+		bolted.unbolt()
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second, third))
+		rioter.lockdown_left = 0
+	first.forceMove(prison_spot(home, 8, 8))
+	second.forceMove(prison_spot(home, 10, 8))
 	prison.refresh_reach()
 	third.forceMove(prison_spot(home, 12, 7))
 
@@ -968,7 +991,8 @@
 	prison.set_subdued(0)
 
 	// A breakout walled in: nobody gets out, and five minutes on the clock later they are gone
-	// for good anyway (OUTPOST_PRISON_LOOSE_TIME). A rioter put down first loses the clock.
+	// for good anyway (OUTPOST_PRISON_LOOSE_TIME). A rioter put down stays a rioter, but their
+	// clock waits while they are down.
 	prison.crew_home_override = TRUE
 	treasury = trouble_fund(home, 10000)
 	var/mob/living/basic/outpost_prisoner/runner = trouble_prisoner(prison, prison_spot(home, 8, 8))
@@ -978,7 +1002,8 @@
 	prison.tick(180)
 	TEST_ASSERT(prison.breaking_out, "Three minutes of riot with the crew home did not break out")
 	downed.adjustStaminaLoss(200)
-	TEST_ASSERT(isnull(downed.trouble) && downed.loose_left <= 0, "A breakout rioter put down kept the clock ([downed.loose_left] s)")
+	TEST_ASSERT_EQUAL(downed.trouble, "breakout", "A breakout rioter put down stopped rioting")
+	var/downed_clock = downed.loose_left
 	// The clock runs whatever the crew does. (The calm prisoner's stipend goes in meanwhile.)
 	prison.crew_home_override = FALSE
 	var/paid_before = prison.paid_total
@@ -989,11 +1014,25 @@
 	TEST_ASSERT_EQUAL(runner.phase, "leaving", "A walled-in breakout rioter was not gone after five minutes")
 	TEST_ASSERT_EQUAL(stayer.phase, "leaving", "The second walled-in rioter was not gone after five minutes")
 	TEST_ASSERT_EQUAL(downed.phase, "present", "The rioter put down in time was taken anyway")
+	TEST_ASSERT_EQUAL(downed.loose_left, downed_clock, "The clock of a breakout rioter who was down ran ([downed_clock] s to [downed.loose_left] s)")
 	var/stipends = prison.paid_total - paid_before
 	TEST_ASSERT_EQUAL(treasury.account_balance, 10000 - 2000 + stipends, "Two escapes took [10000 + stipends - treasury.account_balance], not 2000")
+	// Down in the yard, the last rioter is still at large; bolted in their cell, the riot is over.
+	prison.tick(1)
+	TEST_ASSERT(prison.riot_active, "The riot ended with a rioter down in the yard")
+	var/datum/outpost_prison_cell/downed_cell = downed.cell
+	var/obj/machinery/door/airlock/downed_door = downed_cell.door()
+	downed.forceMove(downed_cell.arrival_turf())
+	if(!downed_door.density)
+		downed_door.close()
+	downed_door.bolt()
+	prison.refresh_reach()
 	prison.tick(1)
 	TEST_ASSERT(!prison.riot_active, "The riot outlived its rioters")
 	TEST_ASSERT(!prison.incident_open, "The incident outlived the breakout")
+	TEST_ASSERT(downed.lockdown_left > 0, "The last rioter was bolted in and owes no lockdown")
+	downed_door.unbolt()
+	downed.lockdown_left = 0
 	downed.setStaminaLoss(0)
 	settle_prison_air(home)
 

@@ -17,22 +17,26 @@
  * firelocks drop), an alarm sounds and the outpost is told. Rioters pull shivs and shout for a few
  * seconds before the first blow, then go for staff (two at most on one person), smash the wing's
  * fixtures and bang on the doors out. Prisoners who don't join sit it out in their cells. A rioter
- * who is stunned or beaten drops the shiv and calms down. The riot is over when no rioter is on
- * their feet outside a cell they are shut in; then the wing is subdued for PRISON_SUBDUED_TIME:
- * no riots or fights, time for the crew to clean up.
+ * who is stunned, beaten or cuffed drops the shiv, but riots on once up and free again: only a
+ * cell they are shut in takes them out of it, and earns them a lockdown (outpost_prison_capture.dm).
+ * The riot is over when no rioter is at large, every one shut in a cell or dead; then every
+ * rioter calms, and the wing is subdued for PRISON_SUBDUED_TIME: no riots or fights, time for the
+ * crew to clean up.
  *
- * The riot's clock runs only while a member of the wing is home (crew_home()). Left
- * PRISON_RIOT_BREAKOUT_TIME it turns into a breakout: the rioters go all out for the exits, and
- * each has OUTPOST_PRISON_LOOSE_TIME seconds to be put down before they are gone for good. A riot
- * nobody comes home to is a sit-in; after PRISON_RIOT_TRANSFER_TIME the corrections service
- * transfers the rioters out, for a fee.
+ * The riot's clock runs only while a member of the wing is home (crew_home()) and a rioter is
+ * free, on their feet and uncuffed. Left PRISON_RIOT_BREAKOUT_TIME it turns into a breakout: the
+ * rioters go all out for the exits, and each has OUTPOST_PRISON_LOOSE_TIME seconds free before
+ * they are gone for good. A riot nobody comes home to, or one held down but never locked up, is a
+ * sit-in; after PRISON_RIOT_TRANSFER_TIME the corrections service transfers the rioters still at
+ * large out, for a fee.
  *
  * The cell block (outpost_prison_containment.dm) is everything prisoners can reach from the cells
  * without passing a staff door or a serving hatch. A prisoner outside it on their own feet, or
  * outside the wing in any state, has escaped: they go loose on the outpost patrol AI and have the
- * rest of their clock before they are gone for good, which fines the treasury. Brought back down
- * into the cell block, they are recaptured. A riot, its breakout and its escapes are one incident,
- * whose fines are capped together (outpost_prison_economy.dm).
+ * rest of their clock before they are gone for good, which fines the treasury; cuffed, the clock
+ * waits. Brought back into the cell block down or cuffed, they are recaptured. A riot, its
+ * breakout and its escapes are one incident, whose fines are capped together
+ * (outpost_prison_economy.dm).
  *
  * A prisoner bolted into their cell long enough, and miserable enough, wrecks it; the bolts shear
  * PRISONER_WRECK_TIME seconds later and they come out rioting.
@@ -145,13 +149,16 @@
 
 /**
  * Advances a prisoner's confinement clock by `seconds`. Shut in their cell it counts up, unless
- * that is for their own safety; out of it, it falls PRISONER_LOCKED_IN_RECOVERY seconds a second,
- * so letting them out for a moment does not reset it.
+ * that is for their own safety or they owe lockdown; out of it, it falls PRISONER_LOCKED_IN_RECOVERY
+ * seconds a second, so letting them out for a moment does not reset it. A rioter just shut in a
+ * cell is in custody, and owes lockdown for it (outpost_prison_capture.dm).
  */
 /datum/outpost_prison/proc/update_locked_in(mob/living/basic/outpost_prisoner/prisoner, seconds)
 	var/confined = prisoner.is_confined()
 	if(confined)
-		if(!protective_custody())
+		if(!prisoner.was_confined && prisoner.is_rioting())
+			start_lockdown(prisoner)
+		if(!protective_custody() && prisoner.lockdown_left <= 0)
 			prisoner.locked_in_seconds += seconds
 	else
 		if(prisoner.was_confined && prisoner.locked_in_seconds >= OUTPOST_PRISON_LOCKED_IN_COMPLAINT)
@@ -159,9 +166,12 @@
 		prisoner.locked_in_seconds = max(0, prisoner.locked_in_seconds - PRISONER_LOCKED_IN_RECOVERY * seconds)
 	prisoner.was_confined = confined
 
-/// Whether shutting prisoners in their cells is for their own safety right now, so it costs nothing: a riot, someone loose, an experiment
+/**
+ * Whether shutting prisoners in their cells is for their own safety right now, so it costs
+ * nothing: a riot, someone loose and not yet caught (cuffed), an experiment
+ */
 /datum/outpost_prison/proc/protective_custody()
-	return riot_active || loose_count() > 0 || experiment_active()
+	return riot_active || runners_at_large() > 0 || experiment_active()
 
 /// A prisoner is let out after a long lock-in: some relief, and they say so
 /datum/outpost_prison/proc/on_unbolted(mob/living/basic/outpost_prisoner/prisoner)
@@ -270,6 +280,7 @@
 	var/dirty = 0
 	var/hurt = 0
 	var/locked = 0
+	var/cuffed = 0
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
 		if(!counts_for_tension(prisoner))
 			continue
@@ -281,6 +292,8 @@
 			hurt++
 		if(prisoner.locked_in_seconds > OUTPOST_PRISON_LOCKED_IN_COMPLAINT)
 			locked++
+		if(prisoner.cuffed_seconds > PRISONER_CUFFED_GRACE)
+			cuffed++
 	var/list/causes = list()
 	if(hungry)
 		causes += "[hungry] hungry"
@@ -299,6 +312,8 @@
 		causes += "no power"
 	if(locked)
 		causes += "[locked] locked in"
+	if(cuffed)
+		causes += "[cuffed] cuffed"
 	return causes
 
 /// Tension reached riot level: the crew is warned, and the yard gathers at the staff door
@@ -633,6 +648,17 @@
 	return holding?.is_bolted()
 
 /**
+ * A rioter not yet in custody: present, alive, rioting and not shut in a cell (is_confined(), so a
+ * door bolted open does not count). Down or cuffed, they are still at large.
+ */
+/mob/living/basic/outpost_prisoner/proc/riot_at_large()
+	return phase == PRISONER_PRESENT && stat != DEAD && is_rioting() && !is_confined()
+
+/// A rioter at large and free to act: on their feet and uncuffed
+/mob/living/basic/outpost_prisoner/proc/riot_free()
+	return riot_at_large() && stat == CONSCIOUS && !can_be_dragged()
+
+/**
  * Whether they can join a riot now. Not from a cell they are shut in: a riot that nobody can take
  * out of a cell would be over as soon as it began, so they bang on the door and shout instead.
  */
@@ -672,13 +698,14 @@
 
 /**
  * Starts a riot. `everyone` pulls in every prisoner able to riot, as the admin button does, and
- * ignores the quiet after a riot; `forced` joins whatever their mood. Nobody starts one while an
+ * ignores the quiet after a riot; `forced` joins whatever their mood. `ignore_quiet` starts it in
+ * the quiet after a riot too, for a prisoner let out of lockdown early. Nobody starts one while an
  * experiment is on.
  */
-/datum/outpost_prison/proc/start_riot(reason, everyone = FALSE, mob/living/basic/outpost_prisoner/forced)
+/datum/outpost_prison/proc/start_riot(reason, everyone = FALSE, mob/living/basic/outpost_prisoner/forced, ignore_quiet = FALSE)
 	if(!trouble_enabled || riot_active)
 		return FALSE
-	if(!everyone && (subdued_left > 0 || experiment_active()))
+	if(!everyone && ((subdued_left > 0 && !ignore_quiet) || experiment_active()))
 		return FALSE
 	var/list/joining = riot_candidates(everyone, forced)
 	if(!length(joining))
@@ -732,24 +759,27 @@
 			qdel(hide)
 
 /**
- * The riot's clocks. The breakout clock runs only while the crew is home; the sit-in clock only
- * while they are not, and ends in a transfer.
+ * The riot's clocks. It is over once no rioter is at large: every one shut in a cell or dead.
+ * The breakout clock runs only while the crew is home and at least one rioter is free (on their
+ * feet and uncuffed); otherwise the sit-in clock runs, and ends in a transfer of the rioters
+ * still at large. So a riot held down but never locked up does not last forever.
  */
 /datum/outpost_prison/proc/riot_tick(seconds)
 	if(!riot_active)
 		return
 	riot_windup_left = max(0, riot_windup_left - seconds)
-	var/standing = 0
+	var/at_large = 0
+	var/free = 0
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(!prisoner.is_rioting())
+		if(!prisoner.riot_at_large())
 			continue
-		if(prisoner.phase != PRISONER_PRESENT || prisoner.stat != CONSCIOUS || prisoner.can_be_dragged() || prisoner.is_confined())
-			continue
-		standing++
-	if(!standing)
+		at_large++
+		if(prisoner.riot_free())
+			free++
+	if(!at_large)
 		end_riot()
 		return
-	if(crew_home())
+	if(crew_home() && free)
 		riot_elapsed += seconds
 		if(!breaking_out && !riot_warned && riot_elapsed >= PRISON_RIOT_BREAKOUT_WARNING)
 			riot_warned = TRUE
@@ -767,8 +797,9 @@
 		play_alarm()
 
 /**
- * Nobody is left rioting on their feet: anyone still holding out in a cell gives up, everyone
- * calms to PRISONER_RIOT_CALM_MOOD, the spikes clear and the wing is subdued for PRISON_SUBDUED_TIME.
+ * No rioter is left at large: every rioter, shut in a cell or anywhere else, calms to
+ * PRISONER_RIOT_CALM_MOOD, the spikes clear and the wing is subdued for PRISON_SUBDUED_TIME.
+ * Lockdown they owe stands (outpost_prison_capture.dm).
  */
 /datum/outpost_prison/proc/end_riot(announce_end = TRUE)
 	if(!riot_active)
@@ -818,14 +849,14 @@
 	announce("The prison riot is turning into a breakout!", SHIP_NOTIFY_DANGER)
 
 /**
- * A sit-in nobody came home to: the corrections service beams every rioter out, with no bonus,
- * for OUTPOST_PRISON_TRANSFER_FEE each as part of the incident. Also the admin panel's hook.
- * Returns how many went.
+ * A sit-in nobody dealt with: the corrections service beams every rioter still at large out, with
+ * no bonus, for OUTPOST_PRISON_TRANSFER_FEE each as part of the incident. Rioters already shut in a
+ * cell stay, and calm with the end of the riot. Also the admin panel's hook. Returns how many went.
  */
 /datum/outpost_prison/proc/transfer_rioters()
 	var/list/rioters = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && prisoner.is_rioting())
+		if(prisoner.riot_at_large())
 			rioters += prisoner
 	if(!length(rioters))
 		if(riot_active)
@@ -1128,6 +1159,14 @@
 			count++
 	return count
 
+/// Loose prisoners nobody has caught yet: not cuffed. Caught ones, left cuffed somewhere, keep no protective custody going.
+/datum/outpost_prison/proc/runners_at_large()
+	var/count = 0
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.trouble == PRISONER_TROUBLE_LOOSE && prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && !prisoner.cuffs)
+			count++
+	return count
+
 /**
  * The warden console's alarm banner: list(alarm, text). In order: a breakout, an escape, a riot,
  * a riot imminent, a hatch someone is waiting at with nothing on it.
@@ -1172,8 +1211,9 @@
 // ===== ESCAPES =====
 
 /**
- * Anyone out of the wing, in whatever state, or outside the cell block on their own feet, has
- * escaped. The loose are recaptured once they are down inside the cell block again.
+ * Anyone out of the wing, in whatever state, or outside the cell block on their own feet and
+ * uncuffed, has escaped. The loose are recaptured once they are inside the cell block again, down
+ * or cuffed (can_be_dragged()).
  */
 /datum/outpost_prison/proc/check_escapes(seconds)
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners.Copy())
@@ -1196,8 +1236,10 @@
 
 /**
  * The loose clocks of breakout rioters and loose prisoners. Once started they run whatever the
- * crew does and wherever the prisoner is; the crew is told where each one is with
- * PRISON_LOOSE_PING_1 and PRISON_LOOSE_PING_2 seconds left, and at 0 they are gone for good.
+ * crew does and wherever the prisoner is, except that a caught prisoner's clock waits: a loose
+ * one's while cuffed, a breakout rioter's while not free (down, cuffed or shut in a cell). The
+ * crew is told where each one is with PRISON_LOOSE_PING_1 and PRISON_LOOSE_PING_2 seconds left,
+ * and at 0 they are gone for good.
  */
 /datum/outpost_prison/proc/loose_tick(seconds)
 	var/list/pings = list()
@@ -1206,6 +1248,8 @@
 			continue
 		if(prisoner.trouble != PRISONER_TROUBLE_LOOSE && prisoner.trouble != PRISONER_TROUBLE_BREAKOUT)
 			prisoner.loose_left = 0
+			continue
+		if(prisoner.trouble == PRISONER_TROUBLE_LOOSE ? prisoner.cuffs : !prisoner.riot_free())
 			continue
 		var/before = prisoner.loose_left
 		prisoner.loose_left -= seconds
@@ -1236,6 +1280,8 @@
 		stop_wreck(prisoner)
 	if(from_riot)
 		broke_out = TRUE
+	// Caught again, a runner from a riot (or from their lockdown) owes lockdown (outpost_prison_capture.dm).
+	prisoner.escaped_rioting = from_riot || prisoner.lockdown_left > 0
 	open_incident()
 	prisoner.go_loose()
 	add_log("[prisoner.real_name] escaped the cell block.")
@@ -1271,12 +1317,15 @@
 	swap_basic_ai_controller(src, /datum/ai_controller/basic_controller/outpost_breakout)
 	assign_mob_to_outpost_patrol_async(src, prison?.outpost)
 
-/// Back in the cell block, down: in custody again, in a foul mood
+/// Back in the cell block, down or cuffed: in custody again, in a foul mood, and owing lockdown if they got out during a riot
 /datum/outpost_prison/proc/recapture(mob/living/basic/outpost_prisoner/prisoner)
 	if(prisoner.trouble != PRISONER_TROUBLE_LOOSE)
 		return FALSE
+	var/owes_lockdown = prisoner.escaped_rioting
 	prisoner.back_in_custody()
 	add_log("[prisoner.real_name] was recaptured.")
+	if(owes_lockdown)
+		start_lockdown(prisoner, quiet = TRUE)
 	if(!loose_count() && !riot_active)
 		broke_out = FALSE
 	update_riot_lights()
@@ -1286,6 +1335,7 @@
 	clear_outpost_patrol(src)
 	trouble = null
 	loose_left = 0
+	escaped_rioting = FALSE
 	note_trouble_ended()
 	obj_damage = initial(obj_damage)
 	drop_shiv()

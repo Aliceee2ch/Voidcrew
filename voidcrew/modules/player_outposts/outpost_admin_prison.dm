@@ -17,7 +17,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_release", // {ref}
 	"prison_kill", // {ref}
 	"prison_remove", // {ref}
-	"prison_set", // {ref, field: hunger|grime|health|sentence|mood|locked_in, value}
+	"prison_set", // {ref, field: hunger|grime|health|sentence|mood|locked_in|lockdown, value}: lockdown 0 clears it
 	"prison_all", // {what: starve|feed|dirty|clean|hurt|heal|enrage|calm}
 	"prison_advance", // {minutes}
 	"prison_pay_now", // {}
@@ -148,7 +148,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 				if("prison_set")
 					var/field = params["field"]
 					var/value = admin_number(params["value"])
-					if(!(field in list("hunger", "grime", "health", "sentence", "mood", "locked_in")) || isnull(value))
+					if(!(field in list("hunger", "grime", "health", "sentence", "mood", "locked_in", "lockdown")) || isnull(value))
 						error = "Invalid prisoner setting."
 						return
 					if(!prison.admin_set(prisoner, field, value))
@@ -367,6 +367,8 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 			"mood" = round(prisoner.mood),
 			"state" = prisoner.trouble_state(),
 			"loose_left" = prisoner.loose_seconds_shown(),
+			"cuffed" = !!prisoner.cuffs,
+			"lockdown_left" = max(0, round(prisoner.lockdown_left)),
 		))
 	var/list/trouble_block = trouble_payload()
 	// The console's own intake state once the economy package sends it; open or closed until then
@@ -457,6 +459,10 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 		return "being dragged"
 	if(beaten_left > 0)
 		return "beaten ([round(beaten_left)] s)"
+	if(cuffs)
+		if(trouble == PRISONER_TROUBLE_LOOSE)
+			return "cuffed, loose"
+		return is_rioting() ? "cuffed, rioting" : "cuffed"
 	if(can_be_dragged())
 		return "down"
 	if(trouble == PRISONER_TROUBLE_LOOSE)
@@ -504,6 +510,12 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 			if(prisoner.stat == DEAD)
 				return FALSE
 			prisoner.locked_in_seconds = clamp(round(value), 0, OUTPOST_ADMIN_PRISON_MAX_SECONDS)
+		if("lockdown")
+			// Seconds of lockdown owed (outpost_prison_capture.dm); 0 clears it
+			if(prisoner.stat == DEAD)
+				return FALSE
+			prisoner.lockdown_left = clamp(round(value), 0, OUTPOST_ADMIN_PRISON_MAX_SECONDS)
+			prisoner.lockdown_out = 0
 		else
 			return FALSE
 	return TRUE
@@ -539,7 +551,10 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 				prisoner.set_mood(100)
 	return count
 
-/// Ends every riot and fight and puts every mood back to PRISONER_MOOD_START. Loose prisoners stay loose.
+/**
+ * Ends every riot and fight, clears every lockdown owed and puts every mood back to
+ * PRISONER_MOOD_START. Loose prisoners stay loose, and cuffs stay on.
+ */
 /datum/outpost_prison/proc/admin_calm()
 	var/count = 0
 	for(var/datum/outpost_prison_fight/brawl as anything in fights.Copy())
@@ -552,6 +567,8 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 		prisoner.cancel_threat()
 		prisoner.calm_down()
 		prisoner.set_mood(PRISONER_MOOD_START)
+		prisoner.lockdown_left = 0
+		prisoner.lockdown_out = 0
 		count++
 	tension_spike = 0
 	riot_hold = 0

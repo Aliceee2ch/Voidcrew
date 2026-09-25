@@ -352,11 +352,11 @@
 		source.balloon_alert(user, "members only")
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(source.has_buckled_mobs())
-		// A prisoner lying awake on it can be told to get up from the talk menu.
+		// A prisoner lying on it can be told to get up from the talk menu, or shaken awake.
 		var/mob/living/basic/outpost_prisoner/lying = locate() in source.buckled_mobs
 		var/why = "someone's lying on it"
 		if(lying)
-			why = lying.activity?.sleeping ? "they're asleep" : "tell them to get up"
+			why = lying.activity?.sleeping ? "shake them awake" : "tell them to get up"
 		source.balloon_alert(user, why)
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	INVOKE_ASYNC(src, PROC_REF(contraband_search_mattress), user, source)

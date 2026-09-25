@@ -770,6 +770,33 @@
 				"Alright."
 			]
 		},
+		"woken": {
+			"any": [
+				"Huh? What? I was asleep!",
+				"What time is it? Okay, okay, I'm up.",
+				"Do you mind? I was sleeping.",
+				"Can't a person get some sleep in here?",
+				"Ugh. What now?",
+				"I was having a good dream, too.",
+				"Alright, I'm awake. What do you want?"
+			],
+			"chatty": [
+				"Oh, hey. I was just resting my eyes. Totally awake.",
+				"Was that really necessary? I'm up, I'm up."
+			],
+			"grumpy": [
+				"You woke me up for this? Unbelievable.",
+				"Shake me like that again and see what happens."
+			],
+			"nervous": [
+				"What? What's wrong? Is something happening?",
+				"Okay! Okay, I'm awake! Don't hurt me."
+			],
+			"quiet": [
+				"Mm. Up.",
+				"What."
+			]
+		},
 		"get_up_grumble": {
 			"any": [
 				"I was lying down. Is that a crime now?",

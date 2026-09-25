@@ -19,6 +19,8 @@
  * - "On your feet", offered while they lie, sit or crouch: an order, and they always get up,
  *   grumbling below their line. Off a bed they step aside and stay put for PRISON_TALK_GET_UP_HOLD,
  *   so the mattress can be searched. Nothing else changes.
+ * The same right click on a prisoner asleep in bed shakes them awake instead (shake_awake()): they
+ * get up as if told to, and lose PRISON_TALK_WAKE_MOOD for it.
  * Numbers in voidcrew/_DEFINES/outpost_prison_social.dm.
  */
 
@@ -48,7 +50,7 @@
 	if(stat == DEAD || phase != PRISONER_PRESENT)
 		return NONE
 	if(activity?.sleeping)
-		balloon_alert(user, "asleep")
+		INVOKE_ASYNC(src, PROC_REF(shake_awake), user)
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(!talk_menu_allowed(user))
 		balloon_alert(user, "can't talk now")
@@ -340,8 +342,9 @@
  * free tile beside it, inside its cell if they can, and if free they stay there for
  * PRISON_TALK_GET_UP_HOLD so the mattress can be searched. Costs no mood and no reputation.
  * Only trouble, or someone else already talking to them, stops it. Returns TRUE if they got up.
+ * `woken`: they were asleep and `user` shook them awake (shake_awake()), which costs PRISON_TALK_WAKE_MOOD.
  */
-/mob/living/basic/outpost_prisoner/proc/talk_menu_get_up(mob/living/user)
+/mob/living/basic/outpost_prisoner/proc/talk_menu_get_up(mob/living/user, woken = FALSE)
 	if(QDELETED(user))
 		return FALSE
 	if(!talk_menu_can_get_up())
@@ -358,14 +361,22 @@
 		return FALSE
 	var/sour = mood < talk_menu_order_line(user)
 	var/obj/structure/bed/bed = istype(buckled, /obj/structure/bed) ? buckled : null
-	user.visible_message(span_notice("[user] tells [src] to get up."), span_notice("You tell [src] to get up."))
+	if(woken)
+		user.visible_message(span_notice("[user] shakes [src] awake."), span_notice("You shake [src] awake."))
+		playsound(src, 'sound/items/weapons/thudswoosh.ogg', 40, TRUE, -1)
+		adjust_mood(-PRISON_TALK_WAKE_MOOD)
+	else
+		user.visible_message(span_notice("[user] tells [src] to get up."), span_notice("You tell [src] to get up."))
 	// A cuffed prisoner is doing nothing; anyone else stops, and lets go of what they claimed.
 	end_activity()
 	stand_up()
 	if(bed)
 		talk_menu_step_off(bed)
 	face_atom(user)
-	say_context(sour ? "get_up_grumble" : "get_up")
+	var/line = sour ? "get_up_grumble" : "get_up"
+	if(woken)
+		line = "woken"
+	say_context(line)
 	// Cuffs keep them where they are anyway.
 	if(!cuffs)
 		var/datum/prisoner_activity/told_to_stand/standing = new(src)
@@ -375,6 +386,12 @@
 		// Already where they stand: the clock starts now, AI or not.
 		standing.arrive()
 	return TRUE
+
+/// Shakes them awake in their bed, and they get up as if told to (talk_menu_get_up()). Returns TRUE if they got up.
+/mob/living/basic/outpost_prisoner/proc/shake_awake(mob/living/user)
+	if(!activity?.sleeping)
+		return FALSE
+	return talk_menu_get_up(user, woken = TRUE)
 
 /**
  * Steps off `bed` onto a free tile beside it: one inside the bed's cell if there is one, else any.

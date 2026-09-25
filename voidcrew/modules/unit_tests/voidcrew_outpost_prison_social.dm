@@ -794,6 +794,22 @@
 	TEST_ASSERT_NULL(prisoner.activity, "A cuffed prisoner was given something to do")
 	TEST_ASSERT(!bed.has_buckled_mobs(), "Someone is still lying on the mattress")
 	prisoner.remove_cuffs()
+
+	// Asleep in bed, a shake wakes them: they get up as if told to, a little sore about it.
+	prisoner.forceMove(bed_turf)
+	var/datum/prisoner_activity/rest/sleep/nap = new(prisoner)
+	TEST_ASSERT(nap.setup(), "The prisoner could not get into bed to sleep")
+	prisoner.start_activity(nap)
+	nap.arrive()
+	TEST_ASSERT(prisoner.activity?.sleeping && prisoner.buckled == bed, "The prisoner is not asleep in bed")
+	TEST_ASSERT_NULL(prison.contraband_search_mattress(member, bed), "A mattress with someone asleep on it was searched")
+	TEST_ASSERT(prisoner.shake_awake(member), "Shaking the sleeping prisoner did not wake them")
+	TEST_ASSERT(!prisoner.buckled && prisoner.loc != bed_turf, "The prisoner woke but stayed in bed")
+	TEST_ASSERT(istype(prisoner.activity, /datum/prisoner_activity/told_to_stand), "The woken prisoner is not standing aside")
+	TEST_ASSERT(contraband_line_for(prisoner.last_line, "woken"), "The woken prisoner said [prisoner.last_line]")
+	TEST_ASSERT(prisoner.mood < 70, "Waking the prisoner cost no mood") // PRISON_TALK_WAKE_MOOD
+	TEST_ASSERT(!prisoner.shake_awake(member), "A prisoner already awake was shaken awake")
+	prisoner.end_activity(cancel_ai = FALSE)
 	settle_prison_air(home)
 
 // ===== AN ORDER DURING A LOCK-IN =====

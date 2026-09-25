@@ -105,3 +105,5 @@
 #define PRISON_SENT_TO_CELL_MAX (90 SECONDS)
 /// How long a prisoner told to get up stays where they stepped, so staff can search the bed
 #define PRISON_TALK_GET_UP_HOLD (10 SECONDS)
+/// Mood a sleeping prisoner loses when staff shake them awake
+#define PRISON_TALK_WAKE_MOOD 3

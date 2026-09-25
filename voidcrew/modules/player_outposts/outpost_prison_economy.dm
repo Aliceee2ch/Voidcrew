@@ -419,10 +419,21 @@
 
 /**
  * The outpost was abandoned: intake closes and every prisoner, living or dead, is transferred out.
- * No bonus, no fine, and the stipend not yet deposited is dropped. A suspension and the count of
- * lost prisoners go with them; a debt stays with the treasury.
+ * No bonus, and the stipend not yet deposited is dropped. Anyone rioting, breaking out or loose
+ * counts as escaped first: OUTPOST_PRISON_ESCAPE_FINE each, as part of the incident (so at most
+ * OUTPOST_PRISON_INCIDENT_FINE_CAP in all), and what the treasury cannot cover becomes its debt.
+ * Otherwise abandoning mid-riot and claiming the outpost back would skip those fines. A suspension
+ * and the count of lost prisoners go with them. A debt stays with the treasury, so whoever claims
+ * the outpost next inherits it, and intake stays shut until it is paid.
  */
 /datum/outpost_prison/proc/on_outpost_abandoned()
+	var/out_of_hand = 0
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && (prisoner.is_rioting() || prisoner.trouble == PRISONER_TROUBLE_LOOSE))
+			out_of_hand++
+	if(out_of_hand)
+		var/fine = charge_fine(out_of_hand * OUTPOST_PRISON_ESCAPE_FINE, "Prison escape fines: [out_of_hand] prisoner\s rioting or loose when the outpost was abandoned", TRUE)
+		add_log("[out_of_hand] prisoner\s [out_of_hand == 1 ? "was" : "were"] rioting or loose when the outpost was abandoned.[fine ? " Fined [fine] cr." : ""]")
 	set_intake(FALSE)
 	intake_suspended = FALSE
 	suspended_after = 0

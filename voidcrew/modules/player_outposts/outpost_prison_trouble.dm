@@ -615,9 +615,14 @@
 
 // ===== THREATS =====
 
-/// Anyone awake who isn't a prisoner and could be on staff: people, borgs, anyone with a mind
+/**
+ * Anyone awake who isn't a prisoner and could be on staff: people, borgs, anyone with a mind. A
+ * monkey is a human by type, but only counts when a player is in it.
+ */
 /proc/is_outpost_prison_staff(mob/living/person)
 	if(!istype(person) || is_outpost_prisoner(person) || person.stat != CONSCIOUS)
+		return FALSE
+	if(ismonkey(person) && isnull(person.mind))
 		return FALSE
 	return ishuman(person) || issilicon(person) || !isnull(person.mind)
 

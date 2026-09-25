@@ -195,7 +195,8 @@
 
 /mob/living/basic/outpost_loiterer/Initialize(mapload)
 	. = ..()
-	apply_dynamic_human_appearance(src, outfit_path = outfit_path)
+	// A random person in the outfit, so two dockhands are two different people (outpost_npc_looks.dm)
+	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(set_outpost_npc_look), src, outfit_path, gender, random_outpost_npc_look_number())
 	// Unkillable, not protected: violence against them is pointless, not punished
 	ADD_TRAIT(src, TRAIT_GODMODE, INNATE_TRAIT)
 	// move_resist only stops pulling; drag-drops (buckling to beds, stuffing

@@ -776,9 +776,17 @@
 			underlying_area = space_area
 		T.change_area(T.loc, underlying_area)
 
+	// Each load of the ferry template makes its own areas, and the ferry has just handed back all
+	// their ground. Nothing else deletes them, so every delivery used to leak one.
+	var/list/ferry_areas = shuttle_port.shuttle_areas?.Copy()
+
 	// Delete the shuttle port (force = TRUE to actually delete it)
 	qdel(shuttle_port, force = TRUE)
 	shuttle_port = null
+
+	for(var/area/shuttle/ferry_area in ferry_areas)
+		if(!QDELETED(ferry_area) && !(ferry_area.area_flags & UNIQUE_AREA) && !ferry_area.has_resident_turfs())
+			qdel(ferry_area)
 
 /**
  * Positions the cargo dock adjacent to the player's ship dock

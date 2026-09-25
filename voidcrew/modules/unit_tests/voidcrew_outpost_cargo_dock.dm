@@ -354,10 +354,18 @@
 		TEST_ASSERT(builder.can_build_at(get_step(get_step(pad, entrance_side), entrance_side)), "The docked ferry blocked construction on the apron at [rotation] degrees")
 
 		// Departure takes the ferry off and leaves the pad as it was.
+		var/list/ferry_areas = ferry_port.shuttle_areas.Copy()
+		TEST_ASSERT(length(ferry_areas), "The docked ferry has no areas at [rotation] degrees")
 		TEST_ASSERT(ferry.send_shuttle(), "The ferry could not be sent away at [rotation] degrees")
 		deltimer(ferry.warmup_timer)
 		TEST_ASSERT(ferry.complete_departure(), "The ferry could not depart at [rotation] degrees: [ferry.last_error]")
 		TEST_ASSERT_NULL(ferry.shuttle_port, "The departed ferry left its port behind at [rotation] degrees")
+		// Each delivery loads the ferry with areas of its own; departing deletes them, or one leaks per delivery.
+		for(var/area/ferry_area as anything in ferry_areas)
+			TEST_ASSERT(QDELETED(ferry_area), "The departed ferry's [ferry_area.type] was not deleted at [rotation] degrees")
+			TEST_ASSERT(!(ferry_area in GLOB.areas), "The departed ferry's area is still listed at [rotation] degrees")
+			for(var/level_key in SSmapping.areas_in_z)
+				TEST_ASSERT(!(ferry_area in SSmapping.areas_in_z[level_key]), "SSmapping.areas_in_z still holds the departed ferry's area on z [level_key] at [rotation] degrees")
 		for(var/turf/pad_tile as anything in pad_turfs)
 			TEST_ASSERT_EQUAL(pad_tile.loc, dock.installed_area, "Pad tile [pad_tile.x],[pad_tile.y] did not return to the dock's area at [rotation] degrees")
 			TEST_ASSERT_EQUAL(pad_tile.type, pad_types[pad_tile], "Pad tile [pad_tile.x],[pad_tile.y] is [pad_tile.type] after departure at [rotation] degrees")
@@ -485,7 +493,12 @@
 
 // ===== THE DOCK'S AREA IS RELEASED =====
 
-/// SSmapping.areas_in_z used to keep the cargo dock's area after its claim was torn down.
+/**
+ * SSmapping.areas_in_z used to keep a claim's areas after it was torn down. A template load
+ * registers every area it touched, then each new area registered itself again in Initialize(), and
+ * /area/Destroy() removes one entry, so the second kept the area from ever being collected (the
+ * shell's area hard deleted, and so did every deleted upgrade's). Registering is idempotent now.
+ */
 /datum/unit_test/voidcrew_outpost_cargo_dock_area_release
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -497,17 +510,26 @@
 	var/datum/outpost_upgrade/cargo_dock/dock = result
 	var/area/voidcrew/player_outpost/cargo_dock/dock_area = dock.installed_area
 	TEST_ASSERT(istype(dock_area), "The placed cargo dock recorded no area")
+	var/area/voidcrew/player_outpost/shell_area = home.outpost_area
+	TEST_ASSERT(istype(shell_area), "The claim recorded no outpost area")
 	var/z_key = "[dock.footprint_bounds[5]]"
-	var/registrations = 0
-	for(var/area/listed as anything in SSmapping.areas_in_z[z_key])
-		if(listed == dock_area)
-			registrations++
-	TEST_ASSERT_EQUAL(registrations, 1, "The cargo dock's area is registered [registrations] times on its level")
+	for(var/area/checked as anything in list(dock_area, shell_area))
+		var/registrations = 0
+		for(var/area/listed as anything in SSmapping.areas_in_z[z_key])
+			if(listed == checked)
+				registrations++
+		TEST_ASSERT_EQUAL(registrations, 1, "[checked.type] is registered [registrations] times on its level")
+	// No area anywhere is listed twice on one level.
+	for(var/level_key in SSmapping.areas_in_z)
+		var/list/level_areas = SSmapping.areas_in_z[level_key]
+		TEST_ASSERT_EQUAL(length(level_areas), length(unique_list(level_areas)), "An area is registered twice on z [level_key]")
 	settle_test_cargo_dock(home)
 
 	qdel(home)
 	var/deadline = world.time + 30 SECONDS
-	UNTIL(QDELETED(dock_area) || world.time > deadline)
+	UNTIL((QDELETED(dock_area) && QDELETED(shell_area)) || world.time > deadline)
 	TEST_ASSERT(QDELETED(dock_area), "Tearing the claim down did not delete the cargo dock's area")
+	TEST_ASSERT(QDELETED(shell_area), "Tearing the claim down did not delete the outpost's area")
 	for(var/level_key in SSmapping.areas_in_z)
 		TEST_ASSERT(!(dock_area in SSmapping.areas_in_z[level_key]), "SSmapping.areas_in_z still holds the deleted cargo dock area on z [level_key]")
+		TEST_ASSERT(!(shell_area in SSmapping.areas_in_z[level_key]), "SSmapping.areas_in_z still holds the deleted outpost area on z [level_key]")

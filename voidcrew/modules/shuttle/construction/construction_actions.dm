@@ -16,7 +16,8 @@
 	var/obj/machinery/computer/camera_advanced/base_construction/ship/ship_console = base_console
 
 	if(!ship_console.can_build_at(build_target))
-		to_chat(owner, span_warning("You can only build within the shuttle or on valid adjacent tiles!"))
+		var/denial = ship_console.get_expansion_denial(build_target)
+		to_chat(owner, span_warning(denial || "You can only build within the shuttle or on valid adjacent tiles!"))
 		return FALSE
 
 	// Check for blast doors - don't allow construction/deconstruction on tiles with blast doors

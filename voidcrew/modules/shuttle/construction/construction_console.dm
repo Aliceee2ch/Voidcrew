@@ -1634,15 +1634,41 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 	if(!port)
 		return FALSE
 	var/area/deck_area = get_area(target)
-	if(is_in_shuttle_area(target))
+	var/inside_hull = is_in_shuttle_area(target)
+	if(inside_hull)
 		// A breach exposes the deck without immediately relinquishing the ship's area.
 		deck_area = port.underlying_areas_by_turf[target]
 	if(!istype(deck_area, /area/voidcrew/outpost_hangar))
+		return FALSE
+	// Standard berths are sized to the ship: breaches in its own footprint may be floored
+	// again, but only a ship bay has room to extend the hull.
+	if(!inside_hull && istype(deck_area, /area/voidcrew/outpost_hangar/berth) && !on_berth_pad(target))
 		return FALSE
 	for(var/obj/fixture in target)
 		if(HAS_TRAIT(fixture, TRAIT_OUTPOST_PROPERTY))
 			return FALSE
 	return TRUE
+
+/**
+ * Whether a turf lies on the ground the ship's current berth was built for. Deck the
+ * hull lost (a breach handed back to the hangar) stays repairable; anything past it is
+ * extension, which a standard berth has no room for.
+ */
+/obj/machinery/computer/camera_advanced/base_construction/ship/proc/on_berth_pad(turf/target)
+	var/obj/docking_port/stationary/berth_dock = get_docking_port()?.get_docked()
+	if(!berth_dock || !target || berth_dock.z != target.z)
+		return FALSE
+	var/list/coords = berth_dock.return_coords()
+	return target.x >= min(coords[1], coords[3]) && target.x <= max(coords[1], coords[3]) \
+		&& target.y >= min(coords[2], coords[4]) && target.y <= max(coords[2], coords[4])
+
+/// Why the hull cannot grow onto this turf, when the reason is standard berth parking.
+/obj/machinery/computer/camera_advanced/base_construction/ship/proc/get_expansion_denial(turf/target)
+	if(!target || is_in_shuttle_area(target))
+		return null
+	if(istype(get_area(target), /area/voidcrew/outpost_hangar/berth) && !on_berth_pad(target))
+		return OUTPOST_BERTH_CONSTRUCTION_DENIAL
+	return null
 
 /**
  * Checks if the drone can move to a destination turf

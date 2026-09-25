@@ -185,6 +185,10 @@
 /obj/structure/cable,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
+"J" = (
+/obj/structure/outpost_kessler_vent,
+/turf/open/floor/iron/dark,
+/area/voidcrew/player_outpost/prison)
 "K" = (
 /obj/machinery/door/airlock/security/glass/outpost_prison_cell{
 	cell_number = 1
@@ -305,7 +309,7 @@ k
 e
 i
 g
-g
+J
 c
 y
 x
@@ -337,7 +341,7 @@ O
 (4,1,1) = {"
 O
 T
-k
+J
 k
 O
 S
@@ -409,7 +413,7 @@ O
 (8,1,1) = {"
 O
 T
-k
+J
 k
 O
 n
@@ -481,7 +485,7 @@ O
 (12,1,1) = {"
 O
 T
-k
+J
 k
 i
 g
@@ -510,7 +514,7 @@ g
 q
 k
 k
-k
+J
 k
 O
 "}
@@ -553,11 +557,11 @@ O
 (16,1,1) = {"
 O
 T
-k
+J
 k
 i
 X
-g
+J
 z
 g
 j

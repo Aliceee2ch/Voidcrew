@@ -68,15 +68,16 @@
 #define OUTPOST_CONTRABAND_ONLOOKER_RANGE 5
 
 // ----- Mail -----
-/// Between letters, counted only while the crew is home
-#define OUTPOST_MAIL_GAP_MIN (6 MINUTES)
-#define OUTPOST_MAIL_GAP_MAX (10 MINUTES)
-/// Undelivered letters at once
-#define OUTPOST_MAIL_MAX_WAITING 2
+/// Between mail pods, counted only while the crew is home
+#define OUTPOST_MAIL_WAVE_GAP_MIN (15 MINUTES)
+#define OUTPOST_MAIL_WAVE_GAP_MAX (25 MINUTES)
+/// Percent of the prisoners present a mail pod brings letters for, at random between these (at least one, never all)
+#define OUTPOST_MAIL_WAVE_SHARE_MIN 33
+#define OUTPOST_MAIL_WAVE_SHARE_MAX 50
 /// Seconds of sentence a prisoner needs left to get a letter; one letter per stay
 #define OUTPOST_MAIL_MIN_SENTENCE 180
 /// An undelivered letter is returned (deleted) after this long with the crew home, and its prisoner loses OUTPOST_MAIL_EXPIRED_MOOD
-#define OUTPOST_MAIL_EXPIRY (10 MINUTES)
+#define OUTPOST_MAIL_EXPIRY (15 MINUTES)
 #define OUTPOST_MAIL_EXPIRED_MOOD 3
 /// Letter kinds by weight, and the mood each gives the reader (contraband reads as news)
 #define OUTPOST_MAIL_WEIGHT_GOOD 30

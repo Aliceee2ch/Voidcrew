@@ -9,8 +9,8 @@
 
 /// A turned wing comes with a tiny fan under its entrance, its yard bin and its office kit: the
 /// baton instead of handcuffs, the recharger, light tubes, flashlights, the cleaning kit, eight
-/// uniforms, the mailbag on an office table by a serving hatch and a crowbar on the rack for the
-/// cell cisterns.
+/// uniforms, the mailbag on an office table by a serving hatch, a crowbar on the rack for the
+/// cell cisterns, and air scrubbers in the cells and the yard.
 /datum/unit_test/voidcrew_outpost_prison_map_kit
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -131,5 +131,21 @@
 	TEST_ASSERT_EQUAL(length(crowbars), 1, "The wing should have one crowbar")
 	TEST_ASSERT(locate(/obj/structure/rack) in get_turf(crowbars[1]), "The crowbar is not on the rack")
 	TEST_ASSERT(all_in_office(prison, mailbags + crowbars), "The mailbag or the crowbar is on the prisoners' side of the wing")
+
+	// Air scrubbers for the scrubber overflow: one in each cell and three in the yard, all in the
+	// cell block and none welded. The seven sealed Kessler vents are still there beside them.
+	var/list/scrubbers = wing_things(prison, /obj/machinery/atmospherics/components/unary/vent_scrubber)
+	TEST_ASSERT_EQUAL(length(scrubbers), 7, "The wing should have seven air scrubbers")
+	for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrubber as anything in scrubbers)
+		TEST_ASSERT(prison.cell_block[get_turf(scrubber)], "An air scrubber is outside the cell block")
+		TEST_ASSERT(!scrubber.welded, "An air scrubber came welded shut")
+	TEST_ASSERT_EQUAL(length(prison.cells), 4, "The turned wing should have four cells")
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		var/in_cell = 0
+		for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrubber as anything in scrubbers)
+			if(cell.turf_set[get_turf(scrubber)])
+				in_cell++
+		TEST_ASSERT_EQUAL(in_cell, 1, "Cell [cell.number] should have one air scrubber")
+	TEST_ASSERT_EQUAL(length(wing_things(prison, /obj/structure/outpost_kessler_vent)), 7, "The wing should still have seven Kessler vents")
 
 	settle_prison_air(home)

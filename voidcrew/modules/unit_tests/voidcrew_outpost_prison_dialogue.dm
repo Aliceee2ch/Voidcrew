@@ -33,7 +33,7 @@
 		"retaliate", "cower_hit",
 		// Wildcard incidents and wing events (outpost_prison_incidents.dm, outpost_prison_wing_events.dm)
 		"incident_brooding", "incident_stab", "incident_stopped", "incident_pacing", "incident_snap",
-		"wing_lights_blown", "wing_vent_backup", "wing_toilet_flood",
+		"wing_lights_blown", "wing_scrubber_overflow", "wing_toilet_flood",
 	)
 
 /// Contexts said by the researcher and the Kessler team, who have no personality or prisoner details

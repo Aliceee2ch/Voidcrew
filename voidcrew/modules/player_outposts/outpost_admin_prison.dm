@@ -41,7 +41,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_changeling_stage", // {stage: burst|horror}: the changeling event skips ahead
 	"prison_experiment_end", // {}: ends the experiment with no fee
 	"prison_incident", // {kind: stab|snap|fight, tell}: a wildcard incident now, past its clock; tell 1 plays the tell first
-	"prison_wing_event", // {kind: lights|vent|toilet}: a wing event now, past its clock
+	"prison_wing_event", // {kind: lights|scrubber|toilet}: a wing event now, past its clock
 	"prison_horror", // {what: kill|regen}: kills the horror for good, or drops it to regenerate (gets it up if it is down)
 	// The extras (outpost_prison_extras.dm); each package validates its own params
 	"prison_guard_spawn", // {}: a free guard, ignoring the cap
@@ -54,6 +54,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_cards", // {}: a card game at the table with the deck, if two can play
 	"prison_stash", // {cell, kind: shiv|pruno|clear}
 	"prison_mail", // {ref, kind: good|kid|news|bad|contraband}: a letter for that prisoner in the mailbag
+	"prison_mail_wave", // {}: a mail pod now, with letters for a share of the prisoners
 	"prison_lead", // {ref}: that prisoner carries a lead and the wing is ready to give one
 ))
 
@@ -355,7 +356,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 			record(user, home, "start a prison [kind] incident[with_tell ? " with its tell" : ""]")
 		if("prison_wing_event")
 			var/kind = params["kind"]
-			if(!istext(kind) || !(kind in list("lights", "vent", "toilet")))
+			if(!istext(kind) || !(kind in list("lights", "scrubber", "toilet")))
 				error = "Invalid wing event."
 				return
 			var/refusal = prison.wing_event_refusal(kind)

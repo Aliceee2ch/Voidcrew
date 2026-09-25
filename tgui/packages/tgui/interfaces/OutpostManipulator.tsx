@@ -214,7 +214,7 @@ type PrisonIncidents = {
   wing_event_in: number | null;
   /** why the wing event clock is not running, null when it is */
   wing_event_paused: string | null;
-  /** vent or toilet while one gurgles */
+  /** scrubber or toilet while one gurgles */
   wing_event_pending: string | null;
 };
 
@@ -258,7 +258,7 @@ type AdminMail = {
     /** seconds */
     age: number;
   }[];
-  /** seconds until the next letter, null when the clock is stopped */
+  /** seconds until the next mail pod, null when the clock is stopped */
   next_in: number | null;
 };
 
@@ -1114,7 +1114,7 @@ const INCIDENT_KINDS = [
 /** prison_wing_event kinds */
 const WING_EVENTS = [
   ['lights', 'Blow Lights', 'lightbulb'],
-  ['vent', 'Vent Backup', 'wind'],
+  ['scrubber', 'Scrubber Overflow', 'wind'],
   ['toilet', 'Toilet Flood', 'toilet'],
 ] as const;
 
@@ -2302,9 +2302,18 @@ const PrisonExtrasTools = ({
         ) : null}
         {mail ? (
           <LabeledList.Item label="Mail">
-            <Box color="label">
+            <Button
+              compact
+              icon="envelope"
+              disabled={busy}
+              tooltip="A mail pod now, with letters for a share of the prisoners"
+              onClick={() => act('prison_mail_wave', {})}
+            >
+              Mail pod
+            </Button>
+            <Box inline color="label" ml={1}>
               {isNum(mail.next_in)
-                ? `Next letter in ${clock(mail.next_in)}`
+                ? `Next mail pod in ${clock(mail.next_in)}`
                 : 'Mail clock stopped'}
             </Box>
             {letters.map((letter) => (

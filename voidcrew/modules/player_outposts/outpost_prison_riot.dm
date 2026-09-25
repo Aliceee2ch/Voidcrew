@@ -1266,9 +1266,10 @@
 	obj_damage = PRISONER_LOOSE_OBJ_DAMAGE
 	update_melee()
 	update_bubble()
-	// The outpost patrol AI (voidcrew/modules/npc_ships/code/outpost_patrol.dm)
+	// The outpost patrol AI (voidcrew/modules/npc_ships/code/outpost_patrol.dm). Finding the doors
+	// yields on a big outpost, and this runs in the prison's tick on SSprocessing.
 	swap_basic_ai_controller(src, /datum/ai_controller/basic_controller/outpost_breakout)
-	assign_mob_to_outpost_patrol(src, prison?.outpost)
+	assign_mob_to_outpost_patrol_async(src, prison?.outpost)
 
 /// Back in the cell block, down: in custody again, in a foul mood
 /datum/outpost_prison/proc/recapture(mob/living/basic/outpost_prisoner/prisoner)

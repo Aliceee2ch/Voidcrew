@@ -396,3 +396,49 @@
 		TEST_ASSERT(get_dist(origin, door) >= farthest_kept, "A door [get_dist(origin, door)] tiles from the wing was dropped while one [farthest_kept] tiles away was kept")
 	qdel(cache)
 	settle_prison_air(home)
+
+// ===== THE LOOKUP NEVER HOLDS UP THE PRISON =====
+
+/**
+ * Looking for an outpost's doors yields whenever the tick is full, and a prisoner goes loose from
+ * the prison's tick on SSprocessing, where a sleep stalls everything else the subsystem runs. So
+ * going loose hands the lookup off and returns at once; the patrol is assigned when it finishes,
+ * and not at all if the prisoner was caught meanwhile.
+ */
+/datum/unit_test/voidcrew_outpost_patrol_async
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_patrol_async/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("patrolasyncowner")
+	TEST_ASSERT_NOTNULL(home, "The patrol lookup test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/basic/outpost_prisoner/runner = trouble_prisoner(prison, prison_spot(home, 9, 8))
+	var/mob/living/basic/outpost_prisoner/caught = trouble_prisoner(prison, prison_spot(home, 10, 8))
+
+	// With no tick left, the lookup's first CHECK_TICK has to give the tick back.
+	var/started = world.time
+	Master.current_ticklimit = 0
+	runner.go_loose()
+	var/returned_at = world.time
+	if(!Master.current_ticklimit)
+		Master.current_ticklimit = TICK_LIMIT_RUNNING
+	TEST_ASSERT_EQUAL(returned_at, started, "Going loose waited [returned_at - started] ds for the door lookup")
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(has_patrol), runner), 10 SECONDS), "The loose prisoner was never put on the patrol")
+	TEST_ASSERT(length(runner.ai_controller.blackboard["mob_patrol_path"]) <= 40, "The patrol path is longer than 40 stops") // OUTPOST_PATROL_MAX_STOPS
+
+	// Caught while the doors are still being looked for: no patrol for the prisoner back in custody.
+	var/datum/outpost_patrol_cache/cache = GLOB.outpost_patrol_caches[REF(home)]
+	TEST_ASSERT_NOTNULL(cache, "The outpost has no patrol cache")
+	cache.dirty = TRUE
+	Master.current_ticklimit = 0
+	caught.go_loose()
+	caught.back_in_custody()
+	if(!Master.current_ticklimit)
+		Master.current_ticklimit = TICK_LIMIT_RUNNING
+	UNTIL(!cache.rebuilding || world.time > started + 20 SECONDS)
+	sleep(1)
+	TEST_ASSERT(!has_patrol(caught), "A prisoner caught during the door lookup was put on the patrol")
+	settle_prison_air(home)
+
+/datum/unit_test/voidcrew_outpost_patrol_async/proc/has_patrol(mob/living/walker)
+	return length(walker.ai_controller?.blackboard["mob_patrol_path"]) > 0

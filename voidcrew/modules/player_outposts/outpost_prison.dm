@@ -1,10 +1,12 @@
 /// The prison wing an outpost buys from its upgrades catalog. Each placement
 /// loads its own instance (the parent has no UNIQUE_AREA), with its own APC,
-/// so a power failure in the wing stays in the wing.
+/// so a power failure in the wing stays in the wing. It echoes like a big hard
+/// room, so the yard's noise (and a brewing riot) carries to the office.
 /area/voidcrew/player_outpost/prison
 	name = "\improper Prison Wing"
 	icon = 'icons/area/areas_station.dmi'
 	icon_state = "sec_prison"
+	sound_environment = SOUND_AREA_LARGE_ENCLOSED
 	/// The prison this wing houses, once placement has finished
 	var/datum/outpost_prison/prison
 

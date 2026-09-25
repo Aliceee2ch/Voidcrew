@@ -374,6 +374,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	var/max_duration = 120 SECONDS
 	/// Whether another prisoner may pull them into a chat
 	var/interruptible = TRUE
+	/// Whether doing it lifts their mood by PRISONER_MOOD_ACTIVITY a minute
+	var/mood_activity = FALSE
 	/// Asleep: no chatting, only sleep talk
 	var/sleeping = FALSE
 	var/mob/living/basic/outpost_prisoner/prisoner
@@ -770,6 +772,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 /datum/prisoner_activity/basketball
 	name = "shooting hoops"
 	leisure = TRUE
+	mood_activity = TRUE
 	context = "basketball"
 	weight = 8
 	personality_weights = list("cheerful" = 1.8, "chatty" = 1.2, "quiet" = 0.5, "nervous" = 0.7)
@@ -818,7 +821,12 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	SIGNAL_HANDLER
 	var/obj/structure/hoop/hoop = hoop_ref?.resolve()
 	var/mob/living/thrower = thrown?.get_thrower()
-	if(!hoop || !istype(thrower) || is_outpost_prisoner(thrower) || hoop.total_score <= score_at_throw)
+	if(!hoop || !istype(thrower) || is_outpost_prisoner(thrower))
+		return
+	var/scored = hoop.total_score > score_at_throw
+	// The courtside crowd (outpost_prison_pastimes.dm) sees every shot.
+	prisoner?.prison?.on_basket(thrower, hoop, scored)
+	if(!scored)
 		return
 	prisoner?.prison?.staff_basket(thrower, hoop)
 
@@ -901,6 +909,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 		return
 	var/obj/structure/hoop/hoop = hoop_ref?.resolve()
 	var/scored = hoop && hoop.total_score > old_score
+	if(hoop)
+		prisoner.prison?.on_basket(prisoner, hoop, scored)
 	if(prob(scored ? 50 : 35))
 		prisoner.say_context(scored ? "basketball_score" : "basketball_miss")
 
@@ -914,6 +924,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 /datum/prisoner_activity/read
 	name = "reading"
 	leisure = TRUE
+	mood_activity = TRUE
 	context = "reading"
 	weight = 7
 	personality_weights = list("quiet" = 1.8, "nervous" = 1.2, "cheerful" = 0.8, "chatty" = 0.7)
@@ -1029,6 +1040,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 /datum/prisoner_activity/chat
 	name = "chatting"
 	leisure = TRUE
+	mood_activity = TRUE
 	weight = 7
 	personality_weights = list("chatty" = 2, "cheerful" = 1.5, "grumpy" = 0.6, "quiet" = 0.4)
 	min_duration = 30 SECONDS
@@ -1047,7 +1059,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 			continue
 		options += other
 	while(length(options))
-		var/mob/living/basic/outpost_prisoner/other = pick_n_take(options)
+		// Friends first (outpost_prison_life.dm); the pick comes out of options either way.
+		var/mob/living/basic/outpost_prisoner/other = prisoner.prison.take_chat_partner(prisoner, options)
 		var/turf/beside = prisoner.approach_turf(other)
 		if(!beside)
 			continue
@@ -1081,7 +1094,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	prisoner.face_atom(partner)
 	if(world.time >= next_exchange)
 		next_exchange = world.time + rand(15, 25) SECONDS
-		if(prisoner.prison.wing_can_speak())
+		if(prisoner.prison.wing_can_speak() && !prisoner.prison.speech_hushed(prisoner, "conversation"))
 			prisoner.start_conversation(partner)
 	return ..()
 
@@ -1089,6 +1102,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	var/mob/living/basic/outpost_prisoner/partner = partner_ref?.resolve()
 	if(partner && istype(partner.activity, /datum/prisoner_activity/chat/listen) && partner.activity.chat_partner() == prisoner)
 		partner.end_activity()
+	if(started && partner)
+		prisoner?.prison?.note_chat(prisoner, partner)
 	return ..()
 
 /// The other half of a chat: stays put and faces whoever came over
@@ -1144,7 +1159,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	var/datum/weakref/bin_ref
 
 /datum/prisoner_activity/eat/setup()
-	var/obj/item/food/meal = istype(prisoner.held_item, /obj/item/food) ? prisoner.held_item : null
+	// A held cake saved for a party is not a meal (outpost_prison_pastimes.dm).
+	var/obj/item/food/meal = (istype(prisoner.held_item, /obj/item/food) && !prisoner.prison.reserved_supply(prisoner.held_item, prisoner)) ? prisoner.held_item : null
 	if(meal)
 		food_ref = WEAKREF(meal)
 		return go_to_seat()

@@ -97,6 +97,9 @@
 /proc/may_use_outpost_prison_staff_door(atom/door, mob/accessor)
 	if(is_outpost_prisoner(accessor))
 		return FALSE
+	// The wing's own guards (outpost_prison_guards.dm)
+	if(is_outpost_prison_guard(accessor))
+		return TRUE
 	if(isAdminGhostAI(accessor))
 		return TRUE
 	var/datum/outpost_prison/prison = get_outpost_prison(door)
@@ -105,11 +108,11 @@
 // ===== THE PRISON'S OWN MOBS =====
 
 /**
- * Whether a mob belongs to an outpost prison: its prisoners, and later the experiments' creatures
- * and researcher. The prison deletes them with the outpost, so they never block deleting it.
+ * Whether a mob belongs to an outpost prison: its prisoners and guards, and later the experiments'
+ * creatures and researcher. The prison deletes them with the outpost, so they never block deleting it.
  */
 /proc/is_outpost_prison_mob(atom/thing)
-	return is_outpost_prisoner(thing)
+	return is_outpost_prisoner(thing) || is_outpost_prison_guard(thing)
 
 // ===== REACH =====
 

@@ -451,6 +451,15 @@
 			tile_differences++
 	if(tile_differences > 5)
 		problems += "[tile_differences - 5] more tiles differ"
+	if(tile_differences)
+		// Whether a differing fitting was lost or only ended up elsewhere.
+		var/list/built_totals = fitting_totals(built_tiles)
+		var/list/spawned_totals = fitting_totals(spawned_tiles)
+		var/list/totals = list()
+		for(var/type_name in (built_totals | spawned_totals))
+			if(built_totals[type_name] != spawned_totals[type_name])
+				totals += "[type_name] [built_totals[type_name] || 0]/[spawned_totals[type_name] || 0]"
+		problems += "fitting totals built/spawned: [length(totals) ? totals.Join(", ") : "equal"]"
 	// Loose structures (crates, buckets, boxes) are often rolled by random spawners: compared in total.
 	var/loose_tiles = 0
 	for(var/i in 1 to min(length(built_loose), length(spawned_loose)))
@@ -592,3 +601,14 @@
 			return FALSE
 		spawned_things -= matched
 	return TRUE
+
+/// Every fitting type in a set of tile lines, counted.
+/datum/unit_test/voidcrew_checkpoints/every_ship/ship_orders/proc/fitting_totals(list/lines)
+	var/list/totals = list()
+	for(var/line in lines)
+		var/list/parts = splittext(line, " ")
+		if(length(parts) != 3 || !parts[3])
+			continue
+		for(var/type_name in splittext(parts[3], ","))
+			totals[type_name]++
+	return totals

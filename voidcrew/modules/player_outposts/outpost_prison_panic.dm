@@ -195,13 +195,26 @@
 	return found
 
 /**
- * Whether a creature in the wing is shut in: no more than OUTPOST_PANIC_SHUT_IN_TILES of floor a
- * prisoner could stand on around it, as in a bolted cell or a corner walled off. It frightens only
- * those who can see it, so a creature kept locked away never keeps the whole wing hiding for free.
+ * Whether a creature in the cell block is shut in: over floor a prisoner could stand on, it cannot
+ * get to the doorway of any cell but the one it is in, as in a bolted cell or a corner of the yard
+ * walled off. It frightens only those who can see it, so a creature kept locked away never keeps the
+ * whole wing hiding for free. One outside the cell block is never shut in.
  */
 /datum/outpost_prison/proc/creature_shut_in(mob/living/creature)
 	var/turf/start = get_turf(creature)
-	if(!start || start.loc != wing)
+	if(!start || start.loc != wing || !in_cell_block(start))
+		return FALSE
+	// The yard-side tiles in front of every other cell's door
+	var/datum/outpost_prison_cell/own_cell = cell_at(start)
+	var/list/doorsteps = list()
+	for(var/datum/outpost_prison_cell/cell as anything in cells)
+		if(cell == own_cell || !cell.door_turf)
+			continue
+		for(var/direction in GLOB.cardinals)
+			var/turf/doorstep = get_step(cell.door_turf, direction)
+			if(doorstep && !cell.turf_set[doorstep])
+				doorsteps[doorstep] = TRUE
+	if(doorsteps[start])
 		return FALSE
 	var/list/seen = list()
 	seen[start] = TRUE
@@ -211,12 +224,15 @@
 		var/turf/current = queue[index++]
 		for(var/direction in GLOB.cardinals)
 			var/turf/next = get_step(current, direction)
-			if(!next || seen[next] || next.loc != wing || !prisoner_can_stand(next))
+			if(!next || seen[next] || next.loc != wing || !in_cell_block(next))
+				continue
+			// At a cell door, whatever is piled on the step
+			if(doorsteps[next])
+				return FALSE
+			if(!prisoner_can_stand(next))
 				continue
 			seen[next] = TRUE
 			queue += next
-			if(length(queue) > OUTPOST_PANIC_SHUT_IN_TILES)
-				return FALSE
 	return TRUE
 
 /// Whether a creature that fully frightens is out and about, not shut in. The guards keep to the office meanwhile (outpost_prison_guards.dm).
@@ -650,10 +666,10 @@
 	make_plan(threat)
 	if(spot == prisoner.loc)
 		spot = null
-	if(spot)
-		if(spot != was_going)
-			redirect()
-	else if(plan != old_plan)
+	// Somewhere new, or nowhere now: the walk they were on stops.
+	if(spot != was_going)
+		redirect()
+	if(!spot && plan != old_plan)
 		settle()
 	return TRUE
 

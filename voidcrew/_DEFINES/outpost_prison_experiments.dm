@@ -113,9 +113,6 @@
 #define OUTPOST_PANIC_SPOT_MARGIN 2
 /// Seconds between looks at whether where they are running or hiding still holds
 #define OUTPOST_PANIC_REPLAN_GAP 2
-/// A creature with no more floor than this around it that a prisoner could stand on (a bolted cell, a
-/// corner walled off) is shut in: it frightens only those who can see it, not the whole cell block
-#define OUTPOST_PANIC_SHUT_IN_TILES 12
 /// Rioters and fighters roll to run or fight when a creature comes this close
 #define OUTPOST_PANIC_ROLL_RANGE 3
 /// Seconds a rioter's or fighter's roll holds before they roll again

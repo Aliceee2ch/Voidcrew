@@ -2,7 +2,7 @@
  * # Prison wing fixtures
  *
  * The pieces the prison wing's map places: uniforms that get dirty, the serving hatches, the
- * ration dispenser, the wing's first aid kit and bookcases. The machines have no circuit boards or
+ * supply dispenser, the wing's first aid kit and bookcases. The machines have no circuit boards or
  * designs and are protected outpost property, so they only exist in a placed prison wing and never
  * end up on a ship. The wing's doors and bolt buttons are in outpost_prison_doors.dm.
  */
@@ -52,15 +52,88 @@
  * A reinforced counter set into the wall between the office and the yard, with a window door on
  * each side like a security front desk. Staff open their side, leave meals and clean clothes on
  * the counter and close it; prisoners open theirs and take them. Nobody climbs over it.
+ *
+ * It holds OUTPOST_PRISON_HATCH_CAPACITY items. Staff can't put more on it by hand or from a tray,
+ * and anything dumped or thrown onto a full counter slides back off. A prisoner swapping a clean
+ * uniform for their dirty one never counts against it.
  */
 /obj/structure/table/reinforced/prison_hatch
 	name = "serving hatch"
 	desc = "A reinforced counter built into the wall, with a window door on each side. Meals and clean clothes go across it. People don't."
 	pass_flags_self = LETPASSTHROW
+	COOLDOWN_DECLARE(full_message_cooldown)
 
 /obj/structure/table/reinforced/prison_hatch/Initialize(mapload)
 	. = ..()
 	AddElement(/datum/element/outpost_property)
+	var/static/list/loc_connections = list(
+		COMSIG_ATOM_ENTERED = PROC_REF(on_counter_entered),
+	)
+	AddElement(/datum/element/connect_loc, loc_connections)
+
+/obj/structure/table/reinforced/prison_hatch/examine(mob/user)
+	. = ..()
+	. += span_notice("It holds [stock_count()] of [OUTPOST_PRISON_HATCH_CAPACITY] items.")
+
+/// Items on the counter
+/obj/structure/table/reinforced/prison_hatch/proc/stock_count()
+	var/count = 0
+	for(var/obj/item/thing in loc)
+		if(!(thing.item_flags & ABSTRACT))
+			count++
+	return count
+
+/// How many more items fit on the counter
+/obj/structure/table/reinforced/prison_hatch/proc/room_left()
+	return max(0, OUTPOST_PRISON_HATCH_CAPACITY - stock_count())
+
+/obj/structure/table/reinforced/prison_hatch/table_place_act(mob/living/user, obj/item/tool, list/modifiers)
+	if(!(tool.item_flags & ABSTRACT) && room_left() <= 0)
+		balloon_alert(user, "the counter is full")
+		return ITEM_INTERACT_BLOCKING
+	. = ..()
+	if(. == ITEM_INTERACT_SUCCESS && tool.loc == loc)
+		get_outpost_prison(src)?.on_hatch_stocked(src, list(tool), user)
+
+/obj/structure/table/reinforced/prison_hatch/tray_act(mob/living/user, obj/item/storage/bag/tray/used_tray)
+	if(!length(used_tray.contents))
+		return NONE
+	var/room = room_left()
+	if(room <= 0)
+		balloon_alert(user, "the counter is full")
+		return ITEM_INTERACT_BLOCKING
+	var/list/moved = list()
+	for(var/obj/item/thing in used_tray.contents)
+		if(length(moved) >= room)
+			break
+		used_tray.atom_storage.attempt_remove(thing, loc)
+		moved += thing
+	used_tray.update_appearance()
+	user.visible_message(span_notice("[user] empties [length(moved) < room ? "" : "some of "][used_tray] on [src]."))
+	if(length(used_tray.contents))
+		balloon_alert(user, "the counter is full")
+	get_outpost_prison(src)?.on_hatch_stocked(src, moved, user)
+	return ITEM_INTERACT_SUCCESS
+
+/// Something landed on the counter: dumped, thrown or dropped there. Over capacity, it slides back off.
+/obj/structure/table/reinforced/prison_hatch/proc/on_counter_entered(datum/source, atom/movable/arrived, atom/old_loc, list/atom/old_locs)
+	SIGNAL_HANDLER
+	if(!isitem(arrived) || stock_count() <= OUTPOST_PRISON_HATCH_CAPACITY)
+		return
+	var/turf/back = get_turf(old_loc)
+	if(!back || back == loc || isclosedturf(back))
+		back = staff_side_turf()
+	if(!back)
+		return
+	INVOKE_ASYNC(src, PROC_REF(push_off), arrived, back)
+
+/obj/structure/table/reinforced/prison_hatch/proc/push_off(obj/item/thing, turf/back)
+	if(QDELETED(thing) || thing.loc != loc || stock_count() <= OUTPOST_PRISON_HATCH_CAPACITY)
+		return
+	thing.forceMove(back)
+	if(COOLDOWN_FINISHED(src, full_message_cooldown))
+		COOLDOWN_START(src, full_message_cooldown, 1 SECONDS)
+		visible_message(span_notice("[thing] slides off [src]. The counter is full."))
 
 /obj/structure/table/reinforced/prison_hatch/make_climbable()
 	return
@@ -100,7 +173,7 @@
 		INVOKE_ASYNC(yard_door, TYPE_PROC_REF(/obj/machinery/door/window, open_and_close))
 	return FALSE
 
-// ===== RATION DISPENSER =====
+// ===== SUPPLY DISPENSER =====
 
 /obj/item/food/prison_ration
 	name = "prison ration"
@@ -113,10 +186,16 @@
 	foodtypes = GRAIN
 	w_class = WEIGHT_CLASS_SMALL
 
-/// Prints rations for the prison office. Each one is billed to the outpost treasury.
+/**
+ * The prison office's supplies, each billed to the outpost treasury: a ration into your hand, a
+ * round of OUTPOST_PRISON_SERVE_ROUND rations straight onto the nearest serving hatch with room
+ * (billed per ration placed), a bruise pack, or a prison uniform. The owner, stewards and
+ * treasurers order freely; residents may order OUTPOST_PRISON_RESIDENT_ORDERS items per
+ * OUTPOST_PRISON_RESIDENT_ORDER_WINDOW between them.
+ */
 /obj/machinery/outpost_ration_dispenser
-	name = "ration dispenser"
-	desc = "Prints plain prison rations, billed to the outpost treasury."
+	name = "supply dispenser"
+	desc = "Prints rations, dressings and prison uniforms for the wing, billed to the outpost treasury. It can also put a round of rations straight onto a serving hatch."
 	icon = 'icons/obj/machines/vending.dmi'
 	icon_state = "sustenance"
 	density = TRUE
@@ -139,23 +218,93 @@
 
 /obj/machinery/outpost_ration_dispenser/examine(mob/user)
 	. = ..()
-	. += span_notice("Each ration costs [OUTPOST_PRISON_RATION_COST] cr from the outpost treasury.")
+	. += span_notice("A ration is [OUTPOST_PRISON_RATION_COST] cr, a bruise pack [OUTPOST_PRISON_BRUISE_PACK_COST] cr and a prison uniform [OUTPOST_PRISON_UNIFORM_COST] cr, from the outpost treasury.")
 
 /obj/machinery/outpost_ration_dispenser/interact(mob/user)
 	. = ..()
 	if(!isliving(user))
 		return
-	var/denial = dispense(user)
+	var/list/choices = list()
+	for(var/key in list("ration", "round", "bruise_pack", "uniform"))
+		var/datum/radial_menu_choice/choice = new
+		choice.name = "[order_name(key)] ([price_of(key)] cr[key == "round" ? " each" : ""])"
+		choice.image = order_image(key)
+		choices[key] = choice
+	var/picked = show_radial_menu(user, src, choices, require_near = TRUE, tooltips = TRUE)
+	if(!picked || QDELETED(src) || !user.Adjacent(src))
+		return
+	var/denial = order(user, picked)
 	if(denial)
 		balloon_alert(user, denial)
 		playsound(src, 'sound/machines/buzz/buzz-sigh.ogg', 30, TRUE)
 
-/// Who may bill rations to the treasury: the owner, stewards, treasurers and residents
+/// What an order is called
+/obj/machinery/outpost_ration_dispenser/proc/order_name(key)
+	switch(key)
+		if("ration")
+			return "Ration"
+		if("round")
+			return "Serve a round"
+		if("bruise_pack")
+			return "Bruise pack"
+		if("uniform")
+			return "Prison uniform"
+	return null
+
+/// What an order reads as on the treasury's history
+/obj/machinery/outpost_ration_dispenser/proc/bill_text(key, count)
+	switch(key)
+		if("ration")
+			return "Prison ration"
+		if("round")
+			return "Prison rations x[count], served to the hatch"
+		if("bruise_pack")
+			return "Prison bruise pack"
+		if("uniform")
+			return "Prison uniform"
+	return "Prison supplies"
+
+/// What an order costs, per item
+/obj/machinery/outpost_ration_dispenser/proc/price_of(key)
+	switch(key)
+		if("ration", "round")
+			return OUTPOST_PRISON_RATION_COST
+		if("bruise_pack")
+			return OUTPOST_PRISON_BRUISE_PACK_COST
+		if("uniform")
+			return OUTPOST_PRISON_UNIFORM_COST
+	return 0
+
+/// The radial menu picture of an order
+/obj/machinery/outpost_ration_dispenser/proc/order_image(key)
+	switch(key)
+		if("ration")
+			return image(icon = /obj/item/food/prison_ration::icon, icon_state = /obj/item/food/prison_ration::icon_state)
+		if("round")
+			return image(icon = /obj/item/storage/bag/tray::icon, icon_state = /obj/item/storage/bag/tray::icon_state)
+		if("bruise_pack")
+			return image(icon = /obj/item/stack/medical/bruise_pack::icon, icon_state = /obj/item/stack/medical/bruise_pack::icon_state)
+		if("uniform")
+			return outpost_prisoner_bubble_item("dirty")
+	return null
+
+/// Who may bill supplies to the treasury: the owner, stewards, treasurers and residents
 /obj/machinery/outpost_ration_dispenser/proc/may_order(mob/living/user, obj/structure/overmap/dynamic/player_outpost/home)
 	return home.can_manage(user) || home.can_spend(user) || (user.mind && (user.mind in home.residents))
 
-/// Prints one ration for the user. Returns null on success, else why not.
+/// Prints one ration into the user's hand. Returns null on success, else why not.
 /obj/machinery/outpost_ration_dispenser/proc/dispense(mob/living/user)
+	return order(user, "ration")
+
+/**
+ * Bills and prints one order ("ration", "round", "bruise_pack" or "uniform") for the user.
+ * Everything is checked and paid before anything is made, with nothing in between that can wait.
+ * Returns null on success, else why not.
+ */
+/obj/machinery/outpost_ration_dispenser/proc/order(mob/living/user, key)
+	var/price = price_of(key)
+	if(!price)
+		return "no such order"
 	if(!is_operational)
 		return "no power"
 	if(!COOLDOWN_FINISHED(src, dispense_cooldown))
@@ -165,15 +314,88 @@
 		return "no outpost link"
 	if(!may_order(user, home))
 		return "residents only"
+	var/datum/outpost_prison/prison = get_outpost_prison(src)
+	var/count = key == "round" ? OUTPOST_PRISON_SERVE_ROUND : 1
+	var/resident = !home.can_manage(user) && !home.can_spend(user)
+	if(resident)
+		count = min(count, prison ? prison.resident_orders_left() : 0)
+		if(count <= 0)
+			return "restocking"
+	// A round goes onto the hatches, as far as they have room.
+	var/list/obj/structure/table/reinforced/prison_hatch/hatches = key == "round" ? hatches_by_distance(prison) : null
+	if(key == "round")
+		var/room = 0
+		for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in hatches)
+			room += hatch.room_left()
+		if(!length(hatches))
+			return "no serving hatch"
+		if(!room)
+			return "the hatches are full"
+		count = min(count, room)
 	home.ensure_home_services()
-	if(!home.treasury?.adjust_money(-OUTPOST_PRISON_RATION_COST, "Prison ration, ordered by [user.ckey || user.name]"))
+	var/datum/bank_account/treasury = home.treasury
+	if(!treasury)
 		return "insufficient funds"
-	COOLDOWN_START(src, dispense_cooldown, 1 SECONDS)
-	var/obj/item/food/prison_ration/ration = new(drop_location())
-	user.put_in_hands(ration)
+	count = min(count, round(treasury.account_balance / price))
+	var/bill = bill_text(key, count)
+	if(count <= 0 || !treasury.adjust_money(-price * count, "[bill], ordered by [user.ckey || user.name]"))
+		return "insufficient funds"
+	COOLDOWN_START(src, dispense_cooldown, OUTPOST_PRISON_ORDER_COOLDOWN)
+	if(resident)
+		prison.note_resident_orders(count)
+	prison?.note_spending(price * count, bill)
 	playsound(src, 'sound/machines/machine_vend.ogg', 40, TRUE)
 	use_energy(active_power_usage)
+	if(key == "round")
+		serve_round(prison, hatches, count, user)
+		return null
+	var/obj/item/made
+	switch(key)
+		if("ration")
+			made = new /obj/item/food/prison_ration(drop_location())
+		if("bruise_pack")
+			made = new /obj/item/stack/medical/bruise_pack(drop_location(), 1, FALSE)
+		if("uniform")
+			made = new /obj/item/clothing/under/rank/prisoner/outpost(drop_location())
+	user.put_in_hands(made)
 	return null
+
+/// The prison's serving hatches, nearest this dispenser first
+/obj/machinery/outpost_ration_dispenser/proc/hatches_by_distance(datum/outpost_prison/prison)
+	var/list/unsorted = prison ? prison.hatches() : list()
+	var/list/sorted = list()
+	while(length(unsorted))
+		var/obj/structure/table/reinforced/prison_hatch/nearest = unsorted[1]
+		for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in unsorted)
+			if(get_dist(src, hatch) < get_dist(src, nearest))
+				nearest = hatch
+		unsorted -= nearest
+		sorted += nearest
+	return sorted
+
+/// Puts `count` paid-for rations on the hatches, nearest with room first, and lets the yard know
+/obj/machinery/outpost_ration_dispenser/proc/serve_round(datum/outpost_prison/prison, list/hatches, count, mob/living/user)
+	for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in hatches)
+		if(count <= 0)
+			break
+		var/list/served = list()
+		while(count > 0 && hatch.room_left() > 0)
+			served += new /obj/item/food/prison_ration(hatch.loc)
+			count--
+		if(length(served))
+			playsound(hatch, 'sound/machines/machine_vend.ogg', 30, TRUE)
+			prison?.on_hatch_stocked(hatch, served, user)
+
+/// Items residents may still order from the supply dispenser in the current window
+/datum/outpost_prison/proc/resident_orders_left()
+	for(var/ordered_at in resident_orders.Copy())
+		if(world.time - ordered_at >= OUTPOST_PRISON_RESIDENT_ORDER_WINDOW)
+			resident_orders -= ordered_at
+	return max(0, OUTPOST_PRISON_RESIDENT_ORDERS - length(resident_orders))
+
+/datum/outpost_prison/proc/note_resident_orders(count)
+	for(var/i in 1 to count)
+		resident_orders += world.time
 
 // ===== FIRST AID =====
 

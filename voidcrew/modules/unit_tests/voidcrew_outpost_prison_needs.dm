@@ -1,6 +1,8 @@
 /**
  * Outpost prison needs: hunger, uniforms and the serving hatch, eating, mess, blood and first aid,
- * the routine and dialogue, and what needs do to mood.
+ * the routine and dialogue, and what needs do to mood; arrivals, food by quality, sport, the
+ * hatch as the only stockpile, the supply dispenser, and the prisoners' small routines (binning,
+ * tidying, shared meals, sick calls, basketball with staff, the cycling thought bubble).
  *
  * Voidcrew defines are not visible from test files, so tuning values appear as literals with
  * the define named beside them. Prisons are driven with tick(seconds) with their own processing
@@ -25,17 +27,17 @@
 	var/mob/living/carbon/human/warden = make_player(prison_spot(home, 5, 5), "needsowner")
 
 	// Unit tests are parsed before voidcrew/_DEFINES, so the rates are read off one minute of play:
-	// full to empty hunger in 10 minutes (10 a minute), clean to filthy in 12 (100/12 a minute).
+	// full to empty hunger in 20 minutes (PRISONER_HUNGER_DECAY 5 a minute), grime 2.5 a minute at rest.
 	prison.tick(60)
 	var/hunger_rate = 100 - prisoner.hunger
 	var/grime_rate = prisoner.uniform_grime
-	TEST_ASSERT(abs(hunger_rate - 10) < 0.01, "A minute took [hunger_rate] hunger, not 10")
-	TEST_ASSERT(abs(grime_rate - 100 / 12) < 0.01, "A minute added [grime_rate] grime, not [100 / 12]")
-	prisoner.adjust_needs(9 * 60)
-	TEST_ASSERT(prisoner.hunger < 0.01, "Ten minutes did not empty hunger ([prisoner.hunger])")
+	TEST_ASSERT(abs(hunger_rate - 5) < 0.01, "A minute took [hunger_rate] hunger, not 5")
+	TEST_ASSERT(abs(grime_rate - 2.5) < 0.01, "A minute added [grime_rate] grime, not 2.5")
+	prisoner.adjust_needs(19 * 60)
+	TEST_ASSERT(prisoner.hunger < 0.01, "Twenty minutes did not empty hunger ([prisoner.hunger])")
 	prisoner.set_uniform_grime(0)
-	prisoner.adjust_needs(12 * 60)
-	TEST_ASSERT(prisoner.uniform_grime > 99.99, "Twelve minutes did not ruin the uniform ([prisoner.uniform_grime])")
+	prisoner.adjust_needs(40 * 60)
+	TEST_ASSERT(prisoner.uniform_grime > 99.99, "Forty minutes did not ruin the uniform ([prisoner.uniform_grime])")
 
 	// The hatch is a security desk: a window door on each side of the counter.
 	var/obj/machinery/door/window/yard_door = hatch.yard_windoor()
@@ -52,6 +54,9 @@
 	// Food they can reach: on the hatch, yes, through their own window door; on the office floor, no.
 	prisoner.set_hunger(30)
 	prisoner.set_uniform_grime(0)
+	// Rations at 60 (PRISONER_FOOD_RATION). At mood 40 (50 after the meal's +10) wrappers stay on the
+	// table, neither binned (PRISONER_BIN_MOOD 60) nor dropped (PRISONER_LITTER_MOOD 40).
+	prisoner.set_mood(40)
 	var/obj/item/food/prison_ration/office_food = allocate(__IMPLIED_TYPE__, prison_spot(home, 8, 5))
 	prison.refresh_reach()
 	TEST_ASSERT(prisoner.wants_food(), "A prisoner at 30 hunger did not want food")
@@ -95,8 +100,7 @@
 	TEST_ASSERT_EQUAL(meal.tick(1), 1, "The meal did not finish")
 	prisoner.end_activity(cancel_ai = FALSE)
 	TEST_ASSERT(QDELETED(hatch_food), "The meal was not eaten")
-	TEST_ASSERT(abs(prisoner.hunger - 80) < 0.01, "Eating did not add 50 hunger (now [prisoner.hunger])") // PRISONER_FOOD_VALUE
-	TEST_ASSERT(locate(/obj/effect/decal/cleanable/food/crumbs) in get_turf(seat), "Eating left no crumbs where they sat")
+	TEST_ASSERT(abs(prisoner.hunger - 90) < 0.01, "Eating a ration did not add 60 hunger (now [prisoner.hunger])") // PRISONER_FOOD_RATION
 	TEST_ASSERT_NULL(prisoner.buckled, "The prisoner stayed sat after the meal")
 	// Wrappers are left often, not always.
 	var/wrappers = 0
@@ -120,8 +124,8 @@
 	TEST_ASSERT_NOTEQUAL(prisoner.ai_controller.ai_status, AI_STATUS_ON, "The prisoner's AI runs in a world with no players")
 	prison.tick(5)
 	TEST_ASSERT(QDELETED(unwatched_food), "An unwatched prisoner did not eat reachable food")
-	TEST_ASSERT(prisoner.hunger > 79, "Eating unwatched did not add 50 hunger (now [prisoner.hunger])")
-	TEST_ASSERT(locate(/obj/effect/decal/cleanable/food/crumbs) in yard_by_hatch, "Eating unwatched left no crumbs")
+	TEST_ASSERT(prisoner.hunger > 89, "Eating unwatched did not add 60 hunger (now [prisoner.hunger])")
+	TEST_ASSERT(locate(/obj/effect/decal/cleanable/food/crumbs) in yard_by_hatch, "Eating standing up left no crumbs")
 
 	// Handing food over: eaten when hungry, refused when full.
 	prisoner.set_hunger(20)
@@ -130,7 +134,7 @@
 	warden.put_in_active_hand(handed)
 	click_wrapper(warden, prisoner)
 	TEST_ASSERT(QDELETED(handed), "The prisoner did not eat food handed to them")
-	TEST_ASSERT(abs(prisoner.hunger - 70) < 0.01, "Hand feeding did not add 50 hunger (now [prisoner.hunger])")
+	TEST_ASSERT(abs(prisoner.hunger - 80) < 0.01, "Hand feeding a ration did not add 60 hunger (now [prisoner.hunger])")
 	prisoner.set_hunger(95)
 	var/obj/item/food/prison_ration/refused = allocate(__IMPLIED_TYPE__)
 	warden.put_in_active_hand(refused)
@@ -178,15 +182,27 @@
 	qdel(handed_back)
 	qdel(left_behind)
 
-	// Thought bubbles: one at a time, hungry over hurt over dirty, only when it needs attention.
+	// Thought bubbles: only when something needs attention; several needs take turns, every 4
+	// seconds (PRISONER_BUBBLE_CYCLE), starting from the most urgent whenever the set changes.
 	for(var/need in list("hungry", "dirty", "hurt", "riot", "experiment"))
 		TEST_ASSERT_NOTNULL(outpost_prisoner_bubble_item(need), "The thought bubble has no item look for [need]")
 	prisoner.set_hunger(10)
 	prisoner.set_uniform_grime(90)
 	prisoner.adjustBruteLoss(20)
-	TEST_ASSERT_EQUAL(prisoner.bubble, "hungry", "Hunger did not outrank the other needs")
+	TEST_ASSERT_EQUAL(prisoner.bubble, "hungry", "Hunger did not come first among the needs")
+	for(var/expected in list("hurt", "dirty", "hungry"))
+		prisoner.bubble_clock += 4
+		prisoner.update_bubble()
+		TEST_ASSERT_EQUAL(prisoner.bubble, expected, "Four seconds on, the bubble showed [prisoner.bubble], not [expected]")
+	prisoner.bubble_clock += 2
+	prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.bubble, "hungry", "The bubble changed before its 4 seconds were up")
+	prisoner.experiment_subject = TRUE
+	prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.bubble, "experiment", "An experiment's subject did not show the syringe over their needs")
+	prisoner.experiment_subject = FALSE
 	prisoner.set_hunger(100)
-	TEST_ASSERT_EQUAL(prisoner.bubble, "hurt", "The bubble did not fall back to the injury")
+	TEST_ASSERT_EQUAL(prisoner.bubble, "hurt", "The bubble did not start again at the injury when hunger was dealt with")
 	prisoner.adjustBruteLoss(-20)
 	TEST_ASSERT_EQUAL(prisoner.bubble, "dirty", "The bubble did not fall back to the dirty uniform")
 	prisoner.set_uniform_grime(0)
@@ -487,8 +503,11 @@
 	prisoner.set_uniform_grime(90)
 	TEST_ASSERT(drift_is(prisoner, 2 - 5), "A filthy uniform drifts [prisoner.mood_drift_per_minute()], not -3") // PRISONER_MOOD_FILTHY
 	prisoner.set_uniform_grime(0)
-	prisoner.adjustBruteLoss(50)
-	TEST_ASSERT(drift_is(prisoner, 2 - 4), "Half health drifts [prisoner.mood_drift_per_minute()], not -2") // 4 x missing x 2
+	// Injuries cost mood only below 75% health (PRISONER_HURT_MOOD_BELOW): 8 x (75 - health) / 75.
+	prisoner.adjustBruteLoss(20)
+	TEST_ASSERT(drift_is(prisoner, 2), "80% health drifts [prisoner.mood_drift_per_minute()], not +2")
+	prisoner.adjustBruteLoss(30)
+	TEST_ASSERT(drift_is(prisoner, 2 - 8 * 25 / 75), "Half health drifts [prisoner.mood_drift_per_minute()], not [2 - 8 * 25 / 75]") // PRISONER_MOOD_HURT
 	prisoner.adjustBruteLoss(-50)
 
 	// Instant changes: a meal +10, a clean uniform +8, treatment +8.
@@ -505,4 +524,648 @@
 	COOLDOWN_START(prisoner, treatment_window, 20 SECONDS)
 	prisoner.adjustBruteLoss(-30)
 	TEST_ASSERT(abs(prisoner.mood - 66) < 0.01, "Treatment left mood at [prisoner.mood], not 66") // PRISONER_MOOD_TREATED
+	settle_prison_air(home)
+
+// ===== HELPERS FOR THE TESTS BELOW =====
+
+/// Clears everything off a serving hatch and returns how many items it holds when empty
+/datum/unit_test/voidcrew_outpost_management/proc/clear_hatch(obj/structure/table/reinforced/prison_hatch/hatch)
+	for(var/obj/item/thing in hatch.loc)
+		qdel(thing)
+	return hatch.room_left()
+
+/// Puts `count` rations on a serving hatch, bypassing its capacity check
+/datum/unit_test/voidcrew_outpost_management/proc/stock_hatch(obj/structure/table/reinforced/prison_hatch/hatch, count)
+	for(var/i in 1 to count)
+		new /obj/item/food/prison_ration(hatch.loc)
+
+/datum/unit_test/voidcrew_outpost_management/proc/count_on(turf/tile, item_type)
+	var/count = 0
+	for(var/obj/item/thing in tile)
+		if(istype(thing, item_type))
+			count++
+	return count
+
+// ===== ARRIVALS, HUNGER, GRIME, SPORT AND FOOD =====
+
+/datum/unit_test/voidcrew_outpost_prison_arrivals_food
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_arrivals_food/proc/present(mob/living/basic/outpost_prisoner/prisoner)
+	return prisoner.phase == "present"
+
+/datum/unit_test/voidcrew_outpost_prison_arrivals_food/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("arrivalowner")
+	TEST_ASSERT_NOTNULL(home, "The arrivals test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, prison_spot(home, 8, 8))
+
+	// Arrivals, 200 of them: hunger 35-75, a third in a stained uniform (55-70 grime, else 0-15), and a
+	// fifth roughed up to 60-85% health (PRISONER_ARRIVAL_*, _STAINED_*, _HURT_ARRIVAL_*).
+	var/stained = 0
+	var/hurt = 0
+	for(var/i in 1 to 200)
+		prisoner.roll_arrival()
+		TEST_ASSERT(prisoner.hunger >= 35 && prisoner.hunger <= 75, "An arrival came in at [prisoner.hunger] hunger")
+		if(prisoner.arrived_stained)
+			stained++
+			TEST_ASSERT(prisoner.uniform_grime >= 55 && prisoner.uniform_grime <= 70, "A stained arrival had [prisoner.uniform_grime] grime")
+		else
+			TEST_ASSERT(prisoner.uniform_grime >= 0 && prisoner.uniform_grime <= 15, "An ordinary arrival had [prisoner.uniform_grime] grime")
+		if(prisoner.arrival_brute)
+			hurt++
+			TEST_ASSERT(prisoner.arrival_brute >= 15 && prisoner.arrival_brute <= 40, "A roughed-up arrival carried [prisoner.arrival_brute] brute")
+	TEST_ASSERT(stained >= 45 && stained <= 95, "[stained] of 200 arrivals came in stained, not about 70")
+	TEST_ASSERT(hurt >= 20 && hurt <= 60, "[hurt] of 200 arrivals came in hurt, not about 40")
+	// The injury lands as they beam in, with no attacker: no blood, and a hurt bubble.
+	prisoner.roll_arrival()
+	prisoner.arrival_brute = 25
+	prisoner.beam_in()
+	TEST_ASSERT_EQUAL(prisoner.health, 75, "Beaming in roughed up left [prisoner.health] health, not 75")
+	TEST_ASSERT(prisoner.arrived_hurt, "A roughed-up arrival was not marked hurt")
+	TEST_ASSERT_NULL(locate(/obj/effect/decal/cleanable/blood) in get_turf(prisoner), "A transfer injury bled on the floor")
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(present), prisoner), 6 SECONDS), "The arrival never finished beaming in")
+	prisoner.set_hunger(100)
+	prisoner.set_uniform_grime(0)
+	TEST_ASSERT_EQUAL(prisoner.bubble, "hurt", "A roughed-up arrival did not show the hurt bubble")
+	prisoner.adjustBruteLoss(-25)
+
+	// Hunger 5 a minute (PRISONER_HUNGER_DECAY), paused while well fed.
+	prisoner.adjust_needs(60)
+	TEST_ASSERT(abs(prisoner.hunger - 95) < 0.01, "A minute took [100 - prisoner.hunger] hunger, not 5")
+	prisoner.well_fed_left = 30
+	prisoner.adjust_needs(60)
+	TEST_ASSERT(abs(prisoner.hunger - 92.5) < 0.01, "Thirty seconds well fed still took hunger (now [prisoner.hunger])")
+	TEST_ASSERT_EQUAL(prisoner.well_fed_left, 0, "Well fed did not run out")
+
+	// Fed and clean fall to nothing at starving (15) and filthy (80).
+	var/list/fed_points = list("40" = 100, "27.5" = 50, "15" = 0, "5" = 0, "90" = 100)
+	for(var/point in fed_points)
+		prisoner.set_hunger(text2num(point))
+		TEST_ASSERT(abs(prisoner.fed_factor() - fed_points[point]) < 0.01, "Hunger [point] gave fed [prisoner.fed_factor()], not [fed_points[point]]")
+	var/list/clean_points = list("49" = 100, "65" = 50, "80" = 0, "95" = 0)
+	for(var/point in clean_points)
+		prisoner.set_uniform_grime(text2num(point))
+		TEST_ASSERT(abs(prisoner.clean_factor() - clean_points[point]) < 0.01, "Grime [point] gave clean [prisoner.clean_factor()], not [clean_points[point]]")
+	prisoner.set_hunger(100)
+	prisoner.set_uniform_grime(0)
+
+	// Sport: three times the grime (PRISONER_GRIME_SPORT_MULT) at basketball or a workout, not pacing.
+	// At 45% health they play carefully, so no injury gets in the way here (PRISONER_SPORT_INJURY_ABOVE).
+	prisoner.adjustBruteLoss(55)
+	var/datum/prisoner_activity/basketball/game = new(prisoner)
+	game.started = TRUE
+	prisoner.activity = game
+	prisoner.adjust_needs(60)
+	TEST_ASSERT(abs(prisoner.uniform_grime - 7.5) < 0.01, "A minute of basketball added [prisoner.uniform_grime] grime, not 7.5")
+	prisoner.end_activity(cancel_ai = FALSE)
+	var/datum/prisoner_activity/pace/walk = new(prisoner)
+	walk.started = TRUE
+	prisoner.activity = walk
+	prisoner.set_uniform_grime(0)
+	prisoner.adjust_needs(60)
+	TEST_ASSERT(abs(prisoner.uniform_grime - 2.5) < 0.01, "A minute of pacing added [prisoner.uniform_grime] grime, not 2.5")
+	walk.exercising = TRUE
+	prisoner.set_uniform_grime(0)
+	prisoner.adjust_needs(60)
+	TEST_ASSERT(abs(prisoner.uniform_grime - 7.5) < 0.01, "A minute of working out added [prisoner.uniform_grime] grime, not 7.5")
+	TEST_ASSERT(!prisoner.sport_injury(), "A badly hurt prisoner was injured at sport")
+	// A sport injury: 8-15 brute (PRISONER_SPORT_INJURY_MIN/_MAX), no blood, and they stop.
+	prisoner.adjustBruteLoss(-55)
+	TEST_ASSERT(prisoner.sport_injury(), "A healthy prisoner working out could not be injured")
+	TEST_ASSERT(prisoner.health >= 85 && prisoner.health <= 92, "A sport injury left [prisoner.health] health")
+	TEST_ASSERT_NULL(prisoner.activity, "The injured prisoner kept working out")
+	TEST_ASSERT_NULL(locate(/obj/effect/decal/cleanable/blood) in get_turf(prisoner), "A sport injury bled on the floor")
+	prisoner.adjustBruteLoss(-prisoner.getBruteLoss())
+	prisoner.set_uniform_grime(0)
+
+	// Food by quality: the prison ration, cooked food, snacks and junk food, and poor food.
+	var/list/tiers = list(
+		/obj/item/food/prison_ration = "ration",
+		/obj/item/food/burger/plain = "cooked",
+		/obj/item/food/donkpocket = "cooked",
+		/obj/item/food/chips = "snack",
+		/obj/item/food/candy = "snack",
+		/obj/item/food/breadslice/plain = "snack",
+		/obj/item/food/meat/slab = "poor",
+		/obj/item/food/grown/potato = "poor",
+		/obj/item/food/badrecipe = "poor",
+	)
+	var/turf/table = prison_spot(home, 5, 9)
+	for(var/food_type in tiers)
+		var/obj/item/food/sample = allocate(food_type, table)
+		TEST_ASSERT_EQUAL(outpost_prisoner_food_tier(sample), tiers[food_type], "[food_type] counted as [outpost_prisoner_food_tier(sample)] food")
+		qdel(sample)
+	// Hunger and mood: ration 60/+10, cooked 60/+15 and 8 minutes well fed, snack 35/+5, poor 20/+0.
+	var/list/values = list(
+		/obj/item/food/prison_ration = list(60, 10, 0),
+		/obj/item/food/burger/plain = list(60, 15, 480),
+		/obj/item/food/chips = list(35, 5, 0),
+		/obj/item/food/meat/slab = list(20, 0, 0),
+	)
+	prisoner.set_mood(40)
+	for(var/food_type in values)
+		var/list/expected = values[food_type]
+		prisoner.set_hunger(10)
+		prisoner.set_mood(40)
+		prisoner.well_fed_left = 0
+		var/obj/item/food/meal = allocate(food_type, get_turf(prisoner))
+		prisoner.finish_meal(meal, get_turf(prisoner), null)
+		TEST_ASSERT(abs(prisoner.hunger - (10 + expected[1])) < 0.01, "[food_type] left hunger at [prisoner.hunger], not [10 + expected[1]]")
+		TEST_ASSERT(abs(prisoner.mood - (40 + expected[2])) < 0.01, "[food_type] left mood at [prisoner.mood], not [40 + expected[2]]")
+		TEST_ASSERT_EQUAL(prisoner.well_fed_left, expected[3], "[food_type] left them well fed for [prisoner.well_fed_left] seconds")
+	// Well fed after cooked food: they don't go looking for food, and refuse it by hand.
+	var/mob/living/carbon/human/warden = make_player(prison_spot(home, 9, 8), "arrivalowner")
+	prisoner.set_hunger(20)
+	prisoner.well_fed_left = 480
+	TEST_ASSERT(!prisoner.wants_food(), "A well fed prisoner went looking for food")
+	var/obj/item/food/prison_ration/refused = allocate(__IMPLIED_TYPE__)
+	warden.put_in_active_hand(refused)
+	click_wrapper(warden, prisoner)
+	TEST_ASSERT(!QDELETED(refused) && warden.is_holding(refused), "A well fed prisoner ate a ration by hand")
+	// By hand the tiers hold too: a cooked meal fed by hand keeps them full.
+	prisoner.well_fed_left = 0
+	warden.drop_all_held_items()
+	var/obj/item/food/burger/plain/burger = allocate(__IMPLIED_TYPE__)
+	warden.put_in_active_hand(burger)
+	click_wrapper(warden, prisoner)
+	TEST_ASSERT(QDELETED(burger), "The prisoner did not eat a burger handed to them")
+	TEST_ASSERT(abs(prisoner.hunger - 80) < 0.01, "A burger by hand left hunger at [prisoner.hunger], not 80")
+	TEST_ASSERT_EQUAL(prisoner.well_fed_left, 480, "A burger by hand did not keep them full")
+	TEST_ASSERT_EQUAL(prisoner.last_carer_ref?.resolve(), warden, "Feeding by hand was not noted")
+	settle_prison_air(home)
+
+// ===== THE SERVING HATCH: THE ONLY STOCKPILE =====
+
+/datum/unit_test/voidcrew_outpost_prison_hatch
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_hatch/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("hatchowner")
+	TEST_ASSERT_NOTNULL(home, "The hatch test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/turf/hatch_turf = prison_spot(home, 5, 6)
+	var/turf/office_side = prison_spot(home, 5, 5)
+	var/turf/yard_side = prison_spot(home, 5, 7)
+	var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in hatch_turf
+	var/obj/structure/table/reinforced/prison_hatch/east_hatch = locate() in prison_spot(home, 13, 6)
+	TEST_ASSERT(hatch && east_hatch, "The serving hatches are not where the map puts them")
+	var/capacity = clear_hatch(hatch)
+	clear_hatch(east_hatch)
+	// OUTPOST_PRISON_HATCH_CAPACITY, read off an empty hatch so a retune does not break the tests.
+	TEST_ASSERT(capacity >= 6, "An empty hatch holds only [capacity] items")
+	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, yard_side)
+	var/mob/living/carbon/human/warden = make_player(office_side, "hatchowner")
+
+	// Supplies anywhere but a hatch are left alone, by the AI's eating (setup) and by an unwatched
+	// prisoner helping themself (fend_for_self), food and uniforms alike.
+	prisoner.set_hunger(30)
+	prisoner.set_uniform_grime(90)
+	var/obj/item/food/prison_ration/floor_food = allocate(__IMPLIED_TYPE__, prison_spot(home, 6, 7))
+	var/obj/item/food/prison_ration/table_food = allocate(__IMPLIED_TYPE__, prison_spot(home, 5, 9))
+	var/obj/item/clothing/under/rank/prisoner/outpost/floor_suit = allocate(__IMPLIED_TYPE__, prison_spot(home, 6, 7))
+	prison.refresh_reach()
+	TEST_ASSERT(prisoner.reachable[get_turf(floor_food)] && prisoner.reachable[get_turf(table_food)], "The test food is out of the prisoner's reach anyway")
+	TEST_ASSERT_NULL(prison.find_supply(prisoner), "A prisoner went for food on the floor or a mess table")
+	TEST_ASSERT_NULL(prison.find_supply(prisoner, TRUE), "A prisoner went for a uniform on the floor")
+	var/datum/prisoner_activity/eat/meal = new(prisoner)
+	TEST_ASSERT(!meal.setup(), "The AI set off to eat food that was not on a hatch")
+	qdel(meal)
+	var/datum/prisoner_activity/change/change = new(prisoner)
+	TEST_ASSERT(!change.setup(), "The AI set off to change into a uniform that was not on a hatch")
+	qdel(change)
+	TEST_ASSERT_NOTEQUAL(prisoner.ai_controller.ai_status, AI_STATUS_ON, "The prisoner's AI runs in a world with no players")
+	prison.tick(5)
+	TEST_ASSERT(!QDELETED(floor_food) && !QDELETED(table_food), "An unwatched prisoner ate food off the floor or a table")
+	TEST_ASSERT(abs(prisoner.uniform_grime - 90) < 1, "An unwatched prisoner changed into a uniform off the floor")
+	// On the hatch it is theirs, for the AI and unwatched.
+	var/obj/item/food/prison_ration/hatch_food = allocate(__IMPLIED_TYPE__, hatch_turf)
+	meal = new(prisoner)
+	TEST_ASSERT(meal.setup(), "The AI would not go for food on the hatch")
+	qdel(meal)
+	prison.tick(5)
+	TEST_ASSERT(QDELETED(hatch_food), "An unwatched prisoner did not eat food on the hatch")
+	qdel(floor_food)
+	qdel(table_food)
+	qdel(floor_suit)
+	clear_hatch(hatch)
+
+	// Capacity: by hand, the eleventh item is refused and stays in the hand.
+	stock_hatch(hatch, capacity - 1)
+	var/obj/item/clothing/under/rank/prisoner/outpost/fresh = new(hatch_turf)
+	TEST_ASSERT_EQUAL(hatch.room_left(), 0, "A full hatch still had room")
+	var/obj/item/food/prison_ration/extra = allocate(__IMPLIED_TYPE__)
+	warden.put_in_active_hand(extra)
+	TEST_ASSERT_EQUAL(hatch.table_place_act(warden, extra, list()), ITEM_INTERACT_BLOCKING, "A full hatch took another item")
+	TEST_ASSERT(warden.is_holding(extra), "The refused item left the warden's hand")
+	TEST_ASSERT_EQUAL(hatch.stock_count(), capacity, "The hatch holds [hatch.stock_count()] items after a refusal")
+	// Dumped or thrown on, it slides back off where it came from.
+	warden.dropItemToGround(extra)
+	TEST_ASSERT_EQUAL(extra.loc, office_side, "The refused item was not dropped at the warden's feet")
+	extra.forceMove(hatch_turf)
+	TEST_ASSERT_EQUAL(extra.loc, office_side, "An item pushed onto a full hatch stayed on it")
+	// A prisoner's swap on a full hatch goes through, one for one.
+	prisoner.set_uniform_grime(90)
+	prison.refresh_reach()
+	TEST_ASSERT_EQUAL(prison.find_supply(prisoner, TRUE), fresh, "A dirty prisoner did not find the clean uniform on the full hatch")
+	TEST_ASSERT(reach_until_ok(prisoner, fresh), "The prisoner could not reach the full hatch")
+	TEST_ASSERT(prisoner.take_uniform(fresh), "A swap on a full hatch was refused")
+	TEST_ASSERT(prisoner.uniform_grime < 0.01, "The swap did not leave the prisoner clean")
+	var/obj/item/clothing/under/rank/prisoner/outpost/left = locate() in hatch_turf
+	TEST_ASSERT(left && left.grime > 89, "The dirty uniform was not left on the hatch")
+	TEST_ASSERT_EQUAL(hatch.stock_count(), capacity, "The swap changed the hatch's count to [hatch.stock_count()]")
+	// A tray: as much as fits goes on, the rest stays on the tray.
+	qdel(left)
+	qdel(extra)
+	var/obj/item/storage/bag/tray/tray = allocate(__IMPLIED_TYPE__)
+	for(var/i in 1 to 3)
+		new /obj/item/food/prison_ration(tray)
+	warden.put_in_active_hand(tray)
+	TEST_ASSERT_EQUAL(hatch.room_left(), 1, "The tray test hatch has the wrong room")
+	TEST_ASSERT_EQUAL(hatch.tray_act(warden, tray), ITEM_INTERACT_SUCCESS, "A tray could not put anything on a hatch with room")
+	TEST_ASSERT_EQUAL(hatch.stock_count(), capacity, "A tray overfilled or underfilled the hatch ([hatch.stock_count()])")
+	TEST_ASSERT_EQUAL(length(tray.contents), 2, "The tray kept [length(tray.contents)] items, not the 2 that did not fit")
+	clear_hatch(hatch)
+
+	// Stock: meals, clean and dirty suits, capacity, and how long it lasts at 0.11 meals and 0.045
+	// suits a prisoner-minute (OUTPOST_PRISON_MEAL_RATE / _SUIT_RATE).
+	stock_hatch(hatch, 3)
+	new /obj/item/clothing/under/rank/prisoner/outpost(hatch_turf)
+	new /obj/item/clothing/under/rank/prisoner/outpost(prison_spot(home, 13, 6))
+	var/obj/item/clothing/under/rank/prisoner/outpost/dirty = new(hatch_turf)
+	dirty.set_grime(70)
+	var/list/stock = prison.hatch_stock()
+	TEST_ASSERT_EQUAL(stock["meals"], 3, "The stock counted [stock["meals"]] meals")
+	TEST_ASSERT_EQUAL(stock["clean_suits"], 2, "The stock counted [stock["clean_suits"]] clean suits")
+	TEST_ASSERT_EQUAL(stock["dirty_suits"], 1, "The stock counted [stock["dirty_suits"]] dirty suits")
+	TEST_ASSERT_EQUAL(stock["capacity"], capacity * 2, "The stock capacity was [stock["capacity"]]")
+	TEST_ASSERT_EQUAL(stock["lasts_minutes"], round(min(3 / 0.11, 2 / 0.045)), "One prisoner's stock lasts [stock["lasts_minutes"]] minutes")
+	clear_hatch(hatch)
+	clear_hatch(east_hatch)
+
+	// Shortage: hungry with nothing on the hatches is a shortage, and the radio hears about it once.
+	prisoner.set_hunger(30)
+	prisoner.set_uniform_grime(0)
+	prison.hatch_warning_left = 0
+	prison.tick(5)
+	TEST_ASSERT(prison.hatch_shortage(), "A hungry prisoner at empty hatches was not a shortage")
+	TEST_ASSERT_EQUAL(prison.waiting_for_food, 1, "[prison.waiting_for_food] prisoners were counted waiting for food")
+	TEST_ASSERT_EQUAL(prison.hatch_warning_text(), "Prison wing: the hatch is out of food and 1 prisoner is waiting.", "The warning read: [prison.hatch_warning_text()]")
+	TEST_ASSERT(prison.hatch_warning_left > 590, "The empty hatch was not reported (or the next report is due in [prison.hatch_warning_left] s)")
+	prison.tick(5)
+	TEST_ASSERT(prison.hatch_warning_left > 580 && prison.hatch_warning_left < 600, "The radio report did not wait out its 10 minutes")
+	prisoner.set_uniform_grime(90)
+	prison.tick(5)
+	TEST_ASSERT_EQUAL(prison.hatch_warning_text(), "Prison wing: the hatch is out of food and clean uniforms and 1 prisoner is waiting.", "The warning read: [prison.hatch_warning_text()]")
+	stock_hatch(east_hatch, 1)
+	new /obj/item/clothing/under/rank/prisoner/outpost(prison_spot(home, 13, 6))
+	prison.refresh_reach()
+	prison.tick(5)
+	TEST_ASSERT(!prison.hatch_shortage(), "Food and a suit on the other hatch still read as a shortage")
+	// Bolted in, they can't reach a hatch, so they are not waiting at one.
+	clear_hatch(east_hatch)
+	prisoner.set_hunger(30)
+	prisoner.forceMove(prisoner.cell.arrival_turf())
+	prison.toggle_cell_bolts(prisoner.cell.number, warden)
+	prison.tick(5)
+	TEST_ASSERT(!prison.hatch_shortage(), "A prisoner bolted in their cell counted as waiting at the hatch")
+	prison.toggle_cell_bolts(prisoner.cell.number, warden)
+	prisoner.forceMove(yard_side)
+	prison.refresh_reach()
+
+	// Stocking gets a call-out from a prisoner who wants it, and thanks from one waiting at the hatch.
+	var/mob/living/basic/outpost_prisoner/waiting = prisoner
+	var/mob/living/basic/outpost_prisoner/watcher = test_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/basic/outpost_prisoner/full = test_prisoner(prison, prison_spot(home, 7, 8))
+	waiting.set_hunger(30)
+	waiting.set_uniform_grime(0)
+	watcher.set_hunger(30)
+	full.set_hunger(100)
+	var/datum/prisoner_activity/hatch_wait/wait = waiting.start_activity(new /datum/prisoner_activity/hatch_wait(waiting))
+	wait.hatch_ref = WEAKREF(hatch)
+	waiting.last_line = null
+	COOLDOWN_RESET(waiting, thanks_cooldown)
+	COOLDOWN_RESET(prison, hatch_call_cooldown)
+	var/obj/item/food/prison_ration/stocked = new(hatch_turf)
+	var/mob/living/basic/outpost_prisoner/crier = prison.on_hatch_stocked(hatch, list(stocked), warden)
+	TEST_ASSERT_EQUAL(crier, watcher, "The call-out came from [crier || "nobody"], not the hungry prisoner watching")
+	TEST_ASSERT(is_line_for(waiting.last_line, "thanks_food"), "The prisoner waiting at the hatch did not say thanks: [waiting.last_line]")
+	TEST_ASSERT_EQUAL(waiting.last_carer_ref?.resolve(), warden, "The waiting prisoner did not note who stocked the hatch")
+	TEST_ASSERT_NULL(prison.on_hatch_stocked(hatch, list(stocked), warden), "A second call-out came within 20 seconds") // OUTPOST_PRISON_HATCH_CALL_GAP
+	// By hand, through the table: the call-out fires (its cooldown starts).
+	COOLDOWN_RESET(prison, hatch_call_cooldown)
+	var/obj/item/food/prison_ration/by_hand = allocate(__IMPLIED_TYPE__)
+	warden.drop_all_held_items()
+	warden.put_in_active_hand(by_hand)
+	TEST_ASSERT_EQUAL(hatch.table_place_act(warden, by_hand, list()), ITEM_INTERACT_SUCCESS, "Putting a ration on a hatch with room failed")
+	TEST_ASSERT(!COOLDOWN_FINISHED(prison, hatch_call_cooldown), "Stocking the hatch by hand drew no call-out")
+	// A dirty uniform on the hatch is nothing to call about.
+	COOLDOWN_RESET(prison, hatch_call_cooldown)
+	var/obj/item/clothing/under/rank/prisoner/outpost/grubby = new(hatch_turf)
+	grubby.set_grime(90)
+	TEST_ASSERT_NULL(prison.on_hatch_stocked(hatch, list(grubby), warden), "A dirty uniform drew a call-out")
+	waiting.end_activity(cancel_ai = FALSE)
+	clear_hatch(hatch)
+
+	// The admin fill: every hatch to capacity, mostly meals (OUTPOST_PRISON_FILL_MEAL_SHARE 0.7).
+	prison.fill_hatches()
+	stock = prison.hatch_stock()
+	TEST_ASSERT_EQUAL(hatch.stock_count(), capacity, "The fill left the west hatch at [hatch.stock_count()]")
+	TEST_ASSERT_EQUAL(east_hatch.stock_count(), capacity, "The fill left the east hatch at [east_hatch.stock_count()]")
+	TEST_ASSERT_EQUAL(stock["meals"], 2 * round(capacity * 0.7, 1), "The fill put out [stock["meals"]] meals")
+	TEST_ASSERT_EQUAL(stock["clean_suits"], 2 * (capacity - round(capacity * 0.7, 1)), "The fill put out [stock["clean_suits"]] clean suits")
+	TEST_ASSERT_EQUAL(prison.fill_hatches(), 0, "Filling full hatches added more")
+	clear_hatch(hatch)
+	clear_hatch(east_hatch)
+	settle_prison_air(home)
+
+// ===== THE SUPPLY DISPENSER =====
+
+/datum/unit_test/voidcrew_outpost_prison_dispenser
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_dispenser/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("dispenseowner")
+	TEST_ASSERT_NOTNULL(home, "The dispenser test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/datum/bank_account/treasury = home.treasury
+	var/obj/machinery/outpost_ration_dispenser/dispenser = locate() in prison_spot(home, 4, 5)
+	TEST_ASSERT_NOTNULL(dispenser, "The supply dispenser is not where the map puts it")
+	var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in prison_spot(home, 5, 6)
+	var/obj/structure/table/reinforced/prison_hatch/east_hatch = locate() in prison_spot(home, 13, 6)
+	var/capacity = clear_hatch(hatch)
+	clear_hatch(east_hatch)
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 4, 4), "dispenseowner")
+	var/mob/living/carbon/human/resident = make_player(prison_spot(home, 5, 4), "dispenseresident")
+	var/mob/living/carbon/human/visitor = make_player(prison_spot(home, 3, 4), "dispensevisitor")
+	home.residents += resident.mind
+	treasury.adjust_money(5000, "Prison test")
+	var/ration_price = dispenser.price_of("ration")
+	TEST_ASSERT_EQUAL(dispenser.price_of("round"), ration_price, "A served ration costs more than one from the hand")
+
+	// Serve a round: four rations (OUTPOST_PRISON_SERVE_ROUND) onto the nearest hatch, billed per ration.
+	var/start = treasury.account_balance
+	TEST_ASSERT_NULL(dispenser.order(owner, "round"), "The owner could not serve a round")
+	TEST_ASSERT_EQUAL(count_on(hatch.loc, /obj/item/food/prison_ration), 4, "A round put [count_on(hatch.loc, /obj/item/food/prison_ration)] rations on the nearest hatch")
+	TEST_ASSERT_EQUAL(start - treasury.account_balance, 4 * ration_price, "A round of 4 cost [start - treasury.account_balance]")
+	TEST_ASSERT_EQUAL(dispenser.order(owner, "round"), "busy", "The dispenser took an order inside its cooldown")
+	// Past the nearest hatch's capacity, the rest go on the next.
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	stock_hatch(hatch, capacity - 2 - 4)
+	start = treasury.account_balance
+	TEST_ASSERT_NULL(dispenser.order(owner, "round"), "A round onto a nearly full hatch failed")
+	TEST_ASSERT_EQUAL(hatch.stock_count(), capacity, "The nearest hatch was not filled to capacity")
+	TEST_ASSERT_EQUAL(count_on(east_hatch.loc, /obj/item/food/prison_ration), 2, "The rest of the round did not go on the other hatch")
+	TEST_ASSERT_EQUAL(start - treasury.account_balance, 4 * ration_price, "The split round cost [start - treasury.account_balance]")
+	// Full hatches: nothing served, nothing billed.
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	stock_hatch(east_hatch, capacity - 2)
+	start = treasury.account_balance
+	TEST_ASSERT_EQUAL(dispenser.order(owner, "round"), "the hatches are full", "A round was served onto full hatches")
+	TEST_ASSERT_EQUAL(treasury.account_balance, start, "Full hatches were billed")
+	// Short of money: as many as it can pay for.
+	clear_hatch(hatch)
+	clear_hatch(east_hatch)
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	treasury.adjust_money(-treasury.account_balance, "Prison test")
+	treasury.adjust_money(round(2.5 * ration_price), "Prison test")
+	TEST_ASSERT_NULL(dispenser.order(owner, "round"), "A round the treasury could half pay for failed")
+	TEST_ASSERT_EQUAL(count_on(hatch.loc, /obj/item/food/prison_ration), 2, "A treasury with 2.5 rations' worth served [count_on(hatch.loc, /obj/item/food/prison_ration)]")
+	TEST_ASSERT_EQUAL(treasury.account_balance, round(2.5 * ration_price) - 2 * ration_price, "The half-paid round billed the wrong amount")
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	TEST_ASSERT_EQUAL(dispenser.order(owner, "bruise_pack"), "insufficient funds", "A bruise pack came out of an empty treasury")
+	treasury.adjust_money(5000, "Prison test")
+	clear_hatch(hatch)
+
+	// A bruise pack (one use) and a clean uniform, into the hand.
+	start = treasury.account_balance
+	TEST_ASSERT_NULL(dispenser.order(owner, "bruise_pack"), "The owner could not order a bruise pack")
+	var/obj/item/stack/medical/bruise_pack/pack = owner.is_holding_item_of_type(/obj/item/stack/medical/bruise_pack)
+	TEST_ASSERT(pack && pack.amount == 1, "The bruise pack was not handed over as a single pack")
+	TEST_ASSERT_EQUAL(start - treasury.account_balance, dispenser.price_of("bruise_pack"), "A bruise pack was billed wrong")
+	owner.drop_all_held_items()
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	start = treasury.account_balance
+	TEST_ASSERT_NULL(dispenser.order(owner, "uniform"), "The owner could not order a uniform")
+	var/obj/item/clothing/under/rank/prisoner/outpost/suit = owner.is_holding_item_of_type(/obj/item/clothing/under/rank/prisoner/outpost)
+	TEST_ASSERT(suit && suit.grime < 0.01, "A clean prison uniform was not handed over")
+	TEST_ASSERT_EQUAL(start - treasury.account_balance, dispenser.price_of("uniform"), "A uniform was billed wrong")
+	TEST_ASSERT(dispenser.price_of("bruise_pack") > 0 && dispenser.price_of("uniform") > dispenser.price_of("bruise_pack"), "The dispenser's prices are off")
+	owner.drop_all_held_items()
+
+	// Who may order: never a visitor; residents up to 8 items per 10 minutes between them
+	// (OUTPOST_PRISON_RESIDENT_ORDERS / _WINDOW); managers as often as the cooldown allows.
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	TEST_ASSERT_EQUAL(dispenser.order(visitor, "ration"), "residents only", "A visitor billed the treasury")
+	TEST_ASSERT_NULL(dispenser.order(resident, "round"), "A resident could not serve a round")
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	TEST_ASSERT_NULL(dispenser.order(resident, "round"), "A resident could not serve a second round")
+	TEST_ASSERT_EQUAL(count_on(hatch.loc, /obj/item/food/prison_ration), 8, "Two resident rounds put out [count_on(hatch.loc, /obj/item/food/prison_ration)] rations")
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	TEST_ASSERT_EQUAL(dispenser.order(resident, "ration"), "restocking", "A resident ordered a ninth item inside ten minutes")
+	TEST_ASSERT_NULL(dispenser.order(owner, "ration"), "The owner was held to the residents' limit")
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	for(var/i in 1 to length(prison.resident_orders))
+		prison.resident_orders[i] -= 6000 // OUTPOST_PRISON_RESIDENT_ORDER_WINDOW
+	TEST_ASSERT_NULL(dispenser.order(resident, "ration"), "A resident could not order once the window had passed")
+	TEST_ASSERT_EQUAL(prison.resident_orders_left(), 7, "The window did not start again after it passed")
+	// Unpowered, nothing.
+	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	dispenser.set_machine_stat(dispenser.machine_stat | NOPOWER)
+	TEST_ASSERT_EQUAL(dispenser.order(owner, "ration"), "no power", "An unpowered dispenser took an order")
+	dispenser.set_machine_stat(dispenser.machine_stat & ~NOPOWER)
+	clear_hatch(hatch)
+	settle_prison_air(home)
+
+// ===== THE PRISONERS' SMALL ROUTINES =====
+
+/datum/unit_test/voidcrew_outpost_prison_liveliness
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_liveliness/proc/holds(mob/living/basic/outpost_prisoner/prisoner, obj/item/thing)
+	return thing.loc == prisoner
+
+/datum/unit_test/voidcrew_outpost_prison_liveliness/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("livelyowner")
+	TEST_ASSERT_NOTNULL(home, "The liveliness test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/turf/table = prison_spot(home, 5, 9)
+	var/turf/seat = prison_spot(home, 5, 10)
+	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, prison_spot(home, 8, 8))
+	// The map's own bin (if any) moves aside for a known one.
+	for(var/turf/tile as anything in prison.wing_turfs())
+		for(var/obj/structure/closet/crate/bin/map_bin in tile)
+			qdel(map_bin)
+	var/obj/structure/closet/crate/bin/bin = allocate(/obj/structure/closet/crate/bin, prison_spot(home, 8, 10))
+	prison.refresh_reach()
+	TEST_ASSERT_EQUAL(prison.find_bin(prisoner), bin, "The prisoner cannot find the yard bin")
+
+	// Binning: at mood 60+ (PRISONER_BIN_MOOD) a wrapper is often meant for the bin (70%,
+	// PRISONER_BIN_CHANCE); below it never; below 40 (PRISONER_LITTER_MOOD) it goes on the floor.
+	var/meant_for_bin = 0
+	var/crumbs = 0
+	prisoner.set_mood(80)
+	for(var/obj/effect/decal/cleanable/food/crumbs/old_crumb in seat)
+		qdel(old_crumb)
+	for(var/i in 1 to 40)
+		var/obj/item/food/prison_ration/sample = new(null)
+		var/obj/item/trash = prisoner.leave_meal_mess(sample, seat, table)
+		qdel(sample)
+		if(trash)
+			meant_for_bin++
+			TEST_ASSERT_EQUAL(trash.loc, table, "A wrapper meant for the bin was not left on the table first")
+		// Crumbs on one tile merge into one decal, so count them meal by meal.
+		var/obj/effect/decal/cleanable/food/crumbs/crumb = locate() in seat
+		if(crumb)
+			crumbs++
+			qdel(crumb)
+	TEST_ASSERT(meant_for_bin >= 10 && meant_for_bin <= 36, "A content prisoner meant [meant_for_bin] of 40 wrappers for the bin, not about 24")
+	TEST_ASSERT(crumbs >= 5 && crumbs <= 35, "Forty meals at a table left crumbs [crumbs] times, not about 20") // PRISONER_TABLE_CRUMB_CHANCE 50
+	prisoner.set_mood(59)
+	for(var/i in 1 to 20)
+		var/obj/item/food/prison_ration/sample = new(null)
+		TEST_ASSERT_NULL(prisoner.leave_meal_mess(sample, seat, table), "A prisoner at mood 59 meant a wrapper for the bin")
+		qdel(sample)
+	for(var/obj/item/trash/left_out in table)
+		qdel(left_out)
+	prisoner.set_mood(30)
+	var/on_floor = 0
+	for(var/i in 1 to 20)
+		var/obj/item/food/prison_ration/sample = new(null)
+		prisoner.leave_meal_mess(sample, seat, table)
+		qdel(sample)
+	TEST_ASSERT_NULL(locate(/obj/item/trash) in table, "An unhappy prisoner left a wrapper on the table")
+	for(var/obj/item/trash/dropped in seat)
+		on_floor++
+		qdel(dropped)
+	TEST_ASSERT(on_floor >= 5, "An unhappy prisoner dropped [on_floor] of 20 wrappers on the floor")
+	for(var/obj/effect/decal/cleanable/food/crumbs/crumb in seat)
+		qdel(crumb)
+	// A full bin: they say so and leave it.
+	bin.storage_capacity = length(bin.contents)
+	prisoner.set_mood(80)
+	for(var/i in 1 to 20)
+		var/obj/item/food/prison_ration/sample = new(null)
+		TEST_ASSERT_NULL(prisoner.leave_meal_mess(sample, seat, table), "A prisoner meant a wrapper for a full bin")
+		qdel(sample)
+	bin.storage_capacity = initial(bin.storage_capacity)
+	for(var/obj/item/trash/left_out in table)
+		qdel(left_out)
+	for(var/obj/effect/decal/cleanable/food/crumbs/crumb in seat)
+		qdel(crumb)
+	// After a meal: the wrapper carried to the bin and put in.
+	var/datum/prisoner_activity/eat/meal = prisoner.start_activity(new /datum/prisoner_activity/eat(prisoner))
+	var/obj/item/trash/wrapper = new /obj/item/trash/fleet_ration(table)
+	TEST_ASSERT_EQUAL(meal.carry_to_bin(wrapper), 2, "The prisoner did not set off for the bin") // ACTIVITY_MOVE
+	TEST_ASSERT_EQUAL(prisoner.held_item, wrapper, "The prisoner is not carrying the wrapper")
+	TEST_ASSERT(get_dist(meal.spot, bin) <= 1 && prisoner.walkable[meal.spot], "The prisoner is not headed to the bin")
+	prisoner.forceMove(meal.spot)
+	meal.arrive()
+	TEST_ASSERT_EQUAL(wrapper.loc, bin, "The wrapper did not go in the bin")
+	TEST_ASSERT_EQUAL(meal.tick(1), 1, "The meal did not end after binning") // ACTIVITY_DONE
+	prisoner.end_activity(cancel_ai = FALSE)
+	// Unwatched, straight in.
+	var/obj/item/trash/raisins/unwatched = new(prisoner.loc)
+	TEST_ASSERT(prisoner.bin_litter(unwatched), "An unwatched prisoner could not bin a wrapper")
+	TEST_ASSERT_EQUAL(unwatched.loc, bin, "The unwatched wrapper did not go in the bin")
+
+	// Tidying: at mood 75+ (PRISONER_TIDY_MOOD), one piece of litter to the bin, then not again for 5 minutes.
+	prisoner.forceMove(prison_spot(home, 8, 8))
+	prison.refresh_reach()
+	var/obj/item/trash/chips/litter = new(prison_spot(home, 11, 7))
+	prisoner.set_mood(74)
+	var/datum/prisoner_activity/tidy/tidy = new(prisoner)
+	TEST_ASSERT_EQUAL(tidy.get_weight(), 0, "A prisoner at mood 74 felt like tidying")
+	prisoner.set_mood(80)
+	TEST_ASSERT(tidy.get_weight() > 0, "A prisoner at mood 80 did not feel like tidying")
+	TEST_ASSERT(tidy.setup(), "Tidying could not be set up with litter and a bin in the yard")
+	TEST_ASSERT_EQUAL(tidy.spot, get_turf(litter), "Tidying did not go for the litter")
+	prisoner.start_activity(tidy)
+	TEST_ASSERT_EQUAL(drive_activity(prisoner, tidy), 1, "Tidying never finished")
+	TEST_ASSERT_EQUAL(litter.loc, bin, "The litter did not end up in the bin")
+	TEST_ASSERT_NULL(prisoner.held_item, "The prisoner kept hold of something after tidying")
+	var/datum/prisoner_activity/tidy/again = new(prisoner)
+	TEST_ASSERT_EQUAL(again.get_weight(), 0, "A prisoner felt like tidying again straight away")
+	qdel(again)
+
+	// Shared meals: three at the tables within a minute each cheer up by 3, once (PRISONER_MOOD_SHARED_MEAL).
+	var/mob/living/basic/outpost_prisoner/second = test_prisoner(prison, prison_spot(home, 4, 10))
+	var/mob/living/basic/outpost_prisoner/third = test_prisoner(prison, prison_spot(home, 6, 10))
+	var/mob/living/basic/outpost_prisoner/fourth = test_prisoner(prison, prison_spot(home, 4, 8))
+	set_moods(list(prisoner, second, third, fourth), 50)
+	TEST_ASSERT_EQUAL(length(prison.note_table_meal(prisoner)), 0, "One prisoner eating alone made a shared meal")
+	TEST_ASSERT_EQUAL(length(prison.note_table_meal(second)), 0, "Two prisoners eating made a shared meal")
+	var/list/lifted = prison.note_table_meal(third)
+	TEST_ASSERT_EQUAL(length(lifted), 3, "Three prisoners at the tables lifted [length(lifted)]")
+	for(var/mob/living/basic/outpost_prisoner/diner as anything in list(prisoner, second, third))
+		TEST_ASSERT(abs(diner.mood - 53) < 0.01, "A shared meal left [diner] at [diner.mood], not 53")
+	lifted = prison.note_table_meal(fourth)
+	TEST_ASSERT(length(lifted) == 1 && lifted[1] == fourth, "The fourth at the table did not get the lift alone")
+	TEST_ASSERT(abs(prisoner.mood - 53) < 0.01, "A shared meal lifted the same prisoner twice")
+
+	// Sick call: a hurt prisoner goes over to a member of staff holding dressings in the yard, asks,
+	// and waits until treated.
+	var/mob/living/carbon/human/medic = make_player(prison_spot(home, 12, 8), "livelyowner")
+	prisoner.forceMove(prison_spot(home, 8, 8))
+	prison.refresh_reach()
+	prisoner.adjustBruteLoss(30)
+	TEST_ASSERT(!prisoner.start_sick_call(), "A hurt prisoner asked for treatment from someone holding no dressings")
+	var/obj/item/stack/medical/bruise_pack/dressing = allocate(__IMPLIED_TYPE__)
+	medic.put_in_active_hand(dressing)
+	TEST_ASSERT(prisoner.start_sick_call(), "A hurt prisoner did not go to someone holding a bruise pack")
+	var/datum/prisoner_activity/sick_call/asking = prisoner.activity
+	TEST_ASSERT(istype(asking), "The sick call is not their activity")
+	TEST_ASSERT(get_dist(asking.spot, medic) <= 1, "The sick call did not head for the medic")
+	prisoner.forceMove(asking.spot)
+	asking.arrive()
+	TEST_ASSERT_EQUAL(asking.tick(1), 0, "The sick call ended before treatment") // ACTIVITY_CONTINUE
+	TEST_ASSERT(asking.asked, "The prisoner did not ask for treatment")
+	TEST_ASSERT_EQUAL(prisoner.dir, get_dir(prisoner, medic), "The prisoner is not facing the medic")
+	prisoner.adjustBruteLoss(-30)
+	TEST_ASSERT_EQUAL(asking.tick(1), 1, "The sick call went on after treatment") // ACTIVITY_DONE
+	prisoner.end_activity(cancel_ai = FALSE)
+	// Not again straight away, not for a scrape, and not for staff out of the cell block.
+	prisoner.adjustBruteLoss(30)
+	TEST_ASSERT(!prisoner.start_sick_call(), "A prisoner asked for the medic again straight away")
+	COOLDOWN_RESET(prisoner, sick_call_cooldown)
+	medic.forceMove(prison_spot(home, 12, 4))
+	TEST_ASSERT(!prisoner.start_sick_call(), "A prisoner asked staff in the office for treatment")
+	medic.forceMove(prison_spot(home, 12, 8))
+	prisoner.adjustBruteLoss(-25)
+	TEST_ASSERT(!prisoner.start_sick_call(), "A prisoner at 95% health asked for treatment")
+	prisoner.adjustBruteLoss(-prisoner.getBruteLoss())
+	medic.drop_all_held_items()
+
+	// Basketball with staff: a member sinking a shot while two play cheers them up by 10, once per
+	// 5 minutes (PRISONER_MOOD_STAFF_BASKET, OUTPOST_PRISON_STAFF_BASKET_GAP).
+	var/obj/structure/hoop/hoop = locate() in prison_spot(home, 9, 11)
+	TEST_ASSERT_NOTNULL(hoop, "The hoop is not where the map puts it")
+	set_moods(list(prisoner, second), 50)
+	prisoner.start_activity(new /datum/prisoner_activity/basketball(prisoner))
+	TEST_ASSERT(!prison.staff_basket(medic, hoop), "A basket with one prisoner playing cheered them")
+	second.start_activity(new /datum/prisoner_activity/basketball(second))
+	TEST_ASSERT(!prison.staff_basket(third, hoop), "A prisoner's own basket counted as staff's")
+	TEST_ASSERT(prison.staff_basket(medic, hoop), "A staff basket with two playing did not count")
+	TEST_ASSERT(abs(prisoner.mood - 60) < 0.01 && abs(second.mood - 60) < 0.01, "A staff basket left the players at [prisoner.mood] and [second.mood], not 60")
+	TEST_ASSERT(!prison.staff_basket(medic, hoop), "A second staff basket inside 5 minutes counted")
+	second.end_activity(cancel_ai = FALSE)
+	prisoner.end_activity(cancel_ai = FALSE)
+	// A ball thrown to a playing prisoner is caught and the game goes on.
+	var/obj/item/toy/basketball/ball = locate() in prison_spot(home, 9, 9)
+	TEST_ASSERT_NOTNULL(ball, "The ball is not where the map puts it")
+	prisoner.forceMove(prison_spot(home, 9, 8))
+	prison.refresh_prisoner_reach(prisoner)
+	var/datum/prisoner_activity/basketball/game = prisoner.start_activity(new /datum/prisoner_activity/basketball(prisoner))
+	TEST_ASSERT(game.setup(), "Basketball could not be set up for the catch")
+	game.arrive()
+	medic.forceMove(prison_spot(home, 12, 8))
+	medic.put_in_active_hand(ball)
+	TEST_ASSERT(game.tick(1) != 1, "The game ended as soon as staff picked up the ball") // ACTIVITY_DONE
+	medic.dropItemToGround(ball)
+	ball.throw_at(prisoner, 5, 1, medic)
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(holds), prisoner, ball), 5 SECONDS), "The playing prisoner did not catch the ball")
+	TEST_ASSERT_EQUAL(prisoner.held_item, ball, "The caught ball is not in the prisoner's hands")
+	TEST_ASSERT_EQUAL(prisoner.activity, game, "Catching the ball ended the game")
+	prisoner.end_activity(cancel_ai = FALSE)
+	TEST_ASSERT(isturf(ball.loc), "The ball stayed with the prisoner after the game")
 	settle_prison_air(home)

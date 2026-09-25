@@ -1,7 +1,7 @@
 /**
  * Outpost prison needs: hunger, uniforms and the serving hatch, eating, mess, blood and first aid,
  * the routine and dialogue, and what needs do to mood; arrivals, food by quality, sport, the
- * hatch as the only stockpile, the supply dispenser, and the prisoners' small routines (binning,
+ * hatch as the only stockpile, the Sustenance Vendor, and the prisoners' small routines (binning,
  * tidying, shared meals, sick calls, basketball with staff, the cycling thought bubble).
  *
  * Voidcrew defines are not visible from test files, so tuning values appear as literals with
@@ -704,9 +704,12 @@
 	prisoner.adjustBruteLoss(-prisoner.getBruteLoss())
 	prisoner.set_uniform_grime(0)
 
-	// Food by quality: the prison ration, cooked food, snacks and junk food, and poor food.
+	// Food by quality: the prison ration and the Sustenance Vendor's tofu and candy corn, cooked food, snacks and junk food,
+	// and poor food, the vendor's moldy bread among it.
 	var/list/tiers = list(
 		/obj/item/food/prison_ration = "ration",
+		/obj/item/food/tofu/prison = "ration",
+		/obj/item/food/candy_corn/prison = "ration",
 		/obj/item/food/burger/plain = "cooked",
 		/obj/item/food/donkpocket = "cooked",
 		/obj/item/food/chips = "snack",
@@ -715,6 +718,7 @@
 		/obj/item/food/meat/slab = "poor",
 		/obj/item/food/grown/potato = "poor",
 		/obj/item/food/badrecipe = "poor",
+		/obj/item/food/breadslice/moldy = "poor",
 	)
 	var/turf/table = prison_spot(home, 5, 9)
 	for(var/food_type in tiers)
@@ -724,6 +728,7 @@
 	// Hunger and mood: ration 60/+10, cooked 60/+15 and 8 minutes well fed, snack 35/+5, poor 20/+0.
 	var/list/values = list(
 		/obj/item/food/prison_ration = list(60, 10, 0),
+		/obj/item/food/tofu/prison = list(60, 10, 0),
 		/obj/item/food/burger/plain = list(60, 15, 480),
 		/obj/item/food/chips = list(35, 5, 0),
 		/obj/item/food/meat/slab = list(20, 0, 0),
@@ -947,102 +952,103 @@
 	clear_hatch(east_hatch)
 	settle_prison_air(home)
 
-// ===== THE SUPPLY DISPENSER =====
+// ===== THE SUSTENANCE VENDOR =====
 
-/datum/unit_test/voidcrew_outpost_prison_dispenser
+/datum/unit_test/voidcrew_outpost_prison_vendor
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
-/datum/unit_test/voidcrew_outpost_prison_dispenser/Run()
-	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("dispenseowner")
-	TEST_ASSERT_NOTNULL(home, "The dispenser test prison did not load")
+/// Buys one of `record` as `buyer` the way the vendor's window does. Returns what ended up in their hands, dropped and deleted.
+/datum/unit_test/voidcrew_outpost_prison_vendor/proc/buy(obj/machinery/vending/sustenance/outpost_prison/vendor, mob/living/carbon/human/buyer, datum/data/vending_product/record)
+	buyer.drop_all_held_items()
+	world.push_usr(buyer, CALLBACK(vendor, TYPE_PROC_REF(/obj/machinery/vending, vend), list("ref" = REF(record))))
+	var/obj/item/bought = buyer.is_holding_item_of_type(record.product_path)
+	. = bought?.type
+	if(bought)
+		qdel(bought)
+
+/datum/unit_test/voidcrew_outpost_prison_vendor/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("vendorowner")
+	TEST_ASSERT_NOTNULL(home, "The vendor test prison did not load")
 	var/datum/outpost_prison/prison = test_prison(home)
 	var/datum/bank_account/treasury = home.treasury
-	var/obj/machinery/outpost_ration_dispenser/dispenser = locate() in prison_spot(home, 4, 5)
-	TEST_ASSERT_NOTNULL(dispenser, "The supply dispenser is not where the map puts it")
-	var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in prison_spot(home, 5, 6)
-	var/obj/structure/table/reinforced/prison_hatch/east_hatch = locate() in prison_spot(home, 13, 6)
-	var/capacity = clear_hatch(hatch)
-	clear_hatch(east_hatch)
-	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 4, 4), "dispenseowner")
-	var/mob/living/carbon/human/resident = make_player(prison_spot(home, 5, 4), "dispenseresident")
-	var/mob/living/carbon/human/visitor = make_player(prison_spot(home, 3, 4), "dispensevisitor")
+	var/obj/machinery/vending/sustenance/outpost_prison/vendor = locate() in prison_spot(home, 4, 5)
+	TEST_ASSERT_NOTNULL(vendor, "The Sustenance Vendor is not where the map puts it")
+	TEST_ASSERT(vendor.resistance_flags & INDESTRUCTIBLE, "The prison's vendor is not outpost property") // /datum/element/outpost_property
+	TEST_ASSERT(!length(vendor.hidden_records), "The prison's vendor has contraband to hack out")
+	vendor.set_machine_stat(vendor.machine_stat & ~NOPOWER)
+	// tg's stock at one treasury price (OUTPOST_PRISON_RATION_COST 25) an item.
+	var/datum/data/vending_product/tofu
+	for(var/datum/data/vending_product/record as anything in vendor.product_records)
+		TEST_ASSERT_EQUAL(record.price, 25, "[record.name] costs [record.price], not 25")
+		if(record.product_path == /obj/item/food/tofu/prison)
+			tofu = record
+	TEST_ASSERT_NOTNULL(tofu, "The vendor does not sell soggy tofu")
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 4, 4), "vendorowner")
+	var/mob/living/carbon/human/resident = make_player(prison_spot(home, 5, 4), "vendorresident")
+	var/mob/living/carbon/human/visitor = make_player(prison_spot(home, 3, 4), "vendorvisitor")
 	home.residents += resident.mind
 	treasury.adjust_money(5000, "Prison test")
-	var/ration_price = dispenser.price_of("ration")
-	TEST_ASSERT_EQUAL(dispenser.price_of("round"), ration_price, "A served ration costs more than one from the hand")
 
-	// Serve a round: four rations (OUTPOST_PRISON_SERVE_ROUND) onto the nearest hatch, billed per ration.
+	// A member buys: the tofu comes out into their hand and the treasury pays for it.
 	var/start = treasury.account_balance
-	TEST_ASSERT_NULL(dispenser.order(owner, "round"), "The owner could not serve a round")
-	TEST_ASSERT_EQUAL(count_on(hatch.loc, /obj/item/food/prison_ration), 4, "A round put [count_on(hatch.loc, /obj/item/food/prison_ration)] rations on the nearest hatch")
-	TEST_ASSERT_EQUAL(start - treasury.account_balance, 4 * ration_price, "A round of 4 cost [start - treasury.account_balance]")
-	TEST_ASSERT_EQUAL(dispenser.order(owner, "round"), "busy", "The dispenser took an order inside its cooldown")
-	// Past the nearest hatch's capacity, the rest go on the next.
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	stock_hatch(hatch, capacity - 2 - 4)
-	start = treasury.account_balance
-	TEST_ASSERT_NULL(dispenser.order(owner, "round"), "A round onto a nearly full hatch failed")
-	TEST_ASSERT_EQUAL(hatch.stock_count(), capacity, "The nearest hatch was not filled to capacity")
-	TEST_ASSERT_EQUAL(count_on(east_hatch.loc, /obj/item/food/prison_ration), 2, "The rest of the round did not go on the other hatch")
-	TEST_ASSERT_EQUAL(start - treasury.account_balance, 4 * ration_price, "The split round cost [start - treasury.account_balance]")
-	// Full hatches: nothing served, nothing billed.
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	stock_hatch(east_hatch, capacity - 2)
-	start = treasury.account_balance
-	TEST_ASSERT_EQUAL(dispenser.order(owner, "round"), "the hatches are full", "A round was served onto full hatches")
-	TEST_ASSERT_EQUAL(treasury.account_balance, start, "Full hatches were billed")
-	// Short of money: as many as it can pay for.
-	clear_hatch(hatch)
-	clear_hatch(east_hatch)
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	treasury.adjust_money(-treasury.account_balance, "Prison test")
-	treasury.adjust_money(round(2.5 * ration_price), "Prison test")
-	TEST_ASSERT_NULL(dispenser.order(owner, "round"), "A round the treasury could half pay for failed")
-	TEST_ASSERT_EQUAL(count_on(hatch.loc, /obj/item/food/prison_ration), 2, "A treasury with 2.5 rations' worth served [count_on(hatch.loc, /obj/item/food/prison_ration)]")
-	TEST_ASSERT_EQUAL(treasury.account_balance, round(2.5 * ration_price) - 2 * ration_price, "The half-paid round billed the wrong amount")
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	TEST_ASSERT_EQUAL(dispenser.order(owner, "bruise_pack"), "insufficient funds", "A bruise pack came out of an empty treasury")
-	treasury.adjust_money(5000, "Prison test")
-	clear_hatch(hatch)
+	var/stocked = tofu.amount
+	TEST_ASSERT_EQUAL(buy(vendor, owner, tofu), /obj/item/food/tofu/prison, "The owner could not buy soggy tofu")
+	TEST_ASSERT_EQUAL(start - treasury.account_balance, 25, "Soggy tofu cost the treasury [start - treasury.account_balance]")
+	TEST_ASSERT_EQUAL(tofu.amount, stocked - 1, "The vendor's tofu went from [stocked] to [tofu.amount]")
+	// Tofu feeds a prisoner like a ration.
+	var/obj/item/food/tofu/prison/sample = allocate(__IMPLIED_TYPE__, prison_spot(home, 5, 9))
+	TEST_ASSERT_EQUAL(outpost_prisoner_food_tier(sample), "ration", "Soggy tofu does not count as a ration")
+	qdel(sample)
 
-	// A bruise pack (one use) and a clean uniform, into the hand.
+	// A visitor is refused, and nothing is billed.
+	TEST_ASSERT(!vendor.may_vend(visitor), "A visitor may use the prison's vendor")
+	TEST_ASSERT(!vendor.allowed(visitor), "The vendor allows a visitor in")
+	TEST_ASSERT(vendor.allowed(owner), "The vendor keeps the owner out")
+	TEST_ASSERT_EQUAL(vendor.charge(visitor, tofu), "members only", "A visitor was not told the vendor is for members")
 	start = treasury.account_balance
-	TEST_ASSERT_NULL(dispenser.order(owner, "bruise_pack"), "The owner could not order a bruise pack")
-	var/obj/item/stack/medical/bruise_pack/pack = owner.is_holding_item_of_type(/obj/item/stack/medical/bruise_pack)
-	TEST_ASSERT(pack && pack.amount == 1, "The bruise pack was not handed over as a single pack")
-	TEST_ASSERT_EQUAL(start - treasury.account_balance, dispenser.price_of("bruise_pack"), "A bruise pack was billed wrong")
-	owner.drop_all_held_items()
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	start = treasury.account_balance
-	TEST_ASSERT_NULL(dispenser.order(owner, "uniform"), "The owner could not order a uniform")
-	var/obj/item/clothing/under/rank/prisoner/outpost/suit = owner.is_holding_item_of_type(/obj/item/clothing/under/rank/prisoner/outpost)
-	TEST_ASSERT(suit && suit.grime < 0.01, "A clean prison uniform was not handed over")
-	TEST_ASSERT_EQUAL(start - treasury.account_balance, dispenser.price_of("uniform"), "A uniform was billed wrong")
-	TEST_ASSERT(dispenser.price_of("bruise_pack") > 0 && dispenser.price_of("uniform") > dispenser.price_of("bruise_pack"), "The dispenser's prices are off")
-	owner.drop_all_held_items()
+	TEST_ASSERT_NULL(buy(vendor, visitor, tofu), "A visitor bought tofu on the treasury")
+	TEST_ASSERT_EQUAL(treasury.account_balance, start, "A visitor's try was billed")
 
-	// Who may order: never a visitor; residents up to 8 items per 10 minutes between them
-	// (OUTPOST_PRISON_RESIDENT_ORDERS / _WINDOW); managers as often as the cooldown allows.
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	TEST_ASSERT_EQUAL(dispenser.order(visitor, "ration"), "residents only", "A visitor billed the treasury")
-	TEST_ASSERT_NULL(dispenser.order(resident, "round"), "A resident could not serve a round")
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	TEST_ASSERT_NULL(dispenser.order(resident, "round"), "A resident could not serve a second round")
-	TEST_ASSERT_EQUAL(count_on(hatch.loc, /obj/item/food/prison_ration), 8, "Two resident rounds put out [count_on(hatch.loc, /obj/item/food/prison_ration)] rations")
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	TEST_ASSERT_EQUAL(dispenser.order(resident, "ration"), "restocking", "A resident ordered a ninth item inside ten minutes")
-	TEST_ASSERT_NULL(dispenser.order(owner, "ration"), "The owner was held to the residents' limit")
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
+	// Residents take up to 8 items per 10 minutes between them (OUTPOST_PRISON_RESIDENT_ORDERS / _WINDOW);
+	// managers are never held to it.
+	for(var/i in 1 to 8)
+		TEST_ASSERT_EQUAL(buy(vendor, resident, tofu), /obj/item/food/tofu/prison, "A resident could not buy item [i] of 8")
+	start = treasury.account_balance
+	TEST_ASSERT_EQUAL(vendor.charge(resident, tofu), "order limit reached", "A resident was not held to the limit")
+	TEST_ASSERT_NULL(buy(vendor, resident, tofu), "A resident bought a ninth item inside ten minutes")
+	TEST_ASSERT_EQUAL(treasury.account_balance, start, "A refused resident was billed")
+	TEST_ASSERT_EQUAL(buy(vendor, owner, tofu), /obj/item/food/tofu/prison, "The owner was held to the residents' limit")
 	for(var/i in 1 to length(prison.resident_orders))
 		prison.resident_orders[i] -= 6000 // OUTPOST_PRISON_RESIDENT_ORDER_WINDOW
-	TEST_ASSERT_NULL(dispenser.order(resident, "ration"), "A resident could not order once the window had passed")
+	TEST_ASSERT_EQUAL(buy(vendor, resident, tofu), /obj/item/food/tofu/prison, "A resident could not buy once the window had passed")
 	TEST_ASSERT_EQUAL(prison.resident_orders_left(), 7, "The window did not start again after it passed")
-	// Unpowered, nothing.
-	COOLDOWN_RESET(dispenser, dispense_cooldown)
-	dispenser.set_machine_stat(dispenser.machine_stat | NOPOWER)
-	TEST_ASSERT_EQUAL(dispenser.order(owner, "ration"), "no power", "An unpowered dispenser took an order")
-	dispenser.set_machine_stat(dispenser.machine_stat & ~NOPOWER)
-	clear_hatch(hatch)
+
+	// An empty treasury buys nothing.
+	treasury.adjust_money(-treasury.account_balance, "Prison test")
+	stocked = tofu.amount
+	TEST_ASSERT_EQUAL(vendor.charge(owner, tofu), "insufficient funds", "An empty treasury paid for tofu")
+	TEST_ASSERT_NULL(buy(vendor, owner, tofu), "Tofu came out of a vendor on an empty treasury")
+	TEST_ASSERT_EQUAL(tofu.amount, stocked, "A refused sale took tofu off the shelf")
+	treasury.adjust_money(5000, "Prison test")
+
+	// It restocks itself: one item a minute while powered (OUTPOST_PRISON_VENDOR_RESTOCK_TIME), nothing when full or unpowered.
+	for(var/datum/data/vending_product/record as anything in vendor.product_records)
+		record.amount = record.max_amount
+	tofu.amount = tofu.max_amount - 2
+	vendor.restock_progress = 0
+	vendor.process(30)
+	TEST_ASSERT_EQUAL(tofu.amount, tofu.max_amount - 2, "Half a minute restocked the vendor")
+	vendor.process(30)
+	TEST_ASSERT_EQUAL(tofu.amount, tofu.max_amount - 1, "A minute did not restock one tofu")
+	vendor.set_machine_stat(vendor.machine_stat | NOPOWER)
+	vendor.process(60)
+	TEST_ASSERT_EQUAL(tofu.amount, tofu.max_amount - 1, "An unpowered vendor restocked")
+	vendor.set_machine_stat(vendor.machine_stat & ~NOPOWER)
+	vendor.process(60)
+	TEST_ASSERT_EQUAL(tofu.amount, tofu.max_amount, "The vendor did not restock its last tofu")
+	vendor.process(120)
+	TEST_ASSERT_EQUAL(tofu.amount, tofu.max_amount, "A full vendor went over its stock")
+	TEST_ASSERT_EQUAL(vendor.restock_progress, 0, "A full vendor saved up restocking time")
 	settle_prison_air(home)
 
 // ===== THE PRISONERS' SMALL ROUTINES =====

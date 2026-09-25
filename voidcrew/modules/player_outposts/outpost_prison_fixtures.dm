@@ -2,7 +2,7 @@
  * # Prison wing fixtures
  *
  * The pieces the prison wing's map places: uniforms that get dirty, the serving hatches, the
- * supply dispenser, the wing's first aid kit, bookcases, and a quieter basketball hoop and ball.
+ * Sustenance Vendor, the wing's first aid kit, bookcases, and a quieter basketball hoop and ball.
  * The machines have no circuit boards or designs and are protected outpost property, so they only
  * exist in a placed prison wing and never end up on a ship. The wing's doors and bolt buttons are
  * in outpost_prison_doors.dm.
@@ -189,8 +189,9 @@
 		INVOKE_ASYNC(yard_door, TYPE_PROC_REF(/obj/machinery/door/window, open_and_close))
 	return FALSE
 
-// ===== SUPPLY DISPENSER =====
+// ===== RATIONS =====
 
+/// The wing's own ration, put on the hatches by the admin panel's fill. The vendor sells tg's prison food.
 /obj/item/food/prison_ration
 	name = "prison ration"
 	desc = "A dense protein bar in a plain wrapper. Filling, and that's all anyone says about it."
@@ -202,207 +203,148 @@
 	foodtypes = GRAIN
 	w_class = WEIGHT_CLASS_SMALL
 
-/**
- * The prison office's supplies, each billed to the outpost treasury: a ration into your hand, a
- * round of OUTPOST_PRISON_SERVE_ROUND rations straight onto the nearest serving hatch with room
- * (billed per ration placed), a bruise pack, or a prison uniform. The owner, stewards and
- * treasurers order freely; residents may order OUTPOST_PRISON_RESIDENT_ORDERS items per
- * OUTPOST_PRISON_RESIDENT_ORDER_WINDOW between them.
- */
-/obj/machinery/outpost_ration_dispenser
-	name = "supply dispenser"
-	desc = "Prints rations, dressings and prison uniforms for the wing, billed to the outpost treasury. It can also put a round of rations straight onto a serving hatch."
-	icon = 'icons/obj/machines/vending.dmi'
-	icon_state = "sustenance"
-	density = TRUE
-	circuit = null
-	use_power = IDLE_POWER_USE
-	COOLDOWN_DECLARE(dispense_cooldown)
+// ===== SUSTENANCE VENDOR =====
 
-/obj/machinery/outpost_ration_dispenser/Initialize(mapload)
+/**
+ * The prison office's food: tg's Sustenance Vendor with its usual stock (soggy tofu, moldy bread,
+ * ice cups, candy corn, plastic spoons) and no contraband. It serves the wing's members, not
+ * prisoner IDs, and bills the outpost treasury OUTPOST_PRISON_RATION_COST for each item. Members
+ * who can't manage or spend the treasury (residents, builders, the owner's shipmates) may take
+ * OUTPOST_PRISON_RESIDENT_ORDERS items per OUTPOST_PRISON_RESIDENT_ORDER_WINDOW between them. No
+ * refill canisters reach an outpost, so it restocks itself while powered: one item every
+ * OUTPOST_PRISON_VENDOR_RESTOCK_TIME, most likely whatever it is shortest of. The tofu and candy
+ * corn feed a prisoner like a ration (outpost_prisoner_food_tier()).
+ * Uniforms and dressings come with the room: the uniforms, the first aid kit and the washing machine.
+ */
+/obj/machinery/vending/sustenance/outpost_prison
+	desc = "The prison wing's food vendor. It bills the outpost treasury for every item and slowly restocks itself."
+	contraband = list()
+	refill_canister = null
+	all_products_free = FALSE
+	default_price = OUTPOST_PRISON_RATION_COST
+	extra_price = OUTPOST_PRISON_RATION_COST
+	allow_custom = FALSE
+	tiltable = FALSE
+	// tg's sustenance interact() refuses anyone without a prisoner ID unless req_access is set and
+	// allowed() passes; allowed() below lets the wing's members through.
+	req_access = list(ACCESS_BRIG)
+	/// Powered time toward the next restocked item, in deciseconds
+	var/restock_progress = 0
+
+/obj/machinery/vending/sustenance/outpost_prison/Initialize(mapload)
 	. = ..()
 	AddElement(/datum/element/outpost_property)
+	// Restocked by itself, never by the crew's restock tracker
+	GLOB.vending_machines_to_restock -= src
+	set_outpost_prices(product_records)
 
-/obj/machinery/outpost_ration_dispenser/update_icon_state()
-	if(machine_stat & BROKEN)
-		icon_state = "sustenance-broken"
-	else if(machine_stat & NOPOWER)
-		icon_state = "sustenance-off"
-	else
-		icon_state = "sustenance"
+/obj/machinery/vending/sustenance/outpost_prison/reset_prices(list/recordlist, list/premiumlist)
+	. = ..()
+	set_outpost_prices(recordlist)
+
+/// Every item costs the treasury the same
+/obj/machinery/vending/sustenance/outpost_prison/proc/set_outpost_prices(list/recordlist)
+	for(var/datum/data/vending_product/record as anything in recordlist)
+		record.price = OUTPOST_PRISON_RATION_COST
+
+/obj/machinery/vending/sustenance/outpost_prison/examine(mob/user)
+	. = ..()
+	. += span_notice("Each item is [OUTPOST_PRISON_RATION_COST] cr, from the outpost treasury. Only members of the wing can use it.")
+
+/// Whether `user` may buy on the treasury: a member of the wing, or without a wing, a manager, treasurer or resident
+/obj/machinery/vending/sustenance/outpost_prison/proc/may_vend(mob/user)
+	if(!ismob(user) || is_outpost_prisoner(user))
+		return FALSE
+	var/datum/outpost_prison/prison = get_outpost_prison(src)
+	if(prison)
+		return prison.is_member(user)
+	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost_from_atom(src)
+	return home && (home.can_manage(user) || home.can_spend(user) || home.is_resident(user))
+
+/obj/machinery/vending/sustenance/outpost_prison/interact(mob/user)
+	if(isliving(user) && !HAS_AI_ACCESS(user) && !may_vend(user))
+		balloon_alert(user, "members only")
+		return
 	return ..()
 
-/obj/machinery/outpost_ration_dispenser/examine(mob/user)
-	. = ..()
-	. += span_notice("A ration is [OUTPOST_PRISON_RATION_COST] cr, a bruise pack [OUTPOST_PRISON_BRUISE_PACK_COST] cr and a prison uniform [OUTPOST_PRISON_UNIFORM_COST] cr, from the outpost treasury.")
+/obj/machinery/vending/sustenance/outpost_prison/allowed(mob/accessor)
+	return may_vend(accessor)
 
-/obj/machinery/outpost_ration_dispenser/interact(mob/user)
-	. = ..()
-	if(!isliving(user))
-		return
-	var/list/choices = list()
-	for(var/key in list("ration", "round", "bruise_pack", "uniform"))
-		var/datum/radial_menu_choice/choice = new
-		choice.name = "[order_name(key)] ([price_of(key)] cr[key == "round" ? " each" : ""])"
-		choice.image = order_image(key)
-		choices[key] = choice
-	var/picked = show_radial_menu(user, src, choices, require_near = TRUE, tooltips = TRUE)
-	if(!picked || QDELETED(src) || !user.Adjacent(src))
-		return
-	var/denial = order(user, picked)
+/obj/machinery/vending/sustenance/outpost_prison/vend(list/params, list/greyscale_colors)
+	var/datum/data/vending_product/record = locate(params["ref"])
+	if(!can_vend(usr) || !istype(record) || !(record in product_records) || record.amount <= 0)
+		return ..()
+	var/denial = charge(usr, record)
 	if(denial)
-		balloon_alert(user, denial)
-		playsound(src, 'sound/machines/buzz/buzz-sigh.ogg', 30, TRUE)
-
-/// What an order is called
-/obj/machinery/outpost_ration_dispenser/proc/order_name(key)
-	switch(key)
-		if("ration")
-			return "Ration"
-		if("round")
-			return "Serve a round"
-		if("bruise_pack")
-			return "Bruise pack"
-		if("uniform")
-			return "Prison uniform"
-	return null
-
-/// What an order reads as on the treasury's history
-/obj/machinery/outpost_ration_dispenser/proc/bill_text(key, count)
-	switch(key)
-		if("ration")
-			return "Prison ration"
-		if("round")
-			return "Prison rations x[count], served to the hatch"
-		if("bruise_pack")
-			return "Prison bruise pack"
-		if("uniform")
-			return "Prison uniform"
-	return "Prison supplies"
-
-/// What an order costs, per item
-/obj/machinery/outpost_ration_dispenser/proc/price_of(key)
-	switch(key)
-		if("ration", "round")
-			return OUTPOST_PRISON_RATION_COST
-		if("bruise_pack")
-			return OUTPOST_PRISON_BRUISE_PACK_COST
-		if("uniform")
-			return OUTPOST_PRISON_UNIFORM_COST
-	return 0
-
-/// The radial menu picture of an order
-/obj/machinery/outpost_ration_dispenser/proc/order_image(key)
-	switch(key)
-		if("ration")
-			return image(icon = /obj/item/food/prison_ration::icon, icon_state = /obj/item/food/prison_ration::icon_state)
-		if("round")
-			return image(icon = /obj/item/storage/bag/tray::icon, icon_state = /obj/item/storage/bag/tray::icon_state)
-		if("bruise_pack")
-			return image(icon = /obj/item/stack/medical/bruise_pack::icon, icon_state = /obj/item/stack/medical/bruise_pack::icon_state)
-		if("uniform")
-			return outpost_prisoner_bubble_item("dirty")
-	return null
-
-/// Who may bill supplies to the treasury: the owner, stewards, treasurers and residents
-/obj/machinery/outpost_ration_dispenser/proc/may_order(mob/living/user, obj/structure/overmap/dynamic/player_outpost/home)
-	return home.can_manage(user) || home.can_spend(user) || (user.mind && (user.mind in home.residents))
-
-/// Prints one ration into the user's hand. Returns null on success, else why not.
-/obj/machinery/outpost_ration_dispenser/proc/dispense(mob/living/user)
-	return order(user, "ration")
+		balloon_alert(usr, denial)
+		flick(icon_deny, src)
+		return TRUE
+	return ..()
 
 /**
- * Bills and prints one order ("ration", "round", "bruise_pack" or "uniform") for the user.
- * Everything is checked and paid before anything is made, with nothing in between that can wait.
- * Returns null on success, else why not.
+ * Bills the treasury for one of `record` for `user`. Returned items are free, as in any vendor.
+ * Nothing in here can wait, so the vend that follows always happens. Returns null on success,
+ * else why not.
  */
-/obj/machinery/outpost_ration_dispenser/proc/order(mob/living/user, key)
-	var/price = price_of(key)
-	if(!price)
-		return "no such order"
-	if(!is_operational)
-		return "no power"
-	if(!COOLDOWN_FINISHED(src, dispense_cooldown))
-		return "busy"
+/obj/machinery/vending/sustenance/outpost_prison/proc/charge(mob/living/user, datum/data/vending_product/record)
+	if(!may_vend(user))
+		return "members only"
+	if(LAZYLEN(record.returned_products) || record.price <= 0)
+		return null
 	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost_from_atom(src)
 	if(!home)
 		return "no outpost link"
-	if(!may_order(user, home))
-		return "residents only"
 	var/datum/outpost_prison/prison = get_outpost_prison(src)
-	var/count = key == "round" ? OUTPOST_PRISON_SERVE_ROUND : 1
-	var/resident = !home.can_manage(user) && !home.can_spend(user)
-	if(resident)
-		count = min(count, prison ? prison.resident_orders_left() : 0)
-		if(count <= 0)
-			return "restocking"
-	// A round goes onto the hatches, as far as they have room.
-	var/list/obj/structure/table/reinforced/prison_hatch/hatches = key == "round" ? hatches_by_distance(prison) : null
-	if(key == "round")
-		var/room = 0
-		for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in hatches)
-			room += hatch.room_left()
-		if(!length(hatches))
-			return "no serving hatch"
-		if(!room)
-			return "the hatches are full"
-		count = min(count, room)
+	var/limited = !home.can_manage(user) && !home.can_spend(user)
+	if(limited && (!prison || prison.resident_orders_left() <= 0))
+		return "order limit reached"
 	home.ensure_home_services()
 	var/datum/bank_account/treasury = home.treasury
-	if(!treasury)
+	if(!treasury || treasury.account_balance < record.price || !treasury.adjust_money(-record.price, "Prison vendor: [record.name], bought by [user.ckey || user.name]"))
 		return "insufficient funds"
-	count = min(count, round(treasury.account_balance / price))
-	var/bill = bill_text(key, count)
-	if(count <= 0 || !treasury.adjust_money(-price * count, "[bill], ordered by [user.ckey || user.name]"))
-		return "insufficient funds"
-	COOLDOWN_START(src, dispense_cooldown, OUTPOST_PRISON_ORDER_COOLDOWN)
-	if(resident)
-		prison.note_resident_orders(count)
-	prison?.note_spending(price * count, bill)
-	playsound(src, 'sound/machines/machine_vend.ogg', 40, TRUE)
-	use_energy(active_power_usage)
-	if(key == "round")
-		serve_round(prison, hatches, count, user)
-		return null
-	var/obj/item/made
-	switch(key)
-		if("ration")
-			made = new /obj/item/food/prison_ration(drop_location())
-		if("bruise_pack")
-			made = new /obj/item/stack/medical/bruise_pack(drop_location(), 1, FALSE)
-		if("uniform")
-			made = new /obj/item/clothing/under/rank/prisoner/outpost(drop_location())
-	user.put_in_hands(made)
+	if(limited)
+		prison.note_resident_orders(1)
+	prison?.note_spending(record.price, "Prison vendor: [record.name]")
 	return null
 
-/// The prison's serving hatches, nearest this dispenser first
-/obj/machinery/outpost_ration_dispenser/proc/hatches_by_distance(datum/outpost_prison/prison)
-	var/list/unsorted = prison ? prison.hatches() : list()
-	var/list/sorted = list()
-	while(length(unsorted))
-		var/obj/structure/table/reinforced/prison_hatch/nearest = unsorted[1]
-		for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in unsorted)
-			if(get_dist(src, hatch) < get_dist(src, nearest))
-				nearest = hatch
-		unsorted -= nearest
-		sorted += nearest
-	return sorted
+/// The treasury stands in for the buyer's ID, so the vendor shows its balance and greys out what it can't afford
+/obj/machinery/vending/sustenance/outpost_prison/ui_data(mob/user)
+	. = ..()
+	.["user"] = null
+	if(!may_vend(user))
+		return
+	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost_from_atom(src)
+	.["user"] = list(
+		"name" = "Outpost treasury",
+		"cash" = home?.treasury ? home.treasury.account_balance : 0,
+		"job" = "Prison wing",
+		"department" = DEPARTMENT_UNASSIGNED,
+	)
 
-/// Puts `count` paid-for rations on the hatches, nearest with room first, and lets the yard know
-/obj/machinery/outpost_ration_dispenser/proc/serve_round(datum/outpost_prison/prison, list/hatches, count, mob/living/user)
-	for(var/obj/structure/table/reinforced/prison_hatch/hatch as anything in hatches)
-		if(count <= 0)
+/obj/machinery/vending/sustenance/outpost_prison/process(seconds_per_tick)
+	. = ..()
+	if(. == PROCESS_KILL)
+		return
+	restock_progress += seconds_per_tick * (1 SECONDS)
+	while(restock_progress >= OUTPOST_PRISON_VENDOR_RESTOCK_TIME)
+		restock_progress -= OUTPOST_PRISON_VENDOR_RESTOCK_TIME
+		if(!restock_one())
+			restock_progress = 0
 			break
-		var/list/served = list()
-		while(count > 0 && hatch.room_left() > 0)
-			served += new /obj/item/food/prison_ration(hatch.loc)
-			count--
-		if(length(served))
-			playsound(hatch, 'sound/machines/machine_vend.ogg', 30, TRUE)
-			prison?.on_hatch_stocked(hatch, served, user)
 
-/// Items residents may still order from the supply dispenser in the current window
+/// Puts one item back on a shelf that is short, the shortest most likely. Returns its record, or null when full.
+/obj/machinery/vending/sustenance/outpost_prison/proc/restock_one()
+	var/list/short = list()
+	for(var/datum/data/vending_product/record as anything in product_records)
+		if(record.amount < record.max_amount)
+			short[record] = record.max_amount - record.amount
+	if(!length(short))
+		return null
+	var/datum/data/vending_product/picked = pick_weight(short)
+	picked.amount++
+	return picked
+
+/// Items residents may still buy from the Sustenance Vendor in the current window
 /datum/outpost_prison/proc/resident_orders_left()
 	for(var/ordered_at in resident_orders.Copy())
 		if(world.time - ordered_at >= OUTPOST_PRISON_RESIDENT_ORDER_WINDOW)

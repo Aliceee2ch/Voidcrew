@@ -35,7 +35,7 @@
 #define OUTPOST_PRISON_BASE_PAY 12
 /// Treasury credits for a release at full care and conditions
 #define OUTPOST_PRISON_RELEASE_BONUS 200
-/// What the office supply dispenser charges the treasury per ration
+/// What the office Sustenance Vendor charges the treasury per item
 #define OUTPOST_PRISON_RATION_COST 25
 /// Sentence range, in seconds
 #define OUTPOST_PRISON_SENTENCE_MIN (8 * 60)
@@ -63,16 +63,11 @@
 #define OUTPOST_PRISON_GRADE_FULL 95
 /// Seconds between stipend deposits
 #define OUTPOST_PRISON_DEPOSIT_INTERVAL 300
-/// What the office dispenser charges for a bruise pack and a prison uniform
-#define OUTPOST_PRISON_BRUISE_PACK_COST 25
-#define OUTPOST_PRISON_UNIFORM_COST 50
-/// Rations in one "serve a round"
-#define OUTPOST_PRISON_SERVE_ROUND 4
-/// Items a resident may order from the dispenser per window
+/// Items the members who cannot spend the treasury may buy from the vendor per window, between them
 #define OUTPOST_PRISON_RESIDENT_ORDERS 8
 #define OUTPOST_PRISON_RESIDENT_ORDER_WINDOW (10 MINUTES)
-/// Dispenser cooldown for managers and treasurers
-#define OUTPOST_PRISON_ORDER_COOLDOWN (2 SECONDS)
+/// The vendor puts one item back on its shelves this often while powered
+#define OUTPOST_PRISON_VENDOR_RESTOCK_TIME (1 MINUTES)
 /// Fee per rioter transferred out after a sit-in nobody came back for
 #define OUTPOST_PRISON_TRANSFER_FEE 750
 /// Most one incident (a riot, its breakout, its escapes and transfers) can be fined in all

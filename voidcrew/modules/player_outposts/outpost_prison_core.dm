@@ -24,8 +24,8 @@
  *
  * Supplies: prisoners take food and clean uniforms only from the serving hatches (or from a
  * person's hand), never off a floor or a table, so the hatches, OUTPOST_PRISON_HATCH_CAPACITY
- * items each, are the wing's only stockpile. The office supply dispenser (outpost_prison_fixtures.dm)
- * sells rations, a round of rations straight onto a hatch, bruise packs and uniforms. Stocking a
+ * items each, are the wing's only stockpile. The office Sustenance Vendor (outpost_prison_fixtures.dm)
+ * sells food on the treasury; uniforms and dressings come with the room. Stocking a
  * hatch gets a call-out from the yard; a hatch left empty while prisoners wait for it is noted
  * in the warden's log.
  *
@@ -64,7 +64,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	var/hatch_warning_left = 0
 	/// Prisoners who sat down to eat at a mess table -> world.time, for shared meals
 	var/list/table_eaters = list()
-	/// world.time of each item residents ordered from the supply dispenser, within the order window
+	/// world.time of each item members who cannot spend the treasury bought from the Sustenance Vendor, within the order window
 	var/list/resident_orders = list()
 	COOLDOWN_DECLARE(wing_speech_cooldown)
 	/// Between "Food's up!" call-outs

@@ -23,8 +23,8 @@ Fines the outpost bank can't cover become debt. Nobody new arrives while the ban
 
 Prisoners take food and clean uniforms from the serving hatches or from your hand. They never pick things up off the floor or a table.
 
-- The **supply dispenser** in the office prints rations, bruise packs and prison uniforms, billed to the outpost bank. It can also put a round of rations straight onto a hatch.
-- Uniforms get dirty. Hand a prisoner a cleaner one and they change and give you the old one, or leave clean uniforms on a hatch. Wash dirty ones in the office washing machine.
+- The **Sustenance Vendor** in the office sells soggy tofu, candy corn, moldy bread and ice cups to members of the wing, billed to the outpost bank per item. Tofu and candy corn fill a prisoner like a ration; the moldy bread is poor food. It restocks itself slowly.
+- The office has eight prison uniforms in the locker. Uniforms get dirty. Hand a prisoner a cleaner one and they change and give you the old one, or leave clean uniforms on a hatch. Wash dirty ones in the office washing machine.
 - Injured prisoners don't heal on their own. Use bruise packs or sutures on them; there is a first aid kit in the office.
 - The wing's **conditions** count clean floors, working lights and power. Mop up mess, replace broken lights and keep the APC charged.
 - Now and then the wing's air scrubbers back up and spew filthy froth over the floor. It's harmless but it needs mopping. A scrubber welded shut stays quiet.

@@ -11,9 +11,8 @@
  * far side, so its muzzle looks into the cell block. Whether it may fire is checked again at every
  * look: the tile in front of it must still be cell-block floor a prisoner could stand on, and it
  * only answers a prisoner who could walk up to it, so nobody can wall it, table it or window it off
- * from the rioters it shoots. Carried off the outpost, it
- * forgets the wing, so a stolen turret frees its slot and one taken away and brought back never
- * works again.
+ * from the rioters it shoots. Carried off the outpost, it forgets the wing, so a stolen turret
+ * frees its slot and one taken away and brought back never works again.
  *
  * What a turret answers: a prisoner of its own wing, on their feet in the wing, rioting (warned
  * during the riot's wind-up, fired on after), in a fight past the argument, swinging at staff,

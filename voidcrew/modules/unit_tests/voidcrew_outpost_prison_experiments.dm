@@ -456,6 +456,17 @@
 	TEST_ASSERT(!prison.experiment_active(), "A creature carried off the outpost was not recovered")
 	TEST_ASSERT_EQUAL(treasury.account_balance, balance, "A creature carried off cost a recovery fee")
 
+	// Walked off while nobody from the wing is home (a visitor led it away): recovered, and no fee.
+	var/mob/living/basic/outpost_experiment/hulk/stray = creature_for(home, "hulk")
+	TEST_ASSERT(istype(stray), "No stray hulk")
+	prison.crew_home_override = FALSE
+	stray.forceMove(run_loc_floor_bottom_left)
+	balance = treasury.account_balance
+	prison.experiments_tick(1)
+	TEST_ASSERT(!prison.experiment_active(), "A creature off the outpost was not recovered with nobody home")
+	TEST_ASSERT_EQUAL(treasury.account_balance, balance, "A creature that walked off with nobody home cost a recovery fee")
+	prison.crew_home_override = TRUE
+
 	// Out of the wing onto the outpost's own floor: five minutes.
 	var/mob/living/basic/outpost_experiment/fly/runner = creature_for(home, "fly")
 	TEST_ASSERT(istype(runner), "No second fly person")
@@ -528,6 +539,16 @@
 	var/list/hatches = prison.hatches()
 	TEST_ASSERT(length(hatches), "The wing has no serving hatch")
 	TEST_ASSERT(!hulk.can_break(hatches[1]), "The hulk could break a serving hatch's counter")
+
+	// With nobody from the wing home it hunts nobody, but it fights back.
+	var/mob/living/carbon/human/visitor = make_player(prison_spot(home, 10, 10), "creaturevisitor")
+	prison.crew_home_override = FALSE
+	TEST_ASSERT_NULL(hulk.choose_target(), "The hulk went after a visitor with nobody from the wing home")
+	var/datum/component/experiment_damage_ledger/hulk_ledger = hulk.GetComponent(/datum/component/experiment_damage_ledger)
+	hulk_ledger.note_attacker(visitor)
+	TEST_ASSERT_EQUAL(hulk.choose_target(), visitor, "The hulk did not fight back with nobody from the wing home")
+	prison.crew_home_override = TRUE
+	qdel(visitor)
 
 	// The hulk knocks prisoners flat and never kills them.
 	var/mob/living/basic/outpost_prisoner/victim = trouble_prisoner(prison, prison_spot(home, 8, 8))

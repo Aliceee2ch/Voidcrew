@@ -253,12 +253,18 @@
 /mob/living/basic/outpost_experiment/proc/target_penalty(mob/living/target)
 	return 0
 
-/// Its target now: whoever hurt it lately, else the nearest it wants in sight
+/**
+ * Its target now: whoever hurt it lately, else the nearest it wants in sight. While nobody from the
+ * wing is home it fights back but hunts nobody, as the horror does (crew_about()), so a loose
+ * creature is never a trap left for visitors.
+ */
 /mob/living/basic/outpost_experiment/proc/choose_target()
 	var/datum/component/experiment_damage_ledger/ledger = GetComponent(/datum/component/experiment_damage_ledger)
 	var/mob/living/attacker = ledger?.recent_player()
 	if(attacker && can_target(attacker) && get_dist(src, attacker) <= 9 && can_see(src, attacker, 9))
 		return attacker
+	if(prison && !prison.crew_home())
+		return null
 	var/mob/living/best
 	var/best_score = INFINITY
 	for(var/mob/living/candidate in range(7, src))

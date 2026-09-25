@@ -175,8 +175,8 @@
 
 /**
  * The creatures: Kessler's clocks, and the leash. A creature off the outpost is recovered at once
- * (for the fee only if it walked); one out of the wing starts the OUTPOST_EXPERIMENT_KESSLER_LOOSE_TIME
- * clock. Both clocks count only while the crew is home.
+ * (for the fee only if it walked while the crew was home); one out of the wing starts the
+ * OUTPOST_EXPERIMENT_KESSLER_LOOSE_TIME clock. Both clocks count only while the crew is home.
  */
 /datum/outpost_prison/proc/creatures_tick(seconds, home)
 	var/list/live = experiment.live_creatures()
@@ -189,7 +189,8 @@
 		if(!outpost_holds(creature))
 			var/carried = !isturf(creature.loc) || !!creature.pulledby || !!creature.buckled
 			add_log("[creature.name] was taken off the outpost.")
-			experiment_recover(charge = !carried)
+			// With nobody home to stop it, a visitor who led it onto their ship does not bill the owner.
+			experiment_recover(charge = !carried && home)
 			return
 		if(get_area(creature) != wing)
 			out_of_wing = TRUE

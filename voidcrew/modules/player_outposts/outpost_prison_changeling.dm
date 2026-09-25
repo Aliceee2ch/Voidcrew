@@ -27,8 +27,11 @@
  * killed adds tension, and Kessler refits the vent covers.
  *
  * The event drives itself on SSprocessing, once a second. Tests stop that and call tick().
- * Payments go through S4a's API: appeared at the burst and again for the horror (the fee is paid
- * once), down when the slug or the horror dies, failed when the host is lost.
+ * Payments go through S4a's API (outpost_prison_experiments.dm): experiment_creature_appeared() for
+ * the headslug at the burst (the fee) and again for the horror, each before the host or the slug
+ * is gone; the creature's death reports itself (the containment bonus); experiment_failed() when
+ * the host is lost. With S4a in, its experiment_paused() decides when the clocks wait, and S4a
+ * deletes this event when its experiment ends.
  */
 
 /// What an activity's tick() wants next (outpost_prison_routine.dm)
@@ -46,17 +49,11 @@
 // The experiments core (outpost_prison_experiments.dm) defines OUTPOST_EXPERIMENT_API in its
 // defines file and these procs for real. Until then they do nothing, so the changeling runs alone.
 #ifndef OUTPOST_EXPERIMENT_API
-/// Pays the experiment's data fee, once
+/// Pays the experiment's data fee, once; tracks the creature, and pays the containment bonus when it dies
 /datum/outpost_prison/proc/experiment_creature_appeared(mob/living/creature, form)
-	return
-/// Pays the containment bonus, once, if players did at least half of the creature's damage
-/datum/outpost_prison/proc/experiment_creature_down(mob/living/creature, subdued = FALSE)
 	return
 /// The experiment failed: no fee
 /datum/outpost_prison/proc/experiment_failed(reason)
-	return
-/// Kessler recovers the creature and charges the recovery fee as debt
-/datum/outpost_prison/proc/experiment_recover()
 	return
 #endif
 
@@ -181,7 +178,11 @@
 	if(QDELETED(prison) || QDELETED(prison.outpost))
 		end_event("the prison is gone", remove_creatures = TRUE)
 		return
+#ifdef OUTPOST_EXPERIMENT_API
+	var/home = !prison.experiment_paused()
+#else
 	var/home = prison.crew_home()
+#endif
 	switch(stage)
 		if("incubating")
 			incubation_tick(seconds, home)
@@ -237,6 +238,12 @@
 				return FALSE
 			return emerge()
 		if("done")
+#ifdef OUTPOST_EXPERIMENT_API
+			// The experiment is S4a's to call off: it takes the creatures and deletes this event.
+			if(prison?.changeling_event() == src)
+				prison.experiment_end_admin()
+				return TRUE
+#endif
 			return end_event("ended by an admin", remove_creatures = TRUE)
 	return FALSE
 
@@ -421,15 +428,18 @@
 	playsound(spot, 'sound/effects/splat.ogg', 80, TRUE, 4)
 	playsound(spot, 'sound/effects/magic/demon_consume.ogg', 60, TRUE, 2)
 	note_death(victim, FALSE)
+	// The slug first, and reported, while the host is still there to have hatched it.
+	slug = new(spot)
+	link_slug()
+	prison.experiment_creature_appeared(slug, "headslug")
 	spread_gore(spot)
 	flicker_lights_near(spot, 3)
 	scream_near(spot)
 	victim.gib()
-	slug = new(spot)
-	link_slug()
+#ifndef OUTPOST_EXPERIMENT_API
 	watch_prisoners()
+#endif
 	prison.announce("Prison wing: the specimen has hatched!", SHIP_NOTIFY_DANGER)
-	prison.experiment_creature_appeared(slug, "changeling")
 	update_time_left()
 	return TRUE
 
@@ -715,6 +725,12 @@
 		return FALSE
 	straining = FALSE
 	vent = null
+	horror = new(spot)
+	link_horror()
+	stage = "horror"
+	horror.emerge_for(src, extra_players())
+	// Reported before the slug goes, so the experiment always has its creature.
+	prison.experiment_creature_appeared(horror, "horror")
 	var/mob/living/basic/headslug/beakless/outpost/old_slug = slug
 	unlink_slug()
 	slug = null
@@ -725,15 +741,10 @@
 		spot.visible_message(span_userdanger("The cover of [exit] blows out, and something unfolds out of the duct: a person, or the shape of one, in black chitin, with a blade for an arm!"))
 	else
 		spot.visible_message(span_userdanger("The headslug swells and splits, and something unfolds out of it: a person, or the shape of one, in black chitin, with a blade for an arm!"))
-	horror = new(spot)
-	link_horror()
-	stage = "horror"
-	horror.emerge_for(src, extra_players())
 	prison.add_log("A horror came out of the vents.")
 	log_game("PLAYER OUTPOST PRISON: the changeling horror emerged at [AREACOORD(spot)] ('[prison.outpost?.name]'), [horror.maxHealth] health")
 	prison.announce("Prison wing: a horror has come out of the vents!", SHIP_NOTIFY_DANGER)
 	prison.play_alarm()
-	prison.experiment_creature_appeared(horror, "changeling")
 #ifndef OUTPOST_EXPERIMENT_API
 	panic_prisoners()
 #endif
@@ -919,13 +930,9 @@
 	SIGNAL_HANDLER
 	if(stage == "done")
 		return
-	var/mob/living/basic/headslug/beakless/outpost/dead = slug
-	var/datum/outpost_prison/held = prison
+	// The containment bonus is S4a's: it watches the death of every creature reported to it.
 	prison.add_log("The headslug was killed.")
 	end_event("the headslug was killed")
-	// The containment bonus; S4a's side may talk or announce, which can sleep.
-	if(held)
-		INVOKE_ASYNC(held, TYPE_PROC_REF(/datum/outpost_prison, experiment_creature_down), dead, FALSE)
 
 /datum/outpost_changeling_event/proc/on_slug_deleted(datum/source)
 	SIGNAL_HANDLER
@@ -939,12 +946,8 @@
 	SIGNAL_HANDLER
 	if(stage == "done")
 		return
-	var/mob/living/basic/outpost_experiment/horror/dead = horror
-	var/datum/outpost_prison/held = prison
 	prison.add_log("The horror was killed.")
 	end_event("the horror was killed")
-	if(held)
-		INVOKE_ASYNC(held, TYPE_PROC_REF(/datum/outpost_prison, experiment_creature_down), dead, FALSE)
 
 /datum/outpost_changeling_event/proc/on_horror_deleted(datum/source)
 	SIGNAL_HANDLER
@@ -982,6 +985,9 @@
 	unlink_horror()
 	slug = null
 	horror = null
+	// A slug still in the ducts has nowhere to go once it is over: Kessler takes it whatever else happens.
+	if(!remove_creatures && istype(old_slug?.loc, /obj/structure/outpost_kessler_vent))
+		kessler_take(old_slug)
 	if(remove_creatures)
 		for(var/mob/living/creature as anything in list(old_slug, old_horror))
 			if(!QDELETED(creature))
@@ -1107,7 +1113,11 @@
 	maxHealth = OUTPOST_HEADSLUG_HEALTH
 	health = OUTPOST_HEADSLUG_HEALTH
 	speed = OUTPOST_HEADSLUG_SPEED
+#ifdef OUTPOST_EXPERIMENT_API
+	sentience_type = OUTPOST_EXPERIMENT_NO_SENTIENCE
+#else
 	sentience_type = SENTIENCE_BOSS
+#endif
 	unsuitable_atmos_damage = 0
 	unsuitable_cold_damage = 0
 	unsuitable_heat_damage = 0

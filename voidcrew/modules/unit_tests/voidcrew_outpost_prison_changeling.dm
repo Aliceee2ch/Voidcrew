@@ -12,10 +12,21 @@
  * voidcrew_outpost_prison_helpers.dm.
  */
 
-/// A host in cell 1, on their bunk, with the specimen in them and the event's own clock stopped
+/**
+ * A host on their bunk (cell 1's by default) with the specimen in them, and the event's own clock
+ * stopped. Through S4a's start_experiment() when the experiments core is in, as the specimen jar
+ * does, so its experiment_paused() sees an experiment under way.
+ */
 /datum/unit_test/voidcrew_outpost_management/proc/changeling_host(datum/outpost_prison/prison, obj/structure/overmap/dynamic/player_outpost/home, x = 2, y = 15)
 	var/mob/living/basic/outpost_prisoner/host = test_prisoner(prison, prison_spot(home, x, y))
-	var/datum/outpost_changeling_event/event = outpost_changeling_infect(host, prison)
+	var/datum/outpost_changeling_event/event
+	if(hascall(prison, "start_experiment"))
+		call(prison, "start_experiment")("changeling", host, TRUE)
+		event = prison.active_changeling
+		if(event?.host != host)
+			event = null
+	else
+		event = outpost_changeling_infect(host, prison)
 	event?.stop_self_ticking()
 	return event
 
@@ -89,7 +100,7 @@
 	TEST_ASSERT(!ismegafauna(event.slug), "The headslug counts as megafauna")
 	TEST_ASSERT(!HAS_TRAIT(event.slug, TRAIT_VENTCRAWLER_ALWAYS), "The headslug can crawl tg's own vents")
 	TEST_ASSERT(event.slug.egg_lain, "The headslug can lay an egg")
-	TEST_ASSERT_EQUAL(event.slug.sentience_type, 5, "The headslug takes sentience potions") // SENTIENCE_BOSS
+	TEST_ASSERT(event.slug.sentience_type != 1, "The headslug takes sentience potions") // SENTIENCE_ORGANIC
 	var/gore = 0
 	for(var/turf/near as anything in RANGE_TURFS(1, bunk))
 		for(var/obj/effect/decal/cleanable/blood/mess in near)
@@ -553,7 +564,7 @@
 	horror.forceMove(prison_spot(home, 9, 9))
 	sleep(2)
 	TEST_ASSERT(!QDELETED(horror), "The megafauna ban deleted the horror in the prison wing")
-	TEST_ASSERT_EQUAL(horror.sentience_type, 5, "The horror takes sentience potions") // SENTIENCE_BOSS
+	TEST_ASSERT(horror.sentience_type != 1, "The horror takes sentience potions") // SENTIENCE_ORGANIC
 	TEST_ASSERT(HAS_TRAIT(horror, "no_containment"), "The horror can be boxed") // TRAIT_NO_CONTAINMENT
 	var/turf/start = get_turf(horror)
 	do_teleport(horror, prison_spot(home, 9, 3), channel = TELEPORT_CHANNEL_BLUESPACE)

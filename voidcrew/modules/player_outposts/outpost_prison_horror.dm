@@ -59,7 +59,10 @@
 	icon = 'icons/mob/simple/simple_human.dmi'
 	gender = NEUTER
 	mob_biotypes = MOB_ORGANIC | MOB_HUMANOID
+#ifndef OUTPOST_EXPERIMENT_API
+	// With S4a, the experiment creatures' OUTPOST_EXPERIMENT_NO_SENTIENCE: no potion or injector takes it.
 	sentience_type = SENTIENCE_BOSS
+#endif
 	maxHealth = OUTPOST_HORROR_BASE_HEALTH
 	health = OUTPOST_HORROR_BASE_HEALTH
 	speed = OUTPOST_HORROR_SPEED

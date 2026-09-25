@@ -140,6 +140,8 @@
 			"crime" = prisoner.crime,
 			"sentence_left" = prisoner.stat == DEAD ? 0 : max(0, round(prisoner.sentence_left)),
 			"status" = roster_status(prisoner),
+			// Their birthday is today and the yard has not had the cake yet (outpost_prison_life.dm)
+			"birthday" = prisoner.has_birthday && !prisoner.party_done && prisoner.stat != DEAD,
 		))
 	var/list/alarm = alarm_state()
 	var/list/conditions = conditions_payload()

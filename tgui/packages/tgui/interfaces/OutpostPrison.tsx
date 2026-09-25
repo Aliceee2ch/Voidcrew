@@ -43,6 +43,8 @@ type Prisoner = {
   /** seconds */
   sentence_left: number;
   status: PrisonerStatus;
+  /** their birthday is today, until the yard has had the cake */
+  birthday?: boolean;
 };
 
 type Conditions = {
@@ -895,7 +897,15 @@ function RosterRow({ prisoner, cell }: { prisoner: Prisoner; cell: string }) {
       <span className="OutpostPrison__cell">{cell}</span>
       <div className="Outpost__person">
         <strong>{prisoner.name}</strong>
-        <small>{prisoner.crime}</small>
+        <small>
+          {prisoner.crime}
+          {prisoner.birthday ? (
+            <span className="OutpostPrison__tone--good">
+              {' · '}
+              <Icon name="cake-candles" /> Birthday today
+            </span>
+          ) : null}
+        </small>
       </div>
       <span className="OutpostPrison__number">
         {dead ? '-' : clock(prisoner.sentence_left)}

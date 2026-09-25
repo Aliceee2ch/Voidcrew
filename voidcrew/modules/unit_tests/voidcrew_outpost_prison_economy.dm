@@ -446,7 +446,7 @@
 	for(var/i in 1 to 4)
 		var/list/row = roster[i]
 		TEST_ASSERT_EQUAL(length(row), 6, "A roster row sends [length(row)] fields, not 6")
-		for(var/key in list("ref", "name", "cell", "crime", "sentence_left", "status"))
+		for(var/key in list("ref", "name", "cell", "crime", "sentence_left", "status", "birthday"))
 			TEST_ASSERT(key in row, "The console roster sends no [key]")
 		TEST_ASSERT_EQUAL(row["cell"], i, "The roster is not in cell order")
 		TEST_ASSERT_EQUAL(row["status"], "present", "A settled prisoner is listed as [row["status"]]")

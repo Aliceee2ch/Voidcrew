@@ -156,6 +156,10 @@
 
 /obj/structure/toilet/attack_hand_secondary(mob/user, list/modifiers)
 	. = ..()
+	// VOIDCREW EDIT ADDITION START - a right click a signal took (the outpost prison's cistern search, voidcrew/modules/player_outposts/outpost_prison_contraband.dm) does not also flush
+	if(. == SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN)
+		return
+	// VOIDCREW EDIT ADDITION END
 	if(flushing)
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	flushing = TRUE

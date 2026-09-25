@@ -16,6 +16,7 @@
  * Contexts other prison files say by name, spoken by prisoners. Most are from the balance spec's
  * dialogue package; hatch_empty, subdued, fight_argue_none (a fight with no cause) and
  * threat_backed_down (a threat called off by a talk) are spares for the same systems.
+ * turret_backs_off and turret_defies answer a turret's warning (outpost_prison_security.dm).
  */
 /datum/unit_test/voidcrew_outpost_prison_dialogue_contexts/proc/prisoner_contexts()
 	return list(
@@ -26,6 +27,7 @@
 		"creature_panic", "vent_noise", "horror", "absorbed",
 		"hatch_empty", "subdued", "fight_argue_none", "threat_backed_down",
 		"cuffed", "cuffs_off", "lockdown", "lockdown_over",
+		"turret_backs_off", "turret_defies",
 	)
 
 /// Contexts said by the researcher and the Kessler team, who have no personality or prisoner details

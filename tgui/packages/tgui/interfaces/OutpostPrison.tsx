@@ -115,20 +115,9 @@ type Guards = {
   list: Guard[];
 };
 
-type TurretState = 'loose' | 'on' | 'off' | 'broken' | 'no_power';
-
-type Security = {
-  turret_max: number;
-  turret_cost: number;
-  /** a manager, under the cap, and the fee in the treasury */
-  can_buy: BooleanLike;
-  turrets: { ref: string; state: TurretState }[];
-};
-
-/** Guards, turrets and mail (outpost_prison_extras.dm); null on an unlinked console */
+/** Guards and mail (outpost_prison_extras.dm); null on an unlinked console */
 type Extras = {
   guards?: Guards | null;
-  security?: Security | null;
   /** undelivered letters */
   mail?: { waiting: number } | null;
 };
@@ -269,17 +258,6 @@ const GUARD_STATUSES: Record<
   riot: { label: 'Holding the door', icon: 'shield-halved', tone: 'bad' },
   down: { label: 'Down', icon: 'user-injured', tone: 'bad' },
   away: { label: 'Away', icon: 'right-from-bracket', tone: 'average' },
-};
-
-const TURRET_STATES: Record<
-  TurretState,
-  { label: string; icon: string; tone: Tone }
-> = {
-  on: { label: 'On', icon: 'power-off', tone: 'good' },
-  off: { label: 'Off', icon: 'power-off', tone: 'average' },
-  broken: { label: 'Broken', icon: 'screwdriver-wrench', tone: 'bad' },
-  no_power: { label: 'No power', icon: 'plug-circle-xmark', tone: 'bad' },
-  loose: { label: 'Not mounted', icon: 'box-open', tone: 'average' },
 };
 
 /** A blind serum reads Serum until its creature shows. */
@@ -879,60 +857,6 @@ function GuardsSection({ data, act }: Props) {
   );
 }
 
-function TurretsSection({ data, act }: Props) {
-  const security = block(block(data.extras)?.security);
-  if (!security) {
-    return null;
-  }
-  const turrets = (security.turrets || []).filter(Boolean);
-  const max = security.turret_max || 0;
-  const buyBlocked = !data.can_manage
-    ? 'Managers only'
-    : max > 0 && turrets.length >= max
-      ? `${max} at most`
-      : 'Not enough in the treasury';
-  return (
-    <>
-      <div className="Outpost__section-label">
-        Turrets
-        {max > 0 ? <span>{`${turrets.length}/${max}`}</span> : null}
-      </div>
-      {turrets.length === 0 ? (
-        <div className="Outpost__quiet">None</div>
-      ) : (
-        <div className="OutpostPrison__turrets">
-          {turrets.map((turret, index) => {
-            const known = TURRET_STATES[turret.state] || {
-              label: turret.state || '?',
-              icon: 'circle-question',
-              tone: 'average' as Tone,
-            };
-            return (
-              <span
-                key={turret.ref}
-                className={`OutpostPrison__turret OutpostPrison__tone--${known.tone}`}
-              >
-                <Icon name={known.icon} />
-                {`Turret ${index + 1}: ${known.label}`}
-              </span>
-            );
-          })}
-        </div>
-      )}
-      <div className="OutpostPrison__staff-foot">
-        <Button
-          icon="cart-shopping"
-          disabled={!security.can_buy}
-          tooltip={security.can_buy ? undefined : buyBlocked}
-          onClick={() => act('turret_buy')}
-        >
-          {`Buy (${credits(security.turret_cost)} cr)`}
-        </Button>
-      </div>
-    </>
-  );
-}
-
 function Status({ status }: { status: PrisonerStatus }) {
   if (status === 'present') {
     return <span />;
@@ -1066,7 +990,6 @@ export function OutpostPrisonPanel({ data, act }: Props) {
           <Hatch data={data} act={act} />
           <Roster data={data} act={act} />
           <GuardsSection data={data} act={act} />
-          <TurretsSection data={data} act={act} />
           <Log data={data} act={act} />
         </div>
       ) : (

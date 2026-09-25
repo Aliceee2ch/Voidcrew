@@ -664,9 +664,9 @@
 /mob/living/basic/outpost_prisoner/proc/riot_at_large()
 	return phase == PRISONER_PRESENT && stat != DEAD && is_rioting() && !is_confined()
 
-/// A rioter at large and free to act: on their feet and uncuffed
+/// A rioter at large and free to act: on their feet, uncuffed, and not given up at a turret's warning (outpost_prison_security.dm)
 /mob/living/basic/outpost_prisoner/proc/riot_free()
-	return riot_at_large() && stat == CONSCIOUS && !can_be_dragged()
+	return riot_at_large() && stat == CONSCIOUS && !can_be_dragged() && !surrendered_to_turret()
 
 /**
  * Whether they can join a riot now. Not from a cell they are shut in: a riot that nobody can take
@@ -750,6 +750,7 @@
 	end_activity()
 	stand_up()
 	trouble = PRISONER_TROUBLE_RIOT
+	clear_turret_reaction()
 	riot_target_ref = null
 	riot_target_hits = 0
 	riot_victim_ref = null
@@ -852,7 +853,8 @@
 /datum/outpost_prison/proc/begin_breakout()
 	breaking_out = TRUE
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.trouble != PRISONER_TROUBLE_RIOT)
+		// Rioters who gave up at a turret's warning stay where they are (outpost_prison_security.dm)
+		if(prisoner.trouble != PRISONER_TROUBLE_RIOT || prisoner.surrendered_to_turret())
 			continue
 		prisoner.trouble = PRISONER_TROUBLE_BREAKOUT
 		prisoner.riot_target_ref = null
@@ -900,18 +902,23 @@
 	return null
 
 /**
- * What a rioter goes for: nothing during the wind-up; then staff they can get to (unless two
- * rioters are on them already), an open hatch to climb, the fixture or door they were already
- * smashing, or a new one.
+ * What a rioter goes for: nothing during the wind-up or once they gave up at a turret's warning;
+ * then a turret they defied, staff they can get to (unless two rioters are on them already), an
+ * open hatch to climb, the fixture or door they were already smashing, or a new one. Turret
+ * warnings are in outpost_prison_security.dm.
  */
 /mob/living/basic/outpost_prisoner/proc/riot_target()
 	if(!prison)
 		return null
-	if(prison.riot_windup_left > 0)
+	if(prison.riot_windup_left > 0 || surrendered_to_turret())
 		riot_victim_ref = null
 		return null
 	if(!reachable)
 		prison.refresh_prisoner_reach(src)
+	var/obj/machinery/porta_turret/defied = defied_turret()
+	if(defied)
+		riot_victim_ref = null
+		return defied
 	var/mob/living/person = staff_in_reach()
 	riot_victim_ref = person ? WEAKREF(person) : null
 	if(person)
@@ -966,8 +973,8 @@
 	if(istype(target, /obj/machinery/door))
 		var/obj/machinery/door/door = target
 		return door.density
-	if(is_outpost_prison_stun_turret(target))
-		var/obj/machinery/turret = target
+	if(istype(target, /obj/machinery/porta_turret))
+		var/obj/machinery/porta_turret/turret = target
 		return !(turret.machine_stat & BROKEN)
 	return TRUE
 
@@ -986,7 +993,7 @@
  * Once the crew has been told they are at the doors, they go for the doors.
  */
 /datum/outpost_prison/proc/pick_smash_target(mob/living/basic/outpost_prisoner/rioter)
-	// Stun turrets first (outpost_prison_security.dm).
+	// Turrets first (outpost_prison_security.dm).
 	var/atom/priority = priority_smash_target(rioter)
 	if(priority)
 		return priority
@@ -1387,9 +1394,9 @@
 // ===== TURRETS =====
 
 /**
- * Interim rule until guards and turrets are designed: outpost turrets leave prisoners in their
- * wing alone, rioting or not, and treat a loose prisoner outside the wing as fair game until they
- * are down, so a runner is stopped rather than killed.
+ * The hull defense turret's rule (is_hostile_creature()): it leaves prisoners in their wing alone,
+ * rioting or not, and treats a loose prisoner outside the wing as fair game until they are down, so
+ * a runner is stopped rather than killed. Turrets players build follow outpost_prison_security.dm.
  */
 /mob/living/basic/outpost_prisoner/proc/turret_target()
 	if(stat == DEAD || trouble != PRISONER_TROUBLE_LOOSE || phase != PRISONER_PRESENT || can_be_dragged())

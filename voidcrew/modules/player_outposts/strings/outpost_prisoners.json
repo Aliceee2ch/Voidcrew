@@ -1633,6 +1633,48 @@
 				"Okay."
 			]
 		},
+		"turret_backs_off": {
+			"any": [
+				"Alright, alright. I'm going.",
+				"Okay, okay. I'm backing off.",
+				"Fine. Not worth getting shot over.",
+				"Easy. I'm done.",
+				"Okay! Stopping. Stopping.",
+				"Alright. You win, tin can.",
+				"Nobody shoot. I'm walking away.",
+				"Fine. Fine. I'm moving.",
+				"Point that thing somewhere else. I'm going."
+			],
+			"nervous": [
+				"Don't shoot! I'm going, I'm going!",
+				"Okay! Okay! Please don't shoot me."
+			],
+			"cheerful": [
+				"Heh. Worth a try.",
+				"Okay, okay. No harm done, right?"
+			]
+		},
+		"turret_defies": {
+			"any": [
+				"Go on then. Shoot.",
+				"I'm not scared of a toaster.",
+				"You think that thing stops me?",
+				"Try it.",
+				"Shoot me, then. See if I care.",
+				"That thing doesn't scare me.",
+				"Do your worst.",
+				"Not today, tin can.",
+				"I've been shot before."
+			],
+			"grumpy": [
+				"Stupid machine. Come on then.",
+				"I've wanted to break one of those all week."
+			],
+			"quiet": [
+				"No.",
+				"Do it."
+			]
+		},
 		"calm_talk": {
 			"any": [
 				"Yeah. Okay. Thanks for asking.",

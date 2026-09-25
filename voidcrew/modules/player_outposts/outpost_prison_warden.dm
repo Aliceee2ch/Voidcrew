@@ -91,7 +91,7 @@
 				return TRUE
 			prison.set_visitors_allowed(!prison.visitors_allowed, user)
 			return TRUE
-	// Guards and turrets (outpost_prison_extras.dm)
+	// Guards (outpost_prison_extras.dm)
 	if(prison.extras_act(action, params, user))
 		return TRUE
 

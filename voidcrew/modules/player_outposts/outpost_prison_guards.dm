@@ -439,7 +439,8 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		return FALSE
 	if(prisoner.stat != CONSCIOUS || prisoner.phase != PRISONER_PRESENT || prisoner.can_be_dragged() || !Adjacent(prisoner))
 		return FALSE
-	if(prisoner.is_rioting() || prisoner.trouble == PRISONER_TROUBLE_LOOSE || prisoner.climb_ref || prisoner.swing_ref)
+	// A rioter who gave up at a turret's warning is on their way back to their cell (outpost_prison_security.dm)
+	if((prisoner.is_rioting() && !prisoner.surrendered_to_turret()) || prisoner.trouble == PRISONER_TROUBLE_LOOSE || prisoner.climb_ref || prisoner.swing_ref)
 		return TRUE
 	if(prisoner.trouble == PRISONER_TROUBLE_FIGHT && prisoner.fight?.fighting)
 		return TRUE

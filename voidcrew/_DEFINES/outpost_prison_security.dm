@@ -1,29 +1,48 @@
-// ===== OUTPOST PRISON: STUN TURRETS AND AMBIENCE (see outpost_prison_security.dm, outpost_prison_ambience.dm) =====
-// Owner: XB. Values from extras-plan.md 4.2, 4.5 and 4.7. Turrets never raise pay and never
-// touch a calm, threatening, wrecking or downed prisoner.
+// ===== OUTPOST PRISON: BUILT TURRETS AND AMBIENCE (see outpost_prison_security.dm, outpost_prison_ambience.dm) =====
+// Turrets players build follow the prison's rules on its mobs: prisoners only while they make real
+// trouble, and only ever with a stun shot; never a guard or Kessler's people. Ambience values are
+// from extras-plan.md 4.5 and 4.7.
 
-/// Credits per turret, charged before it spawns; refused if short, never debt
-#define OUTPOST_PRISON_TURRET_COST 2000
-/// Turrets a wing may have, counting every one it sold that still exists
-#define OUTPOST_PRISON_TURRET_MAX 2
-/// The laser line and beep before the first shot at a new target
-#define OUTPOST_PRISON_TURRET_WARN_TIME (1.5 SECONDS)
-/// A target is warned again (line, beep, "Step away.") at most this often
-#define OUTPOST_PRISON_TURRET_REWARN_TIME (20 SECONDS)
-/// Tiles it sees from its muzzle
-#define OUTPOST_PRISON_TURRET_SCAN_RANGE 5
-/// Deciseconds between shots
-#define OUTPOST_PRISON_TURRET_SHOT_DELAY 20
-/// Stamina per shot: four put a prisoner down (100 stamina)
-#define OUTPOST_PRISON_TURRET_STAMINA 30
-/// Tiles a shot flies
-#define OUTPOST_PRISON_TURRET_BEAM_RANGE 7
-/// Health, the share of it left when it breaks, and creature swings that break it: 60 damage, six rioter smashes (PRISON_SMASH_DAMAGE)
-#define OUTPOST_PRISON_TURRET_INTEGRITY 100
-#define OUTPOST_PRISON_TURRET_FAILURE 0.4
-#define OUTPOST_PRISON_TURRET_MOB_HITS 6
-/// Idle draw on the wing APC's equipment channel
-#define OUTPOST_PRISON_TURRET_IDLE_POWER (50 WATTS)
+/// What outpost_prison_turret_verdict() says about a mob: not the prison's, spare it, or shoot it
+#define OUTPOST_PRISON_TURRET_NOT_MINE 0
+#define OUTPOST_PRISON_TURRET_SPARE 1
+#define OUTPOST_PRISON_TURRET_SHOOT 2
+/// A turret holds fire this long after warning a prisoner, and warns the same prisoner again only after this
+#define OUTPOST_PRISON_TURRET_WARN_TIME (2 SECONDS)
+#define OUTPOST_PRISON_TURRET_REWARN_TIME (30 SECONDS)
+/// What a warned prisoner does: give up (rioters only), back off, or carry on and take the stun
+#define OUTPOST_PRISON_TURRET_GIVE_UP "give_up"
+#define OUTPOST_PRISON_TURRET_BACK_OFF "back_off"
+#define OUTPOST_PRISON_TURRET_DEFY "defy"
+/// Swinging or fighting: percent chance to back off at mood 0 and at mood 100, straight between
+#define OUTPOST_PRISON_TURRET_BACKOFF_AT_0 20
+#define OUTPOST_PRISON_TURRET_BACKOFF_AT_100 85
+/// No chance of backing off, or of climbing down, is ever below or above these
+#define OUTPOST_PRISON_TURRET_CHANCE_MIN 5
+#define OUTPOST_PRISON_TURRET_CHANCE_MAX 95
+/// Climbing a hatch: percent chance to climb back down
+#define OUTPOST_PRISON_TURRET_CLIMB_DOWN_CHANCE 70
+/// Rioting: weights to give up, back off and defy at mood OUTPOST_PRISON_TURRET_RIOT_MID_MOOD
+#define OUTPOST_PRISON_TURRET_RIOT_GIVE_UP 35
+#define OUTPOST_PRISON_TURRET_RIOT_BACK_OFF 35
+#define OUTPOST_PRISON_TURRET_RIOT_DEFY 30
+#define OUTPOST_PRISON_TURRET_RIOT_MID_MOOD 40
+/// Each point of mood above the middle adds this much to giving up and takes this much from defying (below it, the other way)
+#define OUTPOST_PRISON_TURRET_RIOT_GIVE_UP_PER_MOOD 0.5
+#define OUTPOST_PRISON_TURRET_RIOT_DEFY_PER_MOOD 0.4
+/// No rioter's outcome weighs less than this, so every one stays possible at every mood
+#define OUTPOST_PRISON_TURRET_RIOT_MIN_WEIGHT 5
+/// Nervous and cheerful rioters give up this much more; grumpy ones defy this much more
+#define OUTPOST_PRISON_TURRET_RIOT_PERSONALITY_MULT 1.5
+/// Backing off: how long they have to walk away before the turret may shoot them again
+#define OUTPOST_PRISON_TURRET_RETREAT_TIME (8 SECONDS)
+/// How far a swinger or fighter steps back
+#define OUTPOST_PRISON_TURRET_STEP_BACK 2
+/// A rioter who backs off stays clear of what the turret sees this long; one who defies it goes for it this long
+#define OUTPOST_PRISON_TURRET_AVOID_TIME (60 SECONDS)
+#define OUTPOST_PRISON_TURRET_DEFY_TIME (30 SECONDS)
+/// A rioter who gives up has this long to walk back to their cell before they stop where they are
+#define OUTPOST_PRISON_TURRET_SURRENDER_WALK_TIME (20 SECONDS)
 /// Percent chance someone watching comments on a hit, and the least time between those comments
 #define OUTPOST_PRISON_TURRET_HIT_LINE_CHANCE 15
 #define OUTPOST_PRISON_TURRET_HIT_LINE_GAP (20 SECONDS)

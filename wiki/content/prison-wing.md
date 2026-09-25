@@ -42,11 +42,13 @@ Managers can hire guards from the warden's console, up to the limit it shows. Ea
 
 Guards stand post, walk rounds, and step in when prisoners argue, fight, threaten someone or climb a hatch. In a riot they hold the staff doors, and they go into the yard beside you. Their batons stun and never kill, and they never strike players. A guard who is beaten down beams out and comes back later at no charge.
 
-## Stun turrets
+## Turrets
 
-Managers can buy **wing stun turrets** from the console, up to the limit it shows. A new turret arrives loose on the console's tile. Drag it onto a wall of the cell block so that it faces in, toward the yard or a cell; it won't mount anywhere else.
+A turret you build (a turret frame, an energy gun and a proximity sensor) knows the prison's rules. It leaves calm, downed, cuffed and locked-up prisoners alone, and never fires on guards or Kessler's people. It only fires on prisoners who are rioting, fighting, swinging at someone, climbing a hatch or loose, and every shot at a prisoner is a stun shot, whatever mode the turret is in. Its shots pass through anyone it isn't allowed to hit. It fires on the experiments' creatures as normal.
 
-A turret fires only while someone from the outpost is home, and only at prisoners who are already violent: rioters, fighters, a prisoner about to swing at someone, hatch climbers and prisoners loose in the wing. It warns first with a red beam and "Step away." Only the outpost's members can switch one off, unbolt it or salvage it. Rioters go for turrets first.
+Before its first shot at a prisoner, a turret warns them with a red beam and "Step away." Some back off, some rioters give up and walk back to their cell for you to bolt them in, and some keep going and get stunned. A happier prisoner is likelier to listen.
+
+Inside the wing a turret only fires on prisoners who could walk up to it, so one behind the office glass or in a locked cell won't cover the yard. Rioters go for turrets they can reach and smash them. Only the outpost's members can use a turret's controls or a turret control panel, or unbolt a turret.
 
 ## Talking to prisoners
 

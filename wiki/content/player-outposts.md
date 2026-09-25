@@ -73,7 +73,7 @@ Ship docking has separate controls:
 
 Banning a ship overrides docking clearance. Use the hangar elevator to travel between the habitat and occupied visitor berths.
 
-A hull defense turret bolted to the outpost answers only to its owner, stewards, treasurers, residents and builders. Visitors cannot switch it off, change its targeting, unbolt it or scrap it. A cleanbot can pass a prison wing's staff doors, so one built in the office can clean the yard.
+A hull defense turret bolted to the outpost answers only to its owner, stewards, treasurers, residents and builders. Visitors cannot switch it off, change its targeting, unbolt it or scrap it. The same goes for turrets built on the outpost and for turret control panels. A cleanbot can pass a prison wing's staff doors, so one built in the office can clean the yard.
 
 ## Advertising
 

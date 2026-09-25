@@ -46,11 +46,27 @@
 	if(client)
 		refresh_looping_ambience()
 
-/// No other ambience plays over the yard.
+/// Occasional yard noises over the loop, each with its own volume. Stand-ins from the base game
+/// until custom ones exist.
+GLOBAL_LIST_INIT(checkpoint_yard_ambience, list(
+	// Metal creaking as the bay frame takes a load
+	'sound/effects/creak/creak1.ogg' = 35,
+	'sound/effects/creak/creak2.ogg' = 25,
+	'sound/effects/creak/creak3.ogg' = 35,
+	// A pneumatic line venting; the file is loud, so it stays in the background
+	'sound/effects/gas_hissing.ogg' = 12,
+))
+
+/// Inside a ship bay, the area's own ambience gives way to the yard's.
 /area/play_ambience(mob/M, sound/override_sound, volume = 27)
-	if(checkpoint_yard_noise_at(get_turf(M)))
-		return 10 SECONDS
-	return ..()
+	if(!checkpoint_yard_noise_at(get_turf(M)))
+		return ..()
+	var/sound_file = pick(GLOB.checkpoint_yard_ambience)
+	var/volume_modifier = (M.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_ambience_volume)) / 100
+	var/sound/yard_sound = sound(sound_file, repeat = 0, wait = 0, volume = GLOB.checkpoint_yard_ambience[sound_file] * volume_modifier, channel = CHANNEL_AMBIENCE)
+	yard_sound.frequency = get_rand_frequency()
+	SEND_SOUND(M, yard_sound)
+	return SSsounds.get_sound_length(sound_file) + rand(20 SECONDS, 50 SECONDS)
 
 #undef CHECKPOINT_YARD_LOOP
 #undef CHECKPOINT_YARD_LOOP_VOLUME

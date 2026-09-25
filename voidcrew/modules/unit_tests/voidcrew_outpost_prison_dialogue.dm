@@ -24,7 +24,7 @@
 		"spat", "fight_argue_food", "fight_argue_ball", "fight_argue_bed", "fight_yield",
 		"fight_talked_down", "calm_talk", "talk_refuse", "unbolted", "wreck", "riot_imminent",
 		"riot_bystander", "rat", "no_air", "lights_flicker", "arrival_stained", "arrival_hurt",
-		"creature_panic", "vent_noise", "horror", "absorbed",
+		"creature_panic", "vent_noise", "horror", "absorbed", "horror_down", "horror_rises",
 		"hatch_empty", "subdued", "fight_argue_none", "threat_backed_down",
 		"cuffed", "cuffs_off", "lockdown", "lockdown_over",
 		"turret_backs_off", "turret_gives_up", "turret_defies",

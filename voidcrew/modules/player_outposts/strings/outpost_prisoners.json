@@ -2946,6 +2946,56 @@
 				"Wet.",
 				"Great."
 			]
+		},
+		"horror_down": {
+			"any": [
+				"It's still moving!",
+				"Is it dead? Tell me it's dead.",
+				"It's twitching. Why is it twitching?",
+				"Don't just stand there, finish it!",
+				"It's putting itself back together!",
+				"Burn it! Space it! Something!",
+				"That thing isn't dead. Look at it!",
+				"Keep hitting it! It's still going!",
+				"Crew! It's healing itself!",
+				"Get it out an airlock!"
+			],
+			"nervous": [
+				"It's moving. It's still moving!",
+				"Please tell me it's not getting up."
+			],
+			"grumpy": [
+				"Great. It doesn't even stay dead.",
+				"Stop staring and chop it up!"
+			],
+			"quiet": [
+				"Still moving.",
+				"Not dead."
+			]
+		},
+		"horror_rises": {
+			"any": [
+				"It's getting up again!",
+				"It's back up! Run!",
+				"I told you it wasn't dead!",
+				"It's standing up! Lock the doors!",
+				"Oh no, it's getting up!",
+				"It's alive again!",
+				"Why won't it stay down?",
+				"Here it comes again!"
+			],
+			"nervous": [
+				"No, no, no, it's getting up!",
+				"It's back. It's back!"
+			],
+			"grumpy": [
+				"You had one job! It's up again!",
+				"Should have burned it when you could."
+			],
+			"cheerful": [
+				"Round two, everybody! Run!",
+				"Oh good. It's back. Great."
+			]
 		}
 	},
 	"conversations": [

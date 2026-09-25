@@ -32,12 +32,22 @@
  * Doors that will not open for it, it pries; kept from its quarry, it breaks interior windows
  * toward them. It never breaches the prison wing's outer ring, never a wall or window with
  * anything but the outpost's own floor beyond, and never steps off the outpost's ground.
+ *
+ * It regenerates. At 0 health it collapses, but its flesh keeps moving: it lies on the floor unable
+ * to act or absorb, turrets leave it alone, and after OUTPOST_HORROR_REGEN_TIME (counted only while
+ * a member of the wing is home) it gets up with half its health and fights on. To kill it for good,
+ * destroy the body while it is down (OUTPOST_HORROR_REMAINS more damage, and it bursts), gib or dust
+ * it, or get it into vacuum, where it freezes. It also dies for good if it collapses in vacuum. The
+ * containment bonus and the end of the experiment come only with that final death. The first
+ * collapse is announced to the outpost; prisoners go on hiding while it is down.
  */
 
 /// Trait source for standing still: unfolding, winding up, channelling, staggered or prying
 #define HORROR_BUSY_TRAIT "outpost_horror_busy"
 /// Trait source for holding an absorb victim still
 #define HORROR_GRIP_TRAIT "outpost_horror_grip"
+/// The pulsing outline it has while it lies regenerating
+#define HORROR_REGEN_FILTER "outpost_horror_regen"
 /// The horror's faction: it fights everything else
 #define FACTION_OUTPOST_HORROR "outpost_horror"
 /// Blackboard keys
@@ -131,6 +141,18 @@
 	var/datum/weakref/quarry_ref
 	var/closest_to_quarry = INFINITY
 	var/closing_since = 0
+	/// Down at 0 health and regenerating: not dead, and up again after OUTPOST_HORROR_REGEN_TIME
+	var/regenerating = FALSE
+	/// Seconds until it gets up; they count only while a member of the wing is home
+	var/regen_left = 0
+	/// Damage its body can still take while it is down before it bursts
+	var/remains = 0
+	/// Seconds to its next twitch while it is down
+	var/stasis_tell_left = 0
+	/// It has warned, while down, that it is getting up
+	var/rise_warned = FALSE
+	/// The next death() is for good: an admin's kill, vacuum, or its body destroyed
+	var/final_death = FALSE
 
 /mob/living/basic/outpost_experiment/horror/Initialize(mapload)
 	. = ..()
@@ -230,11 +252,29 @@
 	SIGNAL_HANDLER
 	INVOKE_ASYNC(src, PROC_REF(collect_remains))
 
+/**
+ * At 0 health it goes down regenerating (start_regenerating()) instead of dying. While it is down,
+ * every update of its health lands here again and changes nothing. It dies for good when gibbed or
+ * dusted, after die_for_good(), or when it collapses in vacuum, which stops its regeneration outright.
+ */
 /mob/living/basic/outpost_experiment/horror/death(gibbed)
+	if(stat != DEAD && !gibbed && !final_death)
+		if(regenerating)
+			return FALSE
+		if(!in_vacuum())
+			start_regenerating()
+			return FALSE
+		final_death = TRUE
+		death_message = "freezes solid, and its flesh stops moving."
 	end_absorb()
 	mend_left = 0
 	clear_busy()
+	// Still `regenerating` while the death signal goes out, so a gib counts what was left of its body (unspent_health()).
 	. = ..()
+	if(!.)
+		return
+	regenerating = FALSE
+	end_regeneration_look()
 	move_resist = MOVE_RESIST_DEFAULT
 	if(!gibbed)
 		addtimer(CALLBACK(src, PROC_REF(collect_remains)), OUTPOST_CHANGELING_REMAINS_TIME, TIMER_DELETE_ME)
@@ -249,6 +289,196 @@
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 		new /obj/effect/temp_visual/transporter_beam(spot, 1.5 SECONDS)
 	qdel(src)
+
+// ===== REGENERATION =====
+
+/**
+ * Goes down regenerating: on the floor and out of it, its health held at 0. It cannot act or
+ * absorb, and turrets leave it be. After OUTPOST_HORROR_REGEN_TIME (regen_tick()) it gets up with
+ * OUTPOST_HORROR_REGEN_HEALTH of its health, unless its body is destroyed first (damage_remains())
+ * or it is in vacuum. Returns TRUE if it went down.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/start_regenerating()
+	if(regenerating || stat == DEAD || QDELETED(src))
+		return FALSE
+	regenerating = TRUE
+	regen_left = OUTPOST_HORROR_REGEN_TIME
+	remains = OUTPOST_HORROR_REMAINS
+	rise_warned = FALSE
+	stasis_tell_left = rand(2, 4)
+	end_absorb()
+	mend_left = 0
+	clear_busy()
+	set_quarry(null)
+	ai_controller?.CancelActions()
+	// Unconscious: floored, incapacitated and its AI stopped until it stands up again.
+	set_stat(UNCONSCIOUS)
+	bruteloss = maxHealth
+	updatehealth()
+	// Its body can be dragged about while it is down, but never off the outpost's ground (check_ground()).
+	move_resist = MOVE_RESIST_DEFAULT
+	visible_message(span_boldwarning("[src] collapses, but its flesh keeps moving."))
+	playsound(src, 'sound/effects/magic/demon_dies.ogg', 60, TRUE, 2)
+	start_regeneration_look()
+	log_game("PLAYER OUTPOST PRISON: the changeling horror went down regenerating at [AREACOORD(src)]")
+	event?.horror_collapsed()
+	return TRUE
+
+/**
+ * `seconds` down: vacuum freezes it, fire eats at its body, it twitches, and if `home` (a member of
+ * the wing is home) the clock to getting up runs, with a warning OUTPOST_HORROR_RISE_WARNING before.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/regen_tick(seconds, home = TRUE)
+	if(!regenerating || stat == DEAD || QDELETED(src) || HAS_TRAIT(src, TRAIT_GODMODE))
+		return
+	if(in_vacuum())
+		freeze_solid()
+		return
+	if(on_fire)
+		apply_damage(OUTPOST_HORROR_REMAINS_BURN * seconds, BURN, forced = TRUE)
+		if(QDELETED(src) || stat == DEAD)
+			return
+	stasis_tells(seconds)
+	if(!home)
+		return
+	regen_left -= seconds
+	if(!rise_warned && regen_left <= OUTPOST_HORROR_RISE_WARNING)
+		rise_warned = TRUE
+		visible_message(span_userdanger("[src]'s limbs wrench back into shape. It's getting up!"))
+		balloon_alert_to_viewers("getting up!")
+		playsound(src, 'sound/effects/magic/enter_blood.ogg', 60, TRUE, 2)
+		Shake(2, 1, 1 SECONDS)
+		event?.horror_rising()
+	if(regen_left <= 0)
+		rise_again()
+
+/// Down, it twitches and heaves every few seconds, with wet noises
+/mob/living/basic/outpost_experiment/horror/proc/stasis_tells(seconds)
+	stasis_tell_left -= seconds
+	if(stasis_tell_left > 0)
+		return
+	stasis_tell_left = rand(3, 5)
+	Shake(1, 0, 0.6 SECONDS)
+	playsound(src, pick('sound/effects/meatslap.ogg', 'sound/effects/splat.ogg', 'sound/effects/blob/attackblob.ogg'), 35, TRUE, -2)
+	if(prob(40))
+		visible_message(span_warning(pick(
+			"[src] twitches.",
+			"Something shifts under [src]'s chitin.",
+			"[src]'s torn flesh crawls back together.",
+			"[src]'s fingers curl and flex.",
+		)))
+
+/// Back on its feet with OUTPOST_HORROR_REGEN_HEALTH of its health, roaring, and the fight goes on. Returns TRUE if it got up.
+/mob/living/basic/outpost_experiment/horror/proc/rise_again()
+	if(!regenerating || stat == DEAD || QDELETED(src) || HAS_TRAIT(src, TRAIT_GODMODE))
+		return FALSE
+	regenerating = FALSE
+	regen_left = 0
+	remains = 0
+	end_regeneration_look()
+	pulledby?.stop_pulling()
+	move_resist = initial(move_resist)
+	// The update stands it up (update_stat() sets it conscious), and its AI starts again with it.
+	bruteloss = round(maxHealth * (1 - OUTPOST_HORROR_REGEN_HEALTH), DAMAGE_PRECISION)
+	updatehealth()
+	visible_message(span_userdanger("[src] heaves itself up off the floor with a roar!"))
+	playsound(src, 'sound/mobs/non-humanoids/space_dragon/space_dragon_roar.ogg', 70, TRUE, 4)
+	for(var/mob/living/watcher in view(5, src))
+		if(watcher.client)
+			shake_camera(watcher, 3, 1)
+	log_game("PLAYER OUTPOST PRISON: the changeling horror got up again at [AREACOORD(src)], [health] health")
+	event?.horror_rose()
+	return TRUE
+
+/**
+ * Damage while it is down wears away its body; with nothing left it bursts, dead for good. Healing
+ * does nothing. Returns what adjust_health() would: the change in damage, negative for damage taken,
+ * so the damage ledger counts hits on its body too.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/damage_remains(amount, forced = FALSE)
+	if(amount <= 0 || remains <= 0 || (!forced && HAS_TRAIT(src, TRAIT_GODMODE)))
+		return 0
+	var/taken = min(amount, remains)
+	remains -= taken
+	if(remains <= 0)
+		burst_remains()
+	return -taken
+
+/// Its body is destroyed: it bursts apart in a spray of blood and guts, dead for good
+/mob/living/basic/outpost_experiment/horror/proc/burst_remains()
+	if(QDELETED(src) || stat == DEAD)
+		return
+	final_death = TRUE
+	var/turf/spot = get_turf(src)
+	visible_message(span_userdanger("[src]'s body bursts apart in a spray of blood and guts!"))
+	if(spot)
+		playsound(spot, 'sound/effects/splat.ogg', 80, TRUE, 3)
+		for(var/turf/open/near in range(1, spot))
+			if(prob(60) && !near.is_blocked_turf(TRUE))
+				new /obj/effect/decal/cleanable/blood/splatter(near)
+		new /obj/item/organ/heart(spot)
+		new /obj/item/organ/liver(spot)
+	log_game("PLAYER OUTPOST PRISON: the changeling horror's body was destroyed at [AREACOORD(src)]")
+	gib()
+
+/// Down in vacuum: it freezes solid, dead for good
+/mob/living/basic/outpost_experiment/horror/proc/freeze_solid()
+	if(QDELETED(src) || stat == DEAD)
+		return
+	add_atom_colour("#a8c8f0", FIXED_COLOUR_PRIORITY)
+	log_game("PLAYER OUTPOST PRISON: the changeling horror froze in vacuum at [AREACOORD(src)]")
+	die_for_good("freezes solid, and its flesh stops moving.")
+
+/**
+ * Dies for good, down or not: an admin's kill, vacuum or its body destroyed. `message` replaces its
+ * death message. Returns TRUE if it died.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/die_for_good(message)
+	if(QDELETED(src) || stat == DEAD)
+		return FALSE
+	final_death = TRUE
+	if(message)
+		death_message = message
+	death()
+	return stat == DEAD
+
+/// Whether it lies in vacuum: on a space tile, or where the pressure is below OUTPOST_HORROR_VACUUM_PRESSURE
+/mob/living/basic/outpost_experiment/horror/proc/in_vacuum()
+	var/turf/here = get_turf(src)
+	if(!isopenturf(here))
+		return FALSE
+	if(isspaceturf(here))
+		return TRUE
+	var/datum/gas_mixture/air = here.return_air()
+	return !air || air.return_pressure() < OUTPOST_HORROR_VACUUM_PRESSURE
+
+/// A dark red outline that pulses while it lies regenerating
+/mob/living/basic/outpost_experiment/horror/proc/start_regeneration_look()
+	add_filter(HORROR_REGEN_FILTER, 2, list("type" = "outline", "color" = "#9c1a2cd0", "size" = 1))
+	var/filter = get_filter(HORROR_REGEN_FILTER)
+	if(filter)
+		animate(filter, alpha = 40, time = 0.7 SECONDS, loop = -1)
+		animate(alpha = 230, time = 0.7 SECONDS)
+
+/mob/living/basic/outpost_experiment/horror/proc/end_regeneration_look()
+	remove_filter(HORROR_REGEN_FILTER)
+
+/mob/living/basic/outpost_experiment/horror/examine(mob/user)
+	. = ..()
+	if(regenerating && stat != DEAD)
+		. += span_warning("It's still moving.")
+
+/// Down and regenerating, it is no target for turrets
+/mob/living/basic/outpost_experiment/horror/turret_target()
+	return !regenerating && ..()
+
+/// Down, what is left of its body is what a gib takes without it counting as damage
+/mob/living/basic/outpost_experiment/horror/unspent_health()
+	return regenerating ? remains : ..()
+
+/// Burst or blown apart, it leaves a person's remains
+/mob/living/basic/outpost_experiment/horror/get_gibs_type(drop_bitflags = NONE)
+	return /obj/effect/gibspawner/human
 
 // ===== STANDING STILL =====
 
@@ -279,7 +509,7 @@
 
 /// Thrown off its stride: whatever it was channelling stops, and it stands reeling for `duration`
 /mob/living/basic/outpost_experiment/horror/proc/stagger(duration, reason)
-	if(stat == DEAD)
+	if(stat == DEAD || regenerating)
 		return
 	end_absorb()
 	mend_left = 0
@@ -327,6 +557,9 @@
 // ===== DAMAGE, THE SHIELD AND FIRE =====
 
 /mob/living/basic/outpost_experiment/horror/adjust_health(amount, updating_health = TRUE, forced = FALSE)
+	// Down and regenerating, its health stays at 0 and damage wears away its body instead.
+	if(regenerating && stat != DEAD)
+		return damage_remains(amount, forced)
 	if(amount > 0 && !forced && busy == "fleshmend")
 		amount *= OUTPOST_HORROR_FLESHMEND_VULNERABILITY
 	. = ..()
@@ -806,7 +1039,12 @@
 
 /mob/living/basic/outpost_experiment/horror/Life(seconds_per_tick = SSMOBS_DT, times_fired)
 	. = ..()
-	if(stat == DEAD)
+	if(stat == DEAD || QDELETED(src))
+		return
+	if(regenerating)
+		// An experiment's horror is driven by its event each second (horror_tick()); one without an experiment drives itself.
+		if(!event)
+			regen_tick(seconds_per_tick, crew_about())
 		return
 	check_progress()
 
@@ -1086,7 +1324,7 @@
 
 /// Pulled in, knocked down and impaled on the blade
 /mob/living/basic/outpost_experiment/horror/proc/tentacle_hit(mob/living/victim)
-	if(QDELETED(victim) || stat == DEAD)
+	if(QDELETED(victim) || stat != CONSCIOUS)
 		return
 	victim.visible_message(
 		span_userdanger("[victim] is caught by [src]'s tentacle and dragged in!"),
@@ -1364,6 +1602,7 @@
 
 #undef HORROR_BUSY_TRAIT
 #undef HORROR_GRIP_TRAIT
+#undef HORROR_REGEN_FILTER
 #undef FACTION_OUTPOST_HORROR
 #undef BB_OUTPOST_HORROR_ABILITY
 #undef BB_OUTPOST_HORROR_ABILITY_TARGET

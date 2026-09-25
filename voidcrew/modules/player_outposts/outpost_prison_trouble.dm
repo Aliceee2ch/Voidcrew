@@ -158,9 +158,9 @@
 /mob/living/basic/outpost_prisoner/proc/earning_pay()
 	return !trouble
 
-/// Whether their sentence runs: not while rioting or loose
+/// Whether their sentence runs: not while rioting or loose, or while an experiment under way needs them (outpost_prison_experiments.dm)
 /mob/living/basic/outpost_prisoner/proc/serving_sentence()
-	return !is_rioting() && trouble != PRISONER_TROUBLE_LOOSE
+	return !is_rioting() && trouble != PRISONER_TROUBLE_LOOSE && !prison?.held_for_experiment(src)
 
 /// Their trouble just ended; staff finishing it off in the next few seconds are not to blame
 /mob/living/basic/outpost_prisoner/proc/note_trouble_ended()

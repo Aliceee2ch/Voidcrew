@@ -15,11 +15,14 @@
  * - The wing is paid a fee when a creature shows (experiment_creature_appeared()) and a bonus when
  *   it is put down (experiment_creature_down()) if the crew did half its damage or more
  *   (/datum/component/experiment_damage_ledger). Each is paid once per experiment.
- * - Kessler recovers a creature 12 minutes after it shows, or 5 minutes after it leaves the wing,
- *   or at once if it leaves the outpost, and charges a fee that becomes debt (experiment_recover()).
- * - While a creature is live, arrivals, riots and fights wait, and prisoners run for their cells
- *   and ask to be bolted in, which then costs them nothing (protective custody). When it ends,
- *   everyone who saw a prisoner die loses mood and each death adds tension.
+ * - A creature stays until the crew puts it down or an admin ends the experiment. One that gets out
+ *   of the wing sets off the containment breach alarm. One taken off the outpost (onto a ship, say)
+ *   is recovered by Kessler at once, for a fee that becomes debt (experiment_recover()).
+ * - The dosed subject or the specimen's host is the experiment's until it ends
+ *   (held_for_experiment()): not released, transferred, beamed out as escaped or collected dead.
+ * - While a creature is live, riots and fights wait, and prisoners run for their cells and ask to
+ *   be bolted in, which then costs them nothing (protective custody). When it ends, everyone who
+ *   saw a prisoner die loses mood and each death adds tension.
  * Every clock here counts only while a member of the wing is home (crew_home()).
  */
 
@@ -174,15 +177,19 @@
 	return creature
 
 /**
- * The creatures: Kessler's clocks, and the leash. A creature off the outpost is recovered at once
- * (for the fee only if it walked while the crew was home); one out of the wing starts the
- * OUTPOST_EXPERIMENT_KESSLER_LOOSE_TIME clock. Both clocks count only while the crew is home.
+ * The creatures and the leash. A creature off the outpost is recovered at once (for the fee only
+ * if it walked while the crew was home). One out of the wing sets off the containment breach alarm,
+ * once. Otherwise they stay until they are put down. A specimen whose creatures are all gone without
+ * being put down (deleted outright) has failed.
  */
 /datum/outpost_prison/proc/creatures_tick(seconds, home)
 	var/list/live = experiment.live_creatures()
 	if(!length(live))
-		if(experiment.form != "changeling" && !length(experiment.creature_refs))
-			experiment_failed("the creature is gone")
+		if(experiment.form != "changeling")
+			if(!length(experiment.creature_refs))
+				experiment_failed("the creature is gone")
+		else if(QDELETED(experiment.changeling) || experiment.changeling.stage == "done")
+			experiment_failed("the specimen is gone")
 		return
 	var/out_of_wing = FALSE
 	for(var/mob/living/creature as anything in live)
@@ -194,18 +201,10 @@
 			return
 		if(get_area(creature) != wing)
 			out_of_wing = TRUE
-	if(out_of_wing && isnull(experiment.loose_left))
-		experiment.loose_left = OUTPOST_EXPERIMENT_KESSLER_LOOSE_TIME
+	if(out_of_wing && !experiment.breach_announced)
+		experiment.breach_announced = TRUE
 		add_log("An experiment creature got out of the wing.")
 		announce("CONTAINMENT BREACH: the Kessler specimen has left the prison wing.", SHIP_NOTIFY_DANGER)
-	if(!home)
-		return
-	if(!isnull(experiment.kessler_left))
-		experiment.kessler_left -= seconds
-	if(!isnull(experiment.loose_left))
-		experiment.loose_left -= seconds
-	if((!isnull(experiment.kessler_left) && experiment.kessler_left <= 0) || (!isnull(experiment.loose_left) && experiment.loose_left <= 0))
-		experiment_recover()
 
 /// Whether a creature is still on the outpost's own ground: its areas, not a docked ship or open space
 /datum/outpost_prison/proc/outpost_holds(atom/movable/creature)
@@ -260,8 +259,8 @@
 
 /**
  * A creature showed: the serum's result, the headslug at the burst, or the horror. The first one
- * pays the fee. Starts Kessler's clock (not for the headslug), sends the prisoners to their cells,
- * and watches the creature's death. `form` is the experiment's ("hulk", "fly", "nightmare",
+ * pays the fee. Sends the prisoners to their cells and watches the creature's death; the horror
+ * going down to regenerate is not one. `form` is the experiment's ("hulk", "fly", "nightmare",
  * "changeling") or the creature's ("headslug", "horror"). Returns TRUE if it is tracked.
  */
 /datum/outpost_prison/proc/experiment_creature_appeared(mob/living/creature, form)
@@ -284,8 +283,6 @@
 	creature.AddComponent(/datum/component/experiment_damage_ledger)
 	RegisterSignal(creature, COMSIG_LIVING_DEATH, PROC_REF(on_creature_death))
 	RegisterSignal(creature, COMSIG_QDELETING, PROC_REF(on_creature_deleted))
-	if(kind != "headslug" && isnull(experiment.kessler_left))
-		experiment.kessler_left = OUTPOST_EXPERIMENT_KESSLER_TIME
 	experiment.stage = kind == "horror" ? "horror" : "live"
 	if(!experiment.fee_done)
 		experiment.fee_done = TRUE
@@ -329,12 +326,17 @@
 /**
  * A tracked creature died: that is it put down. Gibbed or dusted (a bomb, a shuttle), it never took
  * the health it still had as damage, so that goes on its ledger as damage that was not the players'.
+ * For the horror down and regenerating, that is what is left of its body.
  */
 /datum/outpost_prison/proc/on_creature_death(mob/living/creature, gibbed)
 	SIGNAL_HANDLER
-	if(gibbed && creature.health > 0)
+	var/unspent = creature.health
+	var/mob/living/basic/outpost_experiment/experiment_creature = creature
+	if(istype(experiment_creature))
+		unspent = experiment_creature.unspent_health()
+	if(gibbed && unspent > 0)
 		var/datum/component/experiment_damage_ledger/ledger = creature.GetComponent(/datum/component/experiment_damage_ledger)
-		ledger?.add_damage(creature.health, FALSE)
+		ledger?.add_damage(unspent, FALSE)
 	INVOKE_ASYNC(src, PROC_REF(experiment_creature_down), creature, FALSE)
 
 /// A tracked creature is gone. A serum creature deleted before it was put down or recovered takes the experiment with it.
@@ -403,6 +405,22 @@
 	if(had_any)
 		add_log("The experiment was called off.")
 	return had_any
+
+/**
+ * The admin panel's horror buttons. "kill" kills the experiment's horror for good, which pays the
+ * containment bonus as any final death would. "regen" puts it down regenerating if it is up, or
+ * gets it up now if it is down. Returns TRUE if it did something.
+ */
+/datum/outpost_prison/proc/admin_horror(what)
+	var/mob/living/basic/outpost_experiment/horror/horror = experiment_active() ? experiment.live_horror() : null
+	if(!horror)
+		return FALSE
+	switch(what)
+		if("kill")
+			return horror.die_for_good()
+		if("regen")
+			return horror.regenerating ? horror.rise_again() : horror.start_regenerating()
+	return FALSE
 
 /**
  * Ends everything to do with experiments at once, with no pay and no fee: for the admin panel,
@@ -572,14 +590,31 @@
 		return 0
 	return ..()
 
+/**
+ * Whether the experiment under way still needs `prisoner`: its dosed subject, or the specimen's
+ * host until the burst, dead or alive. Nobody beams them out meanwhile: their sentence holds
+ * (serving_sentence()), and there is no release, riot transfer, escape for good or body collection.
+ * Once the experiment is over the usual rules apply again.
+ */
+/datum/outpost_prison/proc/held_for_experiment(mob/living/basic/outpost_prisoner/prisoner)
+	if(!prisoner || !experiment_active())
+		return FALSE
+	if(prisoner == experiment.subject())
+		return TRUE
+#ifdef OUTPOST_CHANGELING_API
+	if(!QDELETED(experiment.changeling) && experiment.changeling.host == prisoner)
+		return TRUE
+#endif
+	return FALSE
+
 /// A dosed subject is not released at the end of their sentence
 /datum/outpost_prison/check_release(mob/living/basic/outpost_prisoner/prisoner)
-	if(prisoner.experiment_subject)
+	if(held_for_experiment(prisoner))
 		return
 	return ..()
 
 /datum/outpost_prison/release(mob/living/basic/outpost_prisoner/prisoner)
-	if(prisoner.experiment_subject)
+	if(held_for_experiment(prisoner))
 		return 0
 	return ..()
 
@@ -686,9 +721,8 @@
 	var/list/creature_kinds = list()
 	/// REF() of creatures put down, recovered or taken away -> TRUE
 	var/list/downed = list()
-	/// Seconds before Kessler recovers the creatures; and since one got out of the wing
-	var/kessler_left
-	var/loose_left
+	/// A creature has got out of the wing, and the outpost has been told
+	var/breach_announced = FALSE
 	/// The researcher's sweetener on the pay
 	var/multiplier = 1
 	var/fee_paid = 0
@@ -743,6 +777,12 @@
 		live += creature
 	return live
 
+/// The experiment's horror while it is out and not dead for good (up, or down regenerating), or null
+/datum/outpost_experiment/proc/live_horror()
+	for(var/mob/living/basic/outpost_experiment/horror/horror in live_creatures())
+		return horror
+	return null
+
 /datum/outpost_experiment/proc/forget_creature(key)
 	creature_refs -= key
 	creature_kinds -= key
@@ -762,23 +802,22 @@
 		if("horror")
 			stage = "horror"
 
-/// The console block; see /datum/outpost_prison/proc/experiment_payload()
+/**
+ * The console block; see /datum/outpost_prison/proc/experiment_payload(). A horror down and
+ * regenerating shows as "horror" = "regenerating", with the time until it gets up as time_left.
+ */
 /datum/outpost_experiment/proc/payload()
 	follow_changeling()
 	var/time_left
+	var/mob/living/basic/outpost_experiment/horror/horror = resolved ? null : live_horror()
 	switch(stage)
 		if("dosed", "twitching")
 			time_left = twitch_left
 		if("incubating", "vents")
 			time_left = QDELETED(changeling) ? null : changeling.time_left
 		if("live", "horror")
-			var/list/clocks = list()
-			if(!isnull(kessler_left))
-				clocks += kessler_left
-			if(!isnull(loose_left))
-				clocks += loose_left
-			if(length(clocks))
-				time_left = min(clocks)
+			if(horror?.regenerating)
+				time_left = horror.regen_left
 			else if(!QDELETED(changeling))
 				time_left = changeling.time_left
 	if(!isnull(time_left))
@@ -791,6 +830,7 @@
 		"researcher_present" = !!prison?.researcher,
 		"fee_paid" = fee_paid,
 		"bonus_paid" = bonus_paid,
+		"horror" = horror ? (horror.regenerating ? "regenerating" : "up") : null,
 	)
 
 // ===== TABLES =====

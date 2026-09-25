@@ -7,13 +7,13 @@
 
 // ----- the host -----
 /// Seconds from eating the specimen to the burst, rolled in this range
-#define OUTPOST_CHANGELING_INCUBATION_MIN 180
-#define OUTPOST_CHANGELING_INCUBATION_MAX 240
+#define OUTPOST_CHANGELING_INCUBATION_MIN 90
+#define OUTPOST_CHANGELING_INCUBATION_MAX 120
 /// Seconds into incubation of the first stomach complaint, and of the coughing and retching
-#define OUTPOST_CHANGELING_TELL_PAIN 60
-#define OUTPOST_CHANGELING_TELL_RETCH 120
+#define OUTPOST_CHANGELING_TELL_PAIN 30
+#define OUTPOST_CHANGELING_TELL_RETCH 60
 /// Seconds before the burst that the host takes to their bed
-#define OUTPOST_CHANGELING_BED_WARNING 45
+#define OUTPOST_CHANGELING_BED_WARNING 22.5
 /// Seconds the host has to get to their bed before they go down where they are
 #define OUTPOST_CHANGELING_BED_WALK 15
 /// Seconds a host killed before the burst takes to burst anyway
@@ -37,14 +37,14 @@
 /// How long unbolting a sealed vent's cover takes
 #define OUTPOST_KESSLER_VENT_WRENCH_TIME (3 SECONDS)
 /// Seconds in the vents before the horror comes out
-#define OUTPOST_CHANGELING_VENT_TIME 180
+#define OUTPOST_CHANGELING_VENT_TIME 90
 /// Seconds the emergence vent strains before it gives
-#define OUTPOST_CHANGELING_STRAIN_TIME 10
+#define OUTPOST_CHANGELING_STRAIN_TIME 5
 /// Seconds between rattles of the occupied vent
 #define OUTPOST_CHANGELING_RATTLE_GAP 4
 /// Seconds in the vents at which the second and third noise phases start
-#define OUTPOST_CHANGELING_NOISE_LOUDER 60
-#define OUTPOST_CHANGELING_NOISE_VIOLENT 120
+#define OUTPOST_CHANGELING_NOISE_LOUDER 30
+#define OUTPOST_CHANGELING_NOISE_VIOLENT 60
 /// Seconds between prisoners' remarks about the noise
 #define OUTPOST_CHANGELING_REMARK_GAP 12
 
@@ -124,6 +124,22 @@
 
 /// A dead slug or horror is collected this long after it dies
 #define OUTPOST_CHANGELING_REMAINS_TIME (10 SECONDS)
+
+// ----- the horror's regeneration -----
+// At 0 health it goes down regenerating instead of dying. It dies for good when its body is
+// destroyed, gibbed or dusted, when it is in vacuum while down, or when an admin kills it.
+/// Seconds it stays down before it gets up again; they count only while a member of the wing is home
+#define OUTPOST_HORROR_REGEN_TIME 45
+/// Share of its health it gets up with
+#define OUTPOST_HORROR_REGEN_HEALTH 0.5
+/// Seconds before it gets up that it starts pushing itself up, as a warning
+#define OUTPOST_HORROR_RISE_WARNING 5
+/// Damage its body can take while it is down before it bursts, dead for good
+#define OUTPOST_HORROR_REMAINS 200
+/// Damage a second fire does to its body while it is down
+#define OUTPOST_HORROR_REMAINS_BURN 10
+/// Pressure (kPa) below which it counts as in vacuum: down there, it freezes, dead for good
+#define OUTPOST_HORROR_VACUUM_PRESSURE HAZARD_LOW_PRESSURE
 
 // ----- afterwards -----
 /// Mood each prisoner who saw a death loses when the experiment ends

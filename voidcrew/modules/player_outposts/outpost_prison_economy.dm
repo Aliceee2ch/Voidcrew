@@ -407,9 +407,12 @@
 		broke_out = FALSE
 	update_riot_lights()
 
-/// The corrections service takes a body away
+/// The corrections service takes a body away, unless an experiment under way still needs it: a specimen host about to burst
 /datum/outpost_prison/proc/collect(mob/living/basic/outpost_prisoner/prisoner)
+	if(held_for_experiment(prisoner))
+		return FALSE
 	prisoner.beam_out()
+	return TRUE
 
 /**
  * A prisoner has left the roster (released, collected, escaped or deleted) and their cell is free.

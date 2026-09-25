@@ -190,6 +190,10 @@
 	. = ..()
 	move_resist = MOVE_RESIST_DEFAULT
 
+/// Health it still had, which a gib or dust takes without it counting as damage on its ledger
+/mob/living/basic/outpost_experiment/proc/unspent_health()
+	return health
+
 /**
  * Interim turret rule (outpost_prison_riot.dm): outpost turrets shoot a creature wherever it is,
  * until it is dead, subdued or in Kessler's hands. Turret damage is not the crew's, so a turret

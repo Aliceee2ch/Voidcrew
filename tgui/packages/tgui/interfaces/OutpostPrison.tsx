@@ -145,6 +145,8 @@ type Experiment = {
   researcher_present: BooleanLike;
   fee_paid: number;
   bonus_paid: number;
+  /** "up" or "regenerating" while the horror is out; time_left is then the time until it gets up */
+  horror?: string | null;
 };
 
 export type OutpostPrisonData = {
@@ -556,6 +558,12 @@ function ExperimentPanel({ data }: Props) {
           <Icon name="user-doctor" />
           {present ? 'Researcher here' : 'Researcher away'}
         </span>
+        {experiment.horror === 'regenerating' ? (
+          <span className="OutpostPrison__tone--bad">
+            <Icon name="heart-pulse" />
+            Regenerating
+          </span>
+        ) : null}
         {fee > 0 ? (
           <span className="OutpostPrison__tone--good">
             <Icon name="coins" />

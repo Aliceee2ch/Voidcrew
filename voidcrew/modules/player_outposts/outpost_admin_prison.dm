@@ -42,6 +42,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_experiment_end", // {}: ends the experiment with no fee
 	"prison_incident", // {kind: stab|snap|fight, tell}: a wildcard incident now, past its clock; tell 1 plays the tell first
 	"prison_wing_event", // {kind: lights|vent|toilet}: a wing event now, past its clock
+	"prison_horror", // {what: kill|regen}: kills the horror for good, or drops it to regenerate (gets it up if it is down)
 	// The extras (outpost_prison_extras.dm); each package validates its own params
 	"prison_guard_spawn", // {}: a free guard, ignoring the cap
 	"prison_guard_remove", // {ref}
@@ -145,6 +146,9 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 				if("prison_release")
 					if(prisoner.phase != PRISONER_PRESENT || prisoner.stat == DEAD)
 						error = "Only a living prisoner in the wing can be released."
+						return
+					if(hascall(prison, "held_for_experiment") && call(prison, "held_for_experiment")(prisoner))
+						error = "The experiment still needs this prisoner. End it first."
 						return
 					var/bonus = prison.release(prisoner)
 					record(user, home, "release prisoner [prisoner.real_name] (+[bonus] cr)")
@@ -363,6 +367,18 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 				return
 			prison.wing_event_admin_started()
 			record(user, home, "start a prison wing event ([kind])")
+		if("prison_horror")
+			var/what = params["what"]
+			if(!istext(what) || !(what in list("kill", "regen")))
+				error = "Invalid horror action."
+				return
+			if(!hascall(prison, "admin_horror"))
+				error = "Experiments are not installed."
+				return
+			if(!call(prison, "admin_horror")(what))
+				error = "No horror is out."
+				return
+			record(user, home, what == "kill" ? "kill the prison horror for good" : "force the prison horror's regeneration")
 		else
 			// The extras' own actions: a log line when done, list("error" = text) when refused
 			var/result = prison.extras_admin_act(action, params, user)

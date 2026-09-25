@@ -1,7 +1,7 @@
 /**
  * The changeling experiment: the host's incubation and burst, the headslug and the sealed vents,
- * the horror's emergence, its kit and its absorb, and what keeps it on the outpost and inside the
- * wing's outer ring.
+ * the horror's emergence, its kit and its absorb, its regeneration, and what keeps it on the outpost
+ * and inside the wing's outer ring.
  *
  * Voidcrew defines are not visible from test files, so tuning values appear as literals with the
  * define named beside them. The prison's own clock is stopped (prison_test_claim()), and so is the
@@ -63,37 +63,37 @@
 	TEST_ASSERT(host.experiment_subject, "The host is not marked as the experiment's subject")
 	TEST_ASSERT_EQUAL(host.bubble, "experiment", "The host does not show the syringe bubble")
 	TEST_ASSERT_EQUAL(event.stage, "incubating", "A fresh specimen is not incubating")
-	TEST_ASSERT(event.incubation_total >= 180 && event.incubation_total <= 240, "Incubation rolled [event.incubation_total] s, not 3-4 minutes") // OUTPOST_CHANGELING_INCUBATION_MIN/_MAX
+	TEST_ASSERT(event.incubation_total >= 90 && event.incubation_total <= 120, "Incubation rolled [event.incubation_total] s, not 90-120") // OUTPOST_CHANGELING_INCUBATION_MIN/_MAX
 	TEST_ASSERT_NULL(outpost_changeling_infect(host, prison), "A second specimen took while one was incubating")
-	event.incubation_total = 200
+	event.incubation_total = 100
 	event.tick(0)
-	TEST_ASSERT_EQUAL(event.time_left, 200, "The console clock reads [event.time_left], not 200")
+	TEST_ASSERT_EQUAL(event.time_left, 100, "The console clock reads [event.time_left], not 100")
 
 	// Nobody home: the clock waits.
 	prison.crew_home_override = FALSE
 	changeling_ticks(event, 30)
 	TEST_ASSERT_EQUAL(event.incubation_elapsed, 0, "Incubation ran [event.incubation_elapsed] s with nobody home")
-	TEST_ASSERT_EQUAL(event.time_left, 200, "A paused clock read [event.time_left]")
+	TEST_ASSERT_EQUAL(event.time_left, 100, "A paused clock read [event.time_left]")
 	prison.crew_home_override = TRUE
 
-	// Stomach pain at a minute, then the bunk 45 seconds before the burst.
-	changeling_ticks(event, 60) // OUTPOST_CHANGELING_TELL_PAIN
-	TEST_ASSERT(event.said_pain, "The host had no stomach pain at a minute")
+	// Stomach pain at 30 seconds, then the bunk 22.5 seconds before the burst.
+	changeling_ticks(event, 30) // OUTPOST_CHANGELING_TELL_PAIN
+	TEST_ASSERT(event.said_pain, "The host had no stomach pain at 30 s")
 	host.sentence_left = 30
-	changeling_ticks(event, 94)
+	changeling_ticks(event, 47)
 	TEST_ASSERT(host.sentence_left >= 600, "The host's sentence ran down to [host.sentence_left] while incubating") // OUTPOST_CHANGELING_HOST_SENTENCE_HOLD
-	TEST_ASSERT(!event.bed_phase, "The host went to bed [200 - event.incubation_elapsed] s early")
-	changeling_ticks(event, 1) // 155 = 200 - OUTPOST_CHANGELING_BED_WARNING
-	TEST_ASSERT(event.bed_phase, "The host did not go to bed 45 s before the burst")
+	TEST_ASSERT(!event.bed_phase, "The host went to bed [100 - event.incubation_elapsed] s early")
+	changeling_ticks(event, 1) // 78, the first whole second past 100 - OUTPOST_CHANGELING_BED_WARNING (22.5)
+	TEST_ASSERT(event.bed_phase, "The host did not go to bed 22.5 s before the burst")
 	changeling_ticks(event, 1)
 	TEST_ASSERT(event.host_down && host.can_be_dragged(), "The host on their bunk is not down and draggable")
-	changeling_ticks(event, 43)
-	TEST_ASSERT_EQUAL(event.stage, "incubating", "The host burst at [event.incubation_elapsed] s, not 200")
+	changeling_ticks(event, 20)
+	TEST_ASSERT_EQUAL(event.stage, "incubating", "The host burst at [event.incubation_elapsed] s, not 100")
 
 	// The burst: gore, and a headslug on the bunk.
 	var/turf/bunk = get_turf(host)
 	changeling_ticks(event, 1)
-	TEST_ASSERT_EQUAL(event.stage, "burst", "The host did not burst at 200 s")
+	TEST_ASSERT_EQUAL(event.stage, "burst", "The host did not burst at 100 s")
 	TEST_ASSERT(QDELETED(host), "The host is still in one piece after the burst")
 	TEST_ASSERT(istype(event.slug, /mob/living/basic/headslug/beakless/outpost), "No headslug came out")
 	TEST_ASSERT_EQUAL(get_turf(event.slug), bunk, "The headslug did not come out where the host burst")
@@ -202,7 +202,7 @@
 	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(slug_in), slug, cell_vent), 3 SECONDS), "The slug was not in the vent 2 s later") // OUTPOST_HEADSLUG_VENT_ENTRY
 	TEST_ASSERT_EQUAL(event.stage, "vents", "A slug in the vents is at stage [event.stage]")
 	TEST_ASSERT_EQUAL(cell_vent.occupant, slug, "The vent does not know the slug is in it")
-	TEST_ASSERT_EQUAL(event.time_left, 180, "The vent clock reads [event.time_left], not 180") // OUTPOST_CHANGELING_VENT_TIME
+	TEST_ASSERT_EQUAL(event.time_left, 90, "The vent clock reads [event.time_left], not 90") // OUTPOST_CHANGELING_VENT_TIME
 
 	// Nobody home: it stays put and the clock waits.
 	prison.crew_home_override = FALSE
@@ -220,7 +220,7 @@
 		TEST_ASSERT(event.vent != was_in, "The slug went back to the vent it just left")
 		TEST_ASSERT_EQUAL(slug.loc, event.vent, "The slug is not in the vent the experiment has it in")
 		TEST_ASSERT_EQUAL(get_area(event.vent), prison.wing, "The slug hopped to a vent outside the wing")
-	TEST_ASSERT(event.dwell_left >= 14 && event.dwell_left <= 22, "The first minute's dwell is [event.dwell_left] s, not 15-22")
+	TEST_ASSERT(event.dwell_left >= 14 && event.dwell_left <= 22, "The first noise level's dwell is [event.dwell_left] s, not 15-22")
 
 	// The seal holds on an empty vent, and no tool but a wrench does anything.
 	event.move_slug_to(cell_vent)
@@ -291,24 +291,24 @@
 	TEST_ASSERT(prison.toggle_cell_bolts(1, null), "Cell 1 would not bolt")
 	TEST_ASSERT(prison.cells[1].is_bolted(), "Cell 1 is not bolted")
 	event.dwell_left = 1000
-	changeling_ticks(event, 169)
-	TEST_ASSERT(!event.straining, "A vent strained before 170 s")
-	TEST_ASSERT_EQUAL(event.noise_level(), 3, "The last minute in the vents is noise level [event.noise_level()]")
+	changeling_ticks(event, 84)
+	TEST_ASSERT(!event.straining, "A vent strained before 85 s")
+	TEST_ASSERT_EQUAL(event.noise_level(), 3, "The last half minute in the vents is noise level [event.noise_level()]") // OUTPOST_CHANGELING_NOISE_VIOLENT
 	TEST_ASSERT(cell_vent.dented, "Violent banging did not dent the cover")
 	// The changeling's own panic, or S4a's once it has landed (from the burst on): both go by creature_panic.
 	TEST_ASSERT(bystander.activity?.context == "creature_panic", "The prisoners did not run for their cells in the last minute")
 	changeling_ticks(event, 1) // OUTPOST_CHANGELING_VENT_TIME - OUTPOST_CHANGELING_STRAIN_TIME
-	TEST_ASSERT(event.straining, "No vent strained at 170 s")
+	TEST_ASSERT(event.straining, "No vent strained at 85 s")
 	TEST_ASSERT(event.vent != cell_vent, "The horror is coming out of a vent in a bolted cell")
 	TEST_ASSERT(!event.vent_in_bolted_cell(event.vent), "The emergence vent is in a bolted cell")
 	var/obj/structure/outpost_kessler_vent/exit = event.vent
 	TEST_ASSERT_EQUAL(slug.loc, exit, "The slug is not in the straining vent")
-	changeling_ticks(event, 9)
+	changeling_ticks(event, 4)
 	TEST_ASSERT_EQUAL(event.stage, "vents", "The horror came out before the strain was over")
 	changeling_ticks(event, 1) // OUTPOST_CHANGELING_STRAIN_TIME
 
 	// Out it comes: the cover blown off, the slug gone, the horror unfolding where it was.
-	TEST_ASSERT_EQUAL(event.stage, "horror", "Nothing came out of the vents at 180 s")
+	TEST_ASSERT_EQUAL(event.stage, "horror", "Nothing came out of the vents at 90 s")
 	var/mob/living/basic/outpost_experiment/horror/horror = event.horror
 	TEST_ASSERT_NOTNULL(horror, "The horror did not come out")
 	TEST_ASSERT(QDELETED(slug), "The slug is still about after the horror came out")
@@ -335,8 +335,9 @@
 	scaled.event = null
 	qdel(scaled)
 
-	// Killed: over, and Kessler refits the blown cover and the dent.
-	horror.death()
+	// Killed for good (the admin's kill): over, and Kessler refits the blown cover and the dent.
+	TEST_ASSERT(prison.admin_horror("kill"), "The admin kill did not kill the horror")
+	TEST_ASSERT_EQUAL(horror.stat, DEAD, "The admin kill left the horror alive")
 	TEST_ASSERT_EQUAL(event.stage, "done", "Killing the horror did not end the experiment")
 	TEST_ASSERT(!exit.open && !cell_vent.dented, "Kessler did not refit the vents after the experiment")
 	// The changeling's own aftermath without S4a; with it, S4a's takes in the event's witnesses.
@@ -639,3 +640,138 @@
 
 /datum/unit_test/voidcrew_outpost_prison_changeling_containment/proc/door_open(obj/machinery/door/airlock/door)
 	return !door.density
+
+// ===== REGENERATION =====
+
+/datum/unit_test/voidcrew_outpost_prison_changeling_regen
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// A specimen taken straight to the horror by the admin stage, standing and free, in the yard, with the event's clock stopped
+/datum/unit_test/voidcrew_outpost_prison_changeling_regen/proc/fresh_horror(datum/outpost_prison/prison, obj/structure/overmap/dynamic/player_outpost/home)
+	var/datum/outpost_changeling_event/event = changeling_host(prison, home)
+	if(!event?.force_stage("horror"))
+		return null
+	var/mob/living/basic/outpost_experiment/horror/horror = event.horror
+	horror.clear_busy()
+	horror.forceMove(prison_spot(home, 9, 9))
+	return horror
+
+/// Whether the warden's log has an entry with `text` in it
+/datum/unit_test/voidcrew_outpost_prison_changeling_regen/proc/logged(datum/outpost_prison/prison, text)
+	for(var/list/entry as anything in prison.entries)
+		if(findtext(entry["text"], text))
+			return TRUE
+	return FALSE
+
+/datum/unit_test/voidcrew_outpost_prison_changeling_regen/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("regenowner")
+	TEST_ASSERT_NOTNULL(home, "The regeneration test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.crew_home_override = TRUE
+	var/datum/bank_account/treasury = trouble_fund(home, 0)
+	var/mob/living/carbon/human/crew = make_player(prison_spot(home, 12, 3), "regenowner")
+	var/mob/living/basic/outpost_experiment/horror/horror = fresh_horror(prison, home)
+	TEST_ASSERT_NOTNULL(horror, "The admin horror stage made no horror")
+	var/datum/outpost_changeling_event/event = horror.event
+	var/datum/component/experiment_damage_ledger/ledger = horror.GetComponent(/datum/component/experiment_damage_ledger)
+	TEST_ASSERT_NOTNULL(ledger, "The horror has no damage ledger")
+	var/fee = treasury.account_balance
+
+	// At 0 health it goes down regenerating, not dead: on the floor, out of it, and no turret's target.
+	ledger.note_attacker(crew)
+	horror.apply_damage(horror.maxHealth * 2, BRUTE)
+	TEST_ASSERT(horror.regenerating, "The horror at 0 health did not go down regenerating")
+	TEST_ASSERT(horror.stat != DEAD, "The horror at 0 health died")
+	TEST_ASSERT_EQUAL(horror.stat, UNCONSCIOUS, "The horror down is not out of it")
+	TEST_ASSERT_EQUAL(horror.health, 0, "The horror down has [horror.health] health, not 0")
+	TEST_ASSERT(HAS_TRAIT(horror, TRAIT_FLOORED), "The horror down is not on the floor")
+	TEST_ASSERT(HAS_TRAIT(horror, TRAIT_INCAPACITATED), "The horror down can act")
+	TEST_ASSERT(!horror.can_use_ability(), "The horror down can use an ability")
+	TEST_ASSERT(!is_hostile_creature(horror), "Turrets would shoot the horror while it is down") // interim turret rule
+	TEST_ASSERT_EQUAL(horror.remains, 200, "The horror's body can take [horror.remains] damage while down, not 200") // OUTPOST_HORROR_REMAINS
+	TEST_ASSERT_EQUAL(event.stage, "horror", "Going down ended the changeling event")
+	TEST_ASSERT(prison.experiment_active(), "Going down ended the experiment")
+	TEST_ASSERT(prison.creature_live(), "The horror down does not count as loose, so the prisoners would stop hiding")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 0, "Going down paid the containment bonus")
+	TEST_ASSERT_EQUAL(treasury.account_balance, fee, "Going down paid [treasury.account_balance - fee] cr")
+	var/list/block = prison.experiment_payload()
+	TEST_ASSERT_EQUAL(block["horror"], "regenerating", "The console does not show the horror regenerating")
+	TEST_ASSERT_EQUAL(block["time_left"], 45, "The console shows [block["time_left"]] s to getting up, not 45") // OUTPOST_HORROR_REGEN_TIME
+	TEST_ASSERT(findtext(jointext(horror.examine(crew), " "), "still moving"), "Examining the horror down does not say it is still moving")
+	TEST_ASSERT(logged(prison, "regenerating"), "The warden's log did not record the horror going down")
+	TEST_ASSERT(event.regen_announced, "The outpost was not told the horror is regenerating")
+
+	// Down, it cannot absorb anyone.
+	var/mob/living/basic/outpost_prisoner/victim = test_prisoner(prison, prison_spot(home, 10, 9))
+	victim.collapse()
+	TEST_ASSERT(horror.absorbable(victim), "The test's victim could not be absorbed at all")
+	horror.next_absorb_at = 0
+	TEST_ASSERT(!horror.start_absorb(victim), "The horror absorbed someone while it was down")
+	TEST_ASSERT_NULL(horror.absorbing, "The horror down seized someone")
+
+	// It gets up OUTPOST_HORROR_REGEN_TIME later, counted only while the crew is home, with half its health.
+	prison.crew_home_override = FALSE
+	changeling_ticks(event, 60)
+	TEST_ASSERT(horror.regenerating, "The horror got up with nobody home")
+	TEST_ASSERT_EQUAL(horror.regen_left, 45, "The regeneration clock ran with nobody home")
+	prison.crew_home_override = TRUE
+	changeling_ticks(event, 39)
+	TEST_ASSERT(!horror.rise_warned, "The horror warned it was getting up more than 5 s early") // OUTPOST_HORROR_RISE_WARNING
+	changeling_ticks(event, 1)
+	TEST_ASSERT(horror.rise_warned, "The horror gave no warning 5 s before getting up")
+	changeling_ticks(event, 4)
+	TEST_ASSERT(horror.regenerating, "The horror got up before 45 s")
+	changeling_ticks(event, 1)
+	TEST_ASSERT(!horror.regenerating, "The horror did not get up after 45 s")
+	TEST_ASSERT_EQUAL(horror.stat, CONSCIOUS, "The horror got up but is not conscious")
+	TEST_ASSERT_EQUAL(horror.health, horror.maxHealth * 0.5, "The horror got up with [horror.health] of [horror.maxHealth] health, not half") // OUTPOST_HORROR_REGEN_HEALTH
+	TEST_ASSERT(!HAS_TRAIT(horror, TRAIT_FLOORED) && !HAS_TRAIT(horror, TRAIT_INCAPACITATED), "The horror got up but is still down")
+	TEST_ASSERT(is_hostile_creature(horror), "Turrets leave the horror alone after it got up")
+	TEST_ASSERT(horror.abilities["resonant"], "The horror lost its kit going down")
+	TEST_ASSERT_NOTNULL(horror.ai_controller, "The horror has no mind after getting up")
+	TEST_ASSERT_EQUAL(horror.GetComponent(/datum/component/experiment_damage_ledger), ledger, "The horror's damage ledger was replaced")
+	TEST_ASSERT(ledger.player_damage >= 400, "The crew's damage before it went down was lost from its ledger ([ledger.player_damage])")
+	TEST_ASSERT(logged(prison, "got back up"), "The warden's log did not record the horror getting up")
+	TEST_ASSERT_EQUAL(prison.experiment_payload()["horror"], "up", "The console does not show the horror up again")
+
+	// Down again (the admin's regen), its body takes OUTPOST_HORROR_REMAINS before it bursts: dead for good, and the bonus paid once.
+	TEST_ASSERT(prison.admin_horror("regen"), "The admin regen did not drop the horror")
+	TEST_ASSERT(horror.regenerating, "The admin regen left the horror standing")
+	var/turf/spot = get_turf(horror)
+	ledger.note_attacker(crew)
+	horror.apply_damage(200, BRUTE)
+	TEST_ASSERT(!QDELETED(horror) && horror.regenerating, "The horror's body burst before it had taken 200 damage")
+	TEST_ASSERT(abs(horror.remains - 30) < 0.01, "200 brute left [horror.remains] of its body, not 30") // 200 * OUTPOST_HORROR_DAMAGE_COEFF off OUTPOST_HORROR_REMAINS
+	TEST_ASSERT_EQUAL(horror.health, 0, "Hitting the body changed its health")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 0, "Hitting the body paid the bonus before it burst")
+	ledger.note_attacker(crew)
+	horror.apply_damage(100, BRUTE)
+	TEST_ASSERT(QDELETED(horror), "The horror's body did not burst when it was destroyed")
+	TEST_ASSERT_EQUAL(event.stage, "done", "Destroying the body did not end the changeling event")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "Destroying the body did not contain the horror")
+	TEST_ASSERT_EQUAL(prison.experiment.bonus_paid, 3900, "Destroying the body paid [prison.experiment.bonus_paid], not 3900") // OUTPOST_EXPERIMENT_BONUS_HORROR
+	TEST_ASSERT_EQUAL(treasury.account_balance, fee + 3900, "The containment bonus came to [treasury.account_balance - fee], not 3900 once")
+	TEST_ASSERT(!prison.experiment_creature_down(horror), "The containment bonus could be claimed twice")
+	TEST_ASSERT_NOTNULL(locate(/obj/item/organ/heart) in spot, "The burst body left no organs")
+
+	// A second horror, down in vacuum: it freezes, dead for good.
+	var/mob/living/basic/outpost_experiment/horror/frozen = fresh_horror(prison, home)
+	TEST_ASSERT_NOTNULL(frozen, "The second horror did not come out")
+	var/datum/outpost_changeling_event/second_event = frozen.event
+	TEST_ASSERT(frozen.start_regenerating(), "The second horror would not go down")
+	var/turf/open/cold = get_turf(frozen)
+	var/datum/gas_mixture/air = cold.return_air()
+	air.remove_ratio(1)
+	TEST_ASSERT(frozen.in_vacuum(), "Emptying the air around the horror did not make a vacuum")
+	changeling_ticks(second_event, 1)
+	TEST_ASSERT_EQUAL(frozen.stat, DEAD, "The horror down in vacuum did not die")
+	TEST_ASSERT(!frozen.regenerating, "The frozen horror is still regenerating")
+	TEST_ASSERT_EQUAL(second_event.stage, "done", "The horror freezing did not end the changeling event")
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "contained", "The horror freezing did not end the experiment")
+
+	// Brought down in vacuum, it never goes down regenerating at all.
+	var/mob/living/basic/outpost_experiment/horror/spaced = allocate(/mob/living/basic/outpost_experiment/horror, cold)
+	spaced.adjust_health(spaced.maxHealth)
+	TEST_ASSERT_EQUAL(spaced.stat, DEAD, "A horror brought down in vacuum did not die for good")
+	TEST_ASSERT(!spaced.regenerating, "A horror brought down in vacuum went down regenerating")
+	settle_prison_air(home)

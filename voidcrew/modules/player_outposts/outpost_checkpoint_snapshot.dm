@@ -1,5 +1,7 @@
 /// A registry snapshot deliberately serializes a small set of construction data.
 /// It never calls admin-export hooks (silos emit stock) or turf get_save_vars (air).
+
+/// Ship wiring, plumbing and doors: rebuilt in the Systems stage, before other machinery.
 GLOBAL_LIST_INIT(outpost_checkpoint_infrastructure, typecacheof(list(
 	/obj/machinery/door,
 	/obj/machinery/atmospherics,
@@ -12,43 +14,69 @@ GLOBAL_LIST_INIT(outpost_checkpoint_infrastructure, typecacheof(list(
 	/obj/machinery/button,
 	/obj/machinery/camera,
 	/obj/machinery/power/shuttle_engine,
-	// The ship's spawn point. Without it nobody can join the rebuilt ship.
-	/obj/machinery/cryopod,
-	// Fixtures without circuit boards. Anything they hold is scrubbed like any other stock.
-	/obj/machinery/shower,
 	/obj/machinery/light_switch,
-	/obj/machinery/requests_console,
-	/obj/machinery/iv_drip,
-	/obj/machinery/defibrillator_mount,
+	// A meter lands with its pipe, or it cannot find one and drops itself as an item.
+	/obj/machinery/meter,
 )))
 
-/// Furniture and hull fittings, rather than biological/event/resource spawners.
-GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
-	/obj/structure/window,
-	/obj/structure/grille,
-	/obj/structure/table,
-	/obj/structure/rack,
-	/obj/structure/closet,
-	/obj/structure/chair,
-	/obj/structure/bed,
-	/obj/structure/cable,
-	/obj/structure/disposalpipe,
-	/obj/structure/lattice,
-	/obj/structure/railing,
-	/obj/structure/falsewall,
-	/obj/structure/sign,
-	/obj/structure/fans,
-	/obj/structure/curtain,
-	/obj/structure/dresser,
-	/obj/structure/toilet,
-	/obj/structure/sink,
-	/obj/structure/mirror,
-	/obj/structure/filingcabinet,
-	/obj/structure/bedsheetbin,
-	/obj/structure/extinguisher_cabinet,
-	// Saved empty: the stock scrub drains their reagents.
-	/obj/structure/reagent_dispensers,
+/**
+ * Everything built into a hull is saved except these: movable gas stock, and things that make
+ * creatures or resources. Whatever a saved object holds is scrubbed on load (see clear_stock()),
+ * so new fixtures need no entry here unless they invent supplies some other way.
+ */
+GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
+	/obj/machinery/portable_atmospherics,
+	/obj/machinery/computer/ship_checkpoint,
+	// Made by its turret.
+	/obj/machinery/porta_turret_cover,
+	// Never rebuilt: user decision, 2026-09-24.
+	/obj/machinery/syndicatebomb,
+	/obj/machinery/power/supermatter_crystal,
+	/obj/structure/disposalholder,
+	/obj/structure/spawner,
+	/obj/structure/alien,
+	/obj/structure/spider,
+	/obj/structure/blob,
+	/obj/structure/flora,
+	/obj/structure/geyser,
+	/obj/structure/ore_vent,
+	/obj/structure/holosign,
+	/obj/structure/trap,
+	// Made of the spear and head it holds; clear_stock() takes those and it falls apart.
+	/obj/structure/headpike,
 )))
+
+/**
+ * Hull terrain a checkpoint cannot rebuild. Any other turf is saved as it is, so ship features
+ * such as pools, hot springs and dirt planters need no entry anywhere.
+ * - Mineable rock and asteroid ground hand out ore or sand on every rebuild.
+ * - Planetary atmosphere regenerates air forever wherever it is placed.
+ * - Lava, chasms and open space are hazards or multi-level holes, not hull.
+ */
+GLOBAL_LIST_INIT(outpost_checkpoint_refused_terrain, typecacheof(list(
+	/turf/closed/mineral,
+	/turf/open/misc/asteroid,
+	/turf/open/lava,
+	/turf/open/chasm,
+	/turf/open/openspace,
+)))
+
+/proc/checkpoint_refuses_terrain(turf/tile)
+	if(is_type_in_typecache(tile, GLOB.outpost_checkpoint_refused_terrain))
+		return TRUE
+	if(isopenturf(tile))
+		var/turf/open/open_tile = tile
+		return open_tile.planetary_atmos
+	return FALSE
+
+/// Whether a checkpoint keeps this object. Machinery also needs a type to rebuild as.
+/proc/outpost_checkpoint_saves(obj/object)
+	if(object.flags_1 & HOLOGRAM_1 || is_type_in_typecache(object, GLOB.outpost_checkpoint_excluded))
+		return FALSE
+	if(ismachinery(object))
+		var/obj/machinery/machine = object
+		return !!machine.checkpoint_type()
+	return isstructure(object)
 
 /datum/ship_checkpoint
 	var/obj/structure/overmap/dynamic/player_outpost/outpost
@@ -82,12 +110,7 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 
 /// Ports are handled separately and cannot carry NPC types.
 /datum/ship_checkpoint/proc/includes_object(obj/object)
-	if(istype(object, /obj/structure/disposalholder) || object.flags_1 & HOLOGRAM_1)
-		return FALSE
-	if(ismachinery(object))
-		var/obj/machinery/machine = object
-		return !!machine.checkpoint_type()
-	return is_type_in_typecache(object, GLOB.outpost_checkpoint_structures) || is_type_in_typecache(object, GLOB.outpost_checkpoint_infrastructure)
+	return outpost_checkpoint_saves(object)
 
 /// Preserve placement and construction settings; inventories are never serialized.
 /datum/ship_checkpoint/proc/atom_text(atom/object)
@@ -104,14 +127,13 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 		if(istype(machine, /obj/machinery/power))
 			keys += "cable_layer"
 	if(istype(object, /obj/structure/closet))
-		// Restore storage shells without loot/spawner subtype initialization (some
-		// emergency closets randomly delete or replace themselves even on reload).
-		saved_type = /obj/structure/closet
+		// Closets keep their own type, so they look the same; their stock is never generated
+		// (below) and anything they spawn is scrubbed on load. Emergency closets are the
+		// exception: they can delete or replace themselves as they initialize.
+		if(istype(object, /obj/structure/closet/emcloset))
+			saved_type = /obj/structure/closet
 		if(istype(object, /obj/structure/closet/crate))
-			saved_type = /obj/structure/closet/crate
 			keys += list("lid_icon", "lid_icon_state")
-		else if(istype(object, /obj/structure/closet/secure_closet))
-			saved_type = /obj/structure/closet/secure_closet
 		keys += list("icon", "icon_door", "base_icon_state", "enable_door_overlay", "has_opened_overlay", "has_closed_overlay", "wall_mounted", "horizontal", "locked", "req_one_access")
 		// Closet stock is otherwise generated lazily on first opening.
 		properties += "contents_initialized = 1"
@@ -124,6 +146,13 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 		keys += list("anchored", "req_access", "id_tag")
 	if(istype(object, /obj/machinery/atmospherics))
 		keys += list("piping_layer", "pipe_color")
+	// Which side each port faces: a flipped filter or mixer, and the ports opened on a tank.
+	if(istype(object, /obj/machinery/atmospherics/components/trinary))
+		keys += "flipped"
+	if(istype(object, /obj/machinery/atmospherics/components/tank))
+		keys += "open_ports"
+	if(istype(object, /obj/machinery/duct))
+		keys += list("duct_layer", "duct_color", "connects")
 	for(var/key in keys)
 		var/value = object.vars[key]
 		// Always encode direction: an oriented source must survive a round trip.
@@ -175,7 +204,7 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 			if(!(room in owned_areas))
 				atoms = list("/turf/template_noop", "/area/template_noop")
 			else
-				if(!isfloorturf(tile) && !iswallturf(tile) && !isspaceturf(tile))
+				if(checkpoint_refuses_terrain(tile))
 					return "Replace the hull's [tile.name] terrain with constructed flooring before saving a checkpoint."
 				var/room_id = area_ids[room]
 				if(!room_id)
@@ -244,6 +273,7 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 /// Restore distinct player-built rooms before machines initialize their APC links.
 /// A plain TGM load otherwise merges rooms sharing one /area type.
 /datum/map_template/shuttle/voidcrew/commissioned/checkpoint/initTemplateBounds(list/bounds)
+	mark_phase("read")
 	var/list/replaced_areas = list()
 	for(var/list/room_data as anything in blueprint.rooms)
 		var/area/room_type = room_data["type"]
@@ -257,4 +287,8 @@ GLOBAL_LIST_INIT(outpost_checkpoint_structures, typecacheof(list(
 	for(var/area/old_room as anything in replaced_areas)
 		if(!old_room.has_contained_turfs())
 			qdel(old_room)
-	return ..()
+	if(spread_load)
+		return init_bounds_spread(bounds)
+	mark_phase("rooms")
+	. = ..()
+	mark_phase("init_bounds")

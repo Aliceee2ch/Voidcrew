@@ -389,3 +389,13 @@
 		QUEUE_SMOOTH(src)
 
 	return new_turf
+
+/**
+ * A circuit floor registers for its area's power signal in Initialize() and again whenever its
+ * area changes. A shuttle move re-initializes the turf where the area can already hold that
+ * registration, which warned "area_power_change overridden". Clear it first.
+ */
+/turf/open/floor/circuit/Initialize(mapload)
+	if(loc)
+		UnregisterSignal(loc, COMSIG_AREA_POWER_CHANGE)
+	return ..()

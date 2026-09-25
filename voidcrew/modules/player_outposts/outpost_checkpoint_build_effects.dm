@@ -22,6 +22,10 @@
 	density = TRUE
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 
+/// Drone bays sit in the far corners, so their sounds carry across the whole bay.
+#define CHECKPOINT_DRONE_BAY_SOUND_RANGE 20
+#define CHECKPOINT_DRONE_BAY_SOUND_FULL 28
+
 /obj/structure/checkpoint_drone_bay/proc/launch()
 	flick("make", src)
 
@@ -67,6 +71,10 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	var/datum/weakref/cradle_ref
 	/// Set once the job lets the drone go; it then flies home on its own and docks.
 	var/returning_until = 0
+	/// When the drone may make its next hop.
+	var/next_flight_at = 0
+	/// The drones released together. The last one home plays the dock sound to the bay.
+	var/datum/checkpoint_drone_flock/flock
 
 /obj/effect/checkpoint_build_drone/Initialize(mapload, obj/structure/checkpoint_drone_bay/cradle)
 	. = ..()
@@ -78,6 +86,8 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 /// The visit stays referenced so the job can put it back in the queue.
 /obj/effect/checkpoint_build_drone/Destroy()
 	STOP_PROCESSING(SSfastprocess, src)
+	flock?.leave(src)
+	flock = null
 	QDEL_NULL(work_beam)
 	QDEL_NULL(work_effect)
 	return ..()
@@ -87,8 +97,10 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	return cradle ? get_turf(cradle) : null
 
 /// Released by the job: fly back to the drone bay and dock, or give up after a while.
-/obj/effect/checkpoint_build_drone/proc/return_home()
+/obj/effect/checkpoint_build_drone/proc/return_home(datum/checkpoint_drone_flock/released_with)
 	finish_work()
+	flock = released_with
+	flock?.drones += src
 	returning_until = world.time + 30 SECONDS
 	START_PROCESSING(SSfastprocess, src)
 
@@ -114,6 +126,9 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 		return TRUE
 	if(get_dist(start, destination) <= 1)
 		return TRUE
+	if(world.time < next_flight_at)
+		return FALSE
+	next_flight_at = world.time + CHECKPOINT_DRONE_FLIGHT_INTERVAL
 	var/turf/next = start
 	for(var/i in 1 to CHECKPOINT_DRONE_TILES_PER_TICK)
 		if(get_dist(next, destination) <= 1)
@@ -123,7 +138,7 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	forceMove(next)
 	pixel_x = base_pixel_x + (start.x - next.x) * ICON_SIZE_X
 	pixel_y = base_pixel_y + (start.y - next.y) * ICON_SIZE_Y
-	animate(src, pixel_x = base_pixel_x, pixel_y = base_pixel_y, time = SSfastprocess.wait, flags = ANIMATION_PARALLEL)
+	animate(src, pixel_x = base_pixel_x, pixel_y = base_pixel_y, time = CHECKPOINT_DRONE_FLIGHT_INTERVAL, flags = ANIMATION_PARALLEL)
 	return get_dist(next, destination) <= 1
 
 /// Projects the piece about to appear and points the work beam at it.
@@ -163,3 +178,27 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	hologram.alpha = 110
 	hologram.color = "#80dfff"
 	underlays += hologram
+
+#undef CHECKPOINT_DRONE_BAY_SOUND_RANGE
+#undef CHECKPOINT_DRONE_BAY_SOUND_FULL
+
+/// Drones released together. When the last one is gone, the bay hears them dock.
+/datum/checkpoint_drone_flock
+	var/datum/turf_reservation/yard
+	var/list/obj/effect/checkpoint_build_drone/drones = list()
+
+/datum/checkpoint_drone_flock/New(datum/turf_reservation/yard)
+	src.yard = yard
+
+/datum/checkpoint_drone_flock/Destroy()
+	yard = null
+	drones = null
+	return ..()
+
+/datum/checkpoint_drone_flock/proc/leave(obj/effect/checkpoint_build_drone/drone)
+	drones -= drone
+	if(length(drones))
+		return
+	if(!QDELETED(yard))
+		play_to_checkpoint_yard(yard, CHECKPOINT_YARD_DOCK_SOUND, 25)
+	qdel(src)

@@ -86,7 +86,7 @@
 				var/obj/machinery/machine = object
 				if(machine.checkpoint_type())
 					counts["[machine.checkpoint_type()]"]++
-			else if(is_type_in_typecache(object, GLOB.outpost_checkpoint_structures))
+			else if(outpost_checkpoint_saves(object))
 				// Storage shells intentionally omit the original loot-spawner subtype.
 				counts[istype(object, /obj/structure/closet) ? "closet:[object.name]" : "[object.type]"]++
 	return counts
@@ -136,6 +136,23 @@
 
 /// Directly placed cases are checked the moment they finish, before any outlet can draw hangar air.
 /datum/unit_test/voidcrew_checkpoints/proc/breathes_ambient(datum/pipeline/network)
+	return FALSE
+
+/// Rebuilt engines are refuelled to full: a fueled thruster's heater holds gas_capacity moles.
+/datum/unit_test/voidcrew_checkpoints/proc/engine_is_full(obj/machinery/power/shuttle_engine/ship/engine)
+	if(istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled))
+		var/obj/machinery/power/shuttle_engine/ship/fueled/thruster = engine
+		var/obj/machinery/atmospherics/components/unary/shuttle/heater/heater = thruster.attached_heater?.resolve()
+		return heater && engine.return_fuel() >= heater.gas_capacity * 0.99
+	if(istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid))
+		return engine.return_fuel_cap() && engine.return_fuel() >= engine.return_fuel_cap() * 0.99
+	return TRUE
+
+/// Restocked air and plasma tanks share their gas with the pipes they feed.
+/datum/unit_test/voidcrew_checkpoints/proc/fed_by_restocked_tank(datum/pipeline/network)
+	for(var/obj/machinery/atmospherics/components/tank/supply in network.other_atmos_machines)
+		if(is_type_in_typecache(supply, GLOB.outpost_checkpoint_restocked))
+			return TRUE
 	return FALSE
 
 /// Batteries are charged as each machine lands. Directly placed cases are checked before any
@@ -230,11 +247,6 @@
 			removed_smes_cells = TRUE
 			bank.RefreshParts()
 	var/datum/ship_checkpoint_ui/registry_test/panel = allocate(__IMPLIED_TYPE__, home, terminal, captain)
-	panel.open_bay_view()
-	var/first_view = panel.bay_view.assigned_map
-	TEST_ASSERT(get_turf(bay.dock) in panel.bay_view.vis_contents, "The checkpoint console's bay view does not show the landing pad")
-	panel.open_bay_view()
-	TEST_ASSERT(panel.bay_view.assigned_map != first_view, "A reopened bay view reused its map key")
 	TEST_ASSERT_NOTNULL(panel.save_denial(visitor, bay), "A non-captain could register the hull")
 	TEST_ASSERT(panel.prepare_save(captain, bay), "Could not prepare a real hull: [panel.error]")
 	TEST_ASSERT(!findtext(panel.quote.tgm, "/obj/item"), "The snapshot includes items")
@@ -255,7 +267,7 @@
 			if(!machine.checkpoint_type())
 				dropped["[machine.type]"]++
 		for(var/obj/structure/fitting in tile)
-			if(!is_type_in_typecache(fitting, GLOB.outpost_checkpoint_structures) && !is_type_in_typecache(fitting, GLOB.outpost_checkpoint_infrastructure))
+			if(!outpost_checkpoint_saves(fitting))
 				dropped["[fitting.type]"]++
 	var/list/dropped_text = list()
 	for(var/type_name in dropped)
@@ -475,7 +487,10 @@
 		for(var/obj/machinery/ore_silo/restored_silo in tile)
 			TEST_ASSERT_EQUAL(restored_silo.materials.get_material_amount(/datum/material/iron), 0, "Recovery copied silo materials")
 		for(var/obj/structure/reagent_dispensers/dispenser in tile)
-			TEST_ASSERT(!dispenser.reagents?.total_volume, "Recovery refilled [dispenser] with [dispenser.reagents?.total_volume] units")
+			if(is_type_in_typecache(dispenser, GLOB.outpost_checkpoint_restocked))
+				TEST_ASSERT(dispenser.reagents?.total_volume >= dispenser.reagents?.maximum_volume, "[dispenser] came back [dispenser.reagents?.total_volume]/[dispenser.reagents?.maximum_volume], not full")
+			else
+				TEST_ASSERT(!dispenser.reagents?.total_volume, "Recovery refilled [dispenser] with [dispenser.reagents?.total_volume] units")
 		for(var/obj/structure/bedsheetbin/bin in tile)
 			TEST_ASSERT_EQUAL(bin.amount, 0, "Recovery restocked a bedsheet bin")
 		for(var/obj/machinery/vending/vendor in tile)
@@ -483,12 +498,19 @@
 				TEST_ASSERT_EQUAL(product.amount, 0, "Recovery restocked a vendor")
 		for(var/obj/machinery/atmospherics/machine in tile)
 			for(var/datum/pipeline/network as anything in machine.return_pipenets())
-				if(network && breathes_ambient(network))
+				if(network && (breathes_ambient(network) || fed_by_restocked_tank(network)))
 					continue
 				TEST_ASSERT(!network?.air?.total_moles(), "Rebuilt pipe network at [machine] ([machine.type]) contains [network?.air?.total_moles()] moles of free gas")
 		for(var/obj/machinery/atmospherics/components/tank/stored_tank in tile)
-			TEST_ASSERT(!stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) was refilled with [stored_tank.air_contents?.total_moles()] moles")
+			if(is_type_in_typecache(stored_tank, GLOB.outpost_checkpoint_restocked))
+				TEST_ASSERT(stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) came back empty")
+			else
+				TEST_ASSERT(!stored_tank.air_contents?.total_moles(), "Rebuilt [stored_tank] ([stored_tank.type]) was refilled with [stored_tank.air_contents?.total_moles()] moles")
 	TEST_ASSERT(length(rebuilt.helm_consoles), "Recovered ship has no connected helm")
+	// Decks take the hangar's air as they land; an airless tile would be a vacuum pocket in the bay.
+	for(var/turf/open/deck in rebuilt.shuttle.return_turfs())
+		if((get_area(deck) in rebuilt.shuttle.shuttle_areas) && !deck.blocks_air && !isspaceturf(deck))
+			TEST_ASSERT(deck.air?.total_moles() > 0, "Rebuilt deck [deck.x],[deck.y] ([deck.type]) landed as a vacuum pocket in the bay")
 	var/obj/machinery/cryopod/spawn_pod = locate() in rebuilt.shuttle.spawn_points
 	TEST_ASSERT(spawn_pod && (get_area(spawn_pod) in rebuilt.shuttle.shuttle_areas), "Recovered ship has no cryopod spawn point")
 	for(var/obj/machinery/computer/helm/helm as anything in rebuilt.helm_consoles)
@@ -497,10 +519,8 @@
 	rebuilt.refresh_engines()
 	var/thrust = 0
 	for(var/obj/machinery/power/shuttle_engine/ship/engine in rebuilt.shuttle.engine_list)
-		if(istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid))
-			TEST_ASSERT(engine.return_fuel() > 0, "Liquid engine has no fuel")
-		if(istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled))
-			TEST_ASSERT(engine.return_fuel() > 0, "Gas engine has no fuel")
+		if(istype(engine, /obj/machinery/power/shuttle_engine/ship/liquid) || istype(engine, /obj/machinery/power/shuttle_engine/ship/fueled))
+			TEST_ASSERT(engine_is_full(engine), "[engine] came back with [engine.return_fuel()] fuel, not full")
 		thrust += engine.burn_engine(100, rebuilt.mass, 1)
 	TEST_ASSERT(thrust > 0, "Recovered engines cannot produce thrust")
 	var/obj/docking_port/stationary/transit/recovery_transit = SSshuttle.generate_transit_dock(rebuilt.shuttle)
@@ -657,11 +677,39 @@
 	TEST_ASSERT(count_bay_ship_tiles(bay) > 0 && count_bay_ship_tiles(bay) < length(job.hull_indices), "The drone build was not partial part way through")
 	// Let the real controller finish and hand over on its own.
 	var/total_visits = job.visit_total
+	var/list/copy_turfs = job.source_reservation?.reserved_turfs.Copy()
 	deadline = world.time + 5 MINUTES
+	// Placing pieces must not keep the pressurised hangar's air awake.
+	var/list/peaks = list()
+	var/list/sums = list()
+	var/list/stage_samples = list()
 	while(!QDELETED(job) && world.time < deadline)
 		sleep(5)
+		if(QDELETED(job))
+			break
+		var/stage = job.stage_name()
+		var/list/counts = list("bay deck ([stage])" = 0, "bay ship ([stage])" = 0)
+		for(var/turf/open/active as anything in SSair.active_turfs)
+			if(bay.reservation.contains_turf(active))
+				counts[(get_area(active) in job.port?.shuttle_areas) ? "bay ship ([stage])" : "bay deck ([stage])"]++
+		for(var/key in counts)
+			peaks[key] = max(peaks[key], counts[key])
+			sums[key] += counts[key]
+			stage_samples[key]++
 	TEST_ASSERT(QDELETED(job), "The drones did not finish [total_visits] visits within five minutes")
-	log_test("Drone reconstruction placed [total_visits] visits in [(world.time - started_at) / 10] seconds, including the survey.")
+	// Releasing the hidden copy's space must not leave its job spawns behind for the next user.
+	for(var/turf/tile as anything in copy_turfs)
+		var/obj/effect/landmark/stray = locate() in tile
+		if(stray)
+			TEST_FAIL("The hidden copy left [stray.type] at [tile.x],[tile.y]")
+			break
+	var/list/report = list()
+	for(var/key in peaks)
+		var/mean = round(sums[key] / stage_samples[key])
+		report += "[key] peak [peaks[key]] mean [mean]"
+		// The bay resets its air before a build, so placing pieces leaves little to settle.
+		TEST_ASSERT(mean <= 300, "The hangar stayed busy with atmos while building: [key] averaged [mean] active turfs")
+	log_test("Drone reconstruction placed [total_visits] visits in [(world.time - started_at) / 10] seconds, including the survey. Active air turfs while building: [report.Join("; ")].")
 	// Released drones fly back to their own bays and dock there.
 	deadline = world.time + 30 SECONDS
 	var/docked = FALSE

@@ -2,10 +2,15 @@
  * # Outpost Hangar Berths
  *
  * Every ship that docks at a trader outpost gets its own dynamically allocated
- * hangar berth: a turf reservation with the hangar template loaded into it and
- * a stationary docking port aligned to the ship's own port. Each berth is a
- * "floor" reachable via the hangar elevator (see outpost_elevator.dm); floor 0
- * is the outpost concourse itself.
+ * hangar berth: a turf reservation sized to the ship, with the hangar generated
+ * into it and a stationary docking port aligned to the ship's own port. Each
+ * berth is a "floor" reachable via the hangar elevator (see outpost_elevator.dm);
+ * floor 0 is the outpost concourse itself.
+ *
+ * Standard berths (allocate_berth) are built per visit: the walls, deck and landing
+ * pad come from /datum/outpost_berth_layout, with the fixed exit strip (airlock,
+ * elevator alcove and panel, berth displays) set into the south wall. Player
+ * outpost ship bays and freight receivers keep their full-size mapped hangars.
  *
  * Lifecycle: allocated synchronously in ship_act() before the dock warmup
  * starts; released when the ship finishes undocking (on_ship_undock_complete),
@@ -39,7 +44,10 @@ GLOBAL_DATUM(outpost_hangar_template, /datum/map_template/outpost_hangar)
 	// would step out; see voidcrew/area/megafauna_ban.dm
 	repels_megafauna = TRUE
 
-/// Marks the bottom-left tile of a berth's 56x40 landing rect; consumed at load
+/// A standard per-visit berth. Ships park here; they are only extended in a ship bay.
+/area/voidcrew/outpost_hangar/berth
+
+/// Marks the bottom-left tile of a berth's landing rect; consumed at load
 /obj/effect/landmark/outpost_berth_dock
 	name = "outpost berth dock"
 
@@ -64,9 +72,9 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_berth, 32)
 	return ITEM_INTERACT_BLOCKING
 
 /**
- * Static hangar signage. The berth pad is 56x40 and ships land dead centre of it,
- * so a crew stepping off a small hull is standing in the middle of an empty field
- * with every wall outside view range. These say which way the way out is. Text is
+ * Static hangar signage for the full-size mapped hangars (freight receiver): a 56x40
+ * pad puts every wall outside view range of a small hull in its middle, so these say
+ * which way the way out is. Standard berths are sized to the ship and need none. Text is
  * mapper-set and never changes, so no host wiring: unlike the berth display these
  * are deliberately NOT an /outpost_berth subtype, so link_hangar_contents() leaves
  * them alone.
@@ -122,6 +130,11 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	var/list/obj/machinery/status_display/outpost_berth/status_signs = list()
 	/// Bottom-left turf of the loaded hangar template
 	var/turf/hangar_bottom_left
+	/// Landing rect size the dock is built with, along x and y
+	var/pad_width = RESERVE_DOCK_MAX_SIZE_LONG
+	var/pad_height = RESERVE_DOCK_MAX_SIZE_SHORT
+	/// TRUE while the hangar map is loading into the reservation
+	var/building = FALSE
 	/// Whether the ship has actually landed here
 	var/arrived = FALSE
 	/// Bounded retries while waiting for the departing shuttle to physically leave
@@ -154,7 +167,12 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 		qdel(dock, TRUE) // stationary ports refuse non-forced qdel
 		dock = null
 	if(reservation)
-		qdel(reservation) // async turf wipe deletes the hangar's contents
+		if(building)
+			// The loader is still writing into these turfs. build_standard_hangar() frees
+			// them as soon as it returns; the timer only covers a load that never does.
+			QDEL_IN(reservation, 30 SECONDS)
+		else
+			qdel(reservation) // async turf wipe deletes the hangar's contents
 		reservation = null
 	hangar_bottom_left = null
 	alcove_turfs = null
@@ -194,7 +212,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	if(arrival_watchdog)
 		deltimer(arrival_watchdog)
 		arrival_watchdog = null
-	ship.ship_notify("Docked at [outpost.name], Hangar Berth [berth_number]. Follow the painted arrows to the hangar's south wall; the airlock there leads to the elevator, which connects to the concourse and the other berths.", "DOCKING", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+	ship.ship_notify("Docked at [outpost.name], Hangar Berth [berth_number]. The airlock in the hangar's south wall leads to the elevator, which connects to the concourse and the other berths.", "DOCKING", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 
 /datum/outpost_berth/proc/on_ship_deleted(datum/source)
 	SIGNAL_HANDLER
@@ -265,8 +283,8 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	dock = new /obj/docking_port/stationary(dock_turf)
 	dock.dir = NORTH
 	dock.name = "[outpost.name] Berth [berth_number]"
-	dock.width = RESERVE_DOCK_MAX_SIZE_LONG
-	dock.height = RESERVE_DOCK_MAX_SIZE_SHORT
+	dock.width = pad_width
+	dock.height = pad_height
 	dock.dwidth = 0
 	dock.dheight = 0
 
@@ -317,9 +335,9 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 // (once they place a hangar elevator) can host berths.
 
 /**
- * Allocates the lowest free berth for a ship: reserves space, loads the hangar
- * template into it and wires everything up. Returns the berth, or null if the
- * outpost is full or the load failed.
+ * Allocates the lowest free berth for a ship: reserves a hangar sized to the ship,
+ * builds it and wires everything up. Returns the berth, or null if the outpost is
+ * full, the ship cannot fit a berth, or the build failed.
  */
 /obj/structure/overmap/proc/allocate_berth(obj/structure/overmap/ship/ship)
 	if(!berths)
@@ -332,39 +350,63 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	if(!berth_number)
 		return null
 
-	if(!GLOB.outpost_hangar_template)
-		GLOB.outpost_hangar_template = new
-	var/datum/map_template/outpost_hangar/hangar_template = GLOB.outpost_hangar_template
-	if(!hangar_template.width || !hangar_template.height)
-		log_mapping("OUTPOST BERTH: hangar template has no dimensions, cannot allocate.")
+	var/obj/docking_port/mobile/measured = ship?.shuttle
+	var/list/pad_size = outpost_berth_pad_size(measured)
+	if(!pad_size)
 		return null
-
-	var/datum/turf_reservation/hangar_reservation = SSmapping.request_turf_block_reservation(hangar_template.width, hangar_template.height, 1, requester = "outpost hangar berth for '[ship.name]' at '[name]'")
-	if(!hangar_reservation)
+	var/datum/map_template/outpost_berth_strip/strip = get_outpost_berth_strip()
+	if(!strip.width || !strip.height)
+		log_mapping("OUTPOST BERTH: exit strip template has no dimensions, cannot allocate.")
 		return null
-
-	var/turf/bottom_left = hangar_reservation.bottom_left_turfs[1]
-	var/load_success = FALSE
-	try
-		load_success = hangar_template.load(bottom_left)
-	catch(var/exception/e)
-		log_mapping("OUTPOST BERTH: failed to load hangar template: [e]")
-		load_success = FALSE
-	if(!load_success)
-		qdel(hangar_reservation)
-		return null
+	var/datum/outpost_berth_layout/layout = new(pad_size[1], pad_size[2], strip.width, strip.height)
 
 	var/datum/outpost_berth/berth = new(src, berth_number, ship)
-	berth.reservation = hangar_reservation
-	berth.hangar_bottom_left = bottom_left
-	if(!berth.link_hangar_contents())
-		qdel(berth) // Destroy() frees the reservation
+	// Claim the slot before the build yields, so a second arrival cannot take it too.
+	berths[berth_number] = berth
+	// Watch the ship from the start: its deletion, or a build that never finishes, frees the slot.
+	berth.setup_signals()
+	var/built = berth.build_standard_hangar(layout, strip)
+	// The pad was sized for this hull; a replaced or deleted one needs a new berth.
+	if(!built || QDELETED(src) || QDELETED(berth) || QDELETED(ship) || ship.shuttle != measured || (measured && QDELETED(measured)))
+		if(!QDELETED(berth))
+			qdel(berth) // Destroy() frees the slot and the reservation
 		return null
 
-	berth.setup_signals()
-	berths[berth_number] = berth
 	refresh_elevator_uis()
 	return berth
+
+/**
+ * Reserves this berth's hangar and builds it in one load: generated walls, deck and pad
+ * with the exit strip in the middle of the south wall. Parsing, reserving and loading
+ * all yield, and the berth can be torn down in any of those gaps; each one is checked.
+ */
+/datum/outpost_berth/proc/build_standard_hangar(datum/outpost_berth_layout/layout, datum/map_template/outpost_berth_strip/strip)
+	pad_width = layout.pad_width
+	pad_height = layout.pad_height
+	var/datum/map_template/outpost_berth_body/body = new
+	body.generate(layout, strip)
+	if(QDELETED(src))
+		return FALSE
+	var/datum/turf_reservation/claimed = SSmapping.request_turf_block_reservation(layout.width, layout.height, 1, requester = "outpost hangar berth for '[ship?.name]' at '[outpost?.name]'")
+	if(!claimed)
+		return FALSE
+	// A berth torn down while reserving has nobody left to free this.
+	if(QDELETED(src))
+		qdel(claimed)
+		return FALSE
+	reservation = claimed
+	var/turf/bottom_left = claimed.bottom_left_turfs[1]
+	hangar_bottom_left = bottom_left
+	building = TRUE
+	var/loaded = body.load(bottom_left)
+	building = FALSE
+	if(QDELETED(src))
+		// Destroy() left the reservation alone while the loader was writing into it.
+		qdel(claimed)
+		return FALSE
+	if(!loaded)
+		return FALSE
+	return link_hangar_contents()
 
 /// Called from complete_dock() once the ship has fully left the outpost.
 /obj/structure/overmap/proc/on_ship_undock_complete(obj/structure/overmap/ship/ship)

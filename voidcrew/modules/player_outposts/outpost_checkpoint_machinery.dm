@@ -4,15 +4,31 @@
 
 /// Construct the ordinary machine, not a stocked/map/event subtype. Infrastructure
 /// without a circuit retains its existing, explicitly supported hull representation.
+/// What this machine is rebuilt as: its board's product when it has one, else itself.
 /obj/machinery/proc/checkpoint_type()
+	if(is_type_in_typecache(src, GLOB.outpost_checkpoint_excluded))
+		return null
 	if(anchored && istype(circuit) && ispath(circuit.build_path, /obj/machinery))
 		return circuit.build_path
-	if(is_type_in_typecache(src, GLOB.outpost_checkpoint_infrastructure))
-		return type
-	return null
+	return type
 
 /obj/machinery/computer/helm/viewscreen/checkpoint_type()
 	return type
+
+/// The bare unary type only exists as a machine's own pipe connector (see
+/// /datum/gas_machine_connector). Its machine makes a new one, so it is never a fitting itself.
+/obj/machinery/atmospherics/components/unary/checkpoint_type()
+	if(type == /obj/machinery/atmospherics/components/unary)
+		return null
+	return ..()
+
+/// Pipe connectors this machine made for itself. They move with it rather than as pieces.
+/obj/machinery/proc/checkpoint_atmos_parts()
+	return list()
+
+/obj/machinery/cryo_cell/checkpoint_atmos_parts()
+	var/obj/machinery/atmospherics/connector = internal_connector?.gas_connector
+	return connector ? list(connector) : list()
 
 /// Keep parts as construction types, never mutable datums belonging to the source.
 /datum/ship_checkpoint/proc/capture_machine(obj/machinery/machine)

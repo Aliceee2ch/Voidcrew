@@ -444,12 +444,18 @@
 #include "weird_food.dm"
 #include "wizard_loadout.dm"
 #include "worn_icons.dm"
+#include "../../../voidcrew/modules/unit_tests/_voidcrew_test_selection.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_puzzle_containment.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/armor_partial_modifiers.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_ship_bay.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_admin_bays.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_admin_checkpoints.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_checkpoints.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_checkpoints_every_ship.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_checkpoint_loading.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_checkpoint_mergers.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_ship_orders.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_sized_berths.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_upgrades.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_trouble.dm" // VOIDCREW EDIT ADDITION

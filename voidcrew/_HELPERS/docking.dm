@@ -1,11 +1,8 @@
 /**
- * Alters the position and orientation of a stationary docking port so any mobile
- * port small enough can dock within its bounds.
- *
- * Shared by planets, space ruins and trader outposts (was copy-pasted per type).
- * Callers are responsible for checking the shuttle actually fits afterwards.
+ * The direction adjust_reserve_dock_to_shuttle() turns a reserve dock to face for this shuttle.
+ * The docked hull takes this dir, so it decides which way the hull lies on the ground.
  */
-/proc/adjust_reserve_dock_to_shuttle(obj/docking_port/stationary/dock_to_adjust, obj/docking_port/mobile/shuttle)
+/proc/reserve_dock_facing_for(obj/docking_port/mobile/shuttle)
 	// the shuttle's dimensions where "true height" measures distance from the shuttle's fore to its aft
 	var/shuttle_true_height = shuttle.height
 	var/shuttle_true_width = shuttle.width
@@ -13,8 +10,27 @@
 	if(EWCOMPONENT(shuttle.port_direction))
 		shuttle_true_height = shuttle.width
 		shuttle_true_width = shuttle.height
+	return angle2dir(dir2angle(shuttle_true_height > shuttle_true_width ? EAST : NORTH)+dir2angle(shuttle.port_direction)+180)
+
+/**
+ * The ground a shuttle covers once docked on a reserve dock, as list(x extent, y extent).
+ * A docked hull's width runs along x when it faces north or south and along y otherwise.
+ */
+/proc/reserve_dock_ground_size(obj/docking_port/mobile/shuttle)
+	if(NSCOMPONENT(reserve_dock_facing_for(shuttle)))
+		return list(shuttle.width, shuttle.height)
+	return list(shuttle.height, shuttle.width)
+
+/**
+ * Alters the position and orientation of a stationary docking port so any mobile
+ * port small enough can dock within its bounds.
+ *
+ * Shared by planets, space ruins and trader outposts (was copy-pasted per type).
+ * Callers are responsible for checking the shuttle actually fits afterwards.
+ */
+/proc/adjust_reserve_dock_to_shuttle(obj/docking_port/stationary/dock_to_adjust, obj/docking_port/mobile/shuttle)
 	// the dir the stationary port should be facing (note that it points inwards)
-	var/final_facing_dir = angle2dir(dir2angle(shuttle_true_height > shuttle_true_width ? EAST : NORTH)+dir2angle(shuttle.port_direction)+180)
+	var/final_facing_dir = reserve_dock_facing_for(shuttle)
 	var/list/old_corners = dock_to_adjust.return_coords() // coords for "bottom left" / "top right" of dock's covered area, rotated by dock's current dir
 	var/list/new_dock_location // TBD coords of the new location
 	if(final_facing_dir == dock_to_adjust.dir)

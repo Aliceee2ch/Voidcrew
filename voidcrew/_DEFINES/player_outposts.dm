@@ -69,6 +69,12 @@
 #define OUTPOST_CHECKPOINT_SAVE_COST 10000
 #define OUTPOST_CHECKPOINT_UPDATE_COST 5000
 
+/// New ships built to order in the ship bay (outpost_ship_orders.dm). Credits replace parts:
+/// every part a hull, theme or module would cost in the lobby shipyard is this many credits.
+#define OUTPOST_SHIP_ORDER_PART_PRICE 2500
+/// Charged on every order, on top of the hull's parts.
+#define OUTPOST_SHIP_ORDER_FEE 10000
+
 // ===== STAGED CHECKPOINT RECONSTRUCTION (see outpost_checkpoint_construction.dm) =====
 /// The saved ship is loaded and waiting for its survey markers.
 #define CHECKPOINT_BUILD_PREPARING "preparing"
@@ -93,10 +99,15 @@
 #define CHECKPOINT_BUILD_SURVEY_TIME (4 SECONDS)
 /// Time a drone spends on one tile before its pieces appear.
 #define CHECKPOINT_BUILD_WORK_TIME (0.4 SECONDS)
+/// Played once to everyone in the bay when the drones leave, and when the last one docks.
+#define CHECKPOINT_YARD_LAUNCH_SOUND 'voidcrew/sound/checkpoint/drone_launch.ogg'
+#define CHECKPOINT_YARD_DOCK_SOUND 'voidcrew/sound/checkpoint/drone_dock.ogg'
 #define CHECKPOINT_BUILD_MIN_DRONES 8
 #define CHECKPOINT_BUILD_MAX_DRONES 16
-/// Tiles a drone crosses per controller tick (SSfastprocess, 0.2 seconds).
+/// Tiles a drone crosses in one hop.
 #define CHECKPOINT_DRONE_TILES_PER_TICK 3
+/// How often a drone makes that hop. The glide between hops takes the same time.
+#define CHECKPOINT_DRONE_FLIGHT_INTERVAL (0.4 SECONDS)
 /// Roughly one extra drone per this many visits, between the limits above.
 #define CHECKPOINT_BUILD_VISITS_PER_DRONE 100
 /// Upper bound on tile visits completed in one controller tick, across all drones.

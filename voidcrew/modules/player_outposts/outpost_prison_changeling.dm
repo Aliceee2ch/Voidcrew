@@ -631,11 +631,9 @@
 		if(level >= 3)
 			vent.dent()
 			flicker_lights_near(vent, 4)
-#ifndef OUTPOST_EXPERIMENT_API
-	// With S4a, the prisoners have been hiding since the burst (panic_all()).
+	// The noises have their own flee: a slug in the vents frightens nobody by sight (outpost_prison_panic.dm).
 	if(level >= 3 && !panicked)
 		panic_prisoners()
-#endif
 	remark_left -= seconds
 	if(remark_left <= 0)
 		remark_left = OUTPOST_CHANGELING_REMARK_GAP + rand(0, 6)
@@ -714,9 +712,7 @@
 	vent.strain_pulse()
 	prison.add_log("A vent is giving way.")
 	prison.announce("Prison wing: something is forcing its way out of the vents!", SHIP_NOTIFY_DANGER)
-#ifndef OUTPOST_EXPERIMENT_API
 	panic_prisoners()
-#endif
 
 // ===== THE HORROR =====
 
@@ -886,14 +882,14 @@
 
 // ===== THE PRISONERS =====
 
-/// Every prisoner who can still walk goes to their cell and asks to be locked in
+/// Every prisoner who can still walk goes to their cell and asks to be locked in. Anyone already running from a creature they can see keeps to that (outpost_prison_panic.dm).
 /datum/outpost_changeling_event/proc/panic_prisoners()
 	panicked = TRUE
 	var/shouts = 0
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prison.prisoners)
 		if(prisoner == host || !prisoner.routine_allowed() || prisoner.is_confined())
 			continue
-		if(istype(prisoner.activity, /datum/prisoner_activity/flee_creature))
+		if(istype(prisoner.activity, /datum/prisoner_activity/flee_creature) || istype(prisoner.activity, /datum/prisoner_activity/creature_panic))
 			continue
 		var/datum/prisoner_activity/flee_creature/flee = new(prisoner)
 		if(!flee.setup())
@@ -1094,7 +1090,9 @@
 
 /**
  * Something is loose: back to their own cell, onto the bunk, shouting to be locked in until
- * somebody bolts the door. Over when the creature is dead or taken.
+ * somebody bolts the door. Over when the creature is dead or taken; with the experiments core in,
+ * over once the slug is out of the vents, when the creature itself frightens them instead
+ * (outpost_prison_panic.dm). Bolted in their own cell meanwhile, the lock-in costs them nothing.
  */
 /datum/prisoner_activity/flee_creature
 	name = "hiding in their cell"
@@ -1131,7 +1129,12 @@
 
 /datum/prisoner_activity/flee_creature/tick(seconds)
 	var/datum/outpost_prison/prison = prisoner.prison
-	if(!prison?.active_changeling?.creature_loose())
+	var/datum/outpost_changeling_event/event = prison?.active_changeling
+#ifdef OUTPOST_EXPERIMENT_API
+	if(event?.stage != "vents")
+		return ACTIVITY_DONE
+#endif
+	if(!event?.creature_loose())
 		return ACTIVITY_DONE
 	shout_left -= seconds
 	if(shout_left > 0)

@@ -17,6 +17,7 @@
  * dialogue package; hatch_empty, subdued, fight_argue_none (a fight with no cause) and
  * threat_backed_down (a threat called off by a talk) are spares for the same systems.
  * turret_backs_off, turret_gives_up and turret_defies answer a turret's warning (outpost_prison_security.dm).
+ * creature_flee is the moment a prisoner breaks and runs from a creature (outpost_prison_panic.dm).
  */
 /datum/unit_test/voidcrew_outpost_prison_dialogue_contexts/proc/prisoner_contexts()
 	return list(
@@ -24,7 +25,7 @@
 		"spat", "fight_argue_food", "fight_argue_ball", "fight_argue_bed", "fight_yield",
 		"fight_talked_down", "calm_talk", "talk_refuse", "unbolted", "wreck", "riot_imminent",
 		"riot_bystander", "rat", "no_air", "lights_flicker", "arrival_stained", "arrival_hurt",
-		"creature_panic", "vent_noise", "horror", "absorbed", "horror_down", "horror_rises",
+		"creature_panic", "creature_flee", "vent_noise", "horror", "absorbed", "horror_down", "horror_rises",
 		"hatch_empty", "subdued", "fight_argue_none", "threat_backed_down",
 		"cuffed", "cuffs_off", "lockdown", "lockdown_over",
 		"turret_backs_off", "turret_gives_up", "turret_defies",

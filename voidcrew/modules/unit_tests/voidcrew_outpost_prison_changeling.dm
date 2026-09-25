@@ -295,7 +295,7 @@
 	TEST_ASSERT(!event.straining, "A vent strained before 85 s")
 	TEST_ASSERT_EQUAL(event.noise_level(), 3, "The last half minute in the vents is noise level [event.noise_level()]") // OUTPOST_CHANGELING_NOISE_VIOLENT
 	TEST_ASSERT(cell_vent.dented, "Violent banging did not dent the cover")
-	// The changeling's own panic, or S4a's once it has landed (from the burst on): both go by creature_panic.
+	// The vent noises' own flee (a slug in the vents frightens nobody by sight, outpost_prison_panic.dm) goes by creature_panic.
 	TEST_ASSERT(bystander.activity?.context == "creature_panic", "The prisoners did not run for their cells in the last minute")
 	changeling_ticks(event, 1) // OUTPOST_CHANGELING_VENT_TIME - OUTPOST_CHANGELING_STRAIN_TIME
 	TEST_ASSERT(event.straining, "No vent strained at 85 s")

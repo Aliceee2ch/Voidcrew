@@ -80,7 +80,8 @@
 	TEST_ASSERT(!wildcard_started(prison), "An incident started inside the gap")
 	prison.wildcard_gap_left = 0
 
-	// Nobody home, a riot, an experiment, the quiet after a riot, one prisoner, trouble off: no rolls.
+	// Nobody home, a riot, the quiet after a riot, one prisoner, trouble off: no rolls. An experiment
+	// holds nothing (owner, 2026-09-25): a roll that comes up during one starts an incident.
 	prison.crew_home_override = FALSE
 	prison.wildcard_tick(300)
 	TEST_ASSERT(!wildcard_started(prison), "An incident started with nobody home")
@@ -92,9 +93,13 @@
 	var/datum/outpost_experiment/trial = allocate(/datum/outpost_experiment, prison, "hulk", null)
 	prison.experiment = trial
 	TEST_ASSERT(prison.experiment_active(), "The test experiment is not under way")
-	prison.wildcard_tick(300)
+	TEST_ASSERT_NULL(prison.wildcard_clock_paused(), "The incident clock waits for an experiment ([prison.wildcard_clock_paused()])")
+	prison.wildcard_tick(60) // PRISON_INCIDENT_ROLL_TIME
 	prison.experiment = null
-	TEST_ASSERT(!wildcard_started(prison), "An incident started during an experiment")
+	TEST_ASSERT(wildcard_started(prison), "No incident started during an experiment")
+	wildcard_reset(prison)
+	set_moods(list(first, second), 90)
+	prison.wildcard_gap_left = 0
 	prison.set_subdued(360)
 	prison.wildcard_tick(300)
 	prison.set_subdued(0)

@@ -469,6 +469,7 @@
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_experiments.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_map.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_needs.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_panic.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_trouble.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_contraband.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_extras.dm" // VOIDCREW EDIT ADDITION

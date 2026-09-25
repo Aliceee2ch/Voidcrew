@@ -7276,6 +7276,7 @@
 #include "voidcrew\modules\player_outposts\outpost_prison_leads.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_life.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_mail.dm"
+#include "voidcrew\modules\player_outposts\outpost_prison_panic.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_pastimes.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_prisoner.dm"
 #include "voidcrew\modules\player_outposts\outpost_prison_researcher.dm"

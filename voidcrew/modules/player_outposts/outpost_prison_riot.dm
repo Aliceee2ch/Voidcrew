@@ -149,16 +149,17 @@
 
 /**
  * Advances a prisoner's confinement clock by `seconds`. Shut in their cell it counts up, unless
- * that is for their own safety or they owe lockdown; out of it, it falls PRISONER_LOCKED_IN_RECOVERY
- * seconds a second, so letting them out for a moment does not reset it. A rioter just shut in a
- * cell is in custody, and owes lockdown for it (outpost_prison_capture.dm).
+ * that is for their own safety, they owe lockdown, or they are hiding in their own cell from a
+ * creature (sheltering_from_creature(), outpost_prison_panic.dm); out of it, it falls
+ * PRISONER_LOCKED_IN_RECOVERY seconds a second, so letting them out for a moment does not reset it.
+ * A rioter just shut in a cell is in custody, and owes lockdown for it (outpost_prison_capture.dm).
  */
 /datum/outpost_prison/proc/update_locked_in(mob/living/basic/outpost_prisoner/prisoner, seconds)
 	var/confined = prisoner.is_confined()
 	if(confined)
 		if(!prisoner.was_confined && prisoner.is_rioting())
 			start_lockdown(prisoner)
-		if(!protective_custody() && prisoner.lockdown_left <= 0)
+		if(!protective_custody() && prisoner.lockdown_left <= 0 && !prisoner.sheltering_from_creature())
 			prisoner.locked_in_seconds += seconds
 	else
 		if(prisoner.was_confined && prisoner.locked_in_seconds >= OUTPOST_PRISON_LOCKED_IN_COMPLAINT)
@@ -168,10 +169,11 @@
 
 /**
  * Whether shutting prisoners in their cells is for their own safety right now, so it costs
- * nothing: a riot, someone loose and not yet caught (cuffed), an experiment
+ * nothing: a riot, or someone loose and not yet caught (cuffed). An experiment is not: a prisoner
+ * a creature has frightened into their own cell is spared on their own (sheltering_from_creature()).
  */
 /datum/outpost_prison/proc/protective_custody()
-	return riot_active || runners_at_large() > 0 || experiment_active()
+	return riot_active || runners_at_large() > 0
 
 /// A prisoner is let out after a long lock-in: some relief, and they say so
 /datum/outpost_prison/proc/on_unbolted(mob/living/basic/outpost_prisoner/prisoner)
@@ -188,13 +190,13 @@
 
 /**
  * Something happened that sets the wing on edge. While the wing is restless it is also a spark,
- * and the riot starts, unless the wing is subdued or an experiment is on.
+ * and the riot starts, unless the wing is subdued.
  */
 /datum/outpost_prison/proc/trouble_event(spike, reason)
 	if(!length(prisoners))
 		return FALSE
 	add_tension_spike(spike)
-	if(trouble_enabled && !riot_active && stage == PRISON_STAGE_RESTLESS && subdued_left <= 0 && !experiment_active())
+	if(trouble_enabled && !riot_active && stage == PRISON_STAGE_RESTLESS && subdued_left <= 0)
 		return start_riot(reason)
 	return FALSE
 
@@ -252,7 +254,7 @@
 	stage = outpost_prison_stage_for(tension, old_stage)
 	if(trouble_enabled && stage == PRISON_STAGE_RESTLESS && old_stage != PRISON_STAGE_RESTLESS && old_stage != PRISON_STAGE_RIOT)
 		note_restless()
-	if(!trouble_enabled || tension < PRISON_TENSION_RIOT || subdued_left > 0 || experiment_active())
+	if(!trouble_enabled || tension < PRISON_TENSION_RIOT || subdued_left > 0)
 		riot_hold = 0
 		riot_imminent = FALSE
 		return
@@ -387,7 +389,8 @@
  */
 /datum/outpost_prison/proc/threats_tick(seconds)
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.phase != PRISONER_PRESENT || prisoner.trouble || !prisoner.trouble_can_act() || !prisoner.ai_running() || !in_cell_block(prisoner))
+		// Running from a creature, staff are the least of their worries (outpost_prison_panic.dm).
+		if(prisoner.phase != PRISONER_PRESENT || prisoner.trouble || !prisoner.trouble_can_act() || !prisoner.ai_running() || !in_cell_block(prisoner) || prisoner.is_panicking())
 			prisoner.cancel_threat()
 			continue
 		if(prisoner.threat_ref)
@@ -527,9 +530,9 @@
 		fighter.update_bubble()
 	qdel(brawl)
 
-/// Whether they are angry enough, free and able to start a fight, with someone around to see it
+/// Whether they are angry enough, free and able to start a fight, with someone around to see it, and no creature frightening them
 /mob/living/basic/outpost_prisoner/proc/can_start_fight()
-	return prison && mood < PRISONER_FIGHT_MOOD && !in_trouble() && fight_cooldown <= 0 && trouble_can_act() && health_factor() > PRISONER_FIGHT_YIELD && !activity?.sleeping && ai_running() && prison.in_cell_block(src)
+	return prison && mood < PRISONER_FIGHT_MOOD && !in_trouble() && fight_cooldown <= 0 && trouble_can_act() && health_factor() > PRISONER_FIGHT_YIELD && !activity?.sleeping && ai_running() && prison.in_cell_block(src) && !is_panicking()
 
 /// Chasing the ball, or holding it
 /mob/living/basic/outpost_prisoner/proc/after_ball()
@@ -569,7 +572,7 @@
  * PRISONER_FIGHT_CHANCE percent, doubled when they contest the food or the ball.
  */
 /datum/outpost_prison/proc/try_start_fight()
-	if(!trouble_enabled || riot_active || subdued_left > 0 || length(fights) || fight_gap_left > 0 || experiment_active())
+	if(!trouble_enabled || riot_active || subdued_left > 0 || length(fights) || fight_gap_left > 0)
 		return null
 	var/list/angry = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
@@ -595,9 +598,9 @@
 
 // ===== SPATS =====
 
-/// Whether a prisoner is sour enough and free to argue
+/// Whether a prisoner is sour enough and free to argue, and no creature is frightening them
 /datum/outpost_prison/proc/can_spat(mob/living/basic/outpost_prisoner/prisoner)
-	return prisoner.phase == PRISONER_PRESENT && prisoner.mood < PRISONER_SPAT_MOOD && !prisoner.in_trouble() && prisoner.trouble_can_act() && !prisoner.activity?.sleeping && prisoner.ai_running()
+	return prisoner.phase == PRISONER_PRESENT && prisoner.mood < PRISONER_SPAT_MOOD && !prisoner.in_trouble() && prisoner.trouble_can_act() && !prisoner.activity?.sleeping && prisoner.ai_running() && !prisoner.is_panicking()
 
 /**
  * Two sour prisoners in sight of each other trade a few words: no blows, no mood, only noise.
@@ -711,13 +714,13 @@
 /**
  * Starts a riot. `everyone` pulls in every prisoner able to riot, as the admin button does, and
  * ignores the quiet after a riot; `forced` joins whatever their mood. `ignore_quiet` starts it in
- * the quiet after a riot too, for a prisoner let out of lockdown early. Nobody starts one while an
- * experiment is on.
+ * the quiet after a riot too, for a prisoner let out of lockdown early. An experiment under way
+ * stops nothing.
  */
 /datum/outpost_prison/proc/start_riot(reason, everyone = FALSE, mob/living/basic/outpost_prisoner/forced, ignore_quiet = FALSE)
 	if(!trouble_enabled || riot_active)
 		return FALSE
-	if(!everyone && ((subdued_left > 0 && !ignore_quiet) || experiment_active()))
+	if(!everyone && subdued_left > 0 && !ignore_quiet)
 		return FALSE
 	var/list/joining = riot_candidates(everyone, forced)
 	if(!length(joining))
@@ -762,10 +765,10 @@
 	if(shout)
 		say_context("riot")
 
-/// Prisoners who stay out of a riot go back to their own cells and sit it out on the bed
+/// Prisoners who stay out of a riot go back to their own cells and sit it out on the bed. Anyone running from a creature keeps running (outpost_prison_panic.dm).
 /datum/outpost_prison/proc/send_bystanders_home(list/rioters)
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if((prisoner in rioters) || prisoner.phase != PRISONER_PRESENT || !prisoner.routine_allowed() || prisoner.is_confined())
+		if((prisoner in rioters) || prisoner.phase != PRISONER_PRESENT || !prisoner.routine_allowed() || prisoner.is_confined() || prisoner.is_panicking())
 			continue
 		var/datum/prisoner_activity/hide/hide = new(prisoner)
 		if(hide.setup())
@@ -1067,7 +1070,7 @@
 			continue
 		if(prisoner.trouble == PRISONER_TROUBLE_WRECK)
 			wreck_step(prisoner, seconds)
-		else if(!prisoner.in_trouble() && prisoner.ai_running() && prisoner.locked_in_seconds >= PRISONER_WRECK_AFTER && prisoner.mood <= PRISONER_WRECK_MOOD && !prisoner.can_be_dragged() && prisoner.is_confined())
+		else if(!prisoner.in_trouble() && prisoner.ai_running() && prisoner.locked_in_seconds >= PRISONER_WRECK_AFTER && prisoner.mood <= PRISONER_WRECK_MOOD && !prisoner.can_be_dragged() && prisoner.is_confined() && !prisoner.is_panicking())
 			start_wreck(prisoner)
 
 /**

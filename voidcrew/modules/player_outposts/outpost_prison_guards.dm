@@ -709,9 +709,13 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		return spot
 	return null
 
-/// An experiment is on: into the office and stay there. They never strike the creatures.
+/**
+ * A creature is out (creature_out(), outpost_prison_panic.dm): into the office and stay there until
+ * it is dead, taken or shut in. They never strike the creatures. The rest of an experiment (the dose,
+ * the incubation, the slug in the vents) is no reason to leave the yard to itself.
+ */
 /mob/living/basic/outpost_prison_guard/proc/shelter_response(datum/outpost_guard_response/job)
-	if(!prison.experiment_active())
+	if(!prison.creature_out())
 		return TRUE
 	job.reached = TRUE
 	if(!job.spot)
@@ -840,7 +844,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	var/list/guard_reported = list()
 	/// REF() of loose prisoners a guard has called out
 	var/list/guard_loose_called = list()
-	/// Whether the guards' riot hold went out on the radio this riot, and their experiment line this experiment
+	/// Whether the guards' riot hold went out on the radio this riot, and their creature line while a creature is out
 	var/guard_riot_announced = FALSE
 	var/guard_shelter_called = FALSE
 
@@ -1094,7 +1098,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 // ===== THE DISPATCHER =====
 
 /**
- * Hands out responses and runs them, once a second, for guards whose AI runs. An experiment sends
+ * Hands out responses and runs them, once a second, for guards whose AI runs. A creature out sends
  * everyone to the office; a riot gives everyone the riot doctrine; otherwise each incident (a
  * hatch climb, a fight, an argument, a threat), most urgent first, goes to the nearest free guard,
  * one guard each. Spats are stopped from where the guard stands, and loose prisoners are called
@@ -1107,11 +1111,12 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 			on_duty += guard
 	if(!riot_active)
 		guard_riot_announced = FALSE
-	if(!experiment_active())
+	var/creature_about = creature_out()
+	if(!creature_about)
 		guard_shelter_called = FALSE
 	if(!length(on_duty))
 		return
-	if(experiment_active())
+	if(creature_about)
 		for(var/mob/living/basic/outpost_prison_guard/guard as anything in on_duty)
 			if(guard.response?.kind == "shelter")
 				continue

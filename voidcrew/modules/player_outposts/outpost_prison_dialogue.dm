@@ -193,6 +193,9 @@
 		return list("riot", null)
 	if(trouble || beaten_left > 0 || threat_ref || climb_ref)
 		return null
+	// Running from a creature, they shout about that instead (outpost_prison_panic.dm).
+	if(is_panicking())
+		return null
 	// Sullen while they serve a lockdown
 	if(lockdown_left > 0 && prob(50))
 		return list("lockdown", null)

@@ -46,10 +46,11 @@
 
 /**
  * Whether a prisoner has been shut in their cell, or kept in cuffs (outpost_prison_capture.dm),
- * long enough to stop paying. Not while it is for their own safety or for lockdown they owe.
+ * long enough to stop paying. Not while it is for their own safety, or they are hiding in their own
+ * cell from a creature (outpost_prison_panic.dm), or for lockdown they owe.
  */
 /datum/outpost_prison/proc/confined_unpaid(mob/living/basic/outpost_prisoner/prisoner)
-	return (prisoner.locked_in_seconds > OUTPOST_PRISON_CONFINED_PAY_AFTER && !protective_custody()) || prisoner.cuffs_souring()
+	return (prisoner.locked_in_seconds > OUTPOST_PRISON_CONFINED_PAY_AFTER && !protective_custody() && !prisoner.sheltering_from_creature()) || prisoner.cuffs_souring()
 
 /**
  * The share of full pay a prisoner earns the treasury right now, 0 to 1: G(care) x F(conditions).

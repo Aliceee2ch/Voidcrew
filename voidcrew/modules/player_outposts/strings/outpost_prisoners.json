@@ -2594,6 +2594,42 @@
 				"Something's there."
 			]
 		},
+		"creature_flee": {
+			"any": [
+				"Run! It's coming this way!",
+				"Get out of its way!",
+				"Move! Move!",
+				"Everybody run!",
+				"It's right there! Go!",
+				"I'm not staying here with that thing!",
+				"Get away from it!",
+				"Out of my way!",
+				"Don't let it see you!",
+				"Nope. I'm gone."
+			],
+			"chatty": [
+				"Nobody said anything about monsters when they booked me in!",
+				"I'm running! Somebody write down that I ran!"
+			],
+			"grumpy": [
+				"Out of my way! I'm not dying for any of you!",
+				"Great. Just great. Run!"
+			],
+			"nervous": [
+				"No no no no! Run!",
+				"It saw me! It saw me!",
+				"I can't breathe! Just run!"
+			],
+			"cheerful": [
+				"Okay! Running now! Bye!",
+				"Well, that's my cue to leave!"
+			],
+			"quiet": [
+				"Go.",
+				"Run.",
+				"Not here."
+			]
+		},
 		"creature_panic": {
 			"any": [
 				"Lock me in! Lock the door!",

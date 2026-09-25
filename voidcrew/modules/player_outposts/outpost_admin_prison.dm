@@ -54,6 +54,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_cards", // {}: a card game at the table with the deck, if two can play
 	"prison_stash", // {cell, kind: shiv|pruno|clear}
 	"prison_mail", // {ref, kind: good|kid|news|bad|contraband}: a letter for that prisoner in the mailbag
+	"prison_mail_wave", // {}: a mail pod now, with letters for a share of the prisoners
 	"prison_lead", // {ref}: that prisoner carries a lead and the wing is ready to give one
 ))
 

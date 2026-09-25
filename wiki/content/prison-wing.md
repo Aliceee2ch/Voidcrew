@@ -71,7 +71,7 @@ Unhappy prisoners hide things in their cells: a shiv under the mattress, or a ba
 
 ## Mail
 
-Letters for prisoners turn up in the **mailbag** on the office table. Hand a letter to the prisoner it's addressed to, or put it on a serving hatch for them to collect, and they'll read it on the spot. A letter nobody delivers is eventually sent back, and its prisoner takes that badly. You can open a letter before delivering it, but the prisoner will know. Some envelopes feel like something small and hard is sealed inside.
+Every so often, while someone from the outpost is home, a **mail pod** drops into the warden's office (or just outside the entrance if the office floor is full) with a sack of letters for some of the prisoners. It lands gently and never on anyone. Hand a letter to the prisoner it's addressed to, or put it on a serving hatch for them to collect, and they'll read it on the spot. A letter nobody delivers is eventually sent back, and its prisoner takes that badly. You can open a letter before delivering it, but the prisoner will know. Some envelopes feel like something small and hard is sealed inside.
 
 ## Cards, dice and birthdays
 

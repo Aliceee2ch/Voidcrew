@@ -68,14 +68,15 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 			prison.set_intake(open, user)
 			record(user, home, "[open ? "open" : "close"] prison intake")
 		if("prison_spawn")
-			var/mob/living/basic/outpost_prisoner/arrival = prison.admit_next()
+			// Forced: an admin spawn ignores the cell's ready time and a running experiment
+			var/mob/living/basic/outpost_prisoner/arrival = prison.admit_next(TRUE)
 			if(!arrival)
 				error = "No free cell."
 				return
 			record(user, home, "beam prisoner [arrival.real_name] into cell [arrival.cell?.number]")
 		if("prison_fill")
 			var/count = 0
-			while(prison.admit_next())
+			while(prison.admit_next(TRUE))
 				count++
 			if(!count)
 				error = "No free cell."
@@ -306,49 +307,17 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 		"crew_mode" = isnull(crew_home_override) ? "auto" : (crew_home_override ? "home" : "away"),
 		"riot_active" = riot_active,
 		"riot_elapsed" = round(riot_elapsed),
-		"riot_absent" = admin_amount(admin_read(list("riot_absent"))),
+		"riot_absent" = round(riot_absent),
 		"subdued_left" = trouble_block["subdued_left"],
-		"incident_fined" = admin_amount(admin_read(list("incident_fined"))),
-		"lost_recent" = admin_lost_recent(),
+		"incident_fined" = incident_fined,
+		"lost_recent" = lost_recently(),
 		"debt" = outpost?.treasury?.account_debt || 0,
 		"hatch" = hatch_stock(),
-		"mess_units" = admin_amount(admin_read(list("mess_units", "mess_load"))),
-		"floor_size" = admin_amount(admin_read(list("floor_size", "mess_floor_size"))),
-		"lit_samples" = admin_amount(admin_read(list("lit_samples", "light_samples"))),
+		"mess_units" = round(mess_load, 0.1),
+		"floor_size" = mess_floor_size,
+		"lit_samples" = lit_samples,
 		"outage_debt" = round(outage_debt),
 	)
-
-/**
- * A var another prison package adds, by name: the first of `names` this prison has, or null.
- * This file builds against the seams stubs, where those vars do not exist yet, so it cannot name
- * them directly. Once the packages are merged these reads can become plain var reads.
- */
-/datum/outpost_prison/proc/admin_read(list/names)
-	for(var/name in names)
-		if(name in vars)
-			return vars[name]
-	return null
-
-/// A number for the admin panel from a var that may hold a number or a list (its length), or null
-/datum/outpost_prison/proc/admin_amount(value)
-	if(islist(value))
-		var/list/entries = value
-		return length(entries)
-	if(isnum(value))
-		return round(value, 0.1)
-	return null
-
-/// Prisoners lost within OUTPOST_PRISON_LOST_WINDOW, from the economy package's lost log, or null before it lands
-/datum/outpost_prison/proc/admin_lost_recent()
-	var/list/lost = admin_read(list("lost_log", "lost_times"))
-	if(!islist(lost))
-		return isnum(lost) ? lost : null
-	var/count = 0
-	for(var/entry in lost)
-		if(isnum(entry) && entry < world.time - OUTPOST_PRISON_LOST_WINDOW)
-			continue
-		count++
-	return count
 
 /// Where their care falls between no pay and full pay, 0 to 1 (section 1's G(care))
 /mob/living/basic/outpost_prisoner/proc/admin_care_grade()

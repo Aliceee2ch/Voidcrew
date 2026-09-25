@@ -75,8 +75,6 @@
 	var/subdued_left = 0
 	/// Rioters got out: an escape alarm reads as a breakout until they are dealt with
 	var/broke_out = FALSE
-	/// A riot or escape is under way, and its fines count together
-	var/incident_open = FALSE
 	/// Seconds to the next riot alarm
 	var/alarm_left = 0
 	/// Fights going on, /datum/outpost_prison_fight
@@ -985,21 +983,14 @@
 
 // ===== INCIDENTS =====
 
-/// A riot or an escape opens an incident: its fines count together from here
+/// A riot or an escape opens an incident: its fines count together from here (incident_open and the cap live in the economy file)
 /datum/outpost_prison/proc/open_incident()
-	if(incident_open)
-		return
-	incident_open = TRUE
 	begin_incident()
 
 /// The incident is over once nobody is rioting, breaking out or loose
 /datum/outpost_prison/proc/check_incident_over()
-	if(!incident_open || riot_active)
+	if(!incident_open || incident_ongoing())
 		return FALSE
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && (prisoner.is_rioting() || prisoner.trouble == PRISONER_TROUBLE_LOOSE))
-			return FALSE
-	incident_open = FALSE
 	end_incident()
 	return TRUE
 

@@ -142,8 +142,12 @@
 	TEST_ASSERT(prison.clean_score < clean_before, "Spawning mess did not dirty the wing")
 	panel.manage_outpost(home, operator, "prison_break_lights", list())
 	TEST_ASSERT_EQUAL(prison.lit_score, 0, "Breaking the lights left the wing [prison.lit_score]% lit")
+	// A cut only drops Power once the outage debt passes its grace (PRISON_POWER_GRACE 30) and
+	// ramp (PRISON_POWER_RAMP 90), so the debt is pushed to the end of the ramp.
 	panel.manage_outpost(home, operator, "prison_power", list("on" = 0))
-	TEST_ASSERT_EQUAL(prison.powered_score, 0, "Cutting power left the wing powered")
+	TEST_ASSERT_EQUAL(prison.powered_score, 100, "Cutting power dropped Power before the grace ran out")
+	panel.manage_outpost(home, operator, "prison_outage", list("seconds" = 120))
+	TEST_ASSERT_EQUAL(prison.powered_score, 0, "A cut past its grace and ramp left the wing [prison.powered_score]% powered")
 	panel.manage_outpost(home, operator, "prison_power", list("on" = 2))
 	TEST_ASSERT(panel.error && !prison.powered_score, "A bad power setting was accepted")
 	panel.manage_outpost(home, operator, "prison_power", list("on" = 1))
@@ -168,7 +172,7 @@
 	TEST_ASSERT(panel.error, "Releasing a body was accepted")
 
 	// Every successful action was logged once; failed ones were not.
-	TEST_ASSERT_EQUAL(length(panel.operations), 23, "The manipulator logged [length(panel.operations)] prison actions: [jointext(panel.operations, "; ")]")
+	TEST_ASSERT_EQUAL(length(panel.operations), 24, "The manipulator logged [length(panel.operations)] prison actions: [jointext(panel.operations, "; ")]")
 	settle_prison_air(home)
 
 // ===== TROUBLE ADMIN TOOLS =====

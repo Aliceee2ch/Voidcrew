@@ -6791,6 +6791,7 @@
 #include "voidcrew\edits\code\modules\cargo\supplypod_containment.dm"
 #include "voidcrew\edits\machinery\camera.dm"
 #include "voidcrew\edits\machinery\crew_monitor.dm"
+#include "voidcrew\edits\machinery\light_switch.dm"
 #include "voidcrew\edits\machinery\materials_market.dm"
 #include "voidcrew\edits\machinery\nebula_shielding.dm"
 #include "voidcrew\edits\machinery\plumbing_shuttle_move.dm"

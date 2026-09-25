@@ -405,10 +405,13 @@
 /**
  * Whether the horror could absorb `victim` at all: a prisoner or a person with a mind (crew and
  * visitors, players alive or dead), dead or down, not a husk already, lying on the outpost's
- * ground. Cyborgs, animals, creatures and ambient NPCs never are.
+ * ground. Cyborgs, animals, creatures, the wing's guards and ambient NPCs never are.
  */
 /mob/living/basic/outpost_experiment/horror/proc/absorbable(mob/living/victim)
 	if(QDELETED(victim) || victim == src || !isturf(victim.loc) || HAS_TRAIT(victim, TRAIT_HUSK))
+		return FALSE
+	// The wing's guards (outpost_prison_guards.dm) are never absorbed, even with a mind put in them.
+	if(is_outpost_prison_guard(victim))
 		return FALSE
 	if(!is_outpost_prisoner(victim) && !(ishuman(victim) && victim.mind))
 		return FALSE

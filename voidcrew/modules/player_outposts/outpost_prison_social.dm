@@ -417,6 +417,9 @@
 	var/datum/prison_staff_record/notable = rep_notable_home()
 	if(!notable)
 		return
+	// A hushed yard (outpost_prison_ambience.dm) keeps it for a quieter moment.
+	if(speech_hushed(prisoner, rep_word_context(notable)))
+		return
 	prisoner.rep_word_left = null
 	if(rep_say_word(prisoner, notable))
 		note_speech()
@@ -440,18 +443,22 @@
 			best = record
 	return best
 
+/// What newcomers say about the member behind `record`: "wing_word_fair", "wing_word_brute", or null for anyone else
+/datum/outpost_prison/proc/rep_word_context(datum/prison_staff_record/record)
+	switch(record?.label())
+		if("fair")
+			return "wing_word_fair"
+		if("brute")
+			return "wing_word_brute"
+	return null
+
 /// `prisoner` says what they heard about the member behind `record`. Returns TRUE if they said it.
 /datum/outpost_prison/proc/rep_say_word(mob/living/basic/outpost_prisoner/prisoner, datum/prison_staff_record/record)
 	if(!prisoner || !record?.name)
 		return FALSE
-	var/context
-	switch(record.label())
-		if("fair")
-			context = "wing_word_fair"
-		if("brute")
-			context = "wing_word_brute"
-		else
-			return FALSE
+	var/context = rep_word_context(record)
+	if(!context)
+		return FALSE
 	var/staff_name = first_name(record.name)
 	if(!length(staff_name))
 		return FALSE

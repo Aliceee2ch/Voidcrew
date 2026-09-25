@@ -97,7 +97,7 @@
 #define OUTPOST_MAIL_RAZOR_CHANCE 60
 /// How long a prisoner takes to read a letter handed to them
 #define OUTPOST_MAIL_READ_TIME (3 SECONDS)
-/// Seconds a prisoner sits on their bed after bad news, at random between these
+/// Seconds a prisoner sits in their cell's chair (or on its bed) after bad news, at random between these
 #define OUTPOST_MAIL_MULL_MIN 30
 #define OUTPOST_MAIL_MULL_MAX 60
 /// Percent of a prisoner's extra speech picks that ask after a waiting letter, with a member within OUTPOST_MAIL_ASK_RANGE

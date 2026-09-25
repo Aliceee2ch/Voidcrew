@@ -625,7 +625,7 @@
 	REMOVE_TRAIT(owner, TRAIT_UNKNOWN, TRAIT_SOURCE_UNIT_TESTS)
 	record.score = 2
 
-	// Below the line they refuse; at it they go back and sit on their bed.
+	// Below the line they refuse; at it they go back and sit in their cell's chair.
 	prisoner.set_mood(44)
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A chatty prisoner at 44 went back to the cell")
 	TEST_ASSERT(!istype(prisoner.activity, /datum/prisoner_activity/sent_to_cell), "A refusal still sent them back")

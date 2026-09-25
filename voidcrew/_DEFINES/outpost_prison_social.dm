@@ -105,7 +105,7 @@
 /// The line moves by this for a fair member and a brute
 #define PRISON_TALK_ORDER_FAIR_SHIFT -10
 #define PRISON_TALK_ORDER_BRUTE_SHIFT 15
-/// How long a prisoner sent back sits on their bed
+/// How long a prisoner sent back sits in their cell's chair (or on its bed)
 #define PRISON_SENT_TO_CELL_MIN (60 SECONDS)
 #define PRISON_SENT_TO_CELL_MAX (90 SECONDS)
 /// How long a prisoner told to get up stays where they stepped, so staff can search the bed

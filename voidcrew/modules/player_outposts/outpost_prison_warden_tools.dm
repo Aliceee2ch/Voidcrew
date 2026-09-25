@@ -15,8 +15,8 @@
  * - "How are you doing?": their biggest complaint, or that they're fine. No mood change.
  * - "Crime": what they're in for, and a small lift the first time in a stay.
  * - "Home": back to their cell, a request, not an order they must obey. At or above their line (by
- *   personality, lower for a fair member, higher for a brute) they go and sit on their bed for a
- *   minute or so; below it they refuse. Asking a third time inside PRISON_TALK_ORDER_SPAM_WINDOW
+ *   personality, lower for a fair member, higher for a brute) they go and sit in their cell's chair
+ *   (or on its bed) for a minute or so; below it they refuse. Asking a third time inside PRISON_TALK_ORDER_SPAM_WINDOW
  *   costs mood and is refused. Forcing someone back is still the baton, the drag and the bolts.
  *   Not offered to someone in cuffs, who can't walk anywhere.
  * - "Uncuff", offered in its place while they are cuffed: uncuff_by() in outpost_prison_capture.dm.

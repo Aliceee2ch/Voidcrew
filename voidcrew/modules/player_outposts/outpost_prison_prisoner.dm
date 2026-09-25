@@ -222,13 +222,13 @@
 // ===== BEAMING IN AND OUT =====
 
 /**
- * Materialises them where they stand, with the transporter's column, sounds and knit-together.
- * They stay PRISONER_ARRIVING, and so do nothing at all (no walking, routine, trouble, speech or
- * thought bubble), until finish_beam_in() at the very end of the knit.
+ * Materialises them where they stand: beam_out() backwards. The column comes down and they knit
+ * together inside it from nothing, from the feet up, over the whole beam. They stay
+ * PRISONER_ARRIVING, and so do nothing at all (no walking, routine, trouble, speech or thought
+ * bubble), until finish_beam_in() as the beam ends.
  */
 /mob/living/basic/outpost_prisoner/proc/beam_in()
 	phase = PRISONER_ARRIVING
-	alpha = 0
 	if(arrival_brute > 0)
 		// Roughed up in transfer: no attacker, so no blame, no blood and no collapse.
 		adjustBruteLoss(arrival_brute)
@@ -236,16 +236,19 @@
 		arrived_hurt = TRUE
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
-	// A bubble ignores their alpha: one already up would hang over an empty tile.
+	// A bubble ignores the knit: one already up would hang over an empty tile.
 	drop_bubble()
 	var/turf/spot = get_turf(src)
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
-		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_PRISON_BEAM_TIME + 1.7 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(knit_in)), OUTPOST_PRISON_BEAM_TIME)
+		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_PRISON_BEAM_TIME + 0.5 SECONDS)
+	// Hidden under the mask from the first frame. finish_beam_in() takes the effects off, so a
+	// prisoner beamed out mid-knit keeps beam_out()'s.
+	transporter_materialise(src, 255, OUTPOST_PRISON_BEAM_TIME, restore = FALSE)
+	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), OUTPOST_PRISON_BEAM_TIME)
 
-/// The beam delivers them: the flash, and they knit back together from the feet up, still arriving
-/mob/living/basic/outpost_prisoner/proc/knit_in()
+/// Fully there as the beam ends: the flash, and only now are they present, free to move, and say hello
+/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
 	if(phase != PRISONER_ARRIVING)
 		return
 	var/turf/spot = get_turf(src)
@@ -253,13 +256,6 @@
 		new /obj/effect/temp_visual/transporter_flash(spot)
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
-	transporter_materialise(src, 255)
-	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), transporter_materialise_time())
-
-/// Fully there: only now are they present, free to move, and say hello
-/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
-	if(phase != PRISONER_ARRIVING)
-		return
 	// Whatever is left of the knit, gone: they are solid from here on.
 	transporter_restore(src, 255)
 	phase = PRISONER_PRESENT

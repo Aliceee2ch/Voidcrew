@@ -1293,17 +1293,17 @@
 // ===== NOTHING UNTIL THEY ARE ALL THE WAY IN =====
 
 /**
- * A prisoner beaming in is arriving, and does nothing at all, until they have finished knitting back
- * together: the beam's 3 seconds (OUTPOST_PRISON_BEAM_TIME) and then the knit's 1.2
- * (TRANSPORTER_MATERIALISE_TIME). Until then the routine plans nothing, they say nothing, show no
- * thought bubble and are held still; after it they are solid, free and able to talk. Beaming out,
- * the same holds from the start. Guards and Kessler staff beaming in keep quiet too.
+ * A prisoner beaming in knits together inside the column over the beam's 3 seconds
+ * (OUTPOST_PRISON_BEAM_TIME), hidden under the transporter's mask from the first frame, and does
+ * nothing at all until the knit is over. Until then the routine plans nothing, they say nothing,
+ * show no thought bubble and are held still; after it they are solid, free and able to talk.
+ * Beaming out, the same holds from the start. Guards and Kessler staff beaming in keep quiet too.
  */
 /datum/unit_test/voidcrew_outpost_prison_beam_gates
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
-/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/knitting(mob/living/basic/outpost_prisoner/prisoner)
-	return !!prisoner.get_filter("transporter_dissolve")
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/knitting(atom/movable/arrival)
+	return !!arrival.get_filter("transporter_dissolve")
 
 /datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/all_in(mob/living/basic/outpost_prisoner/prisoner, mob/living/basic/outpost_prison_guard/guard, mob/living/basic/outpost_kessler_staff/doctor)
 	return prisoner.phase == "present" && guard.phase == "present" && !doctor.beaming
@@ -1338,17 +1338,23 @@
 	var/mob/living/basic/outpost_kessler_staff/researcher/doctor = allocate(/mob/living/basic/outpost_kessler_staff/researcher, prison_spot(home, 12, 3), null)
 	doctor.beam_in()
 
-	// In the beam: arriving, and held.
+	// In the beam they are knitting together from the start, under the mask at its lowest
+	// (TRANSPORTER_MASK_TRAVEL -58), so nothing of them shows before the beam does: arriving, and held.
+	for(var/mob/living/arrival as anything in list(prisoner, guard, doctor))
+		TEST_ASSERT(knitting(arrival), "[arrival] was not knitting together inside the beam")
+		TEST_ASSERT_EQUAL(arrival.filter_data?["transporter_dissolve"]?["y"], -58, "[arrival]'s knit did not start hidden under the mask")
 	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "Beaming in did not make the prisoner arriving") // PRISONER_ARRIVING
 	check_held(prisoner, "in the beam")
 	TEST_ASSERT(!other.start_conversation(prisoner), "A prisoner opened a conversation with one still beaming in")
 	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard skipped the beam") // OUTPOST_GUARD_ARRIVING
 	TEST_ASSERT(!guard.say_guard("arrival"), "A guard still beaming in spoke")
 	TEST_ASSERT(!guard.on_duty(), "A guard still beaming in was on duty")
+	TEST_ASSERT(doctor.beaming, "The researcher skipped the beam")
 	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher still beaming in spoke")
 
-	// The beam is over (OUTPOST_PRISON_BEAM_TIME 3 s) and they are knitting together: still arriving, still held.
-	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(knitting), prisoner), 5 SECONDS), "The prisoner never started knitting together after the beam")
+	// Most of the way through the knit: still arriving, still held.
+	sleep(2 SECONDS)
+	TEST_ASSERT(knitting(prisoner), "The prisoner stopped knitting together before the beam was over")
 	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "The prisoner was present before they finished knitting together")
 	check_held(prisoner, "while knitting together")
 	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard was on duty before they finished knitting together")
@@ -1356,7 +1362,7 @@
 	TEST_ASSERT(doctor.beaming, "The researcher finished beaming in before the knit was over")
 	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher spoke while knitting together")
 
-	// All the way in: solid, free and able to talk.
+	// All the way in as the beam ends: solid, free and able to talk.
 	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(all_in), prisoner, guard, doctor), 3 SECONDS), "The arrivals never finished beaming in")
 	TEST_ASSERT_EQUAL(prisoner.alpha, 255, "The prisoner is not solid once in")
 	TEST_ASSERT_NULL(prisoner.get_filter("transporter_dissolve"), "The prisoner still wears the knit once in")

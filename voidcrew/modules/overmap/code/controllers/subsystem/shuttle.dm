@@ -212,6 +212,14 @@
 	return selected_theme
 
 /// Landmarks every new player ship gets: use shuttle areas or fall back to the port's tile.
+/// Landmarks a ship brings with it: its map's crew spawns and the ones place_ship_landmarks() adds.
+/// A deleted hull takes these with it (see jumpToNullSpace()).
+GLOBAL_LIST_INIT(ship_brought_landmarks, typecacheof(list(
+	/obj/effect/landmark/start,
+	/obj/effect/landmark/observer_start,
+	/obj/effect/landmark/blobstart,
+)))
+
 /proc/place_ship_landmarks(obj/docking_port/mobile/loaded)
 	var/turf/safe_turf
 	if(length(loaded.shuttle_areas))

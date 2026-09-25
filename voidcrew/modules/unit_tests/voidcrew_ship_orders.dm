@@ -437,6 +437,19 @@
 		problems += "the buyer does not command it"
 	if(length(built.shuttle.shuttle_areas) != length(spawned.shuttle.shuttle_areas))
 		problems += "[length(built.shuttle.shuttle_areas)] rooms, spawned [length(spawned.shuttle.shuttle_areas)]"
+	// A bought ship keeps every emergency closet its map places; a lobby spawn may roll one away.
+	var/built_closets = 0
+	var/spawned_closets = 0
+	for(var/turf/tile as anything in built.shuttle.return_turfs())
+		if(tile.loc in built.shuttle.shuttle_areas)
+			for(var/obj/structure/closet/emcloset/closet in tile)
+				built_closets++
+	for(var/turf/tile as anything in spawned.shuttle.return_turfs())
+		if(tile.loc in spawned.shuttle.shuttle_areas)
+			for(var/obj/structure/closet/emcloset/closet in tile)
+				spawned_closets++
+	if(built_closets < spawned_closets)
+		problems += "[built_closets] emergency closets, spawned [spawned_closets]"
 	// Tile by tile, in the port's own frame, so a bay that turns the hull still lines up.
 	var/swept = job.swept_leftovers ? jointext(job.swept_leftovers, ", ") : "nothing"
 	var/left = job.left_behind ? jointext(job.left_behind, ", ") : "nothing"
@@ -531,6 +544,10 @@
 		var/list/loose = list()
 		for(var/obj/thing in tile)
 			if(isitem(thing) || istype(thing, /obj/effect/landmark) || istype(thing, /obj/effect/overlay/cap_visual) || istype(thing, /obj/docking_port))
+				continue
+			// Every mapped emergency closet deletes itself 1% of the time at load (tg's
+			// emcloset Initialize), so any two loads of a hull can differ by one.
+			if(istype(thing, /obj/structure/closet/emcloset))
 				continue
 			if(isstructure(thing) && !thing.anchored)
 				loose += "[thing.type]"

@@ -151,91 +151,63 @@ export const ShipCheckpoint = () => {
 
 const CheckpointsTab = () => {
   const { data, act } = useBackend<Data>();
-  const cost = data.has_checkpoint ? data.update_cost : data.save_cost;
+  const updating = !!data.has_checkpoint;
+  const cost = updating ? data.update_cost : data.save_cost;
   return (
     <>
-      <Section title="Ship checkpoints">
-        <LabeledList>
-          <LabeledList.Item label="Save / update">
-            {credits(data.save_cost)} / {credits(data.update_cost)}
-          </LabeledList.Item>
-          <LabeledList.Item label="Includes">
-            Hull, infrastructure, constructible machinery and fitted upgrades
-          </LabeledList.Item>
-          <LabeledList.Item label="Restocked">
-            Charged batteries and engine fuel
-          </LabeledList.Item>
-          <LabeledList.Item label="Excluded">
-            Cargo, ammunition, stored materials and other supplies
-          </LabeledList.Item>
-          <LabeledList.Item label="Recovery">
-            One prepaid rebuild after the original ship is lost or abandoned
-          </LabeledList.Item>
-        </LabeledList>
-        <Box color="label" mt={1}>
-          One checkpoint per captain at this outpost. Updating replaces it with
-          the latest design of the docked ship you choose. Fees are spent from
-          that ship&apos;s account.
-        </Box>
-      </Section>
-      <Section title="Docked ships">
-        {data.bays.length === 0 && (
-          <Box color="label">
-            Dock a ship you command in a ship bay to save or update.
-          </Box>
-        )}
-        {data.bays.map((bay) => (
-          <Box key={bay.ref} mb={2}>
-            <Box bold mb={1} style={{ overflowWrap: 'anywhere' }}>
-              Bay {bay.number}: {bay.name}
-            </Box>
-            <Box color="label" mb={1}>
-              Ship account: {credits(bay.balance)}
-            </Box>
-            {!!bay.denial && (
-              <Box color="label" mb={1}>
-                {bay.denial}
-              </Box>
-            )}
-            <Button
-              icon="floppy-disk"
-              disabled={!!data.working || !!bay.denial || bay.balance < cost}
-              onClick={() =>
-                act(data.has_checkpoint ? 'update' : 'save', { ref: bay.ref })
-              }
-            >
-              {data.has_checkpoint ? 'Update checkpoint' : 'Save checkpoint'} (
-              {credits(cost)})
-            </Button>
-          </Box>
-        ))}
-      </Section>
-      <Section title="Your checkpoint">
+      <Section title="Checkpoint">
         {data.blueprints.length === 0 && (
-          <Box color="label">No checkpoint saved here.</Box>
+          <Box color="label">None saved.</Box>
         )}
         {data.blueprints.map((checkpoint) => (
-          <Box key={checkpoint.ref} mb={1}>
-            <Box bold style={{ overflowWrap: 'anywhere' }}>
+          <Stack key={checkpoint.ref} align="center" mb={1}>
+            <Stack.Item grow bold style={{ overflowWrap: 'anywhere' }}>
               {checkpoint.name}
-            </Box>
-            <Box color="label" mb={1}>
-              {checkpoint.width} x {checkpoint.height} tiles
-            </Box>
-            {!!checkpoint.denial && (
-              <Box color="label" mb={1}>
-                {checkpoint.denial}
-              </Box>
-            )}
-            <Button
-              icon="ship"
-              disabled={!!data.working || !!checkpoint.denial}
-              onClick={() => act('rebuild', { ref: checkpoint.ref })}
-            >
-              Rebuild ship (prepaid)
-            </Button>
-          </Box>
+            </Stack.Item>
+            <Stack.Item>
+              <Button
+                icon="ship"
+                disabled={!!data.working || !!checkpoint.denial}
+                tooltip={checkpoint.denial || 'Prepaid. Drones rebuild it here.'}
+                onClick={() => act('rebuild', { ref: checkpoint.ref })}
+              >
+                Rebuild
+              </Button>
+            </Stack.Item>
+          </Stack>
         ))}
+      </Section>
+      <Section title="Docked here">
+        {data.bays.length === 0 && (
+          <Box color="label">Dock a ship you command to save it.</Box>
+        )}
+        {data.bays.map((bay) => {
+          const short = bay.balance < cost;
+          return (
+            <Stack key={bay.ref} align="center" mb={1}>
+              <Stack.Item grow style={{ overflowWrap: 'anywhere' }}>
+                Bay {bay.number}: {bay.name}
+              </Stack.Item>
+              <Stack.Item>
+                <Button
+                  icon="floppy-disk"
+                  disabled={!!data.working || !!bay.denial || short}
+                  tooltip={
+                    bay.denial ||
+                    (short
+                      ? `Ship account has ${credits(bay.balance)}.`
+                      : 'Saves the hull and machines for one rebuild. Supplies are not saved.')
+                  }
+                  onClick={() =>
+                    act(updating ? 'update' : 'save', { ref: bay.ref })
+                  }
+                >
+                  {updating ? 'Update' : 'Save'} · {credits(cost)}
+                </Button>
+              </Stack.Item>
+            </Stack>
+          );
+        })}
       </Section>
     </>
   );

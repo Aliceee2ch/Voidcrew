@@ -767,7 +767,12 @@ ADMIN_VERB(load_away_mission, R_FUN, "Load Away Mission", "Load a specific away 
 		// that one more drain pass would have made unnecessary. Wait out any queued releases
 		// (bounded - a stuck drain must not wedge every requester) and retry the existing
 		// levels before reaching for a mint.
-		if(length(lists_to_reserve))
+		// VOIDCREW EDIT: ...unless everything still draining adds up to less than this
+		// request. Then no amount of waiting can make room, and the wait only delays the mint.
+		var/queued_turfs = 0
+		for(var/list/packet as anything in lists_to_reserve)
+			queued_turfs += length(packet)
+		if(queued_turfs >= width * height)
 			var/drain_deadline = world.time + 30 SECONDS
 			while(length(lists_to_reserve) && world.time < drain_deadline)
 				stoplag()

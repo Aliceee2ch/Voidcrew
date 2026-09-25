@@ -3,8 +3,9 @@
  *
  * The doors the prison wing's map places: the window doors on each side of a serving hatch, the
  * staff doors prisoners cannot use, the numbered cell doors and their bolt buttons. The window
- * doors and bolt buttons are protected outpost property; the airlocks can be broken, and one built
- * where a staff or cell door stood becomes that door again. Staff doors and the office side of a
+ * doors and bolt buttons are protected outpost property, though rioters can smash the window doors
+ * (outpost_prison_breakout.dm); the airlocks can be broken, and one built where a staff or cell door
+ * stood becomes that door again, as does a window door fitted to a hatch. Staff doors and the office side of a
  * hatch open for members of the wing, or for anyone but prisoners while the warden lets visitors
  * in; bolt buttons work for members only. A prisoner passes a staff door only dragged by a member,
  * down or cuffed (outpost_prisoner_escorted()). Who counts as a member, where prisoners can stand

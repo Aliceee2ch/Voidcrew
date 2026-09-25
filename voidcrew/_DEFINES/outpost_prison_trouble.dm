@@ -157,11 +157,11 @@
 #define PRISON_RIOT_JOIN_NERVOUS 30
 /// Seconds of shivs out and shouting before a riot's first blow
 #define PRISON_RIOT_WINDUP 5
-/// Most rioters that go for one member of staff at once; the rest smash
+/// Most rioters that go for one member of staff at once; the rest go for the ways out
 #define PRISON_RIOT_MAX_ATTACKERS 2
 /// A baton hit stops a rioter's blows for this long
 #define PRISONER_BATON_STOP (2 SECONDS)
-/// Seconds of riot, counted only while the crew is home, before the rioters go all out for the exits
+/// Seconds of riot, counted only while the crew is home, before every rioter goes all out for the exits and their loose clocks start
 #define PRISON_RIOT_BREAKOUT_TIME 180
 /// Seconds of riot before the crew is told the rioters are at the doors
 #define PRISON_RIOT_BREAKOUT_WARNING 120
@@ -171,13 +171,27 @@
 #define PRISONER_RIOT_CALM_MOOD 50
 /// After a riot: no riots or fights, no mood lost to the wing's state and half the rest, for this long
 #define PRISON_SUBDUED_TIME (6 MINUTES)
-/// Percent chance a rioter goes for an exit door instead of the wing's fixtures. Before the breakout doors are only banged on.
-#define PRISON_RIOT_DOOR_CHANCE 25
-/// Damage a rioter does to a fixture per blow, and to a door once breaking out
+/// Damage a rioter does to a fixture per blow
 #define PRISON_SMASH_DAMAGE 10
-/// Blows that force a serving hatch's window doors open
-#define PRISON_HATCH_FORCE_HITS 12
-/// Blows a rioter spends on one fixture before moving on to another
+// A rioter's blow at a way out of the cell block (outpost_prison_breakout.dm), while the crew is home;
+// with nobody home it only booms. At a blow every 2 seconds (a basic mob's melee cooldown), one
+// rioter needs about 80 s for the wing's glass staff door (400 integrity; 90 s for a solid one, 450),
+// 60 s for the office side of a serving hatch (300) and 54 s for a reinforced window and its grille
+// (150 + 30).
+#define PRISON_RIOT_DOOR_DAMAGE 10
+#define PRISON_RIOT_WINDOOR_DAMAGE 10
+#define PRISON_RIOT_WINDOW_DAMAGE 7
+/// Picking a way out: each rioter already at one counts as this many tiles farther, and a window as this many farther than a door
+#define PRISON_RIOT_EXIT_SPREAD 4
+#define PRISON_RIOT_WINDOW_BIAS 1
+/// Most rioters at one door or window at once (a serving hatch takes one); the rest smash fixtures nearby while they wait
+#define PRISON_RIOT_EXIT_CROWD 2
+/// Percent chance a rioter picking a new target smashes a fixture within PRISON_RIOT_DETOUR_RANGE tiles on the way. Never once breaking out.
+#define PRISON_RIOT_DETOUR_CHANCE 15
+#define PRISON_RIOT_DETOUR_RANGE 3
+/// Least seconds between alerts that rioters are breaking at a way out; each one is announced once a riot
+#define PRISON_EXIT_ALERT_GAP 15
+/// Blows a rioter spends on one fixture before looking for a way out again
 #define PRISON_RIOT_TARGET_HITS 6
 /// Seconds between riot alarms in the wing
 #define PRISON_RIOT_ALARM_GAP 20

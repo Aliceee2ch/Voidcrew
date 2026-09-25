@@ -1843,6 +1843,30 @@
 				"Shitcurity can't stop us!"
 			]
 		},
+		"riot_break_door": {
+			"any": [
+				"Keep hitting it!",
+				"It's giving! Keep going!",
+				"Put your back into it!",
+				"Same spot! Keep hitting the same spot!",
+				"Almost through!",
+				"Come on, you stupid thing!",
+				"Somebody help me with this thing!",
+				"They can't keep this shut forever.",
+				"Harder! It's starting to bend!",
+				"Once this is down, we run."
+			],
+			"grumpy": [
+				"They built this cheap, didn't they.",
+				"I've broken out of better places than this.",
+				"Open, you useless lump of junk!"
+			],
+			"nervous": [
+				"Is it supposed to make that noise?",
+				"Hurry, before they get back here!",
+				"Oh no. It's actually working."
+			]
+		},
 		"riot_imminent": {
 			"any": [
 				"Everybody up. It's happening.",

@@ -4,6 +4,11 @@
  * the manipulator's own authorization, and every action is logged.
  */
 
+/// Most debt prison_debt sets, in credits
+#define OUTPOST_ADMIN_PRISON_MAX_DEBT 1000000
+/// Longest prison_subdue and prison_outage, in seconds
+#define OUTPOST_ADMIN_PRISON_MAX_SECONDS 3600
+
 /// Admin actions handled here; every one names its params in the comment beside it
 GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_intake", // {open}
@@ -12,7 +17,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_release", // {ref}
 	"prison_kill", // {ref}
 	"prison_remove", // {ref}
-	"prison_set", // {ref, field: hunger|grime|health|sentence|mood, value}
+	"prison_set", // {ref, field: hunger|grime|health|sentence|mood|locked_in, value}
 	"prison_all", // {what: starve|feed|dirty|clean|hurt|heal|enrage|calm}
 	"prison_advance", // {minutes}
 	"prison_pay_now", // {}
@@ -23,7 +28,18 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_riot", // {}: everyone able joins
 	"prison_calm", // {}: ends riots and fights, moods back to PRISONER_MOOD_START
 	"prison_breakout", // {ref}: out of the cell block and loose
+	"prison_crew_home", // {mode: auto|home|away}: crew_home_override
+	"prison_debt", // {amount}: the treasury's debt, 0 clears it
+	"prison_transfer", // {}: transfers the rioters out now, as a sit-in nobody came back for
+	"prison_subdue", // {seconds}: the quiet after a riot, 0 ends it
+	"prison_fill_hatch", // {}: every serving hatch to capacity
+	"prison_spawn_rat", // {}
+	"prison_outage", // {seconds}: the power outage debt
+	"prison_wreck", // {ref}: that prisoner starts wrecking their cell
 ))
+
+/// prison_crew_home modes and the crew_home_override each sets
+GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = TRUE, "away" = FALSE))
 
 /// The running prison of an outpost, if it has one
 /obj/structure/overmap/dynamic/player_outpost/proc/running_prison()
@@ -65,12 +81,21 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 				error = "No free cell."
 				return
 			record(user, home, "fill [count] prison cell\s")
-		if("prison_release", "prison_kill", "prison_remove", "prison_set", "prison_fight", "prison_breakout")
+		if("prison_release", "prison_kill", "prison_remove", "prison_set", "prison_fight", "prison_breakout", "prison_wreck")
 			var/mob/living/basic/outpost_prisoner/prisoner = locate(params["ref"]) in prison.prisoners
 			if(QDELETED(prisoner))
 				error = "That prisoner is gone."
 				return
 			switch(action)
+				if("prison_wreck")
+					if(prisoner.stat == DEAD || prisoner.phase != PRISONER_PRESENT || !prisoner.cell)
+						error = "Only a living prisoner with a cell can wreck it."
+						return
+					if(prisoner.trouble)
+						error = "That prisoner is already in trouble."
+						return
+					prison.start_wreck(prisoner)
+					record(user, home, "have prisoner [prisoner.real_name] wreck cell [prisoner.cell.number]")
 				if("prison_fight")
 					if(!prisoner.can_join_riot() || prisoner.trouble)
 						error = "That prisoner can't fight now."
@@ -118,7 +143,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 				if("prison_set")
 					var/field = params["field"]
 					var/value = admin_number(params["value"])
-					if(!(field in list("hunger", "grime", "health", "sentence", "mood")) || isnull(value))
+					if(!(field in list("hunger", "grime", "health", "sentence", "mood", "locked_in")) || isnull(value))
 						error = "Invalid prisoner setting."
 						return
 					if(!prison.admin_set(prisoner, field, value))
@@ -168,6 +193,50 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 				error = "The prison wing has no APC."
 				return
 			record(user, home, "[on ? "restore" : "cut"] prison power")
+		if("prison_crew_home")
+			var/mode = params["mode"]
+			if(!istext(mode) || !(mode in GLOB.outpost_admin_prison_crew_modes))
+				error = "Invalid crew setting."
+				return
+			prison.crew_home_override = GLOB.outpost_admin_prison_crew_modes[mode]
+			record(user, home, "set the prison wing's crew presence to [mode]")
+		if("prison_debt")
+			var/amount = admin_number(params["amount"])
+			if(isnull(amount) || amount != round(amount) || amount < 0 || amount > OUTPOST_ADMIN_PRISON_MAX_DEBT)
+				error = "Debt is 0 to [OUTPOST_ADMIN_PRISON_MAX_DEBT] whole credits."
+				return
+			home.ensure_home_services()
+			home.treasury.account_debt = amount
+			record(user, home, "set the treasury's debt to [amount] cr")
+		if("prison_transfer")
+			if(!prison.riot_active)
+				error = "No riot to transfer."
+				return
+			prison.transfer_rioters()
+			record(user, home, "transfer the prison wing's rioters out")
+		if("prison_subdue")
+			var/seconds = admin_number(params["seconds"])
+			if(isnull(seconds) || seconds != round(seconds) || seconds < 0 || seconds > OUTPOST_ADMIN_PRISON_MAX_SECONDS)
+				error = "Subdue for 0 to [OUTPOST_ADMIN_PRISON_MAX_SECONDS] whole seconds."
+				return
+			prison.set_subdued(seconds)
+			record(user, home, seconds ? "subdue the prison wing for [seconds] s" : "end the prison wing's subdued time")
+		if("prison_fill_hatch")
+			prison.fill_hatches()
+			record(user, home, "fill the prison wing's serving hatches")
+		if("prison_spawn_rat")
+			if(!prison.spawn_rat())
+				error = "No rat was placed."
+				return
+			record(user, home, "spawn a rat in the prison wing")
+		if("prison_outage")
+			var/seconds = admin_number(params["seconds"])
+			if(isnull(seconds) || seconds != round(seconds) || seconds < 0 || seconds > OUTPOST_ADMIN_PRISON_MAX_SECONDS)
+				error = "Outage debt is 0 to [OUTPOST_ADMIN_PRISON_MAX_SECONDS] whole seconds."
+				return
+			prison.outage_debt = seconds
+			prison.refresh_conditions()
+			record(user, home, "set the prison wing's outage debt to [seconds] s")
 
 /// TRUE, FALSE or null for a tgui boolean param (0/1, "0"/"1", true/false)
 /datum/outpost_manipulator/proc/admin_bool(value)
@@ -205,18 +274,27 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 			"grime" = round(prisoner.uniform_grime),
 			"health" = round(prisoner.health_factor()),
 			"care" = round(prisoner.care()),
+			"grade" = round(prisoner.admin_care_grade(), 0.01),
+			"pay_factor" = round(pay_factor(prisoner), 0.01),
 			"sentence_left" = max(0, round(prisoner.sentence_left)),
 			"dead" = prisoner.stat == DEAD,
 			"locked_in" = prisoner.locked_in_seconds > 0,
+			"confined_seconds" = round(prisoner.locked_in_seconds),
+			"confined" = !!prisoner.is_confined(),
 			"mood" = round(prisoner.mood),
 			"state" = prisoner.trouble_state(),
 			"loose_left" = prisoner.loose_seconds_shown(),
 		))
+	var/list/trouble_block = trouble_payload()
+	// The console's own intake state once the economy package sends it; open or closed until then
+	var/list/console = ui_payload(null)
+	var/intake_state = console["intake_state"] || (intake_open ? "open" : "closed")
 	return list(
 		"tension" = round(tension),
 		"stage" = stage,
 		"breakout_in" = (riot_active && !breaking_out) ? max(0, round(PRISON_RIOT_BREAKOUT_TIME - riot_elapsed)) : null,
 		"intake_open" = intake_open,
+		"intake_state" = intake_state,
 		"next_arrival" = (intake_open && !isnull(arrival_countdown)) ? round(arrival_countdown) : null,
 		"pay_rate" = round(pay_rate(), 0.1),
 		"paid_total" = paid_total,
@@ -224,7 +302,57 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 		"conditions" = conditions_payload(),
 		"cells" = cell_rows,
 		"prisoners" = prisoner_rows,
+		"crew_home" = !!crew_home(),
+		"crew_mode" = isnull(crew_home_override) ? "auto" : (crew_home_override ? "home" : "away"),
+		"riot_active" = riot_active,
+		"riot_elapsed" = round(riot_elapsed),
+		"riot_absent" = admin_amount(admin_read(list("riot_absent"))),
+		"subdued_left" = trouble_block["subdued_left"],
+		"incident_fined" = admin_amount(admin_read(list("incident_fined"))),
+		"lost_recent" = admin_lost_recent(),
+		"debt" = outpost?.treasury?.account_debt || 0,
+		"hatch" = hatch_stock(),
+		"mess_units" = admin_amount(admin_read(list("mess_units", "mess_load"))),
+		"floor_size" = admin_amount(admin_read(list("floor_size", "mess_floor_size"))),
+		"lit_samples" = admin_amount(admin_read(list("lit_samples", "light_samples"))),
+		"outage_debt" = round(outage_debt),
 	)
+
+/**
+ * A var another prison package adds, by name: the first of `names` this prison has, or null.
+ * This file builds against the seams stubs, where those vars do not exist yet, so it cannot name
+ * them directly. Once the packages are merged these reads can become plain var reads.
+ */
+/datum/outpost_prison/proc/admin_read(list/names)
+	for(var/name in names)
+		if(name in vars)
+			return vars[name]
+	return null
+
+/// A number for the admin panel from a var that may hold a number or a list (its length), or null
+/datum/outpost_prison/proc/admin_amount(value)
+	if(islist(value))
+		var/list/entries = value
+		return length(entries)
+	if(isnum(value))
+		return round(value, 0.1)
+	return null
+
+/// Prisoners lost within OUTPOST_PRISON_LOST_WINDOW, from the economy package's lost log, or null before it lands
+/datum/outpost_prison/proc/admin_lost_recent()
+	var/list/lost = admin_read(list("lost_log", "lost_times"))
+	if(!islist(lost))
+		return isnum(lost) ? lost : null
+	var/count = 0
+	for(var/entry in lost)
+		if(isnum(entry) && entry < world.time - OUTPOST_PRISON_LOST_WINDOW)
+			continue
+		count++
+	return count
+
+/// Where their care falls between no pay and full pay, 0 to 1 (section 1's G(care))
+/mob/living/basic/outpost_prisoner/proc/admin_care_grade()
+	return clamp((care() - OUTPOST_PRISON_GRADE_FLOOR) / (OUTPOST_PRISON_GRADE_FULL - OUTPOST_PRISON_GRADE_FLOOR), 0, 1)
 
 /// What they are up to, in a few words
 /mob/living/basic/outpost_prisoner/proc/admin_activity_text()
@@ -280,6 +408,11 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 			if(prisoner.stat == DEAD)
 				return FALSE
 			prisoner.set_mood(value)
+		if("locked_in")
+			// Seconds on the confinement clock
+			if(prisoner.stat == DEAD)
+				return FALSE
+			prisoner.locked_in_seconds = clamp(round(value), 0, OUTPOST_ADMIN_PRISON_MAX_SECONDS)
 		else
 			return FALSE
 	return TRUE
@@ -357,7 +490,8 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 		return "rioting"
 	if(trouble == PRISONER_TROUBLE_FIGHT)
 		return "fighting"
-	return "normal"
+	// Any other trouble (wrecking their cell) by its own name
+	return trouble || "normal"
 
 /// Seconds left loose, shown only while they are out of the cell block
 /mob/living/basic/outpost_prisoner/proc/loose_seconds_shown()
@@ -423,3 +557,6 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	apc.update_appearance()
 	refresh_conditions()
 	return TRUE
+
+#undef OUTPOST_ADMIN_PRISON_MAX_DEBT
+#undef OUTPOST_ADMIN_PRISON_MAX_SECONDS

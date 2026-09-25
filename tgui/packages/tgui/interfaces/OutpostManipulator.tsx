@@ -89,6 +89,10 @@ type PrisonAdminPrisoner = {
   grime: number;
   health: number;
   care: number;
+  /** 0-1: care between no pay and full pay */
+  grade?: number;
+  /** 0-1: the share of full pay they earn now */
+  pay_factor?: number;
   /** 0-100 */
   mood: number;
   state: PrisonerState;
@@ -97,14 +101,28 @@ type PrisonAdminPrisoner = {
   /** seconds */
   sentence_left: number;
   dead: BooleanLike;
+  /** seconds on the confinement clock */
+  confined_seconds?: number;
+  /** shut in their cell right now */
+  confined?: BooleanLike;
 };
 
-type PrisonerState = 'normal' | 'fighting' | 'beaten' | 'rioting' | 'loose';
+type PrisonerState =
+  | 'normal'
+  | 'fighting'
+  | 'beaten'
+  | 'rioting'
+  | 'loose'
+  | 'wreck';
 
 type PrisonStage = 'calm' | 'grumbling' | 'restless' | 'riot';
 
+type CrewMode = 'auto' | 'home' | 'away';
+
 type PrisonAdminData = {
   intake_open: BooleanLike;
+  /** open, closed, suspended, debt, experiment or no_power */
+  intake_state?: string;
   /** seconds, null when nothing is scheduled */
   next_arrival: number | null;
   /** cr/min */
@@ -120,6 +138,37 @@ type PrisonAdminData = {
   stage: PrisonStage;
   /** seconds until an unresolved riot becomes a breakout, null when none */
   breakout_in: number | null;
+  // Everything below may be missing from an older payload; its row is then hidden.
+  crew_home?: BooleanLike;
+  crew_mode?: CrewMode;
+  riot_active?: BooleanLike;
+  /** seconds of riot with the crew home */
+  riot_elapsed?: number;
+  /** seconds of riot with nobody home, null before it is tracked */
+  riot_absent?: number | null;
+  /** seconds, null when not subdued */
+  subdued_left?: number | null;
+  /** credits fined in the current incident */
+  incident_fined?: number | null;
+  /** prisoners lost in the last 30 minutes */
+  lost_recent?: number | null;
+  /** treasury debt */
+  debt?: number;
+  hatch?: {
+    meals: number;
+    clean_suits: number;
+    dirty_suits: number;
+    capacity: number;
+    lasts_minutes: number | null;
+  };
+  /** weighted mess load */
+  mess_units?: number | null;
+  /** floor tiles the mess score divides by */
+  floor_size?: number | null;
+  /** tiles the light score sampled */
+  lit_samples?: number | null;
+  /** seconds of outage counted against power */
+  outage_debt?: number;
 };
 
 type SelectedOutpost = {
@@ -830,7 +879,7 @@ type PrisonStat = {
   color: (value: number) => string;
 };
 
-// Colours follow the PRISONER_* thresholds in voidcrew/_DEFINES/player_outposts.dm.
+// Colours follow the PRISONER_* thresholds in voidcrew/_DEFINES/outpost_prison_*.dm.
 const PRISON_STATS: PrisonStat[] = [
   {
     field: 'hunger',
@@ -892,14 +941,38 @@ const PRISONER_STATES: Partial<
   beaten: { label: 'Beaten', icon: 'user-injured', color: 'average' },
   rioting: { label: 'Rioting', icon: 'hand-fist', color: 'bad' },
   loose: { label: 'Loose', icon: 'person-running', color: 'bad' },
+  wreck: { label: 'Wrecking', icon: 'hammer', color: 'bad' },
 };
 
-/** Stage thresholds: calm below 40, riot at 80. */
+/** Stage thresholds: calm below 40, riot at 75 (PRISON_TENSION_RIOT). */
 const tensionColor = (value: number) =>
-  value >= 80 ? 'bad' : value >= 40 ? 'average' : 'good';
+  value >= 75 ? 'bad' : value >= 40 ? 'average' : 'good';
 
 /** Minutes */
 const PRISON_ADVANCE = [1, 5, 10];
+
+const CREW_MODES: [CrewMode, string][] = [
+  ['auto', 'Auto'],
+  ['home', 'Home'],
+  ['away', 'Away'],
+];
+
+/** Credits */
+const DEBT_PRESETS = [0, 1000, 5000];
+
+/** Seconds: none, past the 30 s grace, the whole ramp */
+const OUTAGE_PRESETS = [0, 60, 120];
+
+/** Seconds: none, pay stops at 2 min, wrecking at 6 min */
+const CONFINED_PRESETS = [0, 120, 360];
+
+/** PRISON_SUBDUED_TIME */
+const SUBDUE_SECONDS = 360;
+
+const isNum = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const cr = (value: number) => `${Math.floor(value || 0).toLocaleString()} cr`;
 
 type PrisonProps = {
   data: PrisonAdminData;
@@ -932,6 +1005,33 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
     label: data.stage || '?',
     color: 'label',
   };
+  const riotOn =
+    data.riot_active === undefined || data.riot_active === null
+      ? data.stage === 'riot'
+      : !!data.riot_active;
+  const subdued = isNum(data.subdued_left) && data.subdued_left > 0;
+  const intakeParts = [
+    data.intake_state || '',
+    isNum(data.lost_recent) ? `${data.lost_recent} lost in 30 min` : '',
+  ].filter(Boolean);
+  const clocks = [
+    riotOn && isNum(data.riot_elapsed)
+      ? `riot ${clock(data.riot_elapsed)} home`
+      : '',
+    riotOn && isNum(data.riot_absent) ? `${clock(data.riot_absent)} away` : '',
+    isNum(data.subdued_left) ? `subdued ${clock(data.subdued_left)}` : '',
+  ].filter(Boolean);
+  const hatch = data.hatch;
+  const scanParts = [
+    isNum(data.mess_units)
+      ? `mess ${data.mess_units}${
+          isNum(data.floor_size) ? ` / ${data.floor_size} tiles` : ''
+        }`
+      : isNum(data.floor_size)
+        ? `${data.floor_size} floor tiles`
+        : '',
+    isNum(data.lit_samples) ? `${data.lit_samples} light samples` : '',
+  ].filter(Boolean);
 
   return (
     <Section title="Prison">
@@ -980,6 +1080,20 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
           Break Lights
         </Button>
         <Button
+          icon="utensils"
+          disabled={busy}
+          onClick={() => act('prison_fill_hatch', {})}
+        >
+          Fill Hatches
+        </Button>
+        <Button
+          icon="bug"
+          disabled={busy}
+          onClick={() => act('prison_spawn_rat', {})}
+        >
+          Spawn Rat
+        </Button>
+        <Button
           icon={powered ? 'plug-circle-xmark' : 'plug'}
           color={powered ? undefined : 'good'}
           disabled={busy}
@@ -1018,6 +1132,29 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
           onClick={() => act('prison_calm', {})}
         >
           Calm all
+        </Button>
+        <Button
+          icon="truck-arrow-right"
+          disabled={busy || !riotOn}
+          tooltip="Transfer the rioters out now"
+          onClick={() => act('prison_transfer', {})}
+        >
+          Transfer
+        </Button>
+        <Button
+          icon="hourglass-half"
+          disabled={busy}
+          tooltip="The quiet after a riot"
+          onClick={() => act('prison_subdue', { seconds: SUBDUE_SECONDS })}
+        >
+          Subdue
+        </Button>
+        <Button
+          icon="hourglass-end"
+          disabled={busy || !subdued}
+          onClick={() => act('prison_subdue', { seconds: 0 })}
+        >
+          End Subdue
         </Button>
         <Stack.Item className="OutpostPrisonAdmin__tension" ml={1}>
           {'Tension '}
@@ -1084,6 +1221,112 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
             </Box>
           ))}
         </LabeledList.Item>
+        {intakeParts.length > 0 ? (
+          <LabeledList.Item label="Intake">
+            {intakeParts.join(', ')}
+          </LabeledList.Item>
+        ) : null}
+        {data.crew_mode ? (
+          <LabeledList.Item label="Crew">
+            <Box
+              inline
+              bold
+              className="OutpostPrisonAdmin__crew"
+              color={data.crew_home ? 'good' : 'average'}
+              mr={1}
+            >
+              {data.crew_home ? 'Home' : 'Away'}
+            </Box>
+            {CREW_MODES.map(([mode, label]) => (
+              <Button
+                key={mode}
+                compact
+                selected={data.crew_mode === mode}
+                disabled={busy}
+                onClick={() => act('prison_crew_home', { mode })}
+              >
+                {label}
+              </Button>
+            ))}
+          </LabeledList.Item>
+        ) : null}
+        {clocks.length > 0 ? (
+          <LabeledList.Item label="Clocks">
+            {clocks.join(', ')}
+          </LabeledList.Item>
+        ) : null}
+        {isNum(data.debt) ? (
+          <LabeledList.Item label="Debt">
+            <Box inline bold color={data.debt > 0 ? 'bad' : undefined} mr={1}>
+              {cr(data.debt)}
+            </Box>
+            <NumberInput
+              value={Math.max(0, Math.round(data.debt))}
+              minValue={0}
+              maxValue={100000}
+              step={50}
+              stepPixelSize={2}
+              width="60px"
+              disabled={busy}
+              onChange={(next) =>
+                act('prison_debt', { amount: Math.max(0, Math.round(next)) })
+              }
+            />
+            {DEBT_PRESETS.map((amount) => (
+              <Button
+                key={amount}
+                compact
+                disabled={busy}
+                onClick={() => act('prison_debt', { amount })}
+              >
+                {amount.toLocaleString()}
+              </Button>
+            ))}
+            {isNum(data.incident_fined) ? (
+              <Box inline color="label" ml={1}>
+                {`incident fined ${cr(data.incident_fined)}`}
+              </Box>
+            ) : null}
+          </LabeledList.Item>
+        ) : null}
+        {hatch ? (
+          <LabeledList.Item label="Hatches">
+            {`meals ${hatch.meals || 0}, clean ${hatch.clean_suits || 0}, dirty ${
+              hatch.dirty_suits || 0
+            }, ${
+              (hatch.meals || 0) +
+              (hatch.clean_suits || 0) +
+              (hatch.dirty_suits || 0)
+            }/${hatch.capacity || 0}${
+              isNum(hatch.lasts_minutes)
+                ? `, lasts ${Math.round(hatch.lasts_minutes)} min`
+                : ''
+            }`}
+          </LabeledList.Item>
+        ) : null}
+        {scanParts.length > 0 ? (
+          <LabeledList.Item label="Scan">
+            {scanParts.join(', ')}
+          </LabeledList.Item>
+        ) : null}
+        {isNum(data.outage_debt) ? (
+          <LabeledList.Item label="Outage">
+            <Box inline mr={1}>
+              {`${Math.round(data.outage_debt)} s`}
+            </Box>
+            {OUTAGE_PRESETS.map((seconds) => (
+              <Button
+                key={seconds}
+                compact
+                disabled={busy}
+                tooltip="Seconds of outage counted while the power is off"
+                onClick={() => act('prison_outage', { seconds })}
+              >
+                {`${seconds} s`}
+              </Button>
+            ))}
+          </LabeledList.Item>
+        ) : null}
       </LabeledList>
 
       <Stack align="center" wrap mt={1}>
@@ -1214,6 +1457,14 @@ const PrisonerRow = ({ prisoner, busy, act }: PrisonerRowProps) => {
           </Button>
           <Button
             compact
+            icon="hammer"
+            disabled={locked}
+            onClick={() => act('prison_wreck', { ref })}
+          >
+            Wreck
+          </Button>
+          <Button
+            compact
             icon="person-walking-arrow-right"
             disabled={locked}
             onClick={() => act('prison_release', { ref })}
@@ -1284,6 +1535,61 @@ const PrisonerRow = ({ prisoner, busy, act }: PrisonerRowProps) => {
         >
           {`Care ${Math.round(prisoner.care || 0)}`}
         </Stack.Item>
+        {isNum(prisoner.grade) ? (
+          <Stack.Item
+            className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--grade"
+            mr={1}
+            color="label"
+          >
+            {`Grade ${prisoner.grade.toFixed(2)}`}
+          </Stack.Item>
+        ) : null}
+        {isNum(prisoner.pay_factor) ? (
+          <Stack.Item
+            className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--pay"
+            mr={1}
+            color="label"
+          >
+            {`Pay ${prisoner.pay_factor.toFixed(2)}`}
+          </Stack.Item>
+        ) : null}
+        {isNum(prisoner.confined_seconds) ? (
+          <Stack.Item
+            className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--locked_in"
+            mr={1}
+          >
+            <Box
+              inline
+              bold
+              color={prisoner.confined ? 'bad' : undefined}
+              mr={0.5}
+            >
+              {prisoner.confined ? <Icon name="lock" mr={0.5} /> : null}
+              Confined
+            </Box>
+            <NumberInput
+              value={Math.max(0, Math.round(prisoner.confined_seconds))}
+              minValue={0}
+              maxValue={3600}
+              step={10}
+              stepPixelSize={4}
+              width="48px"
+              format={clock}
+              disabled={locked}
+              onChange={(next) => set('locked_in', Math.round(next))}
+            />
+            {CONFINED_PRESETS.map((preset) => (
+              <Button
+                key={preset}
+                compact
+                disabled={locked}
+                onClick={() => set('locked_in', preset)}
+              >
+                {clock(preset)}
+              </Button>
+            ))}
+          </Stack.Item>
+        ) : null}
         <Stack.Item className="OutpostPrisonAdmin__stat OutpostPrisonAdmin__stat--sentence">
           <Box inline bold mr={0.5}>
             Left

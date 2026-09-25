@@ -109,7 +109,10 @@
  * and researcher. The prison deletes them with the outpost, so they never block deleting it.
  */
 /proc/is_outpost_prison_mob(atom/thing)
-	return is_outpost_prisoner(thing)
+	// Experiment creatures (the ledger's trait) and the changeling's forms count too, so a live one
+	// holds the outpost like a prisoner does.
+	return is_outpost_prisoner(thing) || is_outpost_experiment_mob(thing) \
+		|| istype(thing, /mob/living/basic/outpost_experiment) || istype(thing, /mob/living/basic/headslug/beakless/outpost)
 
 // ===== REACH =====
 

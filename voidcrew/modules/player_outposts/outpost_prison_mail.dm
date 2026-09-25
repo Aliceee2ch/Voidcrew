@@ -10,8 +10,8 @@
  * hatch, and the prisoner reads it on the spot: good news, bad news, a drawing from a kid. Opening a
  * letter first shows what it says and anything packed in it, at the cost of that prisoner's trust.
  * Letters never lie. The pod aims for the office side of the first serving hatch
- * (mail_office_spot()); an admin's single letter beams onto the office table nearest it. Nothing
- * uses the old office mailbag any more. Numbers in voidcrew/_DEFINES/outpost_prison_contraband.dm.
+ * (mail_office_spot()); an admin's single letter beams onto the office table nearest it. Numbers in
+ * voidcrew/_DEFINES/outpost_prison_contraband.dm.
  *
  * A letter is tg's envelope (/obj/item/mail/envelope, so sorters and disposals treat it as mail)
  * holding the letter itself and, for a contraband letter, a razor blade or a packet of yeast. The
@@ -52,29 +52,6 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 	var/mail_check_clock = 0
 	/// Letters on their way, as weakrefs to the letter (inside its envelope until someone opens it)
 	var/list/mail_letters = list()
-
-// ===== THE MAILBAG =====
-
-/// The office's old mailbag. Nothing in the mail code uses it now; it stays defined only until the prison map stops placing it, and can then go.
-/obj/structure/outpost_prison_mailbag
-	name = "mailbag"
-	desc = "A canvas sack by the warden's desk for sorting the prison wing's post."
-	icon = 'icons/obj/service/bureaucracy.dmi'
-	icon_state = "mailbag"
-	anchored = TRUE
-	density = FALSE
-
-/obj/structure/outpost_prison_mailbag/Initialize(mapload)
-	. = ..()
-	AddElement(/datum/element/outpost_property)
-
-/obj/structure/outpost_prison_mailbag/examine(mob/user)
-	. = ..()
-	var/count = 0
-	for(var/obj/item/mail/envelope/outpost_prison/envelope in loc)
-		count++
-	if(count)
-		. += span_notice("[count] letter\s waiting.")
 
 // ===== THE MAIL POD =====
 

@@ -120,14 +120,16 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 
 // ===== THE TALK MENU =====
 
-/// "What do you know?" on every prisoner, and "Ask about [name]'s tip" on those who saw a recent one; members only
+/// "What do you know?" on every prisoner, and "Ask about [name]'s tip" on those who saw a recent one (the newest); members only
 /datum/outpost_prison/proc/leads_talk_choices(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	var/list/choices = list()
 	if(!prisoner || !user || !is_member(user))
 		return choices
-	choices[LEAD_ASK_CHOICE] = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_lore")
-	for(var/datum/outpost_prison_lead/lead as anything in lead_vouchable(prisoner))
-		choices[lead_vouch_choice(lead)] = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_quest")
+	choices[LEAD_ASK_CHOICE] = image(icon = 'icons/hud/radial_fishing.dmi', icon_state = "misaligned_question_mark")
+	// Only the newest tip they saw, so the menu never shows the same icon twice
+	var/list/vouchable = lead_vouchable(prisoner)
+	if(length(vouchable))
+		choices[lead_vouch_choice(vouchable[length(vouchable)])] = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_lore")
 	return choices
 
 /// Runs a talk menu choice of this package; TRUE if it was one. May sleep.

@@ -1009,3 +1009,70 @@
 	rioter.remove_cuffs()
 	qdel(visitor)
 	settle_prison_air(home)
+
+// ===== THE TALK MENU'S ICONS =====
+
+/datum/unit_test/voidcrew_outpost_prison_social_menu_icons
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// "icon|icon_state" of each choice -> the choices showing it; every state must exist
+/datum/unit_test/voidcrew_outpost_prison_social_menu_icons/proc/icons_used(list/choices)
+	var/list/used = list()
+	for(var/choice in choices)
+		var/image/picture = choices[choice]
+		TEST_ASSERT(istype(picture), "The talk menu's [choice] has no image")
+		TEST_ASSERT(icon_exists(picture.icon, picture.icon_state), "The talk menu's [choice] shows [picture.icon_state], which [picture.icon] does not have")
+		var/key = "[picture.icon]|[picture.icon_state]"
+		LAZYADD(used[key], choice)
+	return used
+
+/datum/unit_test/voidcrew_outpost_prison_social_menu_icons/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("iconowner")
+	TEST_ASSERT_NOTNULL(home, "The menu icon test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.rep_word_chance = 0
+	// Cell 1 of the unrotated wing: its bed is at (2,15), and the first prisoner booked in gets it.
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_prisoner(prison, prison_spot(home, 2, 15))
+	var/mob/living/basic/outpost_prisoner/teller = trouble_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/basic/outpost_prisoner/other_teller = trouble_prisoner(prison, prison_spot(home, 10, 8))
+	var/mob/living/carbon/human/member = make_player(prison_spot(home, 3, 15), "iconowner")
+
+	// Lying on their bed, with two tips they saw given: every choice the menu has is on it.
+	prison.refresh_prisoner_reach(prisoner)
+	var/datum/prisoner_activity/rest/resting = new(prisoner)
+	TEST_ASSERT(resting.setup(), "The prisoner could not lie on their bed")
+	prisoner.start_activity(resting)
+	resting.arrive()
+	TEST_ASSERT(prisoner.buckled, "Resting did not put the prisoner on their bed")
+	for(var/mob/living/basic/outpost_prisoner/giver as anything in list(teller, other_teller))
+		var/datum/outpost_prison_lead/tip = new
+		tip.teller_ref = WEAKREF(giver)
+		tip.teller_name = giver.real_name
+		tip.teller_first_name = giver.speech_name()
+		tip.given_at = world.time
+		tip.witnesses += WEAKREF(prisoner)
+		prison.open_leads += tip
+	var/list/choices = prisoner.talk_menu_choices(member)
+	// PRISON_TALK_HOW, _CRIME, _CELL, _GET_UP, CONTRABAND_PATDOWN_CHOICE, LEAD_ASK_CHOICE
+	for(var/expected in list("How are you doing?", "What are you in for?", "Back to your cell", "On your feet", "Hands on the wall", "What do you know?"))
+		TEST_ASSERT(expected in choices, "The talk menu has no [expected]")
+	// Only the newest tip is asked about, so it has an icon of its own.
+	TEST_ASSERT("Ask about [other_teller.real_name]'s tip" in choices, "The newest tip is not on the menu")
+	TEST_ASSERT(!("Ask about [teller.real_name]'s tip" in choices), "An older tip is on the menu beside the newest")
+	var/list/used = icons_used(choices)
+	for(var/key in used)
+		var/list/names = used[key]
+		TEST_ASSERT_EQUAL(length(names), 1, "The talk menu shows [key] for [english_list(names)]")
+
+	// Cuffed: the pat-down under its other name, and still no icon twice.
+	prisoner.end_activity()
+	TEST_ASSERT(prisoner.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The prisoner could not be cuffed")
+	choices = prisoner.talk_menu_choices(member)
+	TEST_ASSERT("Pat down" in choices, "A cuffed prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CUFFED_CHOICE
+	used = icons_used(choices)
+	for(var/key in used)
+		var/list/names = used[key]
+		TEST_ASSERT_EQUAL(length(names), 1, "A cuffed prisoner's talk menu shows [key] for [english_list(names)]")
+	prisoner.remove_cuffs()
+	prison.open_leads.Cut()
+	settle_prison_air(home)

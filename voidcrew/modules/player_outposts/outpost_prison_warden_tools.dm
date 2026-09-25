@@ -110,15 +110,21 @@
 			return TRUE
 	return FALSE
 
-/// The menu's choices, name -> image: its own first (no walk back to the cell in cuffs, no getting up for someone already up), then other packages'
+/**
+ * The menu's choices, name -> image: its own first (no walk back to the cell in cuffs, no getting
+ * up for someone already up), then other packages'. No two choices share an icon.
+ */
 /mob/living/basic/outpost_prisoner/proc/talk_menu_choices(mob/living/user)
 	var/static/list/own_choices
 	if(!own_choices)
+		// The bed sits low in its tile; lifted, it is centred on the radial button.
+		var/image/bed = image(icon = /obj/structure/bed::icon, icon_state = /obj/structure/bed::icon_state)
+		bed.pixel_y = 7
 		own_choices = list(
 			(PRISON_TALK_HOW) = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_talk"),
-			(PRISON_TALK_CRIME) = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_lore"),
-			(PRISON_TALK_CELL) = image(icon = /obj/structure/bed::icon, icon_state = /obj/structure/bed::icon_state),
-			(PRISON_TALK_GET_UP) = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_up"),
+			(PRISON_TALK_CRIME) = image(icon = /obj/item/gavelhammer::icon, icon_state = /obj/item/gavelhammer::icon_state),
+			(PRISON_TALK_CELL) = bed,
+			(PRISON_TALK_GET_UP) = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_get_up"),
 		)
 	var/list/choices = own_choices.Copy()
 	if(cuffs)

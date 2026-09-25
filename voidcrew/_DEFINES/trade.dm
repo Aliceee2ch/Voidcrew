@@ -28,6 +28,9 @@
 /// Max simultaneous hangar berths per trader outpost (purely a gameplay/perf cap)
 #define OUTPOST_MAX_BERTHS 6
 
+/// Clear deck kept between a standard berth's landing pad and each hangar wall
+#define OUTPOST_BERTH_MARGIN 4
+
 /// Fake travel time of the hangar elevator between floors
 #define OUTPOST_ELEVATOR_TRAVEL_TIME (3 SECONDS)
 

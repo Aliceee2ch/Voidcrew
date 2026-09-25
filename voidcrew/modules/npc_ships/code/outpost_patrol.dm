@@ -11,8 +11,10 @@
  *
  * Doors come from the outpost's own area and every installed upgrade's area on the main level
  * (outpost_owned_turfs()). Each outpost has one path list, shared by all of its patrollers and
- * rebuilt in place when the doors change. A door or locker that is deleted is dropped from the
- * path and the room tables straight away, so nothing keeps it from being garbage collected.
+ * rebuilt in place when the doors change. The path holds at most OUTPOST_PATROL_MAX_STOPS doors,
+ * the ones nearest the prison wing, and a rebuild yields on a big outpost. A door or locker that
+ * is deleted is dropped from the path and the room tables straight away, so nothing keeps it from
+ * being garbage collected.
  */
 
 /// Other code can test for this API with #ifdef. Keep it defined.
@@ -20,6 +22,8 @@
 
 /// How long a checked door list is trusted before the next assignment looks for new doors
 #define OUTPOST_PATROL_RECHECK (5 SECONDS)
+/// The most doors a patrol path visits: the ones nearest where the patrol starts
+#define OUTPOST_PATROL_MAX_STOPS 40
 
 /// Patrol caches by REF(outpost)
 GLOBAL_LIST_EMPTY(outpost_patrol_caches)
@@ -192,6 +196,8 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	var/dirty = TRUE
 	/// world.time of the last look for doors
 	var/checked_at = 0
+	/// world.time a look for doors or a rebuild started, while one is running (both can yield); callers get the current path meanwhile
+	var/rebuilding = 0
 
 /datum/outpost_patrol_cache/New(obj/structure/overmap/dynamic/player_outpost/owner)
 	. = ..()
@@ -222,16 +228,23 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 /datum/outpost_patrol_cache/proc/get_path(force_check)
 	if(QDELETED(outpost))
 		return null
-	if(!dirty && !force_check && world.time < checked_at + OUTPOST_PATROL_RECHECK)
+	// A rebuild that runtimed never finished: after a minute, it no longer holds the others up.
+	if((rebuilding && world.time < rebuilding + 1 MINUTES) || (!dirty && !force_check && world.time < checked_at + OUTPOST_PATROL_RECHECK))
 		return path
 	checked_at = world.time
+	rebuilding = world.time
 	var/list/owned = list()
 	for(var/turf/owned_turf as anything in outpost.outpost_owned_turfs())
 		if(!isspaceturf(owned_turf))
 			owned[owned_turf] = TRUE
 	var/list/found = find_interior_doors(owned)
+	if(QDELETED(src))
+		return null
 	if(dirty || !same_doors(found))
 		rebuild(owned, found)
+	if(QDELETED(src))
+		return null
+	rebuilding = 0
 	return path
 
 /// Whether `found` (door = TRUE) is the same set as the last build's
@@ -264,6 +277,7 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 					break
 			if(!opens_outside)
 				found[door] = TRUE
+		CHECK_TICK
 	return found
 
 /// Whether a window or grille stands on a tile, making it wall between rooms rather than floor
@@ -276,8 +290,10 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 /**
  * Splits `owned` into rooms, with every interior door as a wall between them, files them in the
  * shared room tables, and orders the doors into a path. A door on furniture parts rooms but is
- * never a stop. Doors a patroller can reach through the rooms come first, nearest first; the rest
- * are appended nearest first, and JPS finds a way or the patrol times out on them.
+ * never a stop. The path keeps the OUTPOST_PATROL_MAX_STOPS stops nearest patrol_origin() and
+ * starts at the nearest of them. After that, stops a patroller can reach through the rooms come
+ * first, nearest first; the rest are appended nearest first, and JPS finds a way or the patrol
+ * times out on them. Yields on a big outpost; the old path stays in use until the new one is done.
  */
 /datum/outpost_patrol_cache/proc/rebuild(list/owned, list/interior)
 	unwatch_all()
@@ -294,7 +310,7 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	var/list/door_turfs = list()
 	for(var/obj/machinery/door/door as anything in interior)
 		var/turf/door_turf = get_turf(door)
-		if(!door_turfs[door_turf])
+		if(door_turf && !door_turfs[door_turf])
 			door_turfs[door_turf] = door
 
 	// Rooms: flood fills that stop at doors, walls, windows and grilles (compute_ship_rooms() rules)
@@ -336,18 +352,31 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 					continue
 				queued[neighbour] = TRUE
 				queue += neighbour
+			CHECK_TICK
 		rooms[room_id] = list(
 			"turfs" = room_turfs,
 			"closets" = room_closets,
 			"doors" = room_doors,
 		)
-		for(var/obj/structure/closet/closet as anything in room_closets)
-			watch(closet)
+	if(QDELETED(src))
+		return
+	// Anything deleted while this yielded leaves the rooms before they are watched.
+	for(var/room_id in rooms)
+		var/list/room = rooms[room_id]
+		for(var/obj/structure/closet/closet as anything in room["closets"])
+			if(QDELETED(closet))
+				room["closets"] -= closet
+			else
+				watch(closet)
+		for(var/obj/machinery/door/door as anything in room["doors"])
+			if(QDELETED(door))
+				room["doors"] -= door
 
-	// Which rooms each door joins, and which path doors each room holds
+	// Which rooms each door joins, and which stops each room holds
 	var/list/stops = list()
-	var/list/room_stops = list()
 	for(var/obj/machinery/door/door as anything in interior)
+		if(QDELETED(door))
+			continue
 		watch(door)
 		var/turf/door_turf = get_turf(door)
 		var/list/joined = list()
@@ -358,28 +387,37 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 				joined += room_id
 		if(length(joined))
 			door_rooms[REF(door)] = joined
-		if(door_on_furniture(door))
-			continue
-		stops += door
-		for(var/room_id in joined)
+		if(!door_on_furniture(door))
+			stops += door
+	stops = nearest_stops(stops)
+	var/list/room_stops = list()
+	for(var/obj/machinery/door/door as anything in stops)
+		for(var/room_id in door_rooms[REF(door)])
 			LAZYADD(room_stops[room_id], door)
 
 	// Visiting order: the nearest unvisited stop sharing a room, else the fewest rooms away,
 	// else (another part of the outpost) the nearest by distance
 	var/list/ordered = list()
-	var/list/unvisited = stops.Copy()
-	var/obj/machinery/door/current_stop = length(unvisited) ? pick(unvisited) : null
+	var/list/unvisited = list()
+	for(var/obj/machinery/door/door as anything in stops)
+		unvisited[door] = TRUE
+	var/obj/machinery/door/current_stop = length(stops) ? stops[1] : null
 	while(current_stop)
 		ordered += current_stop
 		unvisited -= current_stop
 		if(!length(unvisited))
 			break
 		current_stop = next_stop(current_stop, unvisited, door_rooms, room_stops)
+		CHECK_TICK
+	if(QDELETED(src))
+		return
 
 	// A second door between the same two rooms adds nothing but back-and-forth
 	var/list/used_pairs = list()
 	var/list/new_path = list()
 	for(var/obj/machinery/door/door as anything in ordered)
+		if(QDELETED(door))
+			continue
 		var/list/joined = door_rooms[REF(door)]
 		if(length(joined) >= 2)
 			var/room_a = joined[1]
@@ -399,13 +437,40 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 			locked_doors[REF(door)] = TRUE
 	GLOB.boarding_locked_doors[key] = locked_doors
 
-/// The stop to visit after `from`: see rebuild()
+/// Where escapes start from, to rank the doors by: the middle of the outpost's prison wing, else its arrival point
+/datum/outpost_patrol_cache/proc/patrol_origin()
+	var/datum/outpost_prison/prison = outpost?.running_prison()
+	var/list/bounds = prison?.upgrade?.footprint_bounds
+	if(bounds)
+		return locate(round((bounds[1] + bounds[3]) / 2), round((bounds[2] + bounds[4]) / 2), bounds[5])
+	return outpost?.arrival_turf
+
+/**
+ * The OUTPOST_PATROL_MAX_STOPS of `stops` nearest patrol_origin(), nearest first. With no origin,
+ * the first stop stands in for it.
+ */
+/datum/outpost_patrol_cache/proc/nearest_stops(list/stops)
+	if(!length(stops))
+		return list()
+	var/atom/origin = patrol_origin() || stops[1]
+	var/list/by_distance = list()
+	for(var/obj/machinery/door/door as anything in stops)
+		by_distance[door] = get_dist(origin, door)
+	sortTim(by_distance, cmp = GLOBAL_PROC_REF(cmp_numeric_asc), associative = TRUE)
+	var/list/nearest = list()
+	for(var/obj/machinery/door/door as anything in by_distance)
+		nearest += door
+		if(length(nearest) >= OUTPOST_PATROL_MAX_STOPS)
+			break
+	return nearest
+
+/// The stop to visit after `from`: see rebuild(). `unvisited` is a set (door = TRUE).
 /datum/outpost_patrol_cache/proc/next_stop(obj/machinery/door/from, list/unvisited, list/door_rooms, list/room_stops)
 	var/obj/machinery/door/best
 	var/best_distance = INFINITY
 	for(var/room_id in door_rooms[REF(from)])
 		for(var/obj/machinery/door/candidate as anything in room_stops[room_id])
-			if(!(candidate in unvisited))
+			if(!unvisited[candidate])
 				continue
 			var/distance = get_dist(from, candidate)
 			if(distance < best_distance)
@@ -424,7 +489,7 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 		var/list/next_frontier = list()
 		for(var/room_id in frontier)
 			for(var/obj/machinery/door/through as anything in room_stops[room_id])
-				if(through in unvisited)
+				if(unvisited[through])
 					var/distance = get_dist(from, through)
 					if(distance < best_distance)
 						best_distance = distance
@@ -583,3 +648,4 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	return FALSE
 
 #undef OUTPOST_PATROL_RECHECK
+#undef OUTPOST_PATROL_MAX_STOPS

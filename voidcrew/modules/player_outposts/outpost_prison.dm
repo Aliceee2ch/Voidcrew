@@ -35,6 +35,7 @@
 	return ..()
 
 /datum/outpost_upgrade/prison/on_installed(mob/user)
-	if(prison || !istype(installed_area, /area/voidcrew/player_outpost/prison))
+	// A prison an admin deleted can be started again.
+	if(!QDELETED(prison) || !istype(installed_area, /area/voidcrew/player_outpost/prison))
 		return
 	prison = new(src)

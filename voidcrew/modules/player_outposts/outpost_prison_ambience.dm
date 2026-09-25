@@ -67,10 +67,10 @@ GLOBAL_LIST_INIT(outpost_prisoner_examine_placeholders, list("{They}", "{they}",
 
 /// "a few minutes" or "about 25 minutes": their sentence left, rounded to OUTPOST_PRISONER_EXAMINE_ROUND_MINUTES
 /mob/living/basic/outpost_prisoner/proc/sentence_examine_text()
-	var/minutes = round(sentence_left / 60, OUTPOST_PRISONER_EXAMINE_ROUND_MINUTES)
+	var/minutes = sentence_left / 60
 	if(minutes < OUTPOST_PRISONER_EXAMINE_ROUND_MINUTES)
 		return "a few minutes"
-	return "about [minutes] minutes"
+	return "about [round(minutes, OUTPOST_PRISONER_EXAMINE_ROUND_MINUTES)] minutes"
 
 /// The "examine" key for their mood: the bands match the angry, threat, climb and tidy lines
 /mob/living/basic/outpost_prisoner/proc/mood_examine_band()

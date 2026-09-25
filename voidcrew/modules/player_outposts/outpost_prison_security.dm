@@ -9,8 +9,9 @@
  * A turret belongs to the prison that sold it and does nothing for any other. It arrives loose and
  * switched off on the warden console's tile, and is dragged into a wall of the cell block from the
  * far side, so its muzzle looks into the cell block. Whether it may fire is checked again at every
- * look: the tile in front of it must still be cell-block floor a prisoner could stand on, so
- * nobody can wall it or table it off from the rioters it shoots. Carried off the outpost, it
+ * look: the tile in front of it must still be cell-block floor a prisoner could stand on, and it
+ * only answers a prisoner who could walk up to it, so nobody can wall it, table it or window it off
+ * from the rioters it shoots. Carried off the outpost, it
  * forgets the wing, so a stolen turret frees its slot and one taken away and brought back never
  * works again.
  *
@@ -126,10 +127,16 @@
 	if(action != "turret_buy")
 		return FALSE
 	var/result = buy_stun_turret(user)
+	if(!user)
+		return TRUE
+	// The answer shows over the warden's console, as its own buttons' answers do.
+	var/turf/console_turf = alarm_turf()
+	var/atom/speaker = (console_turf && (locate(/obj/machinery/computer/outpost_prison_warden) in console_turf)) || user
 	if(istext(result))
-		user?.balloon_alert(user, result)
+		speaker.balloon_alert(user, result)
+		playsound(speaker, 'sound/machines/buzz/buzz-sigh.ogg', 30, TRUE)
 	else
-		user?.balloon_alert(user, "turret delivered")
+		speaker.balloon_alert(user, "turret delivered")
 	return TRUE
 
 /**
@@ -356,7 +363,7 @@
 	if(!(machine_stat & BROKEN))
 		. += span_notice("It is switched [on ? "on" : "off"].")
 	if(!anchored)
-		. += span_notice("It is loose. It mounts in a wall of the cell block, facing in.")
+		. += span_notice("It is loose.")
 	else if(prison && !muzzle(prison))
 		. += span_warning("It can't see into the cell block from where it is.")
 
@@ -365,7 +372,8 @@
 /**
  * Whether it would warn `creature`: a prisoner of its own wing, on their feet in the wing and not
  * shut in a cell, who is rioting, fighting past the argument, swinging at staff, climbing a hatch
- * or loose, while a member of the wing is home.
+ * or loose, while a member of the wing is home. Only a prisoner who could walk up to it and smash
+ * it: a turret boxed in behind windows, or looking out of a bolted cell, shoots nobody.
  */
 /obj/machinery/porta_turret/ship_defense/outpost_prison/proc/warn_target(mob/living/creature)
 	var/mob/living/basic/outpost_prisoner/prisoner = creature
@@ -380,6 +388,8 @@
 	if(!answers && prisoner.trouble == PRISONER_TROUBLE_FIGHT)
 		answers = prisoner.fight?.fighting
 	if(!answers)
+		return FALSE
+	if(!prisoner.reachable?[get_turf(src)])
 		return FALSE
 	return !prisoner.is_confined()
 

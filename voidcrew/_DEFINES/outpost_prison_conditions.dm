@@ -1,16 +1,23 @@
 // ===== OUTPOST PRISON: CONDITIONS (see outpost_prison_conditions.dm) =====
 // The wing's clean, lit and powered scores, what they do to moods, and the riot strobe.
+//
+// Clean: mess on the cell block's floor (cells, cell doors, yard, the mess tables and serving
+// hatches), each tile's pieces weighted and capped, per 100 floor tiles counted when the wing was
+// placed. Lit: light measured on the tiles prisoners stand on. Power: the equipment channel, with
+// a grace for blips. Conditions = PRISON_WEIGHT_CLEAN x Clean + PRISON_WEIGHT_LIT x Lit +
+// PRISON_WEIGHT_POWER x Power, and pay is scaled by OUTPOST_PRISON_CONDITIONS_PAY_FLOOR +
+// (1 - OUTPOST_PRISON_CONDITIONS_PAY_FLOOR) x Conditions / 100.
 
-/// Cleanliness lost per cleanable decal or piece of trash in the wing
-#define OUTPOST_PRISON_MESS_PENALTY 5
-/// Mood lost per minute in a dark wing, a dirty wing and an unpowered wing
-#define PRISONER_MOOD_DARK 4
-#define PRISONER_MOOD_DIRTY_WING 3
-#define PRISONER_MOOD_NO_POWER 5
-/// The wing is dark below this lit score, and dirty below this clean score
+/// Mood lost per minute at a wing score of 0: dirty and dark scale down to nothing at
+/// PRISON_WING_MOOD_LINE; no power scales with how far Power is below 100
+#define PRISONER_MOOD_DARK 5
+#define PRISONER_MOOD_DIRTY_WING 5
+#define PRISONER_MOOD_NO_POWER 4
+/// Two light samples in a row below this lit score put the wing on edge; a cell below it is dark
 #define PRISON_DARK_BELOW 50
+/// The clean score below which the wing counts as dirty for complaints
 #define PRISON_DIRTY_BELOW 60
-/// Mood gained per minute while every condition score is at least PRISON_GOOD_CONDITIONS
+/// Mood gained per minute while Clean and Lit are at least PRISON_GOOD_CONDITIONS and Power is 100
 #define PRISONER_MOOD_GOOD_WING 2
 #define PRISON_GOOD_CONDITIONS 80
 

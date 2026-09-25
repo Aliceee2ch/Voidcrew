@@ -406,7 +406,7 @@
 	TEST_ASSERT_EQUAL(console.ui_data(owner)["next_arrival"], 5, "The first prisoner is not due in 5 seconds")
 	TEST_ASSERT_EQUAL(console.ui_data(owner)["intake_state"], "open", "Open intake does not show as open")
 
-	// One at a time, each into their own cell, 20 to 40 seconds apart (OUTPOST_PRISON_ARRIVAL_GAP_*).
+	// One at a time, each into their own cell, 30 seconds to 3 minutes apart (OUTPOST_PRISON_ARRIVAL_GAP_*).
 	prison.tick(4)
 	TEST_ASSERT_EQUAL(length(prison.prisoners), 0, "A prisoner arrived early")
 	prison.tick(1)
@@ -417,7 +417,7 @@
 	var/list/seen_cells = list()
 	for(var/i in 1 to 3)
 		var/gap = prison.arrival_countdown
-		TEST_ASSERT(gap >= 20 && gap <= 40, "The next arrival is [gap] s away, not 20-40")
+		TEST_ASSERT(gap >= 30 && gap <= 180, "The next arrival is [gap] s away, not 30-180")
 		prison.tick(gap - 1)
 		TEST_ASSERT_EQUAL(length(prison.prisoners), i, "A prisoner arrived before the gap was up")
 		prison.tick(1)
@@ -439,6 +439,9 @@
 		// Long enough that the rest of the test releases nobody by accident.
 		arrival.sentence_left = 3600
 	TEST_ASSERT_EQUAL(length(prison.entries), 4, "The arrivals were not logged")
+	// Long after the last arrival: from here only each cell's own wait holds arrivals back
+	// (voidcrew_outpost_prison_arrival_gap tests the gap between arrivals).
+	prison.arrival_gap = 0
 
 	// The roster: name, cell, crime, time left and a birthday mark, in cell order, and nothing about their needs.
 	var/list/roster = console.ui_data(owner)["prisoners"]
@@ -609,6 +612,75 @@
 
 /datum/unit_test/voidcrew_outpost_prison_cells/proc/door_bolted(obj/machinery/door/airlock/door)
 	return door?.locked
+
+// ===== THE GAP BETWEEN ARRIVALS =====
+
+/**
+ * After any prisoner beams in, the next waits 30 seconds to 3 minutes (OUTPOST_PRISON_ARRIVAL_GAP_MIN,
+ * _MAX), wing-wide, however many cells stand ready, and a long stretch brings one arrival, not a
+ * crowd. A cell's own refill wait still holds when it is the longer. The console counts down to
+ * whichever is longer, and an admin's forced arrival skips the gap but starts a new one.
+ */
+/datum/unit_test/voidcrew_outpost_prison_arrival_gap
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_economy_kit
+
+/datum/unit_test/voidcrew_outpost_prison_arrival_gap/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("arrivalgapowner")
+	TEST_ASSERT_NOTNULL(home, "The arrival gap test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+
+	// Every cell ready at once; the first arrival comes 5 seconds after intake opens (OUTPOST_PRISON_FIRST_ARRIVAL).
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		cell.ready_at = world.time
+	TEST_ASSERT(prison.set_intake(TRUE), "Intake would not open")
+	prison.intake_tick(5)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 1, "[length(prison.prisoners)] prisoners arrived at once into four ready cells")
+
+	// Three cells stand ready, and still the next waits out the gap, which the console counts down.
+	var/gap = prison.arrival_gap
+	TEST_ASSERT(gap >= 30 && gap <= 180, "The gap after an arrival is [gap] s, not 30-180")
+	TEST_ASSERT_EQUAL(prison.arrival_countdown, gap, "The console does not count down the gap")
+	prison.intake_tick(gap - 1)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 1, "A ready cell filled before the gap was up")
+	TEST_ASSERT_EQUAL(prison.arrival_countdown, 1, "The console shows [prison.arrival_countdown] s with 1 s of the gap left")
+	// A long stretch at once brings one prisoner, and a fresh gap, not the whole wing.
+	prison.intake_tick(10 * 60)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 2, "Ten minutes at once brought [length(prison.prisoners) - 1] prisoners, not one")
+	TEST_ASSERT(prison.arrival_gap >= 30, "No gap followed the second arrival")
+
+	// The gap is rolled afresh each time, between 30 and 180 seconds.
+	var/list/rolled = list()
+	for(var/i in 1 to 30)
+		prison.arrival_gap = 0
+		prison.start_arrival_gap()
+		TEST_ASSERT(prison.arrival_gap >= 30 && prison.arrival_gap <= 180, "A gap rolled [prison.arrival_gap] s, not 30-180")
+		rolled |= prison.arrival_gap
+	TEST_ASSERT(length(rolled) > 1, "Thirty gaps all came out [rolled[1]] s")
+
+	// A cell's own refill wait, when it is the longer, is what the console shows and what holds them back.
+	prison.arrival_gap = 20
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		if(!cell.occupant)
+			cell.ready_at = world.time + 100 SECONDS
+	prison.intake_tick(0)
+	TEST_ASSERT(prison.arrival_countdown >= 99 && prison.arrival_countdown <= 100, "The console shows [prison.arrival_countdown] s, not the cells' 100 s wait")
+	prison.intake_tick(30)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 2, "A prisoner arrived once the gap was up but no cell was ready")
+
+	// An admin's forced arrival skips the gap and the cell's wait, and starts a new gap.
+	prison.arrival_gap = 0
+	var/mob/living/basic/outpost_prisoner/forced = prison.admit_next(TRUE)
+	TEST_ASSERT_NOTNULL(forced, "The forced arrival did not come")
+	TEST_ASSERT(prison.arrival_gap >= 30 && prison.arrival_gap <= 180, "A forced arrival left a [prison.arrival_gap] s gap, not 30-180")
+	prison.arrival_gap = 150
+	TEST_ASSERT_NOTNULL(prison.admit_next(TRUE), "A forced arrival waited for the gap")
+	TEST_ASSERT(prison.arrival_gap >= 150, "A forced arrival shortened the gap to [prison.arrival_gap] s")
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 4, "The forced arrivals did not fill the wing")
+	prison.set_intake(FALSE)
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_economy_kit, all_present), prison), 8 SECONDS), "The arrivals never finished beaming in")
+	for(var/mob/living/basic/outpost_prisoner/arrival as anything in prison.prisoners)
+		ADD_TRAIT(arrival, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	settle_prison_air(home)
 
 // ===== ABANDONING MID-INCIDENT =====
 

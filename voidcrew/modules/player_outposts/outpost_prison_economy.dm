@@ -309,21 +309,26 @@
 		return null
 	return max(arrival_gap, soonest)
 
-/// Advances arrivals by `seconds`: while arrivals are allowed, the next prisoner beams into a ready cell once the gap since the last is up
+/**
+ * Advances arrivals by `seconds`: while arrivals are allowed, the next prisoner beams into a ready
+ * cell once the gap since the last is up. One at a time, however long the step: several ready cells
+ * never fill back to back.
+ */
 /datum/outpost_prison/proc/intake_tick(seconds)
-	arrival_gap -= seconds
-	if(arrivals_allowed())
-		while(arrival_gap <= 0 && free_slots())
-			if(!admit_next())
-				break
-			arrival_gap += rand(OUTPOST_PRISON_ARRIVAL_GAP_MIN, OUTPOST_PRISON_ARRIVAL_GAP_MAX)
-	arrival_gap = max(arrival_gap, 0)
+	arrival_gap = max(arrival_gap - seconds, 0)
+	if(arrivals_allowed() && arrival_gap <= 0 && free_slots())
+		admit_next()
 	arrival_countdown = next_arrival_in()
+
+/// After any arrival the next waits OUTPOST_PRISON_ARRIVAL_GAP_MIN to _MAX seconds, wing-wide, never less than it already had to
+/datum/outpost_prison/proc/start_arrival_gap()
+	arrival_gap = max(arrival_gap, rand(OUTPOST_PRISON_ARRIVAL_GAP_MIN, OUTPOST_PRISON_ARRIVAL_GAP_MAX))
 
 /**
  * Beams a new prisoner into the lowest-numbered cell that can take one: empty, ready and its door
- * not bolted or welded. `forced` (for the admin panel) skips the wait and the door. Returns the
- * prisoner, or null.
+ * not bolted or welded, and starts the gap before the next (start_arrival_gap()). `forced` (for
+ * the admin panel) skips the wait, the door and the gap, though it still starts a new gap. Returns
+ * the prisoner, or null.
  */
 /datum/outpost_prison/proc/admit_next(forced = FALSE)
 	if(!free_slots())
@@ -339,6 +344,8 @@
 		var/mob/living/basic/outpost_prisoner/prisoner = new(spot)
 		admit(prisoner, cell)
 		prisoner.beam_in()
+		start_arrival_gap()
+		arrival_countdown = next_arrival_in()
 		return prisoner
 	return null
 

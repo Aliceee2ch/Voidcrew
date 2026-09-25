@@ -2,9 +2,10 @@
  * # Prison wing fixtures
  *
  * The pieces the prison wing's map places: uniforms that get dirty, the serving hatches, the
- * supply dispenser, the wing's first aid kit and bookcases. The machines have no circuit boards or
- * designs and are protected outpost property, so they only exist in a placed prison wing and never
- * end up on a ship. The wing's doors and bolt buttons are in outpost_prison_doors.dm.
+ * supply dispenser, the wing's first aid kit, bookcases, and a quieter basketball hoop and ball.
+ * The machines have no circuit boards or designs and are protected outpost property, so they only
+ * exist in a placed prison wing and never end up on a ship. The wing's doors and bolt buttons are
+ * in outpost_prison_doors.dm.
  */
 
 /// Whether this is an outpost prisoner
@@ -438,6 +439,16 @@
 	for(var/i in count + 1 to min_books)
 		new /obj/item/book/manual/random(src)
 	update_appearance()
+
+// ===== BASKETBALL =====
+
+/// The yard's hoop. Prisoners shoot at it all day, so its buzzer is half as loud as tg's.
+/obj/structure/hoop/outpost_prison
+	buzzer_volume = 50
+
+/// The yard's ball, bouncing half as loud as tg's
+/obj/item/toy/basketball/outpost_prison
+	bounce_volume = 37
 
 // ===== MESS =====
 

@@ -15,7 +15,8 @@
 // Stipends are deposited every OUTPOST_PRISON_DEPOSIT_INTERVAL seconds. A release pays
 // OUTPOST_PRISON_RELEASE_BONUS x (G x F averaged over the stay).
 // One cell turns over every ~13 minutes: an 11.5 minute average sentence and a 60-120 second
-// refill. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
+// refill. On top of that, arrivals are 30-180 seconds apart wing-wide, which an empty wing feels
+// (filling it takes 1.5-9 minutes) but four staggered cells rarely do. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
 // 4 x 60 / 13 = ~18.5 releases/h x 200 = ~3,700 cr/h in bonuses. Ceiling ~6,250 cr/h before
 // supplies; a well-kept wing nets 5,300-5,400 cr/h and pays back its 10,000 cr in about 2 hours.
 //
@@ -41,9 +42,9 @@
 #define OUTPOST_PRISON_SENTENCE_MAX (15 * 60)
 /// Seconds from opening intake to the first arrival
 #define OUTPOST_PRISON_FIRST_ARRIVAL 5
-/// Seconds between arrivals while cells are free
-#define OUTPOST_PRISON_ARRIVAL_GAP_MIN 20
-#define OUTPOST_PRISON_ARRIVAL_GAP_MAX 40
+/// Seconds between arrivals, wing-wide: after any prisoner beams in, the next waits this long however many cells are ready
+#define OUTPOST_PRISON_ARRIVAL_GAP_MIN 30
+#define OUTPOST_PRISON_ARRIVAL_GAP_MAX 180
 /// Seconds before a freed cell takes a new arrival
 #define OUTPOST_PRISON_REFILL_MIN 60
 #define OUTPOST_PRISON_REFILL_MAX 120

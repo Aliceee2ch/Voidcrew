@@ -136,6 +136,8 @@
 	COOLDOWN_DECLARE(tidy_cooldown)
 	/// Running after they asked for the medic
 	COOLDOWN_DECLARE(sick_call_cooldown)
+	/// Running while what they last said is up over their head: no thought bubble (hush_bubble())
+	COOLDOWN_DECLARE(bubble_hush)
 
 /mob/living/basic/outpost_prisoner/Initialize(mapload)
 	gender = pick(MALE, FEMALE)
@@ -159,6 +161,8 @@
 	RegisterSignal(src, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interaction))
 	RegisterSignal(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, PROC_REF(on_damaged))
 	RegisterSignal(src, COMSIG_LIVING_HEALTH_UPDATE, PROC_REF(on_health_update))
+	// Talking puts the thought bubble away (manual_emote() below covers the prison's own emotes).
+	RegisterSignals(src, list(COMSIG_MOB_SAY, COMSIG_MOB_EMOTE), PROC_REF(on_speech))
 	// Dragging and pulling only while they are down; see can_be_dragged().
 	RegisterSignal(src, COMSIG_MOUSEDROP_ONTO, PROC_REF(block_being_dragged))
 	RegisterSignal(src, COMSIG_ATOM_CAN_BE_PULLED, PROC_REF(check_pullable))
@@ -222,13 +226,13 @@
 // ===== BEAMING IN AND OUT =====
 
 /**
- * Materialises them where they stand, with the transporter's column, sounds and knit-together.
- * They stay PRISONER_ARRIVING, and so do nothing at all (no walking, routine, trouble, speech or
- * thought bubble), until finish_beam_in() at the very end of the knit.
+ * Materialises them where they stand: beam_out() backwards. The column comes down and they knit
+ * together inside it from nothing, from the feet up, over the whole beam. They stay
+ * PRISONER_ARRIVING, and so do nothing at all (no walking, routine, trouble, speech or thought
+ * bubble), until finish_beam_in() as the beam ends.
  */
 /mob/living/basic/outpost_prisoner/proc/beam_in()
 	phase = PRISONER_ARRIVING
-	alpha = 0
 	if(arrival_brute > 0)
 		// Roughed up in transfer: no attacker, so no blame, no blood and no collapse.
 		adjustBruteLoss(arrival_brute)
@@ -236,16 +240,19 @@
 		arrived_hurt = TRUE
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
-	// A bubble ignores their alpha: one already up would hang over an empty tile.
+	// A bubble ignores the knit: one already up would hang over an empty tile.
 	drop_bubble()
 	var/turf/spot = get_turf(src)
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
-		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_PRISON_BEAM_TIME + 1.7 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(knit_in)), OUTPOST_PRISON_BEAM_TIME)
+		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_PRISON_BEAM_TIME + 0.5 SECONDS)
+	// Hidden under the mask from the first frame. finish_beam_in() takes the effects off, so a
+	// prisoner beamed out mid-knit keeps beam_out()'s.
+	transporter_materialise(src, 255, OUTPOST_PRISON_BEAM_TIME, restore = FALSE)
+	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), OUTPOST_PRISON_BEAM_TIME)
 
-/// The beam delivers them: the flash, and they knit back together from the feet up, still arriving
-/mob/living/basic/outpost_prisoner/proc/knit_in()
+/// Fully there as the beam ends: the flash, and only now are they present, free to move, and say hello
+/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
 	if(phase != PRISONER_ARRIVING)
 		return
 	var/turf/spot = get_turf(src)
@@ -253,13 +260,6 @@
 		new /obj/effect/temp_visual/transporter_flash(spot)
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
-	transporter_materialise(src, 255)
-	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), transporter_materialise_time())
-
-/// Fully there: only now are they present, free to move, and say hello
-/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
-	if(phase != PRISONER_ARRIVING)
-		return
 	// Whatever is left of the knit, gone: they are solid from here on.
 	transporter_restore(src, 255)
 	phase = PRISONER_PRESENT
@@ -533,7 +533,10 @@
 		update_appearance(UPDATE_OVERLAYS)
 	schedule_bubble(needs, fresh)
 
-/// Pops the bubble when it is due. One that no longer holds fades early, and a riot takes over at once.
+/**
+ * Pops the bubble when it is due, but not while what they last said is still up over their head
+ * (hush_bubble()). One that no longer holds fades early, and a riot takes over at once.
+ */
 /mob/living/basic/outpost_prisoner/proc/schedule_bubble(list/needs, fresh)
 	if(popped_bubble && popped_bubble != bubble && (!(popped_bubble in needs) || bubble == "riot"))
 		fade_bubble()
@@ -541,8 +544,30 @@
 		return
 	if(fresh)
 		bubble_next_pop = min(bubble_next_pop, world.time + rand(0, PRISONER_BUBBLE_FRESH_DELAY))
-	if(!popped_bubble && world.time >= bubble_next_pop)
+	if(!popped_bubble && world.time >= bubble_next_pop && COOLDOWN_FINISHED(src, bubble_hush))
 		pop_bubble()
+
+/// They said or emoted something: see hush_bubble()
+/mob/living/basic/outpost_prisoner/proc/on_speech(datum/source)
+	SIGNAL_HANDLER
+	hush_bubble()
+
+/mob/living/basic/outpost_prisoner/manual_emote(text)
+	. = ..()
+	if(.)
+		hush_bubble()
+
+/**
+ * Their words go up in runechat over their head for PRISONER_BUBBLE_HUSH. A bubble that is up
+ * sinks away out of the text's way, and none pops until the words are gone; then a need that
+ * still holds comes back within PRISONER_BUBBLE_FRESH_DELAY.
+ */
+/mob/living/basic/outpost_prisoner/proc/hush_bubble()
+	COOLDOWN_START(src, bubble_hush, PRISONER_BUBBLE_HUSH)
+	if(!popped_bubble)
+		return
+	fade_bubble(sink = TRUE)
+	bubble_next_pop = min(bubble_next_pop, world.time + PRISONER_BUBBLE_HUSH + rand(0, PRISONER_BUBBLE_FRESH_DELAY))
 
 /// Pops the bubble up with a little bounce; it bobs, then fades on its own
 /mob/living/basic/outpost_prisoner/proc/pop_bubble()
@@ -558,12 +583,12 @@
 	deltimer(bubble_timer)
 	bubble_timer = addtimer(CALLBACK(src, PROC_REF(end_bubble)), PRISONER_BUBBLE_SHOW + PRISONER_BUBBLE_FADE, TIMER_STOPPABLE | TIMER_DELETE_ME)
 
-/// Fades the bubble out early
-/mob/living/basic/outpost_prisoner/proc/fade_bubble()
+/// Fades the bubble out early, sinking with `sink` (see /obj/effect/abstract/outpost_thought/proc/fade())
+/mob/living/basic/outpost_prisoner/proc/fade_bubble(sink = FALSE)
 	popped_bubble = null
 	if(!thought)
 		return
-	thought.fade()
+	thought.fade(sink)
 	deltimer(bubble_timer)
 	bubble_timer = addtimer(CALLBACK(src, PROC_REF(end_bubble)), PRISONER_BUBBLE_FADE, TIMER_STOPPABLE | TIMER_DELETE_ME)
 
@@ -614,6 +639,12 @@
 /**
  * tg's thought bubble, as a point uses, with the needed item's own sprite inset. A prisoner's pops up
  * now and then through their vis_contents, so it animates apart from them.
+ *
+ * It sits off their right shoulder, level with the head, rather than over it. tg's runechat starts
+ * 32 pixels up (the message's pixel_z is the speaker's maptext_height) and draws on RUNECHAT_PLANE,
+ * above this POINT_PLANE, so anything above the head is hidden behind what anyone says there. At
+ * 0.85 scale the bubble is 27 pixels across, from 7 to 34 pixels up and 20 to 47 across, with its
+ * trailing dots at their shoulder; the first line of a message starts at about 34.
  */
 /obj/effect/abstract/outpost_thought
 	name = "thought"
@@ -623,13 +654,13 @@
 	appearance_flags = KEEP_APART | RESET_COLOR | RESET_ALPHA | RESET_TRANSFORM | PIXEL_SCALE
 	vis_flags = NONE
 	plane = POINT_PLANE
-	// Over their head, its trailing dots pointing down at it
-	pixel_w = 8
-	pixel_z = 26
+	// Off their right shoulder, its trailing dots towards them
+	pixel_w = 18
+	pixel_z = 4
 	alpha = 0
 	/// Size and height it settles at; it bobs 2 pixels above that
-	var/rest_scale = 0.6
-	var/rest_z = 26
+	var/rest_scale = 0.85
+	var/rest_z = 4
 
 /// Shows a need's item and bounces up: it grows past full size, settles, bobs and fades
 /obj/effect/abstract/outpost_thought/proc/pop(need, atom/movable/owner)
@@ -657,9 +688,9 @@
 	animate(pixel_z = rest_z, time = bob, easing = SINE_EASING)
 	animate(alpha = 0, pixel_z = rest_z + 5, transform = matrix().Scale(rest_scale * 0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
 
-/// Fades out from wherever it is
-/obj/effect/abstract/outpost_thought/proc/fade()
-	animate(src, alpha = 0, pixel_z = rest_z + 5, transform = matrix().Scale(rest_scale * 0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
+/// Fades out from wherever it is, drifting up, or with `sink`, down out of the way of what they are saying
+/obj/effect/abstract/outpost_thought/proc/fade(sink = FALSE)
+	animate(src, alpha = 0, pixel_z = rest_z + (sink ? -4 : 5), transform = matrix().Scale(rest_scale * 0.8), time = PRISONER_BUBBLE_FADE, easing = SINE_EASING | EASE_IN)
 
 /// The item a thought bubble shows for a need
 /proc/outpost_prisoner_bubble_item_type(need)

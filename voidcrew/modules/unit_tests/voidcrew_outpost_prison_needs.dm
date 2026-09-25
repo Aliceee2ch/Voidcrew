@@ -223,7 +223,9 @@
 
 	// The bubble pops up now and then rather than staying: a need that has just come up pops it within
 	// 3 seconds (PRISONER_BUBBLE_FRESH_DELAY), the next pop is 20 seconds or more away
-	// (PRISONER_BUBBLE_GAP_MIN), and a need dealt with fades its bubble at once.
+	// (PRISONER_BUBBLE_GAP_MIN), and a need dealt with fades its bubble at once. They thanked the
+	// warden for the uniform above; that has had its time over their head (see below).
+	COOLDOWN_RESET(prisoner, bubble_hush)
 	prisoner.set_hunger(10)
 	if(!prisoner.popped_bubble)
 		TEST_ASSERT(prisoner.bubble_next_pop <= world.time + 3 SECONDS, "A new need did not bring the bubble forward")
@@ -238,7 +240,39 @@
 	TEST_ASSERT_NULL(prisoner.popped_bubble, "The bubble stayed up after the need was dealt with")
 	prisoner.end_bubble()
 	TEST_ASSERT(!(prisoner.thought in prisoner.vis_contents), "The faded bubble was not taken down")
+
+	// It sits off their right shoulder, not over their head where runechat goes: its top edge
+	// (16 + rest_z + 16 x rest_scale) stays under a message's first line (pixel_z 32, text from about 34).
+	var/obj/effect/abstract/outpost_thought/thought = prisoner.thought
+	TEST_ASSERT(thought.rest_scale >= 0.8, "The bubble settles at [thought.rest_scale] scale, too small to read")
+	TEST_ASSERT(16 + thought.rest_z + 16 * thought.rest_scale <= 34, "The bubble's top edge is [16 + thought.rest_z + 16 * thought.rest_scale] px up, into runechat")
+	TEST_ASSERT(thought.pixel_w >= 16, "The bubble is only [thought.pixel_w] px to the side, over their head rather than beside it")
+
+	// Talking puts it away: what they say goes up over their head, so a bubble that is up ducks out of
+	// its way, and none pops for 5 seconds after they say or emote anything (PRISONER_BUBBLE_HUSH).
+	prisoner.set_hunger(10)
+	prisoner.bubble_next_pop = world.time
+	prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.popped_bubble, "hungry", "The hungry bubble did not pop up before they spoke")
+	prisoner.say("Any chance of lunch in here?")
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "The bubble stayed up while they talked")
+	TEST_ASSERT(prisoner.bubble_next_pop <= world.time + 8 SECONDS, "Talking put the next bubble off past the words and the fresh-need delay")
+	prisoner.drop_bubble()
+	prisoner.bubble_next_pop = world.time
+	prisoner.update_bubble()
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "A bubble popped up over what they had just said")
+	COOLDOWN_RESET(prisoner, bubble_hush)
+	prisoner.update_bubble()
+	TEST_ASSERT_EQUAL(prisoner.popped_bubble, "hungry", "The bubble did not come back once what they said had gone")
+	prisoner.manual_emote("stares at the wall.")
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "The bubble stayed up through an emote")
+	prisoner.drop_bubble()
+	prisoner.bubble_next_pop = world.time
+	prisoner.update_bubble()
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "A bubble popped up over their emote")
+	COOLDOWN_RESET(prisoner, bubble_hush)
 	prisoner.set_hunger(45)
+	prisoner.drop_bubble()
 
 	// Medical: the advanced med HUD tracks their health bar, and a bruise pack treats them.
 	var/datum/atom_hud/medhud = GLOB.huds[DATA_HUD_MEDICAL_ADVANCED]
@@ -1293,17 +1327,17 @@
 // ===== NOTHING UNTIL THEY ARE ALL THE WAY IN =====
 
 /**
- * A prisoner beaming in is arriving, and does nothing at all, until they have finished knitting back
- * together: the beam's 3 seconds (OUTPOST_PRISON_BEAM_TIME) and then the knit's 1.2
- * (TRANSPORTER_MATERIALISE_TIME). Until then the routine plans nothing, they say nothing, show no
- * thought bubble and are held still; after it they are solid, free and able to talk. Beaming out,
- * the same holds from the start. Guards and Kessler staff beaming in keep quiet too.
+ * A prisoner beaming in knits together inside the column over the beam's 3 seconds
+ * (OUTPOST_PRISON_BEAM_TIME), hidden under the transporter's mask from the first frame, and does
+ * nothing at all until the knit is over. Until then the routine plans nothing, they say nothing,
+ * show no thought bubble and are held still; after it they are solid, free and able to talk.
+ * Beaming out, the same holds from the start. Guards and Kessler staff beaming in keep quiet too.
  */
 /datum/unit_test/voidcrew_outpost_prison_beam_gates
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
-/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/knitting(mob/living/basic/outpost_prisoner/prisoner)
-	return !!prisoner.get_filter("transporter_dissolve")
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/knitting(atom/movable/arrival)
+	return !!arrival.get_filter("transporter_dissolve")
 
 /datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/all_in(mob/living/basic/outpost_prisoner/prisoner, mob/living/basic/outpost_prison_guard/guard, mob/living/basic/outpost_kessler_staff/doctor)
 	return prisoner.phase == "present" && guard.phase == "present" && !doctor.beaming
@@ -1338,17 +1372,23 @@
 	var/mob/living/basic/outpost_kessler_staff/researcher/doctor = allocate(/mob/living/basic/outpost_kessler_staff/researcher, prison_spot(home, 12, 3), null)
 	doctor.beam_in()
 
-	// In the beam: arriving, and held.
+	// In the beam they are knitting together from the start, under the mask at its lowest
+	// (TRANSPORTER_MASK_TRAVEL -58), so nothing of them shows before the beam does: arriving, and held.
+	for(var/mob/living/arrival as anything in list(prisoner, guard, doctor))
+		TEST_ASSERT(knitting(arrival), "[arrival] was not knitting together inside the beam")
+		TEST_ASSERT_EQUAL(arrival.filter_data?["transporter_dissolve"]?["y"], -58, "[arrival]'s knit did not start hidden under the mask")
 	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "Beaming in did not make the prisoner arriving") // PRISONER_ARRIVING
 	check_held(prisoner, "in the beam")
 	TEST_ASSERT(!other.start_conversation(prisoner), "A prisoner opened a conversation with one still beaming in")
 	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard skipped the beam") // OUTPOST_GUARD_ARRIVING
 	TEST_ASSERT(!guard.say_guard("arrival"), "A guard still beaming in spoke")
 	TEST_ASSERT(!guard.on_duty(), "A guard still beaming in was on duty")
+	TEST_ASSERT(doctor.beaming, "The researcher skipped the beam")
 	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher still beaming in spoke")
 
-	// The beam is over (OUTPOST_PRISON_BEAM_TIME 3 s) and they are knitting together: still arriving, still held.
-	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(knitting), prisoner), 5 SECONDS), "The prisoner never started knitting together after the beam")
+	// Most of the way through the knit: still arriving, still held.
+	sleep(2 SECONDS)
+	TEST_ASSERT(knitting(prisoner), "The prisoner stopped knitting together before the beam was over")
 	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "The prisoner was present before they finished knitting together")
 	check_held(prisoner, "while knitting together")
 	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard was on duty before they finished knitting together")
@@ -1356,7 +1396,7 @@
 	TEST_ASSERT(doctor.beaming, "The researcher finished beaming in before the knit was over")
 	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher spoke while knitting together")
 
-	// All the way in: solid, free and able to talk.
+	// All the way in as the beam ends: solid, free and able to talk.
 	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(all_in), prisoner, guard, doctor), 3 SECONDS), "The arrivals never finished beaming in")
 	TEST_ASSERT_EQUAL(prisoner.alpha, 255, "The prisoner is not solid once in")
 	TEST_ASSERT_NULL(prisoner.get_filter("transporter_dissolve"), "The prisoner still wears the knit once in")

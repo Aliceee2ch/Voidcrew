@@ -296,7 +296,7 @@
 	var/mob/living/basic/outpost_kessler_staff/researcher/doctor = new(spot, null)
 	doctor.beam_in()
 	// A second after they are all the way in, not while they are still knitting together.
-	addtimer(CALLBACK(doctor, TYPE_PROC_REF(/mob/living/basic/outpost_kessler_staff/researcher, refuse_wing)), OUTPOST_KESSLER_BEAM_TIME + transporter_materialise_time() + 1 SECONDS, TIMER_DELETE_ME)
+	addtimer(CALLBACK(doctor, TYPE_PROC_REF(/mob/living/basic/outpost_kessler_staff/researcher, refuse_wing)), OUTPOST_KESSLER_BEAM_TIME + 1 SECONDS, TIMER_DELETE_ME)
 	add_log("[doctor.real_name] of Kessler Biolabs came, but would not work in the wing as it is.")
 	return doctor
 
@@ -390,21 +390,23 @@
 	return line
 
 /**
- * Materialises where they stand, with the transporter's column and sounds. They stay `beaming`
- * (held still, silent) until finish_beam_in() at the very end of the knit.
+ * Materialises where they stand: they knit together inside the transporter's column over the
+ * whole beam. They stay `beaming` (held still, silent) until finish_beam_in() as the beam ends.
  */
 /mob/living/basic/outpost_kessler_staff/proc/beam_in()
 	beaming = TRUE
-	alpha = 0
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, OUTPOST_KESSLER_TRAIT)
 	var/turf/spot = get_turf(src)
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
-		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_KESSLER_BEAM_TIME + 1.7 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(knit_in)), OUTPOST_KESSLER_BEAM_TIME, TIMER_DELETE_ME)
+		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_KESSLER_BEAM_TIME + 0.5 SECONDS)
+	// Hidden under the mask from the first frame. finish_beam_in() takes the effects off, so one
+	// sent away mid-knit keeps beam_out()'s.
+	transporter_materialise(src, 255, OUTPOST_KESSLER_BEAM_TIME, restore = FALSE)
+	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), OUTPOST_KESSLER_BEAM_TIME, TIMER_DELETE_ME)
 
-/// The beam delivers them: the flash, and they knit back together from the feet up, still beaming in
-/mob/living/basic/outpost_kessler_staff/proc/knit_in()
+/// Fully there as the beam ends: the flash, and only now do they talk
+/mob/living/basic/outpost_kessler_staff/proc/finish_beam_in()
 	if(!beaming || departing)
 		return
 	var/turf/spot = get_turf(src)
@@ -412,13 +414,6 @@
 		new /obj/effect/temp_visual/transporter_flash(spot)
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
-	transporter_materialise(src, 255)
-	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), transporter_materialise_time(), TIMER_DELETE_ME)
-
-/// Fully there: only now do they talk
-/mob/living/basic/outpost_kessler_staff/proc/finish_beam_in()
-	if(!beaming || departing)
-		return
 	// Whatever is left of the knit, gone: they are solid from here on.
 	transporter_restore(src, 255)
 	beaming = FALSE

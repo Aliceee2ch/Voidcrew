@@ -735,6 +735,10 @@
 	if(facing)
 		setDir(facing)
 
+/// Whether they crouch where they are, as sit_on_edge() leaves them with no bed under them
+/mob/living/basic/outpost_prisoner/proc/is_crouching()
+	return !!has_offset(PRISONER_SITTING_OFFSET)
+
 // ===== FOOD =====
 
 /**

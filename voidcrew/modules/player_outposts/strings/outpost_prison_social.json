@@ -740,6 +740,64 @@
 				"Hm.",
 				"Waiting."
 			]
+		},
+		"get_up": {
+			"any": [
+				"Alright, I'm up.",
+				"Okay. Getting up.",
+				"Sure. Go ahead.",
+				"I'm up. What's this about?",
+				"Fine by me."
+			],
+			"chatty": [
+				"Okay, I'm up. Looking for something? I'll stand over here.",
+				"Up I get. Nothing under there but lumps, you know."
+			],
+			"grumpy": [
+				"I was comfortable, you know.",
+				"Fine. Up."
+			],
+			"nervous": [
+				"Okay, okay, I'm up. I didn't do anything.",
+				"Up. Sorry. Is something wrong?"
+			],
+			"cheerful": [
+				"No trouble. I needed to stretch anyway.",
+				"Up and about. Go ahead."
+			],
+			"quiet": [
+				"Mm. Up.",
+				"Alright."
+			]
+		},
+		"get_up_grumble": {
+			"any": [
+				"I was lying down. Is that a crime now?",
+				"Yeah, yeah. I'm up.",
+				"Can't anyone get some rest in here?",
+				"Every time I lie down, somebody wants something.",
+				"Fine. Up. Happy?"
+			],
+			"chatty": [
+				"Oh sure, take my one comfy spot. Don't mind me.",
+				"You could have asked nicely. I'm up, I'm up."
+			],
+			"grumpy": [
+				"Unbelievable. Go on, tear my bunk apart.",
+				"I'm up. Don't expect me to like it."
+			],
+			"nervous": [
+				"I'm up, I'm up. Please don't make a mess of it.",
+				"Is this about something? I'm up, alright?"
+			],
+			"cheerful": [
+				"Well, that was a short rest.",
+				"Fine. Try not to lose my pillow."
+			],
+			"quiet": [
+				"Tch. Fine.",
+				"Whatever."
+			]
 		}
 	}
 }

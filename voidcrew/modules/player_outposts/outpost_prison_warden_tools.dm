@@ -2,11 +2,11 @@
  * # Warden tools: the talk menu
  *
  * Owner: XC (extras-plan.md 4.8). A member of the wing (is_member()), not in combat mode, right
- * clicks an awake prisoner with an empty hand: a radial menu opens with three choices, then any
- * other package's (talk_menu_extra_choices(): XF's pat-down, XG's questions), whose picks go to
- * talk_menu_extra_act(). Visitors get no menu.
+ * clicks an awake prisoner who is not down (cuffed is fine) with an empty hand: a radial menu opens
+ * with its own choices, then any other package's (talk_menu_extra_choices(): XF's pat-down, XG's
+ * questions), whose picks go to talk_menu_extra_act(). Visitors get no menu.
  *
- * Each of the three is a short talk face to face (PRISON_TALK_MENU_TIME), which holds their
+ * The first three are a short talk face to face (PRISON_TALK_MENU_TIME), which holds their
  * routine and any threat as a talk-down does, and nobody in trouble or below
  * PRISONER_TALK_MIN_MOOD will have it:
  * - "How are you doing?": their biggest complaint, or that they're fine. No mood change.
@@ -15,6 +15,10 @@
  *   personality, lower for a fair member, higher for a brute) they go and sit on their bed for a
  *   minute or so; below it they refuse. Asking a third time inside PRISON_TALK_ORDER_SPAM_WINDOW
  *   costs mood and is refused. Forcing someone back is still the baton, the drag and the bolts.
+ *   Not offered to someone in cuffs, who can't walk anywhere.
+ * - "On your feet", offered while they lie, sit or crouch: an order, and they always get up,
+ *   grumbling below their line. Off a bed they step aside and stay put for PRISON_TALK_GET_UP_HOLD,
+ *   so the mattress can be searched. Nothing else changes.
  * Numbers in voidcrew/_DEFINES/outpost_prison_social.dm.
  */
 
@@ -53,11 +57,11 @@
 	INVOKE_ASYNC(src, PROC_REF(talk_menu_open), user)
 	return COMPONENT_CANCEL_ATTACK_CHAIN
 
-/// Whether `user` may use the talk menu on them now: a member out of combat mode, and them awake, present and on their feet
+/// Whether `user` may use the talk menu on them now: a member out of combat mode, and them awake, present and not down (cuffed is fine)
 /mob/living/basic/outpost_prisoner/proc/talk_menu_allowed(mob/living/user)
 	if(!istype(user) || QDELETED(user) || user.stat != CONSCIOUS || user.combat_mode || is_outpost_prisoner(user))
 		return FALSE
-	if(QDELETED(src) || stat != CONSCIOUS || phase != PRISONER_PRESENT || can_be_dragged() || activity?.sleeping)
+	if(QDELETED(src) || stat != CONSCIOUS || phase != PRISONER_PRESENT || is_down() || activity?.sleeping)
 		return FALSE
 	return !!prison?.is_member(user)
 
@@ -72,7 +76,7 @@
 		return
 	talk_menu_act(user, choice)
 
-/// The menu's choices, name -> image: its own three first, then other packages'
+/// The menu's choices, name -> image: its own first (no walk back to the cell in cuffs, no getting up for someone already up), then other packages'
 /mob/living/basic/outpost_prisoner/proc/talk_menu_choices(mob/living/user)
 	var/static/list/own_choices
 	if(!own_choices)
@@ -80,8 +84,13 @@
 			(PRISON_TALK_HOW) = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_talk"),
 			(PRISON_TALK_CRIME) = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_lore"),
 			(PRISON_TALK_CELL) = image(icon = /obj/structure/bed::icon, icon_state = /obj/structure/bed::icon_state),
+			(PRISON_TALK_GET_UP) = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_up"),
 		)
 	var/list/choices = own_choices.Copy()
+	if(cuffs)
+		choices -= PRISON_TALK_CELL
+	if(!talk_menu_can_get_up())
+		choices -= PRISON_TALK_GET_UP
 	var/list/extra = talk_menu_other_choices(user)
 	for(var/choice in extra)
 		if(!(choice in choices))
@@ -108,6 +117,8 @@
 			return talk_menu_ask_crime(user)
 		if(PRISON_TALK_CELL)
 			return talk_menu_order(user)
+		if(PRISON_TALK_GET_UP)
+			return talk_menu_get_up(user)
 	return talk_menu_other_act(user, choice)
 
 /**
@@ -218,6 +229,10 @@
  * PRISON_TALK_ORDER_SPAM_MOOD and is refused. Returns TRUE if they went.
  */
 /mob/living/basic/outpost_prisoner/proc/talk_menu_order(mob/living/user)
+	// Cuffed while the menu was open: they can't walk anywhere.
+	if(cuffs)
+		balloon_alert(user, "cuffed")
+		return FALSE
 	if(!COOLDOWN_FINISHED(src, order_cooldown))
 		balloon_alert(user, "just asked them")
 		return FALSE
@@ -311,5 +326,87 @@
 	if(!prisoner.cell?.contains(prisoner))
 		return ACTIVITY_DONE
 	return ..()
+
+// ===== "ON YOUR FEET" =====
+
+/// Whether they lie or sit on something, or crouch, so there is something to get up from
+/mob/living/basic/outpost_prisoner/proc/talk_menu_can_get_up()
+	return !!buckled || is_crouching()
+
+/**
+ * Tells them to get up. An order, not a request: they get up whatever their mood, cuffed or not,
+ * and below the line at which they'd go back to their cell (talk_menu_order_line()) they grumble.
+ * Whatever they were doing stops, a shiv or a brew on the bed included. Off a bed they step onto a
+ * free tile beside it, inside its cell if they can, and if free they stay there for
+ * PRISON_TALK_GET_UP_HOLD so the mattress can be searched. Costs no mood and no reputation.
+ * Only trouble, or someone else already talking to them, stops it. Returns TRUE if they got up.
+ */
+/mob/living/basic/outpost_prisoner/proc/talk_menu_get_up(mob/living/user)
+	if(QDELETED(user))
+		return FALSE
+	if(!talk_menu_can_get_up())
+		balloon_alert(user, "already up")
+		return FALSE
+	if(talking || cuff_work)
+		balloon_alert(user, "busy")
+		return FALSE
+	// Trouble comes before any order, unless cuffs have put a stop to it.
+	if(!cuffs && in_trouble())
+		face_atom(user)
+		say_context("talk_refuse")
+		balloon_alert(user, "not listening")
+		return FALSE
+	var/sour = mood < talk_menu_order_line(user)
+	var/obj/structure/bed/bed = istype(buckled, /obj/structure/bed) ? buckled : null
+	user.visible_message(span_notice("[user] tells [src] to get up."), span_notice("You tell [src] to get up."))
+	// A cuffed prisoner is doing nothing; anyone else stops, and lets go of what they claimed.
+	end_activity()
+	stand_up()
+	if(bed)
+		talk_menu_step_off(bed)
+	face_atom(user)
+	say_context(sour ? "get_up_grumble" : "get_up")
+	// Cuffs keep them where they are anyway.
+	if(!cuffs)
+		var/datum/prisoner_activity/told_to_stand/standing = new(src)
+		if(bed)
+			standing.claim(bed)
+		start_activity(standing)
+		// Already where they stand: the clock starts now, AI or not.
+		standing.arrive()
+	return TRUE
+
+/**
+ * Steps off `bed` onto a free tile beside it: one inside the bed's cell if there is one, else any.
+ * Returns the tile, or null if they stayed where they were.
+ */
+/mob/living/basic/outpost_prisoner/proc/talk_menu_step_off(obj/structure/bed/bed)
+	var/turf/bed_turf = get_turf(bed)
+	if(!bed_turf || loc != bed_turf)
+		return null
+	var/datum/outpost_prison_cell/bed_cell = prison?.cell_at(bed_turf)
+	var/list/inside = list()
+	var/list/outside = list()
+	for(var/direction in GLOB.cardinals)
+		var/turf/beside = get_step(bed_turf, direction)
+		if(!beside || beside.is_blocked_turf(source_atom = src) || tile_taken(beside))
+			continue
+		if(bed_cell?.contains(beside))
+			inside += beside
+		else
+			outside += beside
+	for(var/turf/tile as anything in inside + outside)
+		Move(tile, get_dir(bed_turf, tile))
+		if(loc == tile)
+			return tile
+	return null
+
+/// Told to get up: they stay where they stood up for PRISON_TALK_GET_UP_HOLD, keeping their bed free, then carry on
+/datum/prisoner_activity/told_to_stand
+	name = "told to get up"
+	weight = 0
+	interruptible = FALSE
+	min_duration = PRISON_TALK_GET_UP_HOLD
+	max_duration = PRISON_TALK_GET_UP_HOLD
 
 #undef ACTIVITY_DONE

@@ -24,8 +24,9 @@
 // What an activity's tick() wants next, as in outpost_prison_routine.dm (which undefines its own)
 #define ACTIVITY_CONTINUE 0
 #define ACTIVITY_DONE 1
-/// The talk menu's pat-down choice
+/// The talk menu's pat-down choice, and its name for someone in cuffs, whose hands stay behind them
 #define CONTRABAND_PATDOWN_CHOICE "Hands on the wall"
+#define CONTRABAND_PATDOWN_CUFFED_CHOICE "Pat down"
 /// The prison's own pruno bag
 #define CONTRABAND_PRUNO_TYPE /obj/item/reagent_containers/cup/glass/bottle/pruno/outpost_prison
 
@@ -351,7 +352,12 @@
 		source.balloon_alert(user, "members only")
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(source.has_buckled_mobs())
-		source.balloon_alert(user, "someone's lying on it")
+		// A prisoner lying awake on it can be told to get up from the talk menu.
+		var/mob/living/basic/outpost_prisoner/lying = locate() in source.buckled_mobs
+		var/why = "someone's lying on it"
+		if(lying)
+			why = lying.activity?.sleeping ? "they're asleep" : "tell them to get up"
+		source.balloon_alert(user, why)
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	INVOKE_ASYNC(src, PROC_REF(contraband_search_mattress), user, source)
 	return COMPONENT_CANCEL_ATTACK_CHAIN
@@ -449,11 +455,14 @@
 /datum/outpost_prison/proc/contraband_talk_choices(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	if(!prisoner || !user || !is_member(user))
 		return list()
+	if(prisoner.cuffs)
+		return list(CONTRABAND_PATDOWN_CUFFED_CHOICE = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_examine"))
 	return list(CONTRABAND_PATDOWN_CHOICE = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_examine"))
 
 /// Runs a talk menu choice of this package; TRUE if it was one. May sleep.
 /datum/outpost_prison/proc/contraband_talk_act(mob/living/basic/outpost_prisoner/prisoner, mob/living/user, choice)
-	if(choice != CONTRABAND_PATDOWN_CHOICE)
+	// Either name: cuffs may have gone on or come off while the menu was open.
+	if(choice != CONTRABAND_PATDOWN_CHOICE && choice != CONTRABAND_PATDOWN_CUFFED_CHOICE)
 		return FALSE
 	contraband_pat_down(prisoner, user)
 	return TRUE
@@ -461,36 +470,48 @@
 /**
  * "Hands on the wall": a member pats a prisoner down for OUTPOST_CONTRABAND_SEARCH_TIME. It finds
  * what they carry from the mail; for nothing, they lose mood (once per OUTPOST_CONTRABAND_SEARCH_GAP)
- * and someone watching may speak up. Same gate as a talk. Returns "found", "empty" or null. Sleeps.
+ * and someone watching may speak up. Same gate as a talk, except that someone in cuffs has no say
+ * in it: rioting, loose or sour, they hold still and are searched, unless someone is already
+ * talking to them or working on their cuffs. Returns "found", "empty" or null. Sleeps.
  */
 /datum/outpost_prison/proc/contraband_pat_down(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	if(QDELETED(prisoner) || QDELETED(user) || !is_member(user) || !(prisoner in prisoners))
 		return null
 	if(prisoner.stat != CONSCIOUS || prisoner.phase != PRISONER_PRESENT)
 		return null
-	// Fighting, squaring up, climbing, lying beaten or already being talked to: not now
-	if(prisoner.in_trouble())
-		prisoner.balloon_alert(user, "busy")
-		return null
-	if(!prisoner.will_listen())
-		prisoner.face_atom(user)
-		prisoner.say_context("talk_refuse")
-		prisoner.balloon_alert(user, "not listening")
-		return null
+	if(prisoner.cuffs)
+		if(prisoner.talking || prisoner.cuff_work)
+			prisoner.balloon_alert(user, "busy")
+			return null
+	else
+		// Fighting, squaring up, climbing, lying beaten or already being talked to: not now
+		if(prisoner.in_trouble())
+			prisoner.balloon_alert(user, "busy")
+			return null
+		if(!prisoner.will_listen())
+			prisoner.face_atom(user)
+			prisoner.say_context("talk_refuse")
+			prisoner.balloon_alert(user, "not listening")
+			return null
 	prisoner.talking = TRUE
 	prisoner.end_activity()
 	prisoner.stand_up()
-	var/wall_dir
-	for(var/direction in GLOB.cardinals)
-		if(isclosedturf(get_step(prisoner, direction)))
-			wall_dir = direction
-			break
-	if(wall_dir)
-		prisoner.setDir(wall_dir)
-		prisoner.manual_emote("puts [prisoner.p_their()] hands on the wall.")
-	else
+	if(prisoner.cuffs)
+		// Their hands are cuffed already; nothing for them to put on the wall
 		prisoner.face_atom(user)
-		prisoner.manual_emote("puts [prisoner.p_their()] hands up.")
+		prisoner.manual_emote("stands still to be searched.")
+	else
+		var/wall_dir
+		for(var/direction in GLOB.cardinals)
+			if(isclosedturf(get_step(prisoner, direction)))
+				wall_dir = direction
+				break
+		if(wall_dir)
+			prisoner.setDir(wall_dir)
+			prisoner.manual_emote("puts [prisoner.p_their()] hands on the wall.")
+		else
+			prisoner.face_atom(user)
+			prisoner.manual_emote("puts [prisoner.p_their()] hands up.")
 	user.visible_message(span_notice("[user] pats [prisoner] down."), span_notice("You pat [prisoner] down."))
 	var/finished = do_after(user, OUTPOST_CONTRABAND_SEARCH_TIME, target = prisoner)
 	if(QDELETED(prisoner))
@@ -876,4 +897,5 @@
 #undef ACTIVITY_CONTINUE
 #undef ACTIVITY_DONE
 #undef CONTRABAND_PATDOWN_CHOICE
+#undef CONTRABAND_PATDOWN_CUFFED_CHOICE
 #undef CONTRABAND_PRUNO_TYPE

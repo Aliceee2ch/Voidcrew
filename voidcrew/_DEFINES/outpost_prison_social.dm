@@ -76,6 +76,8 @@
 #define PRISON_TALK_HOW "How are you doing?"
 #define PRISON_TALK_CRIME "What are you in for?"
 #define PRISON_TALK_CELL "Back to your cell"
+/// Offered only while they lie, sit or crouch
+#define PRISON_TALK_GET_UP "On your feet"
 /// How long each choice's talk takes
 #define PRISON_TALK_MENU_TIME (1.5 SECONDS)
 /// Between answers to each question, per prisoner
@@ -101,3 +103,5 @@
 /// How long a prisoner sent back sits on their bed
 #define PRISON_SENT_TO_CELL_MIN (60 SECONDS)
 #define PRISON_SENT_TO_CELL_MAX (90 SECONDS)
+/// How long a prisoner told to get up stays where they stepped, so staff can search the bed
+#define PRISON_TALK_GET_UP_HOLD (10 SECONDS)

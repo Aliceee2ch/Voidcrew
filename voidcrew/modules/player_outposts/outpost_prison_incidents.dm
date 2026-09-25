@@ -568,7 +568,6 @@
 	actor.say_context("incident_stab", target)
 	actor.visible_message(span_danger("[actor] lunges at [target] with a shiv!"))
 	prison.add_log("[actor.real_name] pulled a shiv on [target.real_name].")
-	prison.announce("Prison wing: [actor.real_name] pulled a shiv on [target.real_name].", SHIP_NOTIFY_DANGER)
 	return TRUE
 
 /// After a stabbing, the attacker lets go of the shiv, unless they are rioting or loose with it

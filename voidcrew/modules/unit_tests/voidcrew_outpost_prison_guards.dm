@@ -401,6 +401,9 @@
 	guard.baton_cooldown = 0
 	prison.guards_tick(1)
 	TEST_ASSERT(guard_test_is_line(guard.last_line, "loose_call"), "The guard did not call out the loose prisoner: [guard.last_line]")
+	// Said aloud and logged; nothing goes out over the outpost.
+	var/list/call_entry = prison.entries[1]
+	TEST_ASSERT_EQUAL(call_entry["text"], "[guard.real_name]: \"[guard.last_line]\"", "The loose call was not logged: [call_entry["text"]]")
 	TEST_ASSERT(runner.getStaminaLoss() >= 35, "A loose prisoner beside a guard was not batoned") // OUTPOST_GUARD_BATON_STAMINA
 	runner.trouble = null
 	settle_prison_air(home)
@@ -437,7 +440,16 @@
 	for(var/turf/spot as anything in list(one_spot, two_spot))
 		TEST_ASSERT_EQUAL(get_dist(spot, door), 1, "A hold position is not beside the staff door")
 		TEST_ASSERT(prison.staff_ground[spot], "A hold position is not in the office")
-	TEST_ASSERT(prison.guard_riot_announced, "The guards' hold went out on no radio")
+	TEST_ASSERT(prison.guard_riot_announced, "The guards' hold was never called out")
+	// Said aloud and logged as "Name: \"line\"", once; nothing goes out over the outpost.
+	var/holds_logged = 0
+	for(var/list/entry as anything in prison.entries)
+		for(var/mob/living/basic/outpost_prison_guard/holder as anything in list(guard_one, guard_two))
+			var/prefix = "[holder.real_name]: \""
+			var/text = entry["text"]
+			if(findtext(text, prefix) == 1 && guard_test_is_line(copytext(text, length(prefix) + 1, -1), "riot_hold"))
+				holds_logged++
+	TEST_ASSERT_EQUAL(holds_logged, 1, "The guards' hold was logged [holds_logged] times, not once")
 
 	// A rioter who comes up beside a guard holding the door gets the baton.
 	guard_one.forceMove(one_spot)

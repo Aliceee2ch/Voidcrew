@@ -581,7 +581,7 @@
 			add_log("[prisoner.real_name] died before the serum took. No data, no fee.")
 			var/line = outpost_experiment_line("researcher_no_data")
 			if(line)
-				announce("Kessler Biolabs: \"[line]\"", SHIP_NOTIFY_NOTICE)
+				add_log("Kessler Biolabs: \"[line]\"")
 			experiment_failed("the subject died before the serum took")
 		return
 	if(!creature_live() || prisoner.death_blamed)

@@ -394,7 +394,6 @@
  */
 /datum/outpost_prison/proc/on_prisoner_death(mob/living/basic/outpost_prisoner/prisoner)
 	add_log("[prisoner.real_name] died.")
-	announce("Prison wing: [prisoner.real_name] died.", SHIP_NOTIFY_WARNING)
 	prisoner.died_at = world.time
 	prisoner.clear_trouble()
 	if(prisoner.staff_to_blame())

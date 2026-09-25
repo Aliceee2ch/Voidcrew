@@ -2,7 +2,7 @@
  * # The Kessler researcher
  *
  * A researcher from Kessler Biolabs beams into the warden's office with the transporter's look,
- * says so on the outpost radio, and waits OUTPOST_EXPERIMENT_STAY seconds (OUTPOST_EXPERIMENT_STAY_OPEN
+ * with a chime and a line in the warden's log, and waits OUTPOST_EXPERIMENT_STAY seconds (OUTPOST_EXPERIMENT_STAY_OPEN
  * at most while a manager reads the offer). They only talk business with the outpost's managers;
  * anyone else gets "I only deal with the management." A manager clicking them gets the offer card
  * in a tgui_alert(), claimed before the prompt opens so two managers cannot both take it.
@@ -164,7 +164,6 @@
 	visits_started = TRUE
 	doctor.beam_in()
 	add_log("[doctor.real_name] of Kessler Biolabs came with an offer.")
-	announce("[doctor.real_name] of Kessler Biolabs is waiting in the warden's office.", SHIP_NOTIFY_NOTICE)
 	var/turf/chime_turf = alarm_turf()
 	if(chime_turf)
 		playsound(chime_turf, 'sound/machines/chime.ogg', 40, FALSE)

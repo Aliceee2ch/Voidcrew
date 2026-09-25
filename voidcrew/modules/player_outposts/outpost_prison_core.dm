@@ -26,8 +26,8 @@
  * person's hand), never off a floor or a table, so the hatches, OUTPOST_PRISON_HATCH_CAPACITY
  * items each, are the wing's only stockpile. The office supply dispenser (outpost_prison_fixtures.dm)
  * sells rations, a round of rations straight onto a hatch, bruise packs and uniforms. Stocking a
- * hatch gets a call-out from the yard; a hatch left empty while prisoners wait for it is reported
- * on the outpost radio.
+ * hatch gets a call-out from the yard; a hatch left empty while prisoners wait for it is noted
+ * in the warden's log.
  *
  * Everything that advances with time goes through tick(seconds), which process() calls every
  * second, so tests can advance a prison by minutes in one call. The random mess prisoners leave,
@@ -60,7 +60,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	/// Prisoners waiting for food and for a clean uniform that no hatch in their reach has, as of the last supply check
 	var/waiting_for_food = 0
 	var/waiting_for_suits = 0
-	/// Seconds until the outpost radio may report an empty hatch again
+	/// Seconds until the warden's log may note an empty hatch again
 	var/hatch_warning_left = 0
 	/// Prisoners who sat down to eat at a mess table -> world.time, for shared meals
 	var/list/table_eaters = list()
@@ -262,7 +262,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 /**
  * Advances supplies by `seconds`: every PRISON_SUPPLY_REFRESH_SECONDS, prisoners whose AI is asleep
  * help themselves, hurt prisoners go to anyone holding dressings, and the hatches are checked for
- * prisoners left waiting (reported on the radio at most every OUTPOST_PRISON_HATCH_WARNING_GAP).
+ * prisoners left waiting (noted in the log at most every OUTPOST_PRISON_HATCH_WARNING_GAP).
  */
 /datum/outpost_prison/proc/supply_tick(seconds)
 	hatch_warning_left = max(0, hatch_warning_left - seconds)
@@ -326,7 +326,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 /**
  * Counts who is waiting on the hatches: hungry (not well fed) with no food on a hatch they can
  * reach, or in a dirty uniform with no clean one there. Only prisoners who can reach a hatch
- * count, and only while they are well and out of trouble. Reports it on the outpost radio.
+ * count, and only while they are well and out of trouble. Notes it in the warden's log.
  */
 /datum/outpost_prison/proc/check_hatch_shortage()
 	waiting_for_food = 0
@@ -350,9 +350,9 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 			waiting_for_suits++
 	if(hatch_shortage() && hatch_warning_left <= 0)
 		hatch_warning_left = OUTPOST_PRISON_HATCH_WARNING_GAP / (1 SECONDS)
-		announce(hatch_warning_text())
+		add_log(hatch_warning_text())
 
-/// "Prison wing: the hatch is out of food and 2 prisoners are waiting."
+/// "The hatch is out of food and 2 prisoners are waiting."
 /datum/outpost_prison/proc/hatch_warning_text()
 	var/missing
 	if(waiting_for_food && waiting_for_suits)
@@ -360,7 +360,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	else
 		missing = waiting_for_food ? "food" : "clean uniforms"
 	var/waiting = max(waiting_for_food, waiting_for_suits)
-	return "Prison wing: the hatch is out of [missing] and [waiting] prisoner[waiting == 1 ? " is" : "s are"] waiting."
+	return "The hatch is out of [missing] and [waiting] prisoner[waiting == 1 ? " is" : "s are"] waiting."
 
 /**
  * Fills every serving hatch to capacity for free: meals up to OUTPOST_PRISON_FILL_MEAL_SHARE of

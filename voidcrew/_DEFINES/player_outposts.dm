@@ -69,6 +69,12 @@
 #define OUTPOST_CHECKPOINT_SAVE_COST 10000
 #define OUTPOST_CHECKPOINT_UPDATE_COST 5000
 
+/// New ships built to order in the ship bay (outpost_ship_orders.dm). Credits replace parts:
+/// every part a hull, theme or module would cost in the lobby shipyard is this many credits.
+#define OUTPOST_SHIP_ORDER_PART_PRICE 2500
+/// Charged on every order, on top of the hull's parts.
+#define OUTPOST_SHIP_ORDER_FEE 10000
+
 // ===== STAGED CHECKPOINT RECONSTRUCTION (see outpost_checkpoint_construction.dm) =====
 /// The saved ship is loaded and waiting for its survey markers.
 #define CHECKPOINT_BUILD_PREPARING "preparing"

@@ -7248,6 +7248,7 @@
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_loading.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_build_effects.dm"
 #include "voidcrew\modules\player_outposts\outpost_checkpoint_construction.dm"
+#include "voidcrew\modules\player_outposts\outpost_ship_orders.dm"
 #include "voidcrew\modules\player_outposts\outpost_research.dm"
 #include "voidcrew\modules\player_outposts\outpost_relay.dm"
 #include "voidcrew\modules\player_outposts\outpost_residents.dm"

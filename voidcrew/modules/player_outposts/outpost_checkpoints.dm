@@ -9,13 +9,15 @@
 
 /// Checkpoints remain accessible on the primary deck while every bay is unloaded.
 /obj/item/circuitboard/computer/ship_checkpoint
-	name = "Checkpoint Console (Computer Board)"
+	name = "Shipyard Console (Computer Board)"
 	greyscale_colors = CIRCUIT_COLOR_COMMAND
 	build_path = /obj/machinery/computer/ship_checkpoint
 
+/// The outpost shipyard: new ships built to order, and ship checkpoints. The type path predates
+/// the shop and is kept so maps and boards stay valid.
 /obj/machinery/computer/ship_checkpoint
-	name = "checkpoint console"
-	desc = "Save a ship checkpoint, update it, or recover a lost ship in an outpost ship bay."
+	name = "shipyard console"
+	desc = "Orders new ships for the outpost ship bay and keeps checkpoints of ships docked there, for rebuilding one that is lost."
 	icon_screen = "id"
 	icon_keyboard = "id_key"
 	circuit = /obj/item/circuitboard/computer/ship_checkpoint
@@ -95,6 +97,7 @@
 	outpost = null
 	QDEL_NULL(quote)
 	QDEL_NULL(bay_view)
+	QDEL_NULL(cart)
 	return ..()
 
 /datum/ship_checkpoint_ui/proc/on_outpost_deleted()
@@ -119,11 +122,17 @@
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		open_bay_view()
-		ui = new(user, src, "ShipCheckpoint", "[outpost.name] Checkpoints")
+		ui = new(user, src, "ShipCheckpoint", "[outpost.name] Shipyard")
 		ui.open()
 
 /datum/ship_checkpoint_ui/ui_close(mob/user)
 	qdel(src)
+
+/datum/ship_checkpoint_ui/ui_assets(mob/user)
+	return list(get_asset_datum(/datum/asset/simple/ship_previews))
+
+/datum/ship_checkpoint_ui/ui_static_data(mob/user)
+	return shop_static_data()
 
 GLOBAL_VAR_INIT(checkpoint_bay_view_serial, 0)
 
@@ -294,6 +303,7 @@ GLOBAL_VAR_INIT(checkpoint_bay_view_serial, 0)
 		"save_cost" = OUTPOST_CHECKPOINT_SAVE_COST,
 		"update_cost" = OUTPOST_CHECKPOINT_UPDATE_COST,
 		"has_checkpoint" = !!outpost.checkpoint_for(user),
+		"shop" = shop_data(user),
 	)
 
 /datum/ship_checkpoint_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -322,11 +332,13 @@ GLOBAL_VAR_INIT(checkpoint_bay_view_serial, 0)
 		if("rebuild")
 			var/datum/ship_checkpoint/snapshot = locate(params["ref"]) in outpost.checkpoints
 			rebuild(user, snapshot)
+		else
+			shop_act(user, action, params)
 	return TRUE
 
 /datum/design/board/ship_checkpoint
-	name = "Checkpoint Console Board"
-	desc = "Allows construction of an outpost checkpoint console."
+	name = "Shipyard Console Board"
+	desc = "Allows construction of an outpost shipyard console."
 	id = "ship_checkpoint"
 	build_path = /obj/item/circuitboard/computer/ship_checkpoint
 	category = list(RND_CATEGORY_COMPUTER + RND_SUBCATEGORY_COMPUTER_ENGINEERING)

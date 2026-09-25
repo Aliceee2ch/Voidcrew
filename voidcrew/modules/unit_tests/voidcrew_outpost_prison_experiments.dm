@@ -823,3 +823,23 @@
 	TEST_ASSERT(QDELETED(leftover), "Abandoning the outpost left the serum")
 	TEST_ASSERT_EQUAL(treasury.account_balance, balance, "Abandoning the outpost cost a fee")
 	settle_prison_air(home)
+
+// ===== THE LEDGER AND PRISONERS =====
+
+/// A prisoner's blows on a creature are left out of the crew's share: they neither help nor hurt the bonus
+/datum/unit_test/voidcrew_outpost_prison_ledger_prisoners
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_ledger_prisoners/Run()
+	var/mob/living/basic/cow/creature = allocate(/mob/living/basic/cow, run_loc_floor_bottom_left)
+	var/datum/component/experiment_damage_ledger/ledger = creature.AddComponent(/datum/component/experiment_damage_ledger)
+	var/mob/living/basic/outpost_prisoner/rioter = allocate(/mob/living/basic/outpost_prisoner, run_loc_floor_bottom_left)
+	var/mob/living/carbon/human/crew = make_player(run_loc_floor_bottom_left, "ledgercrew")
+	ledger.note_attacker(crew)
+	creature.apply_damage(10, BRUTE)
+	TEST_ASSERT_EQUAL(ledger.player_damage, 10, "The crew's blow went on the ledger as [ledger.player_damage]")
+	ledger.note_attacker(rioter)
+	creature.apply_damage(10, BRUTE)
+	TEST_ASSERT_EQUAL(ledger.player_damage, 10, "A prisoner's blow counted as the crew's")
+	TEST_ASSERT_EQUAL(ledger.other_damage, 0, "A prisoner's blow counted against the crew's share")
+	TEST_ASSERT_EQUAL(ledger.player_share(), 1, "The crew's share fell to [ledger.player_share()] after a prisoner's blow")

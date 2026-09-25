@@ -921,7 +921,9 @@
  * done at least OUTPOST_EXPERIMENT_PLAYER_SHARE of it. Damage and the report of who did it arrive
  * in either order within one tick, so each waits a tick for the other; damage nobody claims is
  * not the players'. The horror's burning is the exception: it is the players' when one lit it or
- * hurt it lately (crediting_players). Also marks the mob as an experiment's (TRAIT_OUTPOST_EXPERIMENT).
+ * hurt it lately (crediting_players). Prisoners' blows (a rioter's shiv) are nobody's: they are left
+ * out of the share altogether, so they neither help nor hurt the crew's bonus. Also marks the mob as
+ * an experiment's (TRAIT_OUTPOST_EXPERIMENT).
  */
 /datum/component/experiment_damage_ledger
 	dupe_mode = COMPONENT_DUPE_UNIQUE
@@ -931,9 +933,10 @@
 	/// Damage this tick that nobody has claimed yet, and the tick
 	var/pending = 0
 	var/pending_time = -1
-	/// The last attack reported: when, and whether a player made it
+	/// The last attack reported: when, whether a player made it, and whether a prisoner did (left out of the share)
 	var/last_attack_time = -1
 	var/last_attack_player = FALSE
+	var/last_attack_prisoner = FALSE
 	/// The last player who hurt it, and when
 	var/datum/weakref/last_player_ref
 	var/last_player_time = 0
@@ -969,11 +972,14 @@
 /// Someone attacked it: damage it takes this tick is theirs
 /datum/component/experiment_damage_ledger/proc/note_attacker(atom/attacker)
 	var/player = outpost_experiment_is_player(attacker)
+	var/prisoner = is_outpost_prisoner(attacker)
 	settle()
 	last_attack_time = world.time
 	last_attack_player = player
+	last_attack_prisoner = prisoner
 	if(pending > 0 && pending_time == world.time)
-		add_damage(pending, player)
+		if(!prisoner)
+			add_damage(pending, player)
 		pending = 0
 	if(player)
 		last_player_ref = WEAKREF(attacker)
@@ -987,7 +993,8 @@
 		add_damage(damage, TRUE)
 		return
 	if(last_attack_time == world.time)
-		add_damage(damage, last_attack_player)
+		if(!last_attack_prisoner)
+			add_damage(damage, last_attack_player)
 		return
 	settle()
 	pending += damage

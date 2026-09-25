@@ -30,7 +30,7 @@
 	var/list/staff_ground
 	/// Where the wing's staff doors stood (turf = TRUE): an airlock built on one becomes a staff door
 	var/list/staff_door_turfs = list()
-	/// Door tiles watched for rebuilt airlocks (turf = TRUE)
+	/// Door and serving hatch tiles watched for rebuilt airlocks and window doors (turf = TRUE)
 	var/list/door_watch_turfs = list()
 	/// md5 of the wing's walls and airlocks at the last look (layout_signature())
 	var/layout_hash
@@ -311,6 +311,8 @@
 		if(locate(/obj/machinery/door/airlock/security/prison_staff) in tile)
 			staff_door_turfs[tile] = TRUE
 			watch_door_turf(tile)
+	// A window door fitted to a serving hatch (outpost_prison_breakout.dm)
+	watch_hatch_turfs()
 	layout_hash = layout_signature()
 
 /datum/outpost_prison/proc/watch_door_turf(turf/tile)
@@ -332,9 +334,17 @@
 	refresh_cell_block()
 	refresh_reach()
 
-/// Something was built on a door tile. A plain airlock becomes the door that stood there, once its builder is done with it.
+/**
+ * Something was built on a door tile. A plain airlock becomes the door that stood there, and a
+ * window door on a serving hatch the hatch's own (restore_hatch_windoor()), once its builder is
+ * done with it.
+ */
 /datum/outpost_prison/proc/on_door_turf_initialized(turf/source, atom/created, mapload)
 	SIGNAL_HANDLER
+	if(istype(created, /obj/machinery/door/window))
+		if(!is_outpost_prison_windoor(created))
+			addtimer(CALLBACK(src, PROC_REF(restore_hatch_windoor), created), 1)
+		return
 	if(!istype(created, /obj/machinery/door/airlock) || is_outpost_prison_airlock(created))
 		return
 	addtimer(CALLBACK(src, PROC_REF(restore_prison_door), created), 1)

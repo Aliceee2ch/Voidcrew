@@ -563,9 +563,10 @@
 
 /**
  * One blow at `target`, which must be next to them: staff are hit for real, another prisoner is
- * hit but never killed, a serving hatch open on both sides is climbed, and anything else is
- * smashed. While a fight is still an argument they only square up; in a riot's wind-up and after
- * a baton hit, no blows land. Returns TRUE if they acted.
+ * hit but never killed, a serving hatch open on both sides is climbed, a tile (a rioter's way out
+ * of the cell block) is stepped onto, and anything else is smashed. While a fight is still an
+ * argument they only square up; in a riot's wind-up and after a baton hit, no blows land. Returns
+ * TRUE if they acted.
  */
 /mob/living/basic/outpost_prisoner/proc/confront(atom/target)
 	if(QDELETED(target) || !trouble_can_act() || world.time < baton_stop_until)
@@ -577,6 +578,8 @@
 		return FALSE
 	if(!within_reach(target))
 		return FALSE
+	if(isturf(target))
+		return step_to(src, target, 0)
 	if(isliving(target))
 		. = strike(target)
 		if(swing_ref?.resolve() == target)
@@ -647,8 +650,9 @@
 	return TRUE
 
 /**
- * A blow at a fixture or door beside them. Before the breakout a door is only banged on: it shakes
- * and booms but takes no damage.
+ * A blow at a fixture, door or window beside them. A way out of the cell block is the prison's to
+ * judge (hit_exit(), outpost_prison_breakout.dm). Any other door, and anything that is outpost
+ * property, is only banged on: it shakes and booms but takes no damage.
  */
 /mob/living/basic/outpost_prisoner/proc/smash(obj/target)
 	if(!istype(target) || QDELETED(target))
@@ -656,17 +660,15 @@
 	do_attack_animation(target, ATTACK_EFFECT_SMASH)
 	changeNext_move(melee_attack_cooldown)
 	riot_target_hits++
+	if(prison?.is_exit_blocker(target))
+		return prison.hit_exit(src, target)
 	trouble_line("riot")
 	if(istype(target, /obj/machinery/light))
 		var/obj/machinery/light/fixture = target
 		if(fixture.status != LIGHT_BROKEN)
 			fixture.break_light_tube()
 		return TRUE
-	if(istype(target, /obj/structure/table/reinforced/prison_hatch))
-		var/obj/structure/table/reinforced/prison_hatch/hatch = target
-		hatch.take_forcing()
-		return TRUE
-	if(istype(target, /obj/machinery/door) && trouble != PRISONER_TROUBLE_BREAKOUT)
+	if(istype(target, /obj/machinery/door) || istype(target, /obj/structure/table/reinforced/prison_hatch))
 		playsound(target, 'sound/effects/bang.ogg', 50, TRUE)
 		target.Shake(1, 1, 0.3 SECONDS)
 		return TRUE
@@ -959,8 +961,10 @@
 /datum/ai_behavior/outpost_prisoner_confront/perform(seconds_per_tick, datum/ai_controller/controller, target_key)
 	var/mob/living/basic/outpost_prisoner/prisoner = controller.pawn
 	var/atom/target = controller.blackboard[target_key]
+	// Broken, or something else comes first now (staff in reach, a way out opened): not a failure to
+	// reach it, so a rioter can come back to the door they were breaking.
 	if(QDELETED(target) || target != prisoner.trouble_target())
-		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
 	if(!prisoner.within_reach(target))
 		// Close by but blocked, round a corner or behind a window door: give it a few tries.
 		if(get_dist(prisoner, target) <= 1 && ++prisoner.confront_waits > 6)

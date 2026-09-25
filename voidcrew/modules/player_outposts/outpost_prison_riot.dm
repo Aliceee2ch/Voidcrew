@@ -15,8 +15,10 @@
  *
  * In a riot the wing's lights strobe red (outpost_prison_conditions.dm, not the fire alarm, so no
  * firelocks drop), an alarm sounds and the outpost is told. Rioters pull shivs and shout for a few
- * seconds before the first blow, then go for staff (two at most on one person), smash the wing's
- * fixtures and bang on the doors out. Prisoners who don't join sit it out in their cells. A rioter
+ * seconds before the first blow, then go for staff (two at most on one person) and try to break out:
+ * they hammer at the staff doors, serving hatches and windows out of the cell block, smashing the
+ * wing's fixtures on the side (outpost_prison_breakout.dm). Once through, out they go, and escape.
+ * Prisoners who don't join sit it out in their cells. A rioter
  * who is stunned, beaten or cuffed drops the shiv, but riots on once up and free again: only a
  * cell they are shut in takes them out of it, and earns them a lockdown (outpost_prison_capture.dm).
  * The riot is over when no rioter is at large, every one shut in a cell or dead; then every
@@ -24,8 +26,8 @@
  * crew to clean up.
  *
  * The riot's clock runs only while a member of the wing is home (crew_home()) and a rioter is
- * free, on their feet and uncuffed. Left PRISON_RIOT_BREAKOUT_TIME it turns into a breakout: the
- * rioters go all out for the exits, and each has OUTPOST_PRISON_LOOSE_TIME seconds free before
+ * free, on their feet and uncuffed. Left PRISON_RIOT_BREAKOUT_TIME it turns into a breakout: every
+ * rioter goes all out for the exits, and each has OUTPOST_PRISON_LOOSE_TIME seconds free before
  * they are gone for good. A riot nobody comes home to, or one held down but never locked up, is a
  * sit-in; after PRISON_RIOT_TRANSFER_TIME the corrections service transfers the rioters still at
  * large out, for a fee.
@@ -732,6 +734,7 @@
 	riot_elapsed = 0
 	riot_absent = 0
 	riot_warned = FALSE
+	reset_exit_alerts()
 	riot_hold = 0
 	riot_imminent = FALSE
 	riot_windup_left = PRISON_RIOT_WINDUP
@@ -810,6 +813,8 @@
 		if(riot_absent >= PRISON_RIOT_TRANSFER_TIME)
 			transfer_rioters()
 			return
+	// Rioters starting on a door or window (outpost_prison_breakout.dm)
+	exit_alert_tick(seconds)
 	alarm_left -= seconds
 	if(alarm_left <= 0)
 		play_alarm()
@@ -907,16 +912,20 @@
 	return null
 
 /**
- * What a rioter goes for: nothing during the wind-up or once they gave up at a turret's warning;
- * then a turret they defied, staff they can get to (unless two rioters are on them already), an
- * open hatch to climb, the fixture or door they were already smashing, or a new one. Turret
- * warnings are in outpost_prison_security.dm.
+ * What a rioter goes for: nothing during the wind-up, once they gave up at a turret's warning, or
+ * once out of the cell block (they have escaped; check_escapes() sees to it). Then a turret they
+ * defied, staff they can get to (unless two rioters are on them already), an open hatch to climb, a
+ * gap out of the cell block to walk through (escape_spot()), the way out they were already
+ * breaking, the fixture they were smashing for a few more blows, or a new target
+ * (pick_smash_target(), outpost_prison_breakout.dm). Turret warnings are in outpost_prison_security.dm.
  */
 /mob/living/basic/outpost_prisoner/proc/riot_target()
 	if(!prison)
 		return null
 	if(prison.riot_windup_left > 0 || surrendered_to_turret())
 		riot_victim_ref = null
+		return null
+	if(length(prison.cell_block) && !prison.in_cell_block(src))
 		return null
 	if(!reachable)
 		prison.refresh_prisoner_reach(src)
@@ -931,8 +940,13 @@
 	var/obj/structure/table/reinforced/prison_hatch/open_hatch = prison.open_hatch_for(src)
 	if(open_hatch)
 		return open_hatch
+	var/turf/way_out = prison.escape_spot(src)
+	if(way_out)
+		riot_target_ref = WEAKREF(way_out)
+		riot_target_hits = 0
+		return way_out
 	var/atom/current = riot_target_ref?.resolve()
-	if(current && prison.still_smashable(current, src) && (trouble == PRISONER_TROUBLE_BREAKOUT || riot_target_hits < PRISON_RIOT_TARGET_HITS))
+	if(isobj(current) && prison.still_smashable(current, src) && (trouble == PRISONER_TROUBLE_BREAKOUT || riot_target_hits < PRISON_RIOT_TARGET_HITS || prison.is_exit_blocker(current)))
 		return current
 	var/atom/next = prison.pick_smash_target(src)
 	riot_target_ref = next ? WEAKREF(next) : null
@@ -975,9 +989,12 @@
 	if(istype(target, /obj/structure/table/reinforced/prison_hatch))
 		var/obj/structure/table/reinforced/prison_hatch/hatch = target
 		return !hatch.both_sides_open()
-	if(istype(target, /obj/machinery/door))
-		var/obj/machinery/door/door = target
-		return door.density
+	// Open or shut, a prisoner never walks through a staff door on their own.
+	if(istype(target, /obj/machinery/door/airlock/security/prison_staff))
+		return TRUE
+	if(istype(target, /obj/machinery/door) || istype(target, /obj/structure/window) || istype(target, /obj/structure/grille))
+		var/obj/blocking = target
+		return blocking.density
 	if(istype(target, /obj/machinery/porta_turret))
 		var/obj/machinery/porta_turret/turret = target
 		return !(turret.machine_stat & BROKEN)
@@ -990,60 +1007,6 @@
 		if(cell.door() == door || cell.door_turf == door_turf)
 			return TRUE
 	return FALSE
-
-/**
- * A new fixture or door for a rioter. Fixtures: lights, tables, and windows inside the cell block.
- * Exits: doors they cannot open (never a cell door), and, once breaking out, serving hatches and
- * the windows that lead out of the cell block. Windows in the wing's outer wall are left alone.
- * Once the crew has been told they are at the doors, they go for the doors.
- */
-/datum/outpost_prison/proc/pick_smash_target(mob/living/basic/outpost_prisoner/rioter)
-	// Turrets first (outpost_prison_security.dm).
-	var/atom/priority = priority_smash_target(rioter)
-	if(priority)
-		return priority
-	var/breakout = rioter.trouble == PRISONER_TROUBLE_BREAKOUT
-	var/list/exits = list()
-	var/list/fixture_list = list()
-	for(var/turf/tile as anything in rioter.reachable)
-		var/walkable = rioter.walkable?[tile]
-		for(var/obj/thing in tile)
-			if(QDELETED(thing) || LAZYACCESS(rioter.riot_skips, REF(thing)) > world.time)
-				continue
-			if(istype(thing, /obj/machinery/door/airlock))
-				if(thing.density && !walkable && !is_cell_door(thing))
-					exits += thing
-			else if(istype(thing, /obj/structure/table/reinforced/prison_hatch))
-				if(breakout)
-					exits += thing
-			else if(istype(thing, /obj/machinery/light))
-				var/obj/machinery/light/fixture = thing
-				if(fixture.status != LIGHT_BROKEN)
-					fixture_list += fixture
-			else if(istype(thing, /obj/structure/table))
-				fixture_list += thing
-			else if(istype(thing, /obj/structure/window) || istype(thing, /obj/structure/grille))
-				if(on_wing_edge(tile))
-					continue
-				if(leads_out_of_cell_block(tile))
-					if(breakout)
-						exits += thing
-				else
-					fixture_list += thing
-	if(breakout)
-		if(length(exits))
-			var/atom/nearest
-			var/nearest_distance = INFINITY
-			for(var/atom/exit as anything in exits)
-				var/distance = get_dist(rioter, exit)
-				if(distance < nearest_distance)
-					nearest = exit
-					nearest_distance = distance
-			return nearest
-		return length(fixture_list) ? pick(fixture_list) : null
-	if(length(exits) && (!length(fixture_list) || riot_warned || prob(PRISON_RIOT_DOOR_CHANCE)))
-		return pick(exits)
-	return length(fixture_list) ? pick(fixture_list) : null
 
 // ===== INCIDENTS =====
 
@@ -1417,32 +1380,18 @@
 
 // ===== SERVING HATCH =====
 
-/obj/structure/table/reinforced/prison_hatch
-	/// Blows rioters have landed on it since it last gave
-	var/forcing = 0
-
 /// Where someone climbing over from the yard comes down: the tile beyond the staff side
 /obj/structure/table/reinforced/prison_hatch/proc/staff_side_turf()
 	var/obj/machinery/door/window/staff_door = staff_windoor()
 	if(staff_door)
 		return get_step(src, staff_door.dir)
+	// The office side smashed out (outpost_prison_breakout.dm): the far side from the yard
 	var/obj/machinery/door/window/yard_door = yard_windoor()
-	return yard_door ? get_step(src, REVERSE_DIR(yard_door.dir)) : null
+	var/facing = yard_door ? yard_door.dir : yard_dir
+	return facing ? get_step(src, REVERSE_DIR(facing)) : null
 
-/// A rioter working at it. After PRISON_HATCH_FORCE_HITS blows both window doors give and stay open.
-/obj/structure/table/reinforced/prison_hatch/proc/take_forcing()
-	playsound(src, 'sound/effects/glass/glassbash.ogg', 50, TRUE)
-	for(var/obj/machinery/door/window/windoor in loc)
-		windoor.Shake(1, 1, 0.3 SECONDS)
-	if(++forcing < PRISON_HATCH_FORCE_HITS)
-		return FALSE
-	forcing = 0
-	force_open()
-	return TRUE
-
-/// Both window doors open, and they stay open until someone shuts them
+/// Every window door left on it opens, and stays open until someone shuts it. Rioters do this by smashing the office side (take_rioter_blow()).
 /obj/structure/table/reinforced/prison_hatch/proc/force_open()
-	visible_message(span_danger("The window doors of [src] are forced open!"))
 	for(var/obj/machinery/door/window/windoor in loc)
 		windoor.autoclose = FALSE
 		if(windoor.density)

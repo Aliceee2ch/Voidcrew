@@ -66,6 +66,9 @@
 /obj/structure/table/reinforced/prison_hatch/Initialize(mapload)
 	. = ..()
 	AddElement(/datum/element/outpost_property)
+	// Notes which way the yard is, for when rioters smash a window door out (outpost_prison_breakout.dm)
+	yard_windoor()
+	staff_windoor()
 	var/static/list/loc_connections = list(
 		COMSIG_ATOM_ENTERED = PROC_REF(on_counter_entered),
 	)
@@ -74,6 +77,7 @@
 /obj/structure/table/reinforced/prison_hatch/examine(mob/user)
 	. = ..()
 	. += span_notice("It holds [stock_count()] of [OUTPOST_PRISON_HATCH_CAPACITY] items.")
+	. += windoor_examine()
 
 /// Items on the counter
 /obj/structure/table/reinforced/prison_hatch/proc/stock_count()
@@ -138,18 +142,25 @@
 /obj/structure/table/reinforced/prison_hatch/make_climbable()
 	return
 
-/// The window door on the prisoners' side, if it is still there
+/// The window door on the prisoners' side, if it is still there. Notes which way it faces (yard_dir).
 /obj/structure/table/reinforced/prison_hatch/proc/yard_windoor()
-	return locate(/obj/machinery/door/window/outpost_prison_yard) in loc
+	var/obj/machinery/door/window/yard_door = locate(/obj/machinery/door/window/outpost_prison_yard) in loc
+	if(yard_door)
+		yard_dir = yard_door.dir
+	return yard_door
 
-/// The window door on the staff side, if it is still there
+/// The window door on the staff side, if it is still there. Notes which way the yard is, if the yard side has not.
 /obj/structure/table/reinforced/prison_hatch/proc/staff_windoor()
-	return locate(/obj/machinery/door/window/brigdoor/outpost_prison_staff) in loc
+	var/obj/machinery/door/window/staff_door = locate(/obj/machinery/door/window/brigdoor/outpost_prison_staff) in loc
+	if(staff_door && !yard_dir)
+		yard_dir = REVERSE_DIR(staff_door.dir)
+	return staff_door
 
-/// Where a prisoner stands to reach across: the tile beyond the yard-side window door
+/// Where a prisoner stands to reach across: the tile beyond the yard-side window door, or where it stood
 /obj/structure/table/reinforced/prison_hatch/proc/yard_side_turf()
 	var/obj/machinery/door/window/yard_door = yard_windoor()
-	return yard_door ? get_step(src, yard_door.dir) : null
+	var/facing = yard_door ? yard_door.dir : yard_dir
+	return facing ? get_step(src, facing) : null
 
 /**
  * Whether both sides are open (or broken off), leaving a way over the counter. Nothing uses this

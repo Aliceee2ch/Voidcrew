@@ -7370,6 +7370,7 @@
 #include "voidcrew\modules\trade\modsuit_bench.dm"
 #include "voidcrew\modules\trade\outpost.dm"
 #include "voidcrew\modules\trade\outpost_amenities.dm"
+#include "voidcrew\modules\trade\outpost_berth_layout.dm"
 #include "voidcrew\modules\trade\outpost_elevator.dm"
 #include "voidcrew\modules\trade\outpost_hangar.dm"
 #include "voidcrew\modules\trade\outpost_missions.dm"

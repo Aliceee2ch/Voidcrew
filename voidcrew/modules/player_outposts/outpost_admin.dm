@@ -327,6 +327,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		if(ship.docked == home)
 			return "Undock visiting ships and cancel their approaches first."
 	for(var/mob/living/occupant as anything in GLOB.mob_living_list)
-		if(get_outpost_from_atom(occupant) == home)
+		// Prisoners and the prison's other mobs are deleted with the outpost.
+		if(get_outpost_from_atom(occupant) == home && !is_outpost_prison_mob(occupant))
 			return "Move living occupants out of the outpost first."
 	return null

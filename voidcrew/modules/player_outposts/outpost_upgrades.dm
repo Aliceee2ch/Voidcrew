@@ -27,6 +27,8 @@
 #define UPGRADE_CELL_OBJECT "m"
 /// Docking pads, berths, the elevator, the arrival point and other upgrades
 #define UPGRADE_CELL_RESERVED "x"
+/// The placement survey never covers more than this many tiles a side, centred on the outpost's core
+#define UPGRADE_SURVEY_WINDOW 128
 
 /// Base for upgrade rooms. Loaded with load_rotated(), never centered or cached.
 /datum/map_template/outpost_upgrade
@@ -78,6 +80,9 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	outpost = owner
 
 /datum/outpost_upgrade/Destroy()
+	// Deleted on its own (by an admin), it leaves the outpost's list, so it can be bought again.
+	if(id && !QDELETED(outpost) && outpost.outpost_upgrades[id] == src)
+		outpost.outpost_upgrades -= id
 	outpost = null
 	installed_area = null
 	return ..()
@@ -307,9 +312,10 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 /**
  * Whether an upgrade may be stamped over this tile. Pass `protected_rects` from
  * upgrade_protected_rects() when checking many tiles. Lattices and catwalks are cleared by the
- * placement; decals and loose items stay. The survey passes `ignore_mobs`: mobs move, so the
- * server only checks them when the room is actually built. Landmarks never block: a level's
- * teardown keeps them, so a recycled level can carry invisible ones left by deleted hulls.
+ * placement and loose items are moved out of the way (sweep_upgrade_footprint()); decals stay.
+ * The survey passes `ignore_mobs`: mobs move, so the server only checks them when the room is
+ * actually built. Landmarks never block: a level's teardown keeps them, so a recycled level can
+ * carry invisible ones left by deleted hulls.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/is_upgrade_turf_clear(turf/tile, list/protected_rects, ignore_mobs = FALSE)
 	if(!is_turf_buildable(tile) || isclosedturf(tile))
@@ -396,6 +402,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	for(var/turf/tile as anything in footprint_turfs)
 		for(var/obj/structure/lattice/lattice in tile) // catwalks included
 			qdel(lattice)
+	sweep_upgrade_footprint(footprint)
 	var/list/loaded_bounds = template.load_rotated(bottom_left, rotation)
 	if(QDELETED(blueprint))
 		return "The upgrade could not be built."
@@ -417,6 +424,31 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	playsound(entrance[CEILING(length(entrance) / 2, 1)], 'sound/machines/ding.ogg', 60, TRUE)
 	log_game("PLAYER OUTPOST: [key_name(user)] placed the [blueprint.name] upgrade at '[name]' ([bottom_left.x],[bottom_left.y],[bottom_left.z], rotated [rotation])")
 	return null
+
+/**
+ * Moves loose things off a footprint that is about to be built over, onto the ground outside its
+ * entrance, so nothing ends up inside the new walls. Anchored things, effects and decals stay.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/sweep_upgrade_footprint(list/footprint)
+	var/list/entrance = footprint["entrance"]
+	var/entrance_dir = footprint["entrance_dir"]
+	if(!length(entrance))
+		return
+	var/turf/outside = get_step(entrance[CEILING(length(entrance) / 2, 1)], entrance_dir)
+	if(!outside || isclosedturf(outside))
+		outside = null
+		for(var/turf/edge as anything in entrance)
+			var/turf/beyond = get_step(edge, entrance_dir)
+			if(beyond && !isclosedturf(beyond))
+				outside = beyond
+				break
+	if(!outside)
+		return
+	for(var/turf/tile as anything in footprint["turfs"])
+		for(var/atom/movable/thing as anything in tile)
+			if(thing.anchored || iseffect(thing) || !(isobj(thing) || isliving(thing)))
+				continue
+			thing.forceMove(outside)
 
 // ===== PLACEMENT MAP SURVEY =====
 
@@ -446,13 +478,20 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			largest = max(largest, template.width, template.height)
 	return largest
 
+/// The middle of the outpost's shell, or its arrival point, which the placement survey is centred on
+/obj/structure/overmap/dynamic/player_outpost/proc/upgrade_survey_center()
+	if(template_bottom_left && shell_template?.width)
+		return locate(template_bottom_left.x + round(shell_template.width / 2), template_bottom_left.y + round(shell_template.height / 2), template_bottom_left.z)
+	return arrival_turf
+
 /**
  * Surveys the ground around the outpost for the placement map. Yields. Returns
  * list("x", "y", "z", "width", "height", "cells", "near") or null, where `cells` has one
  * UPGRADE_CELL_* character per tile and `near` has "1" where a tile is within
  * OUTPOST_UPGRADE_MAX_GAP of outpost ground. Both run row by row from the bottom-left corner.
  * The region is the outpost ground's bounding box widened by the gap plus the largest room,
- * clamped to the claim, so every legal footprint lies inside it.
+ * clamped to the claim and to UPGRADE_SURVEY_WINDOW tiles a side around the outpost's core, so an
+ * outpost sprawled across the claim does not survey all of it.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/build_upgrade_survey()
 	var/z = upgrade_level_z()
@@ -473,6 +512,13 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	low_y = max(build_bounds[2], low_y - margin)
 	high_x = min(build_bounds[3], high_x + margin)
 	high_y = min(build_bounds[4], high_y + margin)
+	var/turf/center = upgrade_survey_center()
+	if(center)
+		var/half = round(UPGRADE_SURVEY_WINDOW / 2)
+		low_x = max(low_x, center.x - half)
+		low_y = max(low_y, center.y - half)
+		high_x = min(high_x, center.x - half + UPGRADE_SURVEY_WINDOW - 1)
+		high_y = min(high_y, center.y - half + UPGRADE_SURVEY_WINDOW - 1)
 	var/width = high_x - low_x + 1
 	var/height = high_y - low_y + 1
 	if(width < 1 || height < 1)
@@ -694,4 +740,5 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 #undef UPGRADE_CELL_DOOR
 #undef UPGRADE_CELL_OBJECT
 #undef UPGRADE_CELL_RESERVED
+#undef UPGRADE_SURVEY_WINDOW
 #undef OUTPOST_UPGRADE_PREVIEW_DIR

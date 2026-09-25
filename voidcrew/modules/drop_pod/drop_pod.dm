@@ -104,6 +104,9 @@
 		// if is anchored, don't let through
 		if(ROI.anchored)
 			continue
+		// An open pod sweeps its tile without asking insertion_allowed(); the same mobs stay behind.
+		if(HAS_TRAIT(ROI, TRAIT_NO_CONTAINMENT))
+			continue
 
 		if(isliving(ROI))
 			var/mob/living/living_subject = ROI
@@ -319,6 +322,9 @@
 	update_static_data(ui_user)
 
 /obj/structure/closet/supplypod/drop_pod/insertion_allowed(atom/to_insert)
+	// Outpost prisoners, traders and the like belong where they stand (closet_containment.dm).
+	if(HAS_TRAIT(to_insert, TRAIT_NO_CONTAINMENT))
+		return FALSE
 	if(to_insert.invisibility == INVISIBILITY_ABSTRACT)
 		return FALSE
 	if(ismob(to_insert))

@@ -157,7 +157,7 @@
 	TEST_ASSERT_NOTNULL(prison_entry, "The prison wing is missing from the upgrade catalog")
 	for(var/key in list("id", "name", "desc", "price", "width", "height", "entrance", "preview"))
 		TEST_ASSERT(key in prison_entry, "The catalog entry has no [key] for the Upgrades tab")
-	TEST_ASSERT_EQUAL(prison_entry["price"], 12000, "The prison wing's catalog price is wrong") // OUTPOST_PRISON_COST
+	TEST_ASSERT_EQUAL(prison_entry["price"], 10000, "The prison wing's catalog price is wrong") // OUTPOST_PRISON_COST
 	TEST_ASSERT_EQUAL(prison_entry["width"], 17, "The prison wing's catalog width is wrong")
 	TEST_ASSERT_EQUAL(prison_entry["height"], 16, "The prison wing's catalog height is wrong")
 	TEST_ASSERT_EQUAL(prison_entry["entrance"], SOUTH, "The prison wing's entrance edge is wrong")
@@ -188,11 +188,11 @@
 	// Funded owner: exact debit, one unplaced blueprint.
 	act(panel, owner, "buy_upgrade", null, list("id" = "prison"))
 	TEST_ASSERT_NULL(panel.upgrade_error, "A funded purchase reported an error")
-	TEST_ASSERT_EQUAL(home.treasury.account_balance, 500, "The prison wing did not cost exactly its price")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 2500, "The prison wing did not cost exactly its price") // 12500 - OUTPOST_PRISON_COST
 	var/datum/outpost_upgrade/blueprint = home.outpost_upgrades["prison"]
 	TEST_ASSERT(istype(blueprint, /datum/outpost_upgrade/prison), "The purchase left no prison blueprint")
 	TEST_ASSERT_EQUAL(blueprint.outpost, home, "The blueprint does not belong to the outpost")
-	TEST_ASSERT_EQUAL(blueprint.paid, 12000, "The blueprint did not record what was paid")
+	TEST_ASSERT_EQUAL(blueprint.paid, 10000, "The blueprint did not record what was paid") // OUTPOST_PRISON_COST
 	TEST_ASSERT(!blueprint.installed && !blueprint.placing, "A bought blueprint was already placed")
 	var/list/blueprints = home.upgrade_blueprints()
 	TEST_ASSERT_EQUAL(length(blueprints), 1, "The bought blueprint is not waiting to be placed")
@@ -206,12 +206,12 @@
 	home.treasury.adjust_money(20000, "Upgrade test")
 	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "prison"), "Blueprint already bought.", "A second purchase was not refused")
 	act(panel, owner, "buy_upgrade", null, list("id" = "prison"))
-	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "A refused second purchase charged the treasury")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 22500, "A refused second purchase charged the treasury")
 	TEST_ASSERT_EQUAL(home.outpost_upgrades["prison"], blueprint, "A second purchase replaced the blueprint")
 
 	// Cancelling refunds exactly what was paid and frees the slot; only management may do it.
 	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(visitor, "prison"), "Management and treasury access required.", "A visitor cancelled the purchase")
-	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "A refused cancel changed the treasury")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 22500, "A refused cancel changed the treasury")
 	act(panel, owner, "cancel_upgrade", null, list("id" = "prison"))
 	TEST_ASSERT_NULL(panel.upgrade_error, "Cancelling the purchase reported an error")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, 32500, "Cancelling did not refund exactly the price")
@@ -223,12 +223,12 @@
 
 	// An installed upgrade cannot be bought again or refunded.
 	TEST_ASSERT_NULL(home.buy_outpost_upgrade(owner, "prison"), "The upgrade could not be bought again after a refund")
-	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "The second purchase did not cost exactly its price")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 22500, "The second purchase did not cost exactly its price")
 	blueprint = home.outpost_upgrades["prison"]
 	blueprint.installed = TRUE
 	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "prison"), "Already installed.", "An installed upgrade could be bought again")
 	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(owner, "prison"), "Already installed.", "An installed upgrade was refunded")
-	TEST_ASSERT_EQUAL(home.treasury.account_balance, 20500, "Refusing an installed upgrade changed the treasury")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 22500, "Refusing an installed upgrade changed the treasury")
 
 /datum/unit_test/voidcrew_outpost_upgrade_tiles
 	parent_type = /datum/unit_test/voidcrew_outpost_management
@@ -667,3 +667,74 @@
 				the new PNG and .preview.json with the map change.")
 		checked++
 	TEST_ASSERT(checked, "The upgrade catalog is empty")
+
+// ===== ADMIN DELETES, LOOSE ITEMS AND THE SURVEY WINDOW =====
+
+/**
+ * An admin deleting the running prison can start it again, and deleting an upgrade takes it off
+ * the outpost's list, so the shop does not call it installed forever.
+ */
+/datum/unit_test/voidcrew_outpost_upgrade_admin_deletes
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_upgrade_admin_deletes/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("upgradedeleteowner")
+	TEST_ASSERT_NOTNULL(home, "The upgrade deletion test prison did not load")
+	var/datum/outpost_upgrade/prison/blueprint = home.outpost_upgrades["prison"]
+	qdel(blueprint.prison)
+	TEST_ASSERT_NULL(blueprint.prison, "The upgrade kept a deleted prison")
+	blueprint.on_installed(null)
+	TEST_ASSERT(!QDELETED(blueprint.prison), "The prison could not be started again after an admin deleted it")
+	STOP_PROCESSING(SSprocessing, blueprint.prison)
+	var/datum/outpost_prison/restarted = blueprint.prison
+	qdel(blueprint)
+	TEST_ASSERT_NULL(home.outpost_upgrades["prison"], "A deleted upgrade stayed on the outpost's list")
+	TEST_ASSERT(QDELETED(restarted), "Deleting the upgrade left its prison running")
+	settle_prison_air(home)
+
+/// Loose things on a footprint are moved out of the way before the room is built over them.
+/datum/unit_test/voidcrew_outpost_upgrade_sweep
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_upgrade_sweep/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("sweepowner")
+	TEST_ASSERT_NOTNULL(home, "The sweep test outpost did not load")
+	var/datum/outpost_upgrade/prison/blueprint = new(home)
+	home.outpost_upgrades["prison"] = blueprint
+	var/turf/bottom_left = locate(home.template_bottom_left.x, home.template_bottom_left.y + home.shell_template.height + 3, home.upgrade_level_z())
+	var/list/footprint = blueprint.footprint_at(bottom_left, 0)
+	TEST_ASSERT_NOTNULL(footprint, "No footprint for the sweep test")
+	// Where the wall between cells 1 and 2 goes up
+	var/turf/wall_spot = locate(bottom_left.x + 4, bottom_left.y + 13, bottom_left.z)
+	var/obj/item/wrench/loose = allocate(__IMPLIED_TYPE__, wall_spot)
+	TEST_ASSERT_NULL(home.place_outpost_upgrade(blueprint, bottom_left, 0, null), "The prison wing was not placed")
+	TEST_ASSERT(isclosedturf(wall_spot), "The test spot is not a wall after placement")
+	TEST_ASSERT(!blueprint.contains_turf(get_turf(loose)), "A loose wrench was left inside the new wing, at [loose.x],[loose.y]")
+	var/list/entrance = footprint["entrance"]
+	TEST_ASSERT_EQUAL(get_turf(loose), get_step(entrance[CEILING(length(entrance) / 2, 1)], SOUTH), "The wrench was not moved outside the entrance")
+	if(blueprint.prison)
+		STOP_PROCESSING(SSprocessing, blueprint.prison)
+	settle_prison_air(home)
+
+/// An outpost sprawled across its claim is surveyed only in a window around its core.
+/datum/unit_test/voidcrew_outpost_upgrade_survey_window
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_upgrade_survey_window/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("windowowner")
+	TEST_ASSERT_NOTNULL(home, "The survey window test outpost did not load")
+	var/turf/center = home.upgrade_survey_center()
+	TEST_ASSERT_NOTNULL(center, "The outpost has no core to survey around")
+	var/list/claim = home.build_bounds
+	var/turf/far = locate(claim[3], center.y, center.z)
+	if(far.x - center.x < 80)
+		TEST_NOTICE(src, "The claim is too small to sprawl past the survey window")
+		return
+	// One far-off tile of outpost ground stretches the outpost across the claim.
+	var/area/old_area = far.loc
+	far.change_area(old_area, home.outpost_area)
+	var/list/survey = home.build_upgrade_survey()
+	far.change_area(home.outpost_area, old_area)
+	TEST_ASSERT_NOTNULL(survey, "The sprawled outpost could not be surveyed")
+	TEST_ASSERT(survey["width"] <= 128 && survey["height"] <= 128, "The survey covered [survey["width"]] x [survey["height"]] tiles") // UPGRADE_SURVEY_WINDOW
+	TEST_ASSERT(center.x >= survey["x"] && center.x < survey["x"] + survey["width"], "The survey window does not hold the outpost's core")

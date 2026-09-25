@@ -3,8 +3,11 @@
  *
  * The doors the prison wing's map places: the window doors on each side of a serving hatch, the
  * staff doors prisoners cannot use, the numbered cell doors and their bolt buttons. The window
- * doors and bolt buttons are protected outpost property; the airlocks can be broken. Where
- * prisoners can stand and what counts as their cell is in outpost_prison_containment.dm.
+ * doors and bolt buttons are protected outpost property; the airlocks can be broken, and one built
+ * where a staff or cell door stood becomes that door again. Staff doors and the office side of a
+ * hatch open for members of the wing, or for anyone but prisoners while the warden lets visitors
+ * in; bolt buttons work for members only. Who counts as a member, where prisoners can stand and
+ * what counts as their cell are in outpost_prison_containment.dm.
  */
 
 // ===== SERVING HATCH WINDOW DOORS =====
@@ -20,7 +23,7 @@
 
 MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/door/window/outpost_prison_yard, 0)
 
-/// The office side of a serving hatch. It opens for anyone but a prisoner; no ID needed.
+/// The office side of a serving hatch. It opens for members of the wing, never for prisoners; no ID needed.
 /obj/machinery/door/window/brigdoor/outpost_prison_staff
 	name = "hatch window"
 	desc = "The office side of a serving hatch. It won't open for prisoners."
@@ -30,7 +33,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/door/window/outpost_prison_yard, 0)
 	AddElement(/datum/element/outpost_property)
 
 /obj/machinery/door/window/brigdoor/outpost_prison_staff/allowed(mob/accessor)
-	if(is_outpost_prisoner(accessor))
+	if(!may_use_outpost_prison_staff_door(src, accessor))
 		return FALSE
 	return ..()
 
@@ -43,14 +46,28 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/door/window/brigdoor/outpost_prison_s
 
 // ===== STAFF DOORS =====
 
-/// The prison's office and entrance doors. Anyone may use them except the prisoners.
+/// The prison's office and entrance doors. Members of the wing may use them; prisoners never can.
 /obj/machinery/door/airlock/security/prison_staff
 	name = "prison staff airlock"
 
 /obj/machinery/door/airlock/security/prison_staff/allowed(mob/accessor)
-	if(is_outpost_prisoner(accessor))
+	if(!may_use_outpost_prison_staff_door(src, accessor))
 		return FALSE
 	return ..()
+
+// Broken down rather than taken apart, the frame goes too, so rioters are not left facing a solid frame in the doorway.
+/obj/machinery/door/airlock/security/prison_staff/on_deconstruction(disassembled)
+	var/turf/spot = loc
+	var/list/frames_before = list()
+	if(!disassembled && isturf(spot))
+		for(var/obj/structure/door_assembly/frame in spot)
+			frames_before += frame
+	. = ..()
+	if(disassembled || !isturf(spot))
+		return
+	for(var/obj/structure/door_assembly/frame in spot)
+		if(!(frame in frames_before) && !QDELETED(frame))
+			frame.deconstruct(FALSE)
 
 // Open or closed, a prisoner cannot walk through, even dragged.
 /obj/machinery/door/airlock/security/prison_staff/CanAllowThrough(atom/movable/mover, border_dir)
@@ -97,6 +114,13 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/button/outpost_prison_bolt, 24)
 	AddElement(/datum/element/outpost_property)
 	if(cell_number)
 		name = "cell [cell_number] bolt button"
+
+// Members of the wing only, whether or not visitors are let in.
+/obj/machinery/button/outpost_prison_bolt/allowed(mob/accessor)
+	var/datum/outpost_prison/prison = get_outpost_prison(src)
+	if(prison && !isAdminGhostAI(accessor) && !prison.is_member(accessor))
+		return FALSE
+	return ..()
 
 /obj/machinery/button/outpost_prison_bolt/attempt_press(mob/user)
 	. = ..()

@@ -3,7 +3,8 @@
  * a player outpost, the breakout controller escaped prisoners run, and the ship patrol it came from.
  *
  * Voidcrew defines are not visible from test files, so blackboard keys appear as their literal
- * strings. The prison fixtures (prison_test_claim(), prison_spot()) are in voidcrew_outpost_prison.dm.
+ * strings. The prison fixtures (prison_test_claim(), prison_spot()) are in
+ * voidcrew_outpost_prison_helpers.dm.
  */
 
 // ===== PATH =====
@@ -337,3 +338,61 @@
 	TEST_ASSERT_NOTNULL(controller.blackboard["_last_known_room"], "The ship patrol did not find the starting room")
 	TEST_ASSERT_NULL(GLOB.outpost_patrol_caches[REF(ship)], "A ship patrol made an outpost patrol cache")
 	TEST_ASSERT_NULL(outpost_patrol_of(pirate), "A ship patroller reports an outpost patrol")
+
+// ===== DOOR-HEAVY OUTPOSTS =====
+
+/**
+ * A rebuild over two hundred doors yields instead of holding the tick, and the path keeps only
+ * the 40 stops nearest the prison wing (OUTPOST_PATROL_MAX_STOPS).
+ */
+/datum/unit_test/voidcrew_outpost_patrol_many_doors
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_patrol_many_doors/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("manydoorsowner")
+	TEST_ASSERT_NOTNULL(home, "The door-heavy test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/list/bounds = prison.upgrade.footprint_bounds
+	var/z = bounds[5]
+	// A 41 x 21 stretch of the claim beside the wing, with a door on every other tile: 200 doors.
+	var/low_x = bounds[3] + 4
+	if(low_x + 40 > world.maxx)
+		low_x = bounds[1] - 45
+	var/low_y = min(bounds[2], world.maxy - 21)
+	var/turf/low_corner = locate(low_x, low_y, z)
+	var/turf/high_corner = locate(low_x + 40, low_y + 20, z)
+	TEST_ASSERT(low_corner && high_corner, "No room on the claim for the door grid")
+	var/list/owned = list()
+	for(var/turf/ground as anything in block(low_corner, high_corner))
+		owned[ground] = TRUE
+	var/list/interior = list()
+	for(var/column in 0 to 19)
+		for(var/row in 0 to 9)
+			var/obj/machinery/door/airlock/door = allocate(/obj/machinery/door/airlock, locate(low_x + 1 + column * 2, low_y + 1 + row * 2, z))
+			interior[door] = TRUE
+	TEST_ASSERT_EQUAL(length(interior), 200, "The grid has [length(interior)] doors")
+
+	var/datum/outpost_patrol_cache/cache = new(home)
+	// With no tick left, the first CHECK_TICK has to give the tick back.
+	var/started = world.time
+	Master.current_ticklimit = 0
+	cache.rebuild(owned, interior)
+	if(!Master.current_ticklimit)
+		Master.current_ticklimit = TICK_LIMIT_RUNNING
+	TEST_ASSERT(world.time > started, "Rebuilding the patrol over 200 doors never yielded")
+	TEST_ASSERT(!QDELETED(cache), "The patrol cache was deleted during the rebuild")
+	var/list/path = cache.path
+	TEST_ASSERT_EQUAL(length(path), 40, "The patrol path has [length(path)] stops, not the 40 nearest") // OUTPOST_PATROL_MAX_STOPS
+
+	// The stops kept are the ones nearest the wing.
+	var/turf/origin = cache.patrol_origin()
+	TEST_ASSERT_NOTNULL(origin, "The patrol has no starting point")
+	var/farthest_kept = 0
+	for(var/obj/machinery/door/door as anything in path)
+		farthest_kept = max(farthest_kept, get_dist(origin, door))
+	for(var/obj/machinery/door/door as anything in interior)
+		if(door in path)
+			continue
+		TEST_ASSERT(get_dist(origin, door) >= farthest_kept, "A door [get_dist(origin, door)] tiles from the wing was dropped while one [farthest_kept] tiles away was kept")
+	qdel(cache)
+	settle_prison_air(home)

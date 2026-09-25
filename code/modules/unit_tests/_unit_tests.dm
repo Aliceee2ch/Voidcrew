@@ -459,6 +459,7 @@
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_upgrades.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_helpers.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_admin.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_changeling.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_conditions.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_containment.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_outpost_prison_dialogue.dm" // VOIDCREW EDIT ADDITION

@@ -1,7 +1,8 @@
 /**
  * Wildcard incidents and wing events: the chance and the clock that rolls it, what holds the clock,
  * who a stabbing picks, each kind from the admin panel, a stabbing stopped in its tell, a lone snap
- * in a happy wing, blown lights, a backed-up vent and an overflowing toilet.
+ * in a happy wing, blown lights, an overflowing scrubber (or a backed-up Kessler vent) and an
+ * overflowing toilet.
  *
  * Voidcrew defines are not visible from test files, so tuning values appear as literals with the
  * define named beside them. Prisons are driven with the procs tick() calls, with their own
@@ -243,6 +244,13 @@
 	TEST_ASSERT_NOTNULL(panel.error, "An unknown wing event was accepted")
 	panel.manage_outpost(home, operator, "prison_wing_event", list("kind" = "lights"))
 	TEST_ASSERT_NULL(panel.error, "The lights button was refused: [panel.error]")
+	// The vent backup is now the scrubber overflow
+	panel.manage_outpost(home, operator, "prison_wing_event", list("kind" = "vent"))
+	TEST_ASSERT_NOTNULL(panel.error, "The old vent wing event was accepted")
+	panel.manage_outpost(home, operator, "prison_wing_event", list("kind" = "scrubber"))
+	TEST_ASSERT_NULL(panel.error, "The scrubber button was refused: [panel.error]")
+	TEST_ASSERT_EQUAL(prison.wing_event_pending, "scrubber", "The scrubber button started no overflow")
+	prison.wing_events_destroy()
 	settle_prison_air(home)
 
 // ===== STOPPING A STABBING =====
@@ -367,50 +375,128 @@
 	TEST_ASSERT(prison.wing_event_left >= 1200 && prison.wing_event_left <= 2400, "The next wing event is [prison.wing_event_left] s off") // PRISON_WING_EVENT_GAP_MIN, PRISON_WING_EVENT_GAP_MAX
 	settle_prison_air(home)
 
-// ===== A BACKED-UP VENT AND AN OVERFLOWING TOILET =====
+// ===== AN OVERFLOWING SCRUBBER, A BACKED-UP KESSLER VENT AND AN OVERFLOWING TOILET =====
 
 /datum/unit_test/voidcrew_outpost_prison_wing_backups
 	parent_type = /datum/unit_test/voidcrew_outpost_management
+	/// Set once overflow foam is seen anywhere in the wing outside the cell block
+	var/foam_strayed = FALSE
 
 /datum/unit_test/voidcrew_outpost_prison_wing_backups/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("wingventowner")
-	TEST_ASSERT_NOTNULL(home, "The vent backup test prison did not load")
+	TEST_ASSERT_NOTNULL(home, "The scrubber overflow test prison did not load")
 	var/datum/outpost_prison/prison = test_prison(home)
 	clear_wing_mess(prison)
 	prison.refresh_conditions()
 	var/clean_before = prison.clean_score
 
-	// Every piece of filth a vent brings up is mess the scan counts.
+	// Every piece of filth a vent or the foam leaves is mess the scan counts, and the foam carries
+	// nothing dangerous: no toxin, acid, drug, fuel, alcohol, lube, pepper or medicine.
 	for(var/filth_type in GLOB.outpost_prison_vent_filth)
 		TEST_ASSERT(GLOB.outpost_prison_mess_weights[filth_type] > 0, "[filth_type] from a vent is not counted as mess")
+	TEST_ASSERT(length(GLOB.outpost_prison_overflow_reagents), "The overflow foam has no reagents")
+	for(var/reagent_type in GLOB.outpost_prison_overflow_reagents)
+		for(var/banned in list(/datum/reagent/toxin, /datum/reagent/drug, /datum/reagent/fuel, /datum/reagent/consumable/ethanol, /datum/reagent/lube, /datum/reagent/consumable/condensedcapsaicin, /datum/reagent/medicine))
+			TEST_ASSERT(!ispath(reagent_type, banned), "The overflow foam can carry [reagent_type]")
 
-	// The vent gurgles for 5 seconds (PRISON_WING_GURGLE_TIME), then spews 6 to 12 pieces (PRISON_VENT_MESS_MIN, _MAX).
-	TEST_ASSERT(length(prison.backup_vents()), "The wing has no vent in the cell block that can back up")
-	TEST_ASSERT_EQUAL(prison.start_wing_event("vent"), "vent", "No vent started to back up")
-	var/obj/vent = prison.wing_event_source_ref?.resolve()
-	TEST_ASSERT_NOTNULL(vent, "The backing-up vent is not known")
+	// What can overflow: the map's seven scrubbers, all in the cell block, and none that is welded.
+	var/list/sources = prison.overflow_sources()
+	TEST_ASSERT_EQUAL(length(sources), 7, "The wing has [length(sources)] scrubbers that can overflow, not 7")
+	for(var/obj/source as anything in sources)
+		TEST_ASSERT(istype(source, /obj/machinery/atmospherics/components/unary/vent_scrubber), "[source] can overflow while the wing has scrubbers")
+		TEST_ASSERT(prison.in_cell_block(source), "A scrubber outside the cell block can overflow")
+	var/obj/machinery/atmospherics/components/unary/vent_scrubber/yard_scrubber = locate() in prison_spot(home, 13, 11)
+	TEST_ASSERT_NOTNULL(yard_scrubber, "No yard scrubber at (13,11)")
+	for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrubber as anything in sources)
+		if(scrubber != yard_scrubber)
+			scrubber.welded = TRUE
+	var/list/unwelded = prison.overflow_sources()
+	TEST_ASSERT(length(unwelded) == 1 && unwelded[1] == yard_scrubber, "Welded scrubbers can still overflow")
+
+	// The yard scrubber gurgles for 5 seconds (PRISON_WING_GURGLE_TIME) and nothing comes up meanwhile.
+	var/mob/living/carbon/human/bystander = make_player(prison_spot(home, 12, 11), "wingventbystander")
+	prison.wing_event_force_second = FALSE
+	TEST_ASSERT_EQUAL(prison.start_wing_event("scrubber"), "scrubber", "No scrubber started to overflow")
+	var/list/gurgling = prison.wing_event_source_objects()
+	TEST_ASSERT(length(gurgling) == 1 && gurgling[1] == yard_scrubber, "The wrong thing started to overflow")
+	TEST_ASSERT_NULL(prison.start_wing_event("toilet"), "A second event started while a scrubber gurgled")
+	prison.wing_events_tick(3)
+	TEST_ASSERT(!foam_left(prison), "Foam came up after 3 seconds of gurgling")
+	var/list/yard_tiles = prison.backup_tiles(get_turf(yard_scrubber), 5)
+	TEST_ASSERT_EQUAL(count_filth(yard_tiles), 0, "Filth came up while the scrubber was still gurgling")
+
+	// Then it overflows: tg's foam, which keeps to the cell block, slips nobody and leaves filth.
+	prison.wing_events_tick(3)
+	TEST_ASSERT_NULL(prison.wing_event_pending, "The scrubber is still gurgling after 6 seconds")
+	TEST_ASSERT_NOTNULL(locate(/obj/effect/particle_effect/fluid/foam/short_life/outpost_prison) in get_turf(yard_scrubber), "No foam came up out of the scrubber")
+	TEST_ASSERT(wildcard_logged(prison, "scrubber"), "The overflow was not logged")
+	foam_strayed = FALSE
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(foam_gone), prison), 15 SECONDS), "The overflow foam never went away")
+	TEST_ASSERT(!foam_strayed, "The overflow foam spread outside the cell block")
+	// A piece on each open tile the foam covered: about 10 tiles (PRISON_OVERFLOW_FOAM), a few more
+	// as the last ring spreads, less the tables and the water cooler it passes over
+	var/filth = count_filth(prison.wing_turfs())
+	TEST_ASSERT(filth >= 5 && filth <= 14, "The overflow foam left [filth] pieces of filth, not 5 to 14")
+	for(var/turf/tile as anything in prison.wing_turfs())
+		if(!prison.in_cell_block(tile))
+			TEST_ASSERT_EQUAL(count_filth(list(tile)), 0, "The overflow left filth outside the cell block")
+	prison.refresh_conditions()
+	TEST_ASSERT(prison.clean_score < clean_before, "A scrubber overflow left the wing [prison.clean_score] clean")
+	TEST_ASSERT(bystander.body_position == STANDING_UP && !bystander.IsKnockdown() && !bystander.IsParalyzed(), "The overflow foam knocked a bystander down")
+	TEST_ASSERT_EQUAL(bystander.get_total_damage(), 0, "The overflow foam hurt a bystander")
+	for(var/datum/reagent/taken as anything in bystander.reagents.reagent_list)
+		TEST_ASSERT(GLOB.outpost_prison_overflow_reagents[taken.type], "A bystander in the foam took in [taken.type]")
+
+	// Sometimes a second scrubber overflows with the first.
+	for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrubber as anything in sources)
+		scrubber.welded = FALSE
+	prison.wing_event_force_second = TRUE
+	TEST_ASSERT_EQUAL(prison.start_wing_event("scrubber"), "scrubber", "No scrubbers started to overflow")
+	var/list/pair = prison.wing_event_source_objects()
+	TEST_ASSERT_EQUAL(length(pair), 2, "[length(pair)] scrubbers gurgled, not 2")
+	TEST_ASSERT(pair[1] != pair[2], "The same scrubber was picked twice")
+	prison.wing_events_tick(6)
+	TEST_ASSERT(wildcard_logged(prison, "2 scrubbers"), "Two scrubbers overflowing was not logged")
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(foam_gone), prison), 15 SECONDS), "The foam from two scrubbers never went away")
+	TEST_ASSERT(!foam_strayed, "The foam from two scrubbers spread outside the cell block")
+
+	// Welded shut while it gurgles, a scrubber stays quiet.
+	prison.wing_event_force_second = FALSE
+	clear_wing_mess(prison)
+	TEST_ASSERT_EQUAL(prison.start_wing_event("scrubber"), "scrubber", "No scrubber started to overflow")
+	var/obj/machinery/atmospherics/components/unary/vent_scrubber/stopped = prison.wing_event_source_objects()[1]
+	stopped.welded = TRUE
+	TEST_ASSERT_EQUAL(prison.finish_backup(), 0, "A scrubber welded while it gurgled still overflowed")
+	TEST_ASSERT(!foam_left(prison), "A welded scrubber brought up foam")
+
+	// With every scrubber welded shut a sealed Kessler vent backs up instead: 6 to 12 pieces of
+	// filth (PRISON_VENT_MESS_MIN, _MAX) within 3 steps (PRISON_VENT_MESS_RANGE).
+	for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrubber as anything in sources)
+		scrubber.welded = TRUE
+	var/list/fallback = prison.overflow_sources()
+	TEST_ASSERT(length(fallback), "With the scrubbers welded, nothing in the cell block can back up")
+	for(var/obj/source as anything in fallback)
+		TEST_ASSERT(istype(source, /obj/structure/outpost_kessler_vent), "[source] backs up with every scrubber welded")
+	TEST_ASSERT_EQUAL(prison.start_wing_event("scrubber"), "scrubber", "No Kessler vent started to back up")
+	var/obj/vent = prison.wing_event_source_objects()[1]
+	TEST_ASSERT(istype(vent, /obj/structure/outpost_kessler_vent), "The fallback was not a Kessler vent")
 	TEST_ASSERT(prison.in_cell_block(vent), "A vent outside the cell block backed up")
 	var/list/tiles = prison.backup_tiles(get_turf(vent), 3) // PRISON_VENT_MESS_RANGE
 	TEST_ASSERT(length(tiles), "The vent has no floor around it")
 	TEST_ASSERT_EQUAL(count_filth(tiles), 0, "Filth came out while the vent was still gurgling")
-	TEST_ASSERT_NULL(prison.start_wing_event("toilet"), "A second event started while a vent gurgled")
-	prison.wing_events_tick(3)
-	TEST_ASSERT_EQUAL(count_filth(tiles), 0, "Filth came out after 3 seconds of gurgling")
-	prison.wing_events_tick(3)
+	prison.wing_events_tick(6)
 	TEST_ASSERT_NULL(prison.wing_event_pending, "The vent is still gurgling after 6 seconds")
-	var/filth = count_filth(tiles)
+	filth = count_filth(tiles)
 	TEST_ASSERT(filth >= min(6, length(tiles)) && filth <= 12, "The vent spewed [filth] pieces of filth over [length(tiles)] tiles")
 	for(var/turf/tile as anything in tiles)
 		TEST_ASSERT(get_dist(tile, vent) <= 3 && prison.in_cell_block(tile), "Filth landed off the cell block or too far from the vent")
-	prison.refresh_conditions()
-	TEST_ASSERT(prison.clean_score < clean_before, "A vent backup left the wing [prison.clean_score] clean")
 	TEST_ASSERT(wildcard_logged(prison, "vent"), "The backup was not logged")
 
 	// A toilet floods its own cell: wet floor and a little dirt.
 	var/list/toilets = prison.cell_toilets()
 	TEST_ASSERT(length(toilets), "No cell has a toilet")
 	TEST_ASSERT_EQUAL(prison.start_wing_event("toilet"), "toilet", "No toilet started to overflow")
-	var/obj/structure/toilet/toilet = prison.wing_event_source_ref?.resolve()
+	var/obj/structure/toilet/toilet = prison.wing_event_source_objects()[1]
 	var/datum/outpost_prison_cell/cell = prison.cell_at(get_turf(toilet))
 	TEST_ASSERT_NOTNULL(cell, "The overflowing toilet is not in a cell")
 	prison.wing_events_tick(6)
@@ -422,9 +508,12 @@
 	for(var/turf/open/floor in prison.backup_tiles(get_turf(vent), 3))
 		if(!cell.turf_set[floor])
 			TEST_ASSERT_NULL(floor.GetComponent(/datum/component/wet_floor), "The toilet flooded floor outside its cell")
+	for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrubber as anything in sources)
+		scrubber.welded = FALSE
+	prison.wing_event_force_second = null
 	settle_prison_air(home)
 
-/// Pieces of a vent's filth on `tiles`
+/// Pieces of a vent's or the foam's filth on `tiles`
 /datum/unit_test/voidcrew_outpost_prison_wing_backups/proc/count_filth(list/tiles)
 	var/count = 0
 	for(var/turf/tile as anything in tiles)
@@ -432,3 +521,21 @@
 			if(GLOB.outpost_prison_vent_filth[mess.type])
 				count++
 	return count
+
+/// Whether overflow foam is anywhere in the wing
+/datum/unit_test/voidcrew_outpost_prison_wing_backups/proc/foam_left(datum/outpost_prison/prison)
+	for(var/turf/tile as anything in prison.wing_turfs())
+		if(locate(/obj/effect/particle_effect/fluid/foam/short_life/outpost_prison) in tile)
+			return TRUE
+	return FALSE
+
+/// Whether the overflow foam has all gone; notes any seen outside the cell block on the way
+/datum/unit_test/voidcrew_outpost_prison_wing_backups/proc/foam_gone(datum/outpost_prison/prison)
+	var/any = FALSE
+	for(var/turf/tile as anything in prison.wing_turfs())
+		if(!(locate(/obj/effect/particle_effect/fluid/foam/short_life/outpost_prison) in tile))
+			continue
+		any = TRUE
+		if(!prison.in_cell_block(tile))
+			foam_strayed = TRUE
+	return !any

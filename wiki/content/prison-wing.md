@@ -27,6 +27,7 @@ Prisoners take food and clean uniforms from the serving hatches or from your han
 - Uniforms get dirty. Hand a prisoner a cleaner one and they change and give you the old one, or leave clean uniforms on a hatch. Wash dirty ones in the office washing machine.
 - Injured prisoners don't heal on their own. Use bruise packs or sutures on them; there is a first aid kit in the office.
 - The wing's **conditions** count clean floors, working lights and power. Mop up mess, replace broken lights and keep the APC charged.
+- Now and then the wing's air scrubbers back up and spew filthy froth over the floor. It's harmless but it needs mopping. A scrubber welded shut stays quiet.
 
 Pay depends on how well each prisoner is looked after and on the conditions. When a sentence runs out, the prisoner walks back to their cell and beams out, and the outpost gets a release bonus that grows with how well they were treated.
 

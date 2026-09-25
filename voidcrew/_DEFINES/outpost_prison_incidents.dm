@@ -49,14 +49,19 @@
 #define PRISON_WING_EVENT_RETRY 60
 /// How likely each kind is (integers)
 #define PRISON_WING_EVENT_WEIGHT_LIGHTS 4
-#define PRISON_WING_EVENT_WEIGHT_VENT 4
+#define PRISON_WING_EVENT_WEIGHT_SCRUBBER 4
 #define PRISON_WING_EVENT_WEIGHT_TOILET 2
 /// Working lights that blow at once
 #define PRISON_WING_LIGHTS_MIN 1
 #define PRISON_WING_LIGHTS_MAX 3
-/// Seconds a vent or toilet gurgles before it backs up
+/// Seconds a scrubber, vent or toilet gurgles before it backs up
 #define PRISON_WING_GURGLE_TIME 5
-/// Pieces of filth a backed-up vent spews, and how many steps from the vent it reaches
+/// Percent chance a second scrubber overflows along with the first
+#define PRISON_OVERFLOW_SECOND_CHANCE 30
+/// Units of reagent an overflowing scrubber brings up, and about how many tiles its foam covers (tg's event uses 50 across a station).
+/// Each open tile the foam dies on is left with a piece of filth.
+#define PRISON_OVERFLOW_FOAM 10
+/// Pieces of filth a backed-up Kessler vent spews, and how many steps from a scrubber or vent the mess reaches
 #define PRISON_VENT_MESS_MIN 6
 #define PRISON_VENT_MESS_MAX 12
 #define PRISON_VENT_MESS_RANGE 3

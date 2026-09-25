@@ -2921,7 +2921,7 @@
 				"Bulb's gone."
 			]
 		},
-		"wing_vent_backup": {
+		"wing_scrubber_overflow": {
 			"any": [
 				"Oh, that smell! What is that?",
 				"The vent's throwing up again!",
@@ -2930,7 +2930,8 @@
 				"I'm going to be sick.",
 				"Don't step in it. Don't step in it!",
 				"What's coming out of the floor?",
-				"Crew! The vent's backing up!",
+				"Crew! The scrubber's backing up!",
+				"Why is the foam brown?",
 				"I just ate. Why now?"
 			],
 			"chatty": [

@@ -214,7 +214,7 @@ type PrisonIncidents = {
   wing_event_in: number | null;
   /** why the wing event clock is not running, null when it is */
   wing_event_paused: string | null;
-  /** vent or toilet while one gurgles */
+  /** scrubber or toilet while one gurgles */
   wing_event_pending: string | null;
 };
 
@@ -1114,7 +1114,7 @@ const INCIDENT_KINDS = [
 /** prison_wing_event kinds */
 const WING_EVENTS = [
   ['lights', 'Blow Lights', 'lightbulb'],
-  ['vent', 'Vent Backup', 'wind'],
+  ['scrubber', 'Scrubber Overflow', 'wind'],
   ['toilet', 'Toilet Flood', 'toilet'],
 ] as const;
 

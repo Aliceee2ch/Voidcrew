@@ -48,6 +48,7 @@
 	var/mob/living/carbon/human/warden = make_player(prison_spot(home, 8, 5), "dragowner")
 	var/mob/living/carbon/human/visitor = make_player(prison_spot(home, 10, 5), "dragvisitor")
 	var/mob/living/basic/outpost_prisoner/prisoner = trouble_prisoner(prison, prison_spot(home, 9, 5))
+	staff_door.autoclose = FALSE
 	staff_door.open()
 	TEST_ASSERT(!staff_door.density, "The staff door did not open")
 

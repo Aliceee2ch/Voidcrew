@@ -193,10 +193,10 @@
 	TEST_ASSERT(!attacker.cell.stash_shiv, "The stabber did not draw the shiv under their mattress")
 	TEST_ASSERT(attacker.fight && attacker.fight == victim.fight, "The stabbing is not a fight between the two")
 	TEST_ASSERT(attacker.fight.fighting, "The stabbing started with an argument")
-	// A shiv hits a prisoner as hard as it hits staff (PRISONER_SHIV_MIN).
+	// A shiv hits a prisoner harder than a fist, and softer than it hits staff (PRISONER_STAB_MIN/MAX).
 	var/health_before = victim.health
 	TEST_ASSERT(attacker.strike(victim), "The stabber could not strike")
-	TEST_ASSERT(health_before - victim.health >= 7, "A stab did [health_before - victim.health] damage, not a shiv's")
+	TEST_ASSERT(health_before - victim.health >= 7 && health_before - victim.health <= 10, "A stab did [health_before - victim.health] damage, not 7-10")
 	// The fight over, the stabber drops the shiv and the incident is done.
 	prison.end_fight(attacker.fight)
 	prison.wildcard_tick(1)

@@ -77,11 +77,22 @@
 #define PRISONER_THREAT_COOLDOWN 20
 /// Seconds a decided swing waits for them to close in before it is dropped
 #define PRISONER_SWING_TIMEOUT 6
-/// Brute damage of a punch at staff, and of a rioter's shiv (tg's shiv is force 8)
+/// Brute damage of a punch at staff: blunt, and it never wounds
 #define PRISONER_PUNCH_MIN 5
 #define PRISONER_PUNCH_MAX 8
-#define PRISONER_SHIV_MIN 7
-#define PRISONER_SHIV_MAX 10
+/// Brute damage of a shiv at staff or anyone else who is not a prisoner (tg's glass shiv is force 8).
+/// Each blow is a stab or a slash, so it can leave a puncture or a cut that bleeds.
+#define PRISONER_SHIV_MIN 10
+#define PRISONER_SHIV_MAX 15
+/// The shiv's wounding, as tg's glass shiv has it in someone's hand. Four blows in five land on the
+/// chest, which resists wounds; the rest on an arm, a leg or now and then the head (tg's
+/// attack_zone_randomiser). On a bare body about two blows in five wound. An armour vest takes a
+/// third off chest blows and stops nearly every wound there, leaving about one in five.
+#define PRISONER_SHIV_WOUND_BONUS 5
+#define PRISONER_SHIV_EXPOSED_WOUND_BONUS 15
+/// Brute damage of a shiv at another prisoner (a stabbing, outpost_prison_incidents.dm), never a killing blow
+#define PRISONER_STAB_MIN 7
+#define PRISONER_STAB_MAX 10
 
 // A player's blow on a prisoner on their feet: they hit back, or back off
 /// Seconds they go after the attacker before letting it drop

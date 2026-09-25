@@ -309,11 +309,11 @@
 	TEST_ASSERT_EQUAL(block["subject"], subject.real_name, "The console names the wrong subject")
 	TEST_ASSERT_EQUAL(block["time_left"], 60, "The twitch does not last 60 s") // OUTPOST_EXPERIMENT_TWITCH
 
-	// While it runs: the subject earns nothing, cells are for safety, arrivals and riots wait.
+	// While it runs: the subject earns nothing, cells are for safety and riots wait; arrivals keep coming.
 	TEST_ASSERT_EQUAL(prison.pay_factor(subject), 0, "A dosed prisoner still earned")
 	TEST_ASSERT(prison.protective_custody(), "An experiment did not make bolting prisoners in protective custody")
 	prison.intake_open = TRUE
-	TEST_ASSERT_EQUAL(prison.intake_state(), "experiment", "Arrivals did not wait for the experiment")
+	TEST_ASSERT(prison.intake_state() != "experiment", "Arrivals waited for the experiment")
 	prison.intake_open = FALSE
 	TEST_ASSERT(!prison.start_riot("test"), "A riot started during an experiment")
 

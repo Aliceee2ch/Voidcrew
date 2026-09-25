@@ -1073,12 +1073,15 @@
 	prison.tick(1)
 	TEST_ASSERT_NULL(runner.climb_ref, "The climb went on after a window door shut")
 	TEST_ASSERT_EQUAL(runner.loc, prison_spot(home, 5, 7), "The prisoner went over a shut hatch")
-	// Three seconds (PRISONER_CLIMB_TIME) over an open one, and they are out of the cell block.
+	// Three seconds (PRISONER_CLIMB_TIME) over an open one: up on the counter halfway, then down in the
+	// office and out of the cell block.
 	yard_door.open()
 	TEST_ASSERT(runner.start_climb(hatch), "The prisoner did not start over the reopened hatch")
-	prison.tick(2)
-	TEST_ASSERT_EQUAL(runner.loc, prison_spot(home, 5, 7), "The climb finished early")
-	TEST_ASSERT(isnull(runner.trouble), "The climber counted as loose while still in the yard")
+	prison.tick(1)
+	TEST_ASSERT_EQUAL(runner.loc, prison_spot(home, 5, 7), "The climber was on the counter before halfway")
+	prison.tick(1)
+	TEST_ASSERT_EQUAL(runner.loc, prison_spot(home, 5, 6), "The climber did not get up onto the counter halfway")
+	TEST_ASSERT(isnull(runner.trouble), "The climber counted as loose while up on the counter")
 	prison.tick(1)
 	TEST_ASSERT_EQUAL(runner.loc, prison_spot(home, 5, 5), "The climb did not end in the office")
 	yard_door.close()

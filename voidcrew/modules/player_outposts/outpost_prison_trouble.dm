@@ -30,6 +30,7 @@
 #define PRISONER_BEATEN_TRAIT "outpost_prisoner_beaten"
 /// Offset source for a prisoner half way over a serving hatch
 #define PRISONER_CLIMB_OFFSET "outpost_prisoner_climb"
+#define PRISONER_CLIMB_HOP_OFFSET "outpost_prisoner_climb_hop"
 /// How long after a staff hit a collapse or death is put down to staff (deciseconds)
 #define PRISONER_STAFF_BLAME_TIME (5 SECONDS)
 /// Blackboard key: what a prisoner in trouble is going for
@@ -790,7 +791,10 @@
 
 // ===== CLIMBING OUT =====
 
-/// Starts over a serving hatch left open on both sides, from the yard side. Takes PRISONER_CLIMB_TIME seconds.
+/**
+ * Starts over a serving hatch left open on both sides, from the yard side. Takes PRISONER_CLIMB_TIME
+ * seconds: they scramble up onto the counter halfway through, then drop down on the office side.
+ */
 /mob/living/basic/outpost_prisoner/proc/start_climb(obj/structure/table/reinforced/prison_hatch/hatch)
 	if(climb_ref || !hatch?.both_sides_open() || loc != hatch.yard_side_turf() || !trouble_can_act())
 		return FALSE
@@ -798,27 +802,47 @@
 	climb_ref = WEAKREF(hatch)
 	climb_left = PRISONER_CLIMB_TIME
 	face_atom(hatch)
-	add_offsets(PRISONER_CLIMB_OFFSET, y_add = 8)
+	// Leaning onto the counter
+	var/lean = get_dir(src, hatch)
+	add_offsets(PRISONER_CLIMB_OFFSET, x_add = ((lean & EAST) ? 8 : ((lean & WEST) ? -8 : 0)), y_add = ((lean & NORTH) ? 8 : ((lean & SOUTH) ? -8 : 0)))
 	playsound(hatch, 'sound/effects/footstep/catwalk1.ogg', 30, TRUE)
 	visible_message(span_warning("[src] starts climbing over [hatch]!"))
 	return TRUE
 
-/// Advances a climb; over the counter when the time is up, back down if a side shuts or they are stopped
+/// Whether a climber is up on the counter
+/mob/living/basic/outpost_prisoner/proc/on_hatch_counter(obj/structure/table/reinforced/prison_hatch/hatch)
+	return hatch && loc == hatch.loc
+
+/// Advances a climb: up onto the counter halfway, down the office side when the time is up; back down to the yard if a side shuts or they are stopped
 /mob/living/basic/outpost_prisoner/proc/climb_tick(seconds)
 	var/obj/structure/table/reinforced/prison_hatch/hatch = climb_ref?.resolve()
 	if(!hatch || !hatch.both_sides_open() || stat != CONSCIOUS || can_be_dragged() || pulledby || get_dist(src, hatch) > 1)
 		stop_climb(fell = TRUE)
 		return FALSE
 	climb_left -= seconds
+	if(!on_hatch_counter(hatch) && climb_left <= PRISONER_CLIMB_TIME / 2)
+		remove_offsets(PRISONER_CLIMB_OFFSET, animate = FALSE)
+		hop_to(get_turf(hatch))
+		playsound(hatch, 'sound/effects/footstep/catwalk1.ogg', 40, TRUE)
+		visible_message(span_warning("[src] scrambles up onto [hatch]!"))
 	if(climb_left > 0)
 		return FALSE
 	var/turf/over = hatch.staff_side_turf()
 	stop_climb()
 	if(!over)
 		return FALSE
-	forceMove(over)
-	visible_message(span_warning("[src] climbs over [hatch]!"))
+	hop_to(over)
+	visible_message(span_warning("[src] drops down off [hatch] on the far side!"))
 	return TRUE
+
+/// Moves them onto `destination` next to them, gliding over from where they stood rather than blinking there
+/mob/living/basic/outpost_prisoner/proc/hop_to(turf/destination)
+	var/turf/from = get_turf(src)
+	forceMove(destination)
+	if(!from || loc != destination)
+		return
+	add_offsets(PRISONER_CLIMB_HOP_OFFSET, x_add = (from.x - destination.x) * ICON_SIZE_X, y_add = (from.y - destination.y) * ICON_SIZE_Y, animate = FALSE)
+	remove_offsets(PRISONER_CLIMB_HOP_OFFSET)
 
 /mob/living/basic/outpost_prisoner/proc/stop_climb(fell = FALSE)
 	if(!climb_ref)
@@ -828,6 +852,11 @@
 	climb_left = 0
 	note_trouble_ended()
 	remove_offsets(PRISONER_CLIMB_OFFSET)
+	// Stopped up on the counter: back down on the yard side
+	if(fell && on_hatch_counter(hatch))
+		var/turf/yard_side = hatch.yard_side_turf()
+		if(yard_side)
+			hop_to(yard_side)
 	if(fell && hatch && stat == CONSCIOUS)
 		visible_message(span_notice("[src] slides back down off [hatch]."))
 
@@ -1102,6 +1131,7 @@
 
 #undef PRISONER_BEATEN_TRAIT
 #undef PRISONER_CLIMB_OFFSET
+#undef PRISONER_CLIMB_HOP_OFFSET
 #undef PRISONER_STAFF_BLAME_TIME
 #undef BB_OUTPOST_PRISONER_TROUBLE_TARGET
 #undef ACTIVITY_CONTINUE

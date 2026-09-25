@@ -720,9 +720,17 @@
 	remove_offsets(PRISONER_SITTING_OFFSET)
 	buckled?.unbuckle_mob(src, force = TRUE)
 
-/// Perches on the edge of the bed under them
+/**
+ * Settles on the bed under them. There is no sitting pose for a bed, and a standing sprite shifted down
+ * reads as someone standing on it, so they lie on it, awake. With no bed to lie on, they crouch.
+ */
 /mob/living/basic/outpost_prisoner/proc/sit_on_edge(facing)
-	add_offsets(PRISONER_SITTING_OFFSET, y_add = -4)
+	var/obj/structure/bed/bed = locate() in loc
+	if(bed && buckled != bed)
+		stand_up()
+		bed.buckle_mob(src, force = TRUE)
+	if(!buckled)
+		add_offsets(PRISONER_SITTING_OFFSET, y_add = -4)
 	if(facing)
 		setDir(facing)
 

@@ -505,9 +505,9 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	interruptible = FALSE
 	sleeping = TRUE
 
-/// Perched on the edge of their bed
+/// Lying on their bed for a bit, awake (see sit_on_edge())
 /datum/prisoner_activity/sit_bed
-	name = "sitting on their bed"
+	name = "lying on their bed"
 	leisure = TRUE
 	context = "idle"
 	weight = 6

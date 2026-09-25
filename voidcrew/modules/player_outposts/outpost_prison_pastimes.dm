@@ -1321,6 +1321,12 @@
  */
 /datum/outpost_prison/proc/pastime_pre_eat(mob/living/basic/outpost_prisoner/prisoner, atom/food, mob/living/feeder)
 	if(reserved_supply(food, prisoner))
+		// Handing the kept cake to the birthday prisoner saves them fetching it.
+		if(party_stage == PARTY_WAITING && prisoner == party_host_ref?.resolve() && istype(feeder) && food.loc == feeder && !prisoner.held_item && feeder.temporarilyRemoveItemFromInventory(food))
+			if(!prisoner.take_item(food))
+				var/obj/item/dropped = food
+				dropped.forceMove(prisoner.drop_location())
+			INVOKE_ASYNC(src, PROC_REF(try_start_party_host))
 		return TRUE
 	var/obj/item/food/cake/cake = food
 	if(!istype(cake) || !istype(feeder) || is_outpost_prisoner(feeder) || party_stage)
@@ -1421,8 +1427,10 @@
 			continue
 		best_free = length(free)
 		best_stool = null
+		// Beside the cake when it is on the table already, else the nearest to walk to
+		var/atom/near = at_table || prisoner
 		for(var/obj/structure/chair/stool as anything in free)
-			if(!best_stool || get_dist(prisoner, stool) < get_dist(prisoner, best_stool))
+			if(!best_stool || get_dist(near, stool) < get_dist(near, best_stool))
 				best_stool = stool
 	if(best_stool && claim(best_stool))
 		seat_ref = WEAKREF(best_stool)
@@ -1446,20 +1454,30 @@
 		started = TRUE
 		ends_at = INFINITY
 	if(stage == "carry")
-		set_down()
+		return set_down()
 	return TRUE
 
-/// At the table: sits down and puts the cake in front of them, and the party begins
+/**
+ * At the table: sits down and puts the cake in front of them (or sits by it, when it is on the
+ * table already), and the party begins. FALSE if the cake is neither in their hands nor beside them.
+ */
 /datum/prisoner_activity/party_host/proc/set_down()
 	var/datum/outpost_prison/prison = prisoner.prison
 	var/obj/item/food/cake/cake = prison?.party_cake()
-	if(!cake || prisoner.held_item != cake)
+	if(!cake)
+		return FALSE
+	var/turf/put
+	if(prisoner.held_item == cake)
+		put = (table_turf && get_dist(prisoner, table_turf) <= 1) ? table_turf : get_turf(prisoner)
+	else if(isturf(cake.loc) && get_dist(prisoner, cake) <= 1)
+		put = cake.loc
+	else
 		return FALSE
 	var/obj/structure/chair/stool = seat_ref?.resolve()
 	if(stool && prisoner.loc == stool.loc)
-		prisoner.sit_on(stool, table_turf ? get_cardinal_dir(prisoner, table_turf) : stool.dir)
-	var/turf/put = (table_turf && get_dist(prisoner, table_turf) <= 1) ? table_turf : get_turf(prisoner)
-	prisoner.drop_held_item(put)
+		prisoner.sit_on(stool, get_cardinal_dir(prisoner, put) || stool.dir)
+	if(prisoner.held_item == cake)
+		prisoner.drop_held_item(put)
 	stage = "party"
 	return prison.party_ready(put)
 
@@ -1483,14 +1501,11 @@
 			pick_table()
 			if(spot)
 				return ACTIVITY_MOVE
-			set_down()
-			return ACTIVITY_CONTINUE
+			return set_down() ? ACTIVITY_CONTINUE : ACTIVITY_DONE
 		if("carry")
-			if(!cake)
-				return ACTIVITY_DONE
 			// Nowhere to walk to: the party is where they stand.
-			if(!spot)
-				set_down()
+			if(!cake || (!spot && !set_down()))
+				return ACTIVITY_DONE
 			return ACTIVITY_CONTINUE
 		if("party")
 			if(!prison?.scene_active())
@@ -1501,8 +1516,8 @@
 	return ACTIVITY_DONE
 
 /datum/prisoner_activity/party_host/finish()
-	var/obj/item/food/cake/cake = prisoner?.prison?.party_cake()
-	if(cake && prisoner.held_item == cake)
+	// The cake goes down with them, kept or not: nobody walks about holding a cake after the party is off.
+	if(istype(prisoner?.held_item, /obj/item/food/cake))
 		prisoner.drop_held_item((table_turf && get_dist(prisoner, table_turf) <= 1) ? table_turf : null)
 	return ..()
 
@@ -1737,7 +1752,7 @@
 	var/list/far_edge = list()
 	for(var/turf/tile as anything in prisoner.walkable)
 		var/distance = get_dist(tile, hoop)
-		if(distance < PRISON_WATCH_NEAR || distance > PRISON_WATCH_FAR + 1 || prison.cell_at(tile))
+		if(distance < PRISON_WATCH_NEAR || distance > PRISON_WATCH_FAR + 1 || prison.cell_at(tile) || (locate(/obj/machinery/door) in tile))
 			continue
 		if((tile != prisoner.loc && prisoner.tile_taken(tile)) || prison.claimed_by_other(tile, prisoner))
 			continue

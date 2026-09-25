@@ -21,10 +21,12 @@
 	var/list/affinities = list()
 	/// Seconds two prisoners have played basketball together since their last PRISON_AFFINITY_BASKETBALL, by pair key
 	var/list/coplay_seconds = list()
-	/// REF() of fights a friend has already had their one try at breaking up
-	var/list/breakup_checked = list()
 	/// Tests pin the break-up chance here (percent); null uses PRISON_BREAKUP_CHANCE
 	var/breakup_chance_override
+
+/datum/outpost_prison_fight
+	/// A friend of one of the fighters has had their one try at breaking it up
+	var/breakup_tried = FALSE
 
 /mob/living/basic/outpost_prisoner
 	/// It is their birthday; `party_done` once the yard has had the cake
@@ -219,18 +221,14 @@
  * who ended one, or null.
  */
 /datum/outpost_prison/proc/breakup_tick()
-	for(var/key in breakup_checked.Copy())
-		var/datum/outpost_prison_fight/still_on = locate(key) in fights
-		if(!still_on)
-			breakup_checked -= key
 	for(var/datum/outpost_prison_fight/brawl in fights.Copy())
-		if(brawl.fighting || (REF(brawl) in breakup_checked))
+		if(brawl.fighting || brawl.breakup_tried)
 			continue
 		for(var/mob/living/basic/outpost_prisoner/fighter as anything in list(brawl.first, brawl.second))
 			var/mob/living/basic/outpost_prisoner/friend = peacemaker_for(fighter, brawl)
 			if(!friend)
 				continue
-			breakup_checked += REF(brawl)
+			brawl.breakup_tried = TRUE
 			var/chance = isnull(breakup_chance_override) ? PRISON_BREAKUP_CHANCE : breakup_chance_override
 			if(!prob(chance))
 				break
@@ -446,7 +444,6 @@
 /datum/outpost_prison/proc/life_destroy()
 	affinities.Cut()
 	coplay_seconds.Cut()
-	breakup_checked.Cut()
 	clear_pastimes()
 
 // ===== ADMIN =====

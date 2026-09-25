@@ -191,6 +191,29 @@ type PrisonAdminData = {
   extras?: PrisonAdminExtras | null;
   /** null with no experiment */
   experiment?: PrisonExperiment | null;
+  incidents?: PrisonIncidents | null;
+};
+
+/** Wildcard incidents and wing events (outpost_prison_incidents.dm, outpost_prison_wing_events.dm) */
+type PrisonIncidents = {
+  /** percent per minute at the wing's tension now */
+  chance: number;
+  /** seconds of crew-home time before the next roll can come */
+  gap_left: number;
+  /** why the clock is not rolling, null when it is */
+  paused: string | null;
+  /** stab or snap while one is under way */
+  running: string | null;
+  actor: string | null;
+  target: string | null;
+  /** seconds of tell left, null past the tell */
+  tell_left: number | null;
+  /** seconds of crew-home time before the next wing event, null before the first tick */
+  wing_event_in: number | null;
+  /** why the wing event clock is not running, null when it is */
+  wing_event_paused: string | null;
+  /** vent or toilet while one gurgles */
+  wing_event_pending: string | null;
 };
 
 type AdminGuard = {
@@ -1082,6 +1105,20 @@ const CHANGELING_STAGES = [
   ['horror', 'Horror', 'skull-crossbones'],
 ] as const;
 
+/** prison_incident kinds */
+const INCIDENT_KINDS = [
+  ['stab', 'Stabbing', 'skull-crossbones'],
+  ['snap', 'Snap', 'hand-fist'],
+  ['fight', 'Fight', 'hand-back-fist'],
+] as const;
+
+/** prison_wing_event kinds */
+const WING_EVENTS = [
+  ['lights', 'Blow Lights', 'lightbulb'],
+  ['vent', 'Vent Backup', 'wind'],
+  ['toilet', 'Toilet Flood', 'toilet'],
+] as const;
+
 const isNum = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
@@ -1091,6 +1128,113 @@ type PrisonProps = {
   data: PrisonAdminData;
   busy: boolean;
   act: DetailsProps['act'];
+};
+
+/** The wildcard incidents and wing events rows: buttons that skip the clocks, and the clocks */
+const PrisonIncidentTools = ({ data, busy, act }: PrisonProps) => {
+  // Whether the Stabbing and Snap buttons play their tell first
+  const [withTell, setWithTell] = useState(false);
+  const incidents = data.incidents || null;
+  if (!incidents) {
+    return null;
+  }
+  const clockParts = [
+    `${incidents.chance}%/min`,
+    incidents.paused ? `paused: ${incidents.paused}` : 'rolling',
+    incidents.gap_left > 0 ? `gap ${clock(incidents.gap_left)}` : '',
+  ].filter(Boolean);
+  const running = incidents.running
+    ? [
+        incidents.running === 'stab'
+          ? `${incidents.actor || '?'} is after ${incidents.target || '?'}`
+          : `${incidents.actor || '?'} is about to snap`,
+        isNum(incidents.tell_left)
+          ? `tell ${clock(incidents.tell_left)}`
+          : 'attacking',
+      ].join(', ')
+    : '';
+  const wingParts = [
+    incidents.wing_event_pending
+      ? `${incidents.wing_event_pending} gurgling`
+      : isNum(incidents.wing_event_in)
+        ? `next in ${clock(incidents.wing_event_in)}`
+        : '',
+    incidents.wing_event_paused ? `paused: ${incidents.wing_event_paused}` : '',
+  ].filter(Boolean);
+
+  return (
+    <>
+      <Stack
+        className="OutpostPrisonAdmin__incidents"
+        align="center"
+        wrap
+        mb={1}
+      >
+        <Stack.Item width="90px" bold>
+          Incidents
+        </Stack.Item>
+        {INCIDENT_KINDS.map(([kind, label, icon]) => (
+          <Button
+            key={kind}
+            icon={icon}
+            disabled={busy || !!incidents.running}
+            tooltip={
+              kind === 'fight'
+                ? 'Starts with the argument'
+                : withTell
+                  ? 'After its tell'
+                  : 'Skips the tell'
+            }
+            onClick={() =>
+              act('prison_incident', { kind, tell: withTell ? 1 : 0 })
+            }
+          >
+            {label}
+          </Button>
+        ))}
+        <Button.Checkbox
+          checked={withTell}
+          disabled={busy}
+          onClick={() => setWithTell(!withTell)}
+        >
+          Tell first
+        </Button.Checkbox>
+        <Stack.Item ml={1} color="label">
+          {clockParts.join(', ')}
+        </Stack.Item>
+        {running ? (
+          <Stack.Item ml={1} bold color="bad">
+            {running}
+          </Stack.Item>
+        ) : null}
+      </Stack>
+      <Stack
+        className="OutpostPrisonAdmin__wing-events"
+        align="center"
+        wrap
+        mb={1}
+      >
+        <Stack.Item width="90px" bold>
+          Wing events
+        </Stack.Item>
+        {WING_EVENTS.map(([kind, label, icon]) => (
+          <Button
+            key={kind}
+            icon={icon}
+            disabled={busy || !!incidents.wing_event_pending}
+            onClick={() => act('prison_wing_event', { kind })}
+          >
+            {label}
+          </Button>
+        ))}
+        {wingParts.length > 0 ? (
+          <Stack.Item ml={1} color="label">
+            {wingParts.join(', ')}
+          </Stack.Item>
+        ) : null}
+      </Stack>
+    </>
+  );
 };
 
 const PrisonTools = ({ data, busy, act }: PrisonProps) => {
@@ -1294,6 +1438,7 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
           ) : null}
         </Stack.Item>
       </Stack>
+      <PrisonIncidentTools data={data} busy={busy} act={act} />
       <Stack
         className="OutpostPrisonAdmin__experiment"
         align="center"

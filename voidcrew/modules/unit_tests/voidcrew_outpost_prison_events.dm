@@ -70,13 +70,13 @@
 	prison.refresh_reach()
 
 	// A new wing starts with the gap (PRISON_INCIDENT_GAP), and the gap only counts down with the crew home.
-	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 900, "A new wing starts [prison.wildcard_gap_left] s from its first incident")
+	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 600, "A new wing starts [prison.wildcard_gap_left] s from its first incident")
 	prison.crew_home_override = FALSE
 	prison.wildcard_tick(600)
-	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 900, "The gap ran down with nobody home")
+	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 600, "The gap ran down with nobody home")
 	prison.crew_home_override = TRUE
 	prison.wildcard_tick(300)
-	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 600, "Five minutes home left the gap at [prison.wildcard_gap_left]")
+	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 300, "Five minutes home left the gap at [prison.wildcard_gap_left]")
 	TEST_ASSERT(!wildcard_started(prison), "An incident started inside the gap")
 	prison.wildcard_gap_left = 0
 
@@ -119,7 +119,7 @@
 	prison.wildcard_force_roll = TRUE
 	prison.wildcard_tick(60) // PRISON_INCIDENT_ROLL_TIME
 	TEST_ASSERT(wildcard_started(prison), "A roll that came up with the crew home started nothing")
-	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 900, "An incident did not start the gap") // PRISON_INCIDENT_GAP
+	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 600, "An incident did not start the gap") // PRISON_INCIDENT_GAP
 	wildcard_reset(prison)
 
 	// Rivals are picked first, and a shiv under the mattress makes its owner likelier to be the one.
@@ -180,7 +180,7 @@
 	var/datum/outpost_prison_wildcard/stab = prison.wildcard
 	TEST_ASSERT_NOTNULL(stab, "The stab button started no stabbing")
 	TEST_ASSERT_EQUAL(stab.stage, "attack", "The stab button did not skip the tell")
-	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 900, "An admin stabbing did not start the gap") // PRISON_INCIDENT_GAP
+	TEST_ASSERT_EQUAL(prison.wildcard_gap_left, 600, "An admin stabbing did not start the gap") // PRISON_INCIDENT_GAP
 	var/mob/living/basic/outpost_prisoner/attacker = stab.actor()
 	var/mob/living/basic/outpost_prisoner/victim = stab.target()
 	TEST_ASSERT(attacker.has_shiv(), "The stabber has no shiv")

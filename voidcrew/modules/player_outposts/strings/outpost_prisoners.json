@@ -1654,6 +1654,34 @@
 				"Okay, okay. No harm done, right?"
 			]
 		},
+		"turret_gives_up": {
+			"any": [
+				"Okay! Okay! I give up!",
+				"Alright, I'm done. I'm going back to my cell.",
+				"Don't shoot! I'm going back in!",
+				"Fine. I give up. The riot's over for me.",
+				"Hands up, see? I'm going.",
+				"Okay, you win. I'm going back to my bunk.",
+				"Enough. I'm out of this. Going to my cell.",
+				"Not worth it. I'm going back in.",
+				"Alright, alright. Shiv's down. I'm going."
+			],
+			"nervous": [
+				"Please don't shoot! I'm going back, I swear!",
+				"I give up! I give up! Don't shoot!"
+			],
+			"grumpy": [
+				"Fine. I'm going back. This riot was stupid anyway.",
+				"Whatever. I'm done. Happy now?"
+			],
+			"chatty": [
+				"Okay, okay, I know when I'm beat. Back to the cell I go."
+			],
+			"quiet": [
+				"I'm done.",
+				"Going."
+			]
+		},
 		"turret_defies": {
 			"any": [
 				"Go on then. Shoot.",

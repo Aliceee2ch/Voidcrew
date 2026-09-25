@@ -260,7 +260,12 @@
 	else
 		return null
 	face_atom(turret)
-	INVOKE_ASYNC(src, PROC_REF(say_context), reaction == OUTPOST_PRISON_TURRET_DEFY ? "turret_defies" : "turret_backs_off")
+	var/line = "turret_backs_off"
+	if(reaction == OUTPOST_PRISON_TURRET_DEFY)
+		line = "turret_defies"
+	else if(reaction == OUTPOST_PRISON_TURRET_GIVE_UP)
+		line = "turret_gives_up"
+	INVOKE_ASYNC(src, PROC_REF(say_context), line)
 	return reaction
 
 /// Backing off with `chance` percent, else defying. The prison's forced_turret_reaction settles it instead, for tests.

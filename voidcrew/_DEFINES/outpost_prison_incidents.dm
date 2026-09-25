@@ -10,16 +10,15 @@
 #define PRISON_INCIDENT_ROLL_TIME 60
 /// Percent chance per roll at tension PRISON_INCIDENT_CALM_TENSION or less, and at PRISON_INCIDENT_TENSE_TENSION.
 /// It rises in a straight line between them and on past the second, up to PRISON_INCIDENT_CHANCE_MAX.
-/// With PRISON_INCIDENT_GAP between incidents, a calm wing averages one incident per 15 + 100/3.3
-/// = about 45 minutes of crew-home time, and a wing at tension 50 one per 15 + 100/20 = 20 minutes
-/// (the gap keeps it from going lower).
-#define PRISON_INCIDENT_CHANCE_CALM 3.3
+/// With PRISON_INCIDENT_GAP between incidents, a calm wing averages one incident per 10 + 100/6.7
+/// = about 25 minutes of crew-home time, and a wing at tension 50 one per 10 + 100/20 = 15 minutes.
+#define PRISON_INCIDENT_CHANCE_CALM 6.7
 #define PRISON_INCIDENT_CHANCE_TENSE 20
 #define PRISON_INCIDENT_CHANCE_MAX 30
 #define PRISON_INCIDENT_CALM_TENSION 20
 #define PRISON_INCIDENT_TENSE_TENSION 50
 /// Seconds of crew-home time after an incident before the next can roll; a new wing starts with it
-#define PRISON_INCIDENT_GAP 900
+#define PRISON_INCIDENT_GAP 600
 /// Prisoners in the cell block an incident needs
 #define PRISON_INCIDENT_MIN_PRISONERS 2
 /// How likely each kind is (integers)

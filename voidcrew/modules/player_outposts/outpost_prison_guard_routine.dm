@@ -377,7 +377,7 @@ GLOBAL_LIST_INIT(outpost_guard_leisure, outpost_guard_leisure_types())
 
 /// The other guard of the wing on the payroll, if any is here
 /datum/outpost_guard_activity/proc/other_guard()
-	for(var/mob/living/basic/outpost_prison_guard/other as anything in guard.prison?.guard_mobs)
+	for(var/mob/living/basic/outpost_prison_guard/other in guard.prison?.guard_mobs)
 		if(other != guard && other.on_duty())
 			return other
 	return null

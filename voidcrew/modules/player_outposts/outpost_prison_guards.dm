@@ -954,7 +954,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		record.away_left = max(0, record.away_left - seconds)
 		if(record.away_left <= 0 && home)
 			spawn_guard(record)
-	for(var/mob/living/basic/outpost_prison_guard/guard as anything in guard_mobs.Copy())
+	for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs.Copy())
 		if(QDELETED(guard))
 			continue
 		switch(guard.phase)
@@ -1038,7 +1038,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	guard_rounds_left -= seconds
 	if(guard_rounds_left > 0)
 		return
-	for(var/mob/living/basic/outpost_prison_guard/guard as anything in shuffle(guard_mobs))
+	for(var/mob/living/basic/outpost_prison_guard/guard in shuffle(guard_mobs))
 		if(!guard.on_duty() || !guard.ai_running() || guard.response)
 			continue
 		if(guard.activity && (!guard.activity.interruptible || istype(guard.activity, /datum/outpost_guard_activity/rounds)))
@@ -1057,7 +1057,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
  */
 /datum/outpost_prison/proc/guard_leash_check()
 	var/z = wing_z()
-	for(var/mob/living/basic/outpost_prison_guard/guard as anything in guard_mobs)
+	for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs)
 		if(guard.phase != OUTPOST_GUARD_PRESENT)
 			continue
 		var/turf/here = get_turf(guard)
@@ -1089,7 +1089,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
  */
 /datum/outpost_prison/proc/dispatch_guards()
 	var/list/on_duty = list()
-	for(var/mob/living/basic/outpost_prison_guard/guard as anything in guard_mobs)
+	for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs)
 		if(guard.on_duty() && guard.ai_running())
 			on_duty += guard
 	if(!riot_active)
@@ -1307,7 +1307,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	if(!length(members))
 		return
 	for(var/mob/living/member as anything in members)
-		for(var/mob/living/basic/outpost_prison_guard/guard as anything in guard_mobs)
+		for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs)
 			if(!guard.on_duty() || guard.response || get_dist(guard, member) > OUTPOST_GUARD_REPORT_RANGE || !(member in view(OUTPOST_GUARD_REPORT_RANGE, guard)))
 				continue
 			if(guard.greet_member(member))
@@ -1348,7 +1348,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 /datum/outpost_prison/proc/guard_yard_chatter()
 	if(!wing_can_speak() || !prob(OUTPOST_GUARD_NOTICE_CHANCE))
 		return FALSE
-	for(var/mob/living/basic/outpost_prison_guard/guard as anything in shuffle(guard_mobs))
+	for(var/mob/living/basic/outpost_prison_guard/guard in shuffle(guard_mobs))
 		if(!guard.on_duty() || !guard.ai_running())
 			continue
 		for(var/mob/living/basic/outpost_prisoner/prisoner in view(OUTPOST_GUARD_NOTICE_RANGE, guard))
@@ -1389,7 +1389,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	for(var/mob/living/other in tile)
 		if(other != except && other.density)
 			return TRUE
-	for(var/mob/living/basic/outpost_prison_guard/guard as anything in guard_mobs)
+	for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs)
 		if(guard == except)
 			continue
 		if(guard.response?.spot == tile || guard.activity?.goal_turf() == tile)
@@ -1553,7 +1553,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 // ===== LIFE AND DEATH OF THE PRISON =====
 
 /datum/outpost_prison/proc/guards_destroy()
-	for(var/mob/living/basic/outpost_prison_guard/guard as anything in guard_mobs.Copy())
+	for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs.Copy())
 		if(QDELETED(guard))
 			continue
 		guard.prison = null

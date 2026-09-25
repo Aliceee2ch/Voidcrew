@@ -14,7 +14,8 @@
  * when hit, and drip while badly hurt. They take supplies only from a serving hatch or from a
  * person's hand (outpost_prison_core.dm).
  *
- * Awake, they cannot be pulled, dragged onto things or boxed. Knocked down, in stamina crit,
+ * Awake, they cannot be dragged onto things or boxed, and only a calm one (calm_for_pull()) can be
+ * pulled, going along with it (outpost_prison_warden_tools.dm). Knocked down, in stamina crit,
  * cuffed or dead, staff can drag them; stamina crit lasts PRISONER_STAMCRIT_TIME after the last
  * hit. Cuffs and lockdown are in outpost_prison_capture.dm.
  */
@@ -35,7 +36,7 @@
 	maxHealth = 100
 	health = 100
 	speed = 2
-	// Awake they cannot be pulled; see update_drag_resistance().
+	// Heavy while awake, so nobody shoves them about; see update_drag_resistance().
 	move_resist = MOVE_FORCE_VERY_STRONG
 	density = TRUE
 	basic_mob_flags = NONE
@@ -159,7 +160,7 @@
 	RegisterSignal(src, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interaction))
 	RegisterSignal(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, PROC_REF(on_damaged))
 	RegisterSignal(src, COMSIG_LIVING_HEALTH_UPDATE, PROC_REF(on_health_update))
-	// Dragging and pulling only while they are down; see can_be_dragged().
+	// Dragging only while they are down or cuffed (can_be_dragged()); pulling also while calm (pull_allowed()).
 	RegisterSignal(src, COMSIG_MOUSEDROP_ONTO, PROC_REF(block_being_dragged))
 	RegisterSignal(src, COMSIG_ATOM_CAN_BE_PULLED, PROC_REF(check_pullable))
 	// Changes to being down reach update_drag_resistance() through the living trait handlers
@@ -326,9 +327,31 @@
 /mob/living/basic/outpost_prisoner/proc/can_be_dragged()
 	return is_down() || !!cuffs
 
+/**
+ * Calm enough to go along with a pull: awake, present, and in no trouble of their own (rioting,
+ * loose, fighting, wrecking, squaring up, swinging, climbing, beaten down or hitting back).
+ * Someone talking to them or working on their cuffs does not count.
+ */
+/mob/living/basic/outpost_prisoner/proc/calm_for_pull()
+	return stat == CONSCIOUS && phase == PRISONER_PRESENT && !trouble && !threat_ref && !swing_ref && !climb_ref && beaten_left <= 0
+
+/// Anyone may pull them while they are down or cuffed, or while they are calm
+/mob/living/basic/outpost_prisoner/proc/pull_allowed()
+	return can_be_dragged() || calm_for_pull()
+
+/// Their move_resist: ordinary while they can be dragged or are going along with a pull, else too heavy to shove or pull
+/mob/living/basic/outpost_prisoner/proc/pull_weight()
+	return (can_be_dragged() || (pulledby && calm_for_pull())) ? MOVE_RESIST_DEFAULT : MOVE_FORCE_VERY_STRONG
+
 /mob/living/basic/outpost_prisoner/proc/check_pullable(datum/source, mob/living/puller)
 	SIGNAL_HANDLER
-	return can_be_dragged() ? NONE : COMSIG_ATOM_CANT_PULL
+	return pull_allowed() ? NONE : COMSIG_ATOM_CANT_PULL
+
+// Calm, they go along with a pull however heavy they are against shoves; pull_weight() lightens them once it has hold.
+/mob/living/basic/outpost_prisoner/can_be_pulled(user, force)
+	if(!can_be_dragged() && calm_for_pull())
+		force = max(force, move_resist * MOVE_FORCE_PULL_RATIO)
+	return ..(user, force)
 
 /mob/living/basic/outpost_prisoner/proc/block_being_dragged(atom/over, mob/user)
 	SIGNAL_HANDLER
@@ -354,12 +377,14 @@
 	. = ..()
 	update_drag_resistance()
 
-/// Heavy while awake and free, so nobody shoves or pulls them about; ordinary while they are down or cuffed
+/// Heavy while awake and free, so nobody shoves them about; ordinary while they are down or cuffed, or calm and being pulled
 /mob/living/basic/outpost_prisoner/proc/update_drag_resistance()
 	var/draggable = can_be_dragged()
-	move_resist = draggable ? MOVE_RESIST_DEFAULT : MOVE_FORCE_VERY_STRONG
+	move_resist = pull_weight()
 	if(!draggable)
-		pulledby?.stop_pulling()
+		// A calm prisoner goes along with a pull (outpost_prison_warden_tools.dm); anyone else shakes it off.
+		if(!calm_for_pull())
+			pulledby?.stop_pulling()
 		if(is_rioting() && stat == CONSCIOUS)
 			// Up and free again: a rioter riots on until shut in a cell.
 			INVOKE_ASYNC(src, PROC_REF(back_to_rioting))

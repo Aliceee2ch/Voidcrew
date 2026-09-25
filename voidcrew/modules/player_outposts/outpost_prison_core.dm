@@ -681,6 +681,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		update_locked_in(prisoner, seconds)
 		update_cuffed(prisoner, seconds)
 		lockdown_tick(prisoner, seconds)
+		// Pulled while calm, and in trouble since: they shake the pull off (outpost_prison_warden_tools.dm).
+		prisoner.shake_off_pull()
 		prisoner.drift_mood(seconds)
 		if(serving)
 			check_release(prisoner)

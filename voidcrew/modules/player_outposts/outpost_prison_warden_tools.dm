@@ -21,6 +21,11 @@
  *   so the mattress can be searched. Nothing else changes.
  * The same right click on a prisoner asleep in bed shakes them awake instead (shake_awake()): they
  * get up as if told to, and lose PRISON_TALK_WAKE_MOOD for it.
+ *
+ * While the menu is open, and through the talk picked from it, they stop and face the member
+ * (held_by_talk_menu(), which routine_allowed() checks). Anyone may pull a calm prisoner
+ * (calm_for_pull() in outpost_prison_prisoner.dm): they drop what they were doing and go along
+ * with it, and once let go they stay where they were left for PRISON_PULL_RELEASE_HOLD.
  * Numbers in voidcrew/_DEFINES/outpost_prison_social.dm.
  */
 
@@ -37,10 +42,15 @@
 	var/asked_crime = FALSE
 	/// world.time of each recent order back to the cell, for PRISON_TALK_ORDER_SPAM_COUNT
 	var/list/order_times
+	/// Weakrefs to members with the talk menu open on them, or in the talk they picked from it
+	var/list/talk_menu_holders
 
-/// Registers the talk menu on the prisoner; called from setup_extras()
+/// Registers the talk menu and the pull hold on the prisoner; called from setup_extras()
 /mob/living/basic/outpost_prisoner/proc/setup_warden_tools()
 	RegisterSignal(src, COMSIG_ATOM_ATTACK_HAND_SECONDARY, PROC_REF(on_talk_menu_click))
+	// Sent to the pulled mob by a living puller; living pullers never send COMSIG_ATOM_START_PULL.
+	RegisterSignal(src, COMSIG_LIVING_GET_PULLED, PROC_REF(on_pulled))
+	RegisterSignal(src, COMSIG_ATOM_NO_LONGER_PULLED, PROC_REF(on_pull_released))
 
 /// A right click with an empty hand: members get the menu, everyone else nothing
 /mob/living/basic/outpost_prisoner/proc/on_talk_menu_click(datum/source, mob/living/user, list/modifiers)
@@ -67,16 +77,38 @@
 		return FALSE
 	return !!prison?.is_member(user)
 
-/// Shows the radial and runs the pick. Sleeps.
+/// Shows the radial and runs the pick. They stand still facing `user` until the menu closes and the picked talk is over. Sleeps.
 /mob/living/basic/outpost_prisoner/proc/talk_menu_open(mob/living/user)
 	// Nothing to show a menu on.
 	if(!user?.client)
 		return
 	var/list/choices = talk_menu_choices(user)
+	var/datum/weakref/holder_ref = hold_for_talk_menu(user)
 	var/choice = show_radial_menu(user, src, choices, custom_check = CALLBACK(src, PROC_REF(talk_menu_allowed), user), require_near = TRUE, tooltips = TRUE)
-	if(!choice || QDELETED(src) || QDELETED(user))
-		return
-	talk_menu_act(user, choice)
+	if(choice && !QDELETED(src) && !QDELETED(user))
+		talk_menu_act(user, choice)
+	release_talk_menu(holder_ref)
+
+/// Stops them where they are, facing `user`, while `user` has the menu open. Returns the hold, for release_talk_menu().
+/mob/living/basic/outpost_prisoner/proc/hold_for_talk_menu(mob/living/user)
+	var/datum/weakref/holder_ref = WEAKREF(user)
+	LAZYADD(talk_menu_holders, holder_ref)
+	ai_controller?.CancelActions()
+	face_atom(user)
+	return holder_ref
+
+/// The menu `holder_ref` opened is closed and its talk over
+/mob/living/basic/outpost_prisoner/proc/release_talk_menu(datum/weakref/holder_ref)
+	LAZYREMOVE(talk_menu_holders, holder_ref)
+
+/// Whether someone beside them has the talk menu open on them, or is in the talk they picked from it
+/mob/living/basic/outpost_prisoner/proc/held_by_talk_menu()
+	// A holder who walked off or went down no longer holds them, even if their menu never closed cleanly.
+	for(var/datum/weakref/holder_ref in talk_menu_holders)
+		var/mob/living/holder = holder_ref.resolve()
+		if(holder && holder.stat == CONSCIOUS && get_dist(holder, src) <= 1)
+			return TRUE
+	return FALSE
 
 /// The menu's choices, name -> image: its own first (no walk back to the cell in cuffs, no getting up for someone already up), then other packages'
 /mob/living/basic/outpost_prisoner/proc/talk_menu_choices(mob/living/user)
@@ -425,5 +457,51 @@
 	interruptible = FALSE
 	min_duration = PRISON_TALK_GET_UP_HOLD
 	max_duration = PRISON_TALK_GET_UP_HOLD
+
+// ===== A PULL =====
+
+/// Someone took hold of them: they weigh what pull_weight() says, and a calm prisoner drops what they were doing to go along
+/mob/living/basic/outpost_prisoner/proc/on_pulled(datum/source, mob/living/puller)
+	SIGNAL_HANDLER
+	move_resist = pull_weight()
+	if(can_be_dragged() || !calm_for_pull())
+		return
+	INVOKE_ASYNC(src, PROC_REF(go_along_with_pull))
+
+/// Stops whatever they were doing, and any walk, so they follow the pull instead of walking against it
+/mob/living/basic/outpost_prisoner/proc/go_along_with_pull()
+	if(QDELETED(src) || !pulledby)
+		return
+	end_activity()
+	ai_controller?.CancelActions()
+
+/// Let go: back to their usual weight, and a calm prisoner stays where they were left for a moment
+/mob/living/basic/outpost_prisoner/proc/on_pull_released(datum/source, atom/movable/puller)
+	SIGNAL_HANDLER
+	move_resist = pull_weight()
+	if(routine_allowed())
+		INVOKE_ASYNC(src, PROC_REF(stay_put_after_pull))
+
+/// Holds them where they stand for PRISON_PULL_RELEASE_HOLD before the routine picks up again
+/mob/living/basic/outpost_prisoner/proc/stay_put_after_pull()
+	if(QDELETED(src) || !routine_allowed())
+		return
+	var/datum/prisoner_activity/let_go/still = new(src)
+	start_activity(still)
+	// Already where they stand: the clock starts now, AI or not.
+	still.arrive()
+
+/// Pulled along while calm, and in trouble since: they shake the pull off. Called every tick of the prison.
+/mob/living/basic/outpost_prisoner/proc/shake_off_pull()
+	if(pulledby && !pull_allowed())
+		update_drag_resistance()
+
+/// Let go after a pull: they stay where they were left for PRISON_PULL_RELEASE_HOLD, then carry on
+/datum/prisoner_activity/let_go
+	name = "just let go"
+	weight = 0
+	interruptible = FALSE
+	min_duration = PRISON_PULL_RELEASE_HOLD
+	max_duration = PRISON_PULL_RELEASE_HOLD
 
 #undef ACTIVITY_DONE

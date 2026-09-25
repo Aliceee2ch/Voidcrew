@@ -107,3 +107,5 @@
 #define PRISON_TALK_GET_UP_HOLD (10 SECONDS)
 /// Mood a sleeping prisoner loses when staff shake them awake
 #define PRISON_TALK_WAKE_MOOD 3
+/// How long a calm prisoner stays where they were left after a pull, before carrying on
+#define PRISON_PULL_RELEASE_HOLD (3 SECONDS)

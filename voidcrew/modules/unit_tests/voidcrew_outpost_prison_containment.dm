@@ -78,6 +78,9 @@
 /datum/unit_test/voidcrew_outpost_prison_restraint/proc/in_stamcrit(mob/living/prisoner)
 	return !!prisoner.has_status_effect(/datum/status_effect/incapacitating/stamcrit)
 
+/datum/unit_test/voidcrew_outpost_prison_restraint/proc/back_up(mob/living/basic/outpost_prisoner/prisoner)
+	return !prisoner.can_be_dragged()
+
 /datum/unit_test/voidcrew_outpost_prison_restraint/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("restraintowner")
 	TEST_ASSERT_NOTNULL(home, "The restraint test prison did not load")
@@ -87,11 +90,13 @@
 	var/mob/living/carbon/human/warden = make_player(prison_spot(home, 7, 8), "restraintowner")
 	var/obj/structure/bed/bed = prison.cells[1].bed()
 
-	// Awake: no pulling and no dragging onto things.
+	// Awake and calm: they can be pulled and go along with it, but nobody drags them onto things.
 	TEST_ASSERT(!prisoner.can_be_dragged(), "An awake prisoner counts as draggable")
 	warden.start_pulling(prisoner)
-	TEST_ASSERT(warden.pulling != prisoner, "Someone pulled an awake prisoner")
+	TEST_ASSERT_EQUAL(warden.pulling, prisoner, "Nobody could pull a calm prisoner")
+	warden.stop_pulling()
 	TEST_ASSERT(SEND_SIGNAL(prisoner, COMSIG_MOUSEDROP_ONTO, bed, warden) & COMPONENT_CANCEL_MOUSEDROP_ONTO, "An awake prisoner could be dragged onto a bed")
+	prisoner.end_activity()
 
 	// A security baton: 60 stamina and a knockdown a hit; two hits put them in stamina crit.
 	var/obj/item/melee/baton/security/loaded/baton = allocate(__IMPLIED_TYPE__)
@@ -120,11 +125,15 @@
 	TEST_ASSERT_EQUAL(warden.pulling, prisoner, "A prisoner in stamina crit could not be pulled")
 	sleep(11 SECONDS)
 	TEST_ASSERT(in_stamcrit(prisoner), "Stamina crit ended within tg's default 10 seconds")
-	// Once they are back on their feet, nobody holds them any more.
+	// Back on their feet and calm, they go along with the pull that still has them (outpost_prison_warden_tools.dm).
 	prisoner.setStaminaLoss(0)
 	TEST_ASSERT(!in_stamcrit(prisoner), "Clearing stamina did not end stamina crit")
-	TEST_ASSERT(wait_until(CALLBACK(prisoner, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, routine_allowed)), 8 SECONDS) || !prisoner.can_be_dragged(), "The prisoner never recovered")
-	TEST_ASSERT(warden.pulling != prisoner, "A recovered prisoner was still being pulled")
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(back_up), prisoner), 8 SECONDS), "The prisoner never recovered")
+	TEST_ASSERT_EQUAL(warden.pulling, prisoner, "A calm prisoner back on their feet shook off the pull")
+	TEST_ASSERT_EQUAL(prisoner.move_resist, MOVE_RESIST_DEFAULT, "A calm prisoner being pulled is too heavy to pull")
+	warden.stop_pulling()
+	TEST_ASSERT_EQUAL(prisoner.move_resist, MOVE_FORCE_VERY_STRONG, "Let go, a prisoner on their feet is light enough to shove")
+	prisoner.end_activity()
 
 	// A disabler: 30 stamina a shot, four shots.
 	var/mob/living/basic/outpost_prisoner/runner = test_prisoner(prison, prison_spot(home, 12, 8))

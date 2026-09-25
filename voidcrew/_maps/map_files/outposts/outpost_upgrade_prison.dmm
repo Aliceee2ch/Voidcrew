@@ -78,6 +78,7 @@
 /obj/item/melee/baton/security/loaded,
 /obj/item/flashlight,
 /obj/item/flashlight,
+/obj/item/crowbar,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "p" = (
@@ -170,6 +171,7 @@
 /area/voidcrew/player_outpost/prison)
 "G" = (
 /obj/structure/table,
+/obj/structure/outpost_prison_mailbag,
 /obj/item/folder/red,
 /obj/item/pen,
 /turf/open/floor/iron/dark,

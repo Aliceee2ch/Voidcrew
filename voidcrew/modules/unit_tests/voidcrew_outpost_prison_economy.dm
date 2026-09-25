@@ -578,7 +578,7 @@
 	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_economy_kit, all_present), prison), 8 SECONDS), "The arrival into the unbolted cell never finished beaming in")
 
 	// Abandoning the outpost closes intake and transfers everyone out, living or dead, with no
-	// bonus, no fine and no stipend.
+	// bonus and no stipend, and with nobody rioting or loose, no fine (see voidcrew_outpost_prison_abandon_fines).
 	var/mob/living/basic/outpost_prisoner/last_victim = prison.prisoners[1]
 	last_victim.death()
 	prison.pay_owed = 7
@@ -601,3 +601,53 @@
 
 /datum/unit_test/voidcrew_outpost_prison_cells/proc/door_bolted(obj/machinery/door/airlock/door)
 	return door?.locked
+
+// ===== ABANDONING MID-INCIDENT =====
+
+/**
+ * Abandoning the outpost while prisoners riot, break out or run loose counts them as escaped:
+ * 1000 each (OUTPOST_PRISON_ESCAPE_FINE) as one incident, capped at 2500
+ * (OUTPOST_PRISON_INCIDENT_FINE_CAP), and what the treasury cannot cover is debt. Otherwise
+ * abandoning mid-riot and claiming the outpost back skipped the fines. Whoever claims it next
+ * inherits the debt, and intake stays shut until it is paid.
+ */
+/datum/unit_test/voidcrew_outpost_prison_abandon_fines
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_abandon_fines/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("abandonfinesowner")
+	TEST_ASSERT_NOTNULL(home, "The abandonment test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 9, 3), "abandonfinesowner")
+	var/mob/living/basic/outpost_prisoner/rioter = trouble_prisoner(prison, prison_spot(home, 4, 10))
+	var/mob/living/basic/outpost_prisoner/breaking_out = trouble_prisoner(prison, prison_spot(home, 5, 10))
+	var/mob/living/basic/outpost_prisoner/runner = trouble_prisoner(prison, prison_spot(home, 6, 10))
+	var/mob/living/basic/outpost_prisoner/quiet = trouble_prisoner(prison, prison_spot(home, 12, 10))
+	var/datum/bank_account/treasury = trouble_fund(home, 1500)
+	treasury.account_debt = 0
+	rioter.start_rioting(shout = FALSE)
+	breaking_out.trouble = "breakout" // PRISONER_TROUBLE_BREAKOUT
+	runner.trouble = "loose" // PRISONER_TROUBLE_LOOSE, left off the patrol AI
+	prison.begin_incident()
+
+	// Three out of hand: 3000 in fines, capped at 2500; the 1500 held is taken and 1000 is owed.
+	home.abandon(owner)
+	TEST_ASSERT_NULL(home.founder_ckey, "The outpost was not abandoned")
+	TEST_ASSERT_EQUAL(treasury.account_balance, 0, "Abandoning mid-riot left [treasury.account_balance] cr in the treasury")
+	TEST_ASSERT_EQUAL(treasury.account_debt, 1000, "Abandoning mid-riot left [treasury.account_debt] cr of debt, not 1000")
+	TEST_ASSERT(!prison.incident_open, "The incident stayed open after the abandonment")
+	TEST_ASSERT(!prison.intake_open, "Abandoning left intake open")
+	for(var/mob/living/basic/outpost_prisoner/leaving as anything in list(rioter, breaking_out, runner, quiet))
+		TEST_ASSERT_EQUAL(leaving.phase, "leaving", "[leaving] was not transferred out") // PRISONER_LEAVING
+
+	// The next claimant inherits the debt, and intake stays shut until it is paid.
+	var/mob/living/carbon/human/claimant = make_player(prison_spot(home, 9, 3), "abandonfinesclaimant")
+	home.founder_ckey = "abandonfinesclaimant"
+	TEST_ASSERT_EQUAL(prison.intake_state(), "debt", "The claimant's intake shows [prison.intake_state()], not the inherited debt")
+	TEST_ASSERT(!prison.set_intake(TRUE, claimant), "Intake opened with the abandoned outpost's fines unpaid")
+	// A deposit goes to the debt first (debt collection); the console's pay button settles the rest.
+	treasury.adjust_money(1000, "Prison test")
+	prison.pay_treasury_debt(claimant)
+	TEST_ASSERT_EQUAL(treasury.account_debt, 0, "The claimant could not pay off the inherited debt")
+	TEST_ASSERT(prison.set_intake(TRUE, claimant), "Intake stayed shut after the inherited debt was paid")
+	settle_prison_air(home)

@@ -394,6 +394,15 @@
 	TEST_ASSERT_NULL(climber.climb_ref, "A guard at the hatch did not stop the climb")
 	TEST_ASSERT_EQUAL(climber.loc, hatch.yard_side_turf(), "The climber got over the hatch")
 	TEST_ASSERT(guard_test_is_line(guard.last_line, "climb_stop"), "The guard did not say a climb_stop line: [guard.last_line]")
+
+	// A loose prisoner: called out, and batoned when they come beside a guard. No chase.
+	var/mob/living/basic/outpost_prisoner/runner = trouble_awake_prisoner(prison, prison_spot(home, 5, 4))
+	runner.trouble = "loose" // PRISONER_TROUBLE_LOOSE
+	guard.baton_cooldown = 0
+	prison.guards_tick(1)
+	TEST_ASSERT(guard_test_is_line(guard.last_line, "loose_call"), "The guard did not call out the loose prisoner: [guard.last_line]")
+	TEST_ASSERT(runner.getStaminaLoss() >= 35, "A loose prisoner beside a guard was not batoned") // OUTPOST_GUARD_BATON_STAMINA
+	runner.trouble = null
 	settle_prison_air(home)
 
 // ===== RIOTS =====

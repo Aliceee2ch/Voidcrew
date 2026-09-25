@@ -124,7 +124,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	INVOKE_ASYNC(src, PROC_REF(guard_build_look))
 
 /mob/living/basic/outpost_prison_guard/Destroy()
-	end_response()
+	end_response(cancel_ai = FALSE)
 	end_activity(cancel_ai = FALSE)
 	if(record?.guard == src)
 		record.guard = null
@@ -869,6 +869,9 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		return "managers only"
 	if(hired_guard_count() >= OUTPOST_GUARD_MAX)
 		return "no free post"
+	// Nowhere in the office to beam into: refused before anything is charged.
+	if(!guard_office_spot())
+		return "no room in the office"
 	outpost.ensure_home_services()
 	var/datum/bank_account/treasury = outpost.treasury
 	if(!treasury || treasury.account_balance < OUTPOST_GUARD_HIRE_COST || !treasury.adjust_money(-OUTPOST_GUARD_HIRE_COST, "Prison guard hired"))
@@ -1205,8 +1208,10 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		var/key = REF(prisoner)
 		called[key] = TRUE
 		if(!guard_loose_called[key])
+			// Said aloud and on the outpost radio, where the crew can act on it
 			var/mob/living/basic/outpost_prison_guard/crier = pick(on_duty)
-			crier.say_guard("loose_call", list("{place}" = get_area_name(prisoner)))
+			if(crier.say_guard("loose_call", list("{place}" = get_area_name(prisoner))))
+				announce("Prison wing, [crier.real_name]: [crier.last_line]", SHIP_NOTIFY_DANGER)
 		if(prisoner.can_be_dragged())
 			continue
 		for(var/mob/living/basic/outpost_prison_guard/guard as anything in on_duty)
@@ -1352,6 +1357,9 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 			if(prisoner.prison != src || !prisoner.ai_running() || !prisoner.routine_allowed() || prisoner.activity?.sleeping)
 				continue
 			if(prisoner.guard_noticed_at && world.time - prisoner.guard_noticed_at < OUTPOST_GUARD_CHECK_ON_GAP)
+				continue
+			// A restless yard goes quiet (outpost_prison_ambience.dm).
+			if(speech_hushed(prisoner, "guard_near"))
 				continue
 			prisoner.guard_noticed_at = world.time
 			prisoner.face_atom(guard)

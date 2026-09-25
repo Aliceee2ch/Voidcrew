@@ -389,17 +389,13 @@
 	return bonus
 
 /**
- * A prisoner died. Their body is collected in OUTPOST_PRISON_CORPSE_PICKUP seconds, and their
- * cell takes nobody new until the pickup and a refill after it are over, whenever the body goes.
- * A fine for a death blamed on staff is blame_death()'s.
+ * A prisoner died. Nobody comes for the body (body_tick()): it keeps its cell until staff carry it
+ * out of the cell block. A death blamed on staff costs no fine, but the yard takes it hard (blame_death()).
  */
 /datum/outpost_prison/proc/on_prisoner_death(mob/living/basic/outpost_prisoner/prisoner)
-	prisoner.body_pickup_left = OUTPOST_PRISON_CORPSE_PICKUP
 	add_log("[prisoner.real_name] died.")
+	announce("Prison wing: [prisoner.real_name] died.", SHIP_NOTIFY_WARNING)
 	prisoner.died_at = world.time
-	var/datum/outpost_prison_cell/held = prisoner.cell
-	if(held?.occupant == prisoner)
-		held.ready_at = world.time + (OUTPOST_PRISON_CORPSE_PICKUP + rand(OUTPOST_PRISON_REFILL_MIN, OUTPOST_PRISON_REFILL_MAX)) SECONDS
 	prisoner.clear_trouble()
 	if(prisoner.staff_to_blame())
 		blame_death(prisoner)
@@ -407,21 +403,32 @@
 		broke_out = FALSE
 	update_riot_lights()
 
-/// The corrections service takes a body away, unless an experiment under way still needs it: a specimen host about to burst
-/datum/outpost_prison/proc/collect(mob/living/basic/outpost_prisoner/prisoner)
-	if(held_for_experiment(prisoner))
-		return FALSE
-	prisoner.beam_out()
-	return TRUE
+/**
+ * Nobody comes for a body. While it lies in the cell block it keeps its cell and sours the yard
+ * (bodies_in_cell_block()); once it is out of the cell block (carried to a morgue, spaced, anywhere)
+ * it leaves the roster, and its cell waits a refill. An experiment under way that still needs it,
+ * a specimen host about to burst, keeps it on the roster wherever it is.
+ */
+/datum/outpost_prison/proc/body_tick(mob/living/basic/outpost_prisoner/prisoner)
+	if(in_cell_block(prisoner) || held_for_experiment(prisoner))
+		return
+	add_log("[prisoner.real_name]'s body is out of the cell block.")
+	forget(prisoner)
+
+/// Prisoners' bodies lying in the cell block, which nobody comes for
+/datum/outpost_prison/proc/bodies_in_cell_block()
+	. = 0
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.stat == DEAD && prisoner.phase == PRISONER_PRESENT && in_cell_block(prisoner))
+			.++
 
 /**
- * A prisoner has left the roster (released, collected, escaped or deleted) and their cell is free.
- * `cell` is the cell they had, or null; `died` is TRUE when they left as a body, whose cell keeps
- * the ready time on_prisoner_death() gave it. A ready time is never brought forward, so a body
- * revived and collected alive does not skip the wait either.
+ * A prisoner has left the roster (released, escaped, carried out dead or deleted) and their cell
+ * is free: it waits a refill. `cell` is the cell they had, or null. A ready time is never brought
+ * forward.
  */
-/datum/outpost_prison/proc/on_cell_emptied(datum/outpost_prison_cell/cell, died = FALSE)
-	if(cell && !(died && cell.ready_at > world.time))
+/datum/outpost_prison/proc/on_cell_emptied(datum/outpost_prison_cell/cell)
+	if(cell)
 		cell.ready_at = max(cell.ready_at, world.time + rand(OUTPOST_PRISON_REFILL_MIN, OUTPOST_PRISON_REFILL_MAX) SECONDS)
 	arrival_countdown = next_arrival_in()
 

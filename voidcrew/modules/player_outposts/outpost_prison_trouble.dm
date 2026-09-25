@@ -215,6 +215,10 @@
 	// Cuffs kept on without good reason sour them like a lock-in (outpost_prison_capture.dm).
 	if(cuffs_souring())
 		loss += PRISONER_MOOD_CUFFED + round((cuffed_seconds - PRISONER_CUFFED_GRACE) / 60)
+	// Bodies nobody has carried out of the cell block (outpost_prison_economy.dm)
+	var/bodies = prison?.bodies_in_cell_block()
+	if(bodies)
+		loss += min(bodies * PRISONER_MOOD_BODY, PRISONER_MOOD_BODIES_MAX)
 	if(activity?.mood_activity)
 		gain += PRISONER_MOOD_ACTIVITY
 	if(sentence_left <= PRISONER_RELEASE_SOON_TIME)

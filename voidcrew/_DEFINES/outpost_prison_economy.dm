@@ -20,9 +20,9 @@
 // supplies; a well-kept wing nets 5,300-5,400 cr/h and pays back its 10,000 cr in about 2 hours.
 //
 // Fines: 1,000 for an escape, 750 per rioter transferred out after a sit-in nobody came back to,
-// at most 2,500 for one incident (a riot, its breakout, its escapes and transfers) in all, and
-// 1,000 for a death in custody blamed on staff, never capped. What the treasury cannot pay becomes
-// its debt (tg's account_debt: 75% of every later deposit pays it off), and no prisoner arrives
+// at most 2,500 for one incident (a riot, its breakout, its escapes and transfers) in all. A death
+// in custody is not fined: the yard takes it hard, and the body is the crew's to deal with. What the
+// treasury cannot pay becomes its debt (tg's account_debt: 75% of every later deposit pays it off), and no prisoner arrives
 // while it is owed. Two prisoners lost within 30 minutes suspend transfers until a manager reopens
 // intake.
 
@@ -51,8 +51,6 @@
 #define OUTPOST_PRISON_RELEASE_WALK 30
 /// How long a transporter beam takes to deliver or collect a prisoner (deciseconds)
 #define OUTPOST_PRISON_BEAM_TIME (3 SECONDS)
-/// Seconds a body lies in the wing before it is collected
-#define OUTPOST_PRISON_CORPSE_PICKUP 120
 /// Log entries the warden console keeps
 #define OUTPOST_PRISON_LOG_LENGTH 8
 /// Fine for a prisoner gone for good; what the treasury cannot pay becomes debt
@@ -78,8 +76,6 @@
 #define OUTPOST_PRISON_TRANSFER_FEE 750
 /// Most one incident (a riot, its breakout, its escapes and transfers) can be fined in all
 #define OUTPOST_PRISON_INCIDENT_FINE_CAP 2500
-/// Fine for a death in custody blamed on staff
-#define OUTPOST_PRISON_DEATH_FINE 1000
 /// Prisoners lost (escaped or transferred) within OUTPOST_PRISON_LOST_WINDOW that suspend intake
 #define OUTPOST_PRISON_LOST_TO_SUSPEND 2
 #define OUTPOST_PRISON_LOST_WINDOW (30 MINUTES)

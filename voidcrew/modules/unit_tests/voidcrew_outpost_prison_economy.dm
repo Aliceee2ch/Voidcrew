@@ -289,7 +289,7 @@
 	prison.set_intake(FALSE, owner)
 
 	// One incident's fines stop at 2500 together (OUTPOST_PRISON_INCIDENT_FINE_CAP): three escapes
-	// and a transfer. A death in custody (OUTPOST_PRISON_DEATH_FINE) is never capped.
+	// and a transfer. A fine outside the incident is not capped with it.
 	treasury.account_balance = 5000
 	prison.begin_incident()
 	TEST_ASSERT_EQUAL(prison.charge_fine(1000, "Prison escape fine: One", TRUE), 1000, "The first escape was not fined in full")
@@ -297,8 +297,8 @@
 	TEST_ASSERT_EQUAL(prison.charge_fine(1000, "Prison escape fine: Three", TRUE), 500, "The third escape was not cut to the cap")
 	TEST_ASSERT_EQUAL(prison.charge_fine(750, "Prison transfer fee: Four", TRUE), 0, "A transfer past the cap was fined") // OUTPOST_PRISON_TRANSFER_FEE
 	TEST_ASSERT_EQUAL(treasury.account_balance, 2500, "One incident took [5000 - treasury.account_balance] cr, not 2500")
-	TEST_ASSERT_EQUAL(prison.charge_fine(1000, "Prison death fine: Five"), 1000, "A death during the incident was capped with it")
-	TEST_ASSERT_EQUAL(treasury.account_balance, 1500, "The death fine was not taken")
+	TEST_ASSERT_EQUAL(prison.charge_fine(1000, "Prison fine: Five"), 1000, "A fine outside the incident was capped with it")
+	TEST_ASSERT_EQUAL(treasury.account_balance, 1500, "The fine outside the incident was not taken")
 	// Nobody is rioting or loose, so the incident closes on the next tick; the next one starts fresh.
 	prison.tick(1)
 	TEST_ASSERT(!prison.incident_open, "An incident stayed open with nobody rioting or loose")
@@ -534,35 +534,43 @@
 		ADD_TRAIT(arrival, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
 		arrival.sentence_left = max(arrival.sentence_left, 3600)
 
-	// A death is logged, the body holds its cell until collected two minutes later
-	// (OUTPOST_PRISON_CORPSE_PICKUP), and the cell waits a refill after that.
+	// A death is logged. Nobody comes for the body: it keeps its cell while it lies in the cell block
+	// and sours the yard; carried out, it leaves the roster and the cell waits a refill.
 	var/mob/living/basic/outpost_prisoner/victim = prison.prisoners[1]
 	var/datum/outpost_prison_cell/victim_cell = victim.cell
+	var/mob/living/basic/outpost_prisoner/witness = prison.prisoners[2]
+	var/drift_before = witness.mood_drift_per_minute()
 	victim.death()
 	TEST_ASSERT_EQUAL(victim.console_status(), "dead", "A dead prisoner was not listed as dead")
 	TEST_ASSERT_EQUAL(victim.body_position, LYING_DOWN, "A dead prisoner did not fall down")
 	var/list/newest = prison.entries[1]
 	TEST_ASSERT(findtext(newest["text"], "died"), "The death was not logged first: [newest["text"]]")
 	TEST_ASSERT_EQUAL(prison.prisoner_pay_rate(victim), 0, "A body earned a stipend")
-	var/death_wait = victim_cell.ready_at - world.time
-	TEST_ASSERT(death_wait >= 180 SECONDS && death_wait <= 240 SECONDS, "A dead prisoner's cell is ready in [death_wait / 10] s, not the pickup and a refill")
-	var/victim_ready = victim_cell.ready_at
-	prison.tick(119)
-	TEST_ASSERT(victim.phase == "present" && (victim in prison.prisoners), "The body was collected early")
-	var/datum/weakref/victim_ref = WEAKREF(victim)
+	TEST_ASSERT_EQUAL(prison.bodies_in_cell_block(), 1, "The body in the cell block was not counted")
+	TEST_ASSERT(witness.mood_drift_per_minute() < drift_before, "A body in the cell block did not sour the others")
+	TEST_ASSERT("a body in the cell block" in prison.restless_causes(), "The body is not among the restless causes")
+	prison.tick(130)
+	TEST_ASSERT(!QDELETED(victim) && victim.phase == "present" && (victim in prison.prisoners), "The body was taken away with nobody moving it")
+	TEST_ASSERT_EQUAL(victim_cell.occupant, victim, "The body lying in the cell block gave up its cell")
+	var/turf/outside = prison.outside_spot_near(victim)
+	TEST_ASSERT_NOTNULL(outside, "Nowhere outside the cell block to carry the body")
+	victim.forceMove(outside)
 	prison.tick(1)
-	TEST_ASSERT(wait_until(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(is_qdeleted_ref), victim_ref), 6 SECONDS), "The body was never collected")
-	TEST_ASSERT_EQUAL(length(prison.prisoners), 3, "The collected body kept its cell")
-	TEST_ASSERT_EQUAL(victim_cell.ready_at, victim_ready, "Collecting the body changed its cell's ready time")
+	TEST_ASSERT(!QDELETED(victim), "The body carried out of the cell block was deleted")
+	TEST_ASSERT(!(victim in prison.prisoners), "The body carried out of the cell block stayed on the roster")
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 3, "The body carried out kept its cell")
+	var/death_wait = victim_cell.ready_at - world.time
+	TEST_ASSERT(death_wait >= 60 SECONDS && death_wait <= 120 SECONDS, "The carried-out body's cell is ready in [death_wait / 10] s, not a refill") // OUTPOST_PRISON_REFILL_MIN, _MAX
+	qdel(victim)
 
-	// Gibbing does not skip the pickup's wait.
+	// A gibbed prisoner's cell waits a refill too.
 	var/mob/living/basic/outpost_prisoner/gibbed = prison.prisoners[1]
 	var/datum/outpost_prison_cell/gibbed_cell = gibbed.cell
 	gibbed.gib()
 	TEST_ASSERT(QDELETED(gibbed), "The gibbed prisoner is still about")
 	TEST_ASSERT_NULL(gibbed_cell.occupant, "The gibbed prisoner kept their cell")
 	var/gib_wait = gibbed_cell.ready_at - world.time
-	TEST_ASSERT(gib_wait >= 180 SECONDS && gib_wait <= 240 SECONDS, "A gibbed prisoner's cell is ready in [gib_wait / 10] s, not the pickup and a refill")
+	TEST_ASSERT(gib_wait >= 60 SECONDS && gib_wait <= 120 SECONDS, "A gibbed prisoner's cell is ready in [gib_wait / 10] s, not a refill")
 
 	// Nobody is beamed into a bolted cell, ready or not.
 	gibbed_cell.ready_at = world.time

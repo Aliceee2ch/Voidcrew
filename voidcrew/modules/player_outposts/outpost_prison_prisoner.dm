@@ -75,8 +75,6 @@
 	/// Seconds served, and the same seconds weighted by care x conditions, for the release bonus
 	var/served_seconds = 0
 	var/kept_seconds = 0
-	/// Seconds until a body is collected
-	var/body_pickup_left = 0
 	/// Seconds spent bolted into a cell, without a break; step 3's mood will read this
 	var/locked_in_seconds = 0
 	/// Outfit whose look they wear

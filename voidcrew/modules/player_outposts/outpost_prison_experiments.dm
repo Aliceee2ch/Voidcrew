@@ -19,7 +19,7 @@
  *   of the wing sets off the containment breach alarm. One taken off the outpost (onto a ship, say)
  *   is recovered by Kessler at once, for a fee that becomes debt (experiment_recover()).
  * - The dosed subject or the specimen's host is the experiment's until it ends
- *   (held_for_experiment()): not released, transferred, beamed out as escaped or collected dead.
+ *   (held_for_experiment()): not released, transferred, beamed out as escaped or dropped from the roster dead.
  * - While a creature is live, riots and fights wait, and prisoners run for their cells and ask to
  *   be bolted in, which then costs them nothing (protective custody). When it ends, everyone who
  *   saw a prisoner die loses mood and each death adds tension.
@@ -593,7 +593,8 @@
 /**
  * Whether the experiment under way still needs `prisoner`: its dosed subject, or the specimen's
  * host until the burst, dead or alive. Nobody beams them out meanwhile: their sentence holds
- * (serving_sentence()), and there is no release, riot transfer, escape for good or body collection.
+ * (serving_sentence()), and there is no release, riot transfer or escape for good, and a body out
+ * of the cell block stays on the roster (body_tick()).
  * Once the experiment is over the usual rules apply again.
  */
 /datum/outpost_prison/proc/held_for_experiment(mob/living/basic/outpost_prisoner/prisoner)

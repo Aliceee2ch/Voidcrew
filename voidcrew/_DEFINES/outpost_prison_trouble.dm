@@ -189,6 +189,9 @@
 #define PRISONER_CUFFED_GRACE 90
 /// Mood lost per minute cuffed past PRISONER_CUFFED_GRACE, plus 1 per extra minute
 #define PRISONER_MOOD_CUFFED 6
+/// Mood lost per minute for each prisoner's body lying in the cell block, up to PRISONER_MOOD_BODIES_MAX
+#define PRISONER_MOOD_BODY 4
+#define PRISONER_MOOD_BODIES_MAX 12
 
 // Lockdown after a riot (outpost_prison_capture.dm)
 /// Seconds a rioter shut in a cell, or a runner caught after a riot, must serve shut in a cell

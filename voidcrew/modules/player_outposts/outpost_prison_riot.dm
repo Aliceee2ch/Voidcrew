@@ -199,8 +199,8 @@
 	return FALSE
 
 /**
- * Staff killed a prisoner: a OUTPOST_PRISON_DEATH_FINE fine, never capped, unless they were an
- * experiment's subject; and the worst spark there is.
+ * Staff killed a prisoner. No fine: the cost is the worst spark there is, the pay and bonus they
+ * forfeit, and a body to deal with (body_tick()).
  */
 /datum/outpost_prison/proc/blame_death(mob/living/basic/outpost_prisoner/prisoner)
 	if(prisoner.death_blamed)
@@ -208,9 +208,7 @@
 	prisoner.death_blamed = TRUE
 	note_staff_blamed(prisoner, "killed")
 	if(!prisoner.experiment_subject)
-		var/fine = charge_fine(OUTPOST_PRISON_DEATH_FINE, "Death in custody: [prisoner.real_name]")
-		add_log("[prisoner.real_name]'s death was put down to staff. Fined [fine] cr.")
-		announce("[prisoner.real_name] died in custody. The outpost was fined [fine] cr.", SHIP_NOTIFY_WARNING)
+		add_log("[prisoner.real_name]'s death was put down to staff.")
 	return trouble_event(PRISON_SPIKE_KILLED, "[prisoner.real_name] was killed by staff")
 
 /// Whether a prisoner's mood counts toward the wing's tension: present, alive and not loose
@@ -318,6 +316,9 @@
 		causes += extra_cause
 	if(cuffed)
 		causes += "[cuffed] cuffed"
+	var/bodies = bodies_in_cell_block()
+	if(bodies)
+		causes += bodies == 1 ? "a body in the cell block" : "[bodies] bodies in the cell block"
 	return causes
 
 /// Tension reached riot level: the crew is warned, and the yard gathers at the staff door

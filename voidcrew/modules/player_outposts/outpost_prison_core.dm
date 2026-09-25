@@ -655,7 +655,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 /**
  * Advances the prison by `seconds`, in a fixed order: who is home, the condition scores, reach,
- * supplies; then for each prisoner body collection, pay and sentence, needs, confinement, cuffs
+ * supplies; then for each prisoner their body (body_tick()), pay and sentence, needs, confinement, cuffs
  * and lockdown (outpost_prison_capture.dm), mood, and release; then trouble
  * (outpost_prison_riot.dm), experiments, arrivals and deposits.
  * Prisoners who are fighting earn nothing; rioting or loose, they earn nothing and their sentence
@@ -670,9 +670,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		if(QDELETED(prisoner) || prisoner.phase != PRISONER_PRESENT)
 			continue
 		if(prisoner.stat == DEAD)
-			prisoner.body_pickup_left -= seconds
-			if(prisoner.body_pickup_left <= 0)
-				collect(prisoner)
+			body_tick(prisoner)
 			continue
 		var/serving = prisoner.serving_sentence()
 		if(serving)
@@ -716,7 +714,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		if(claims[key] == prisoner)
 			claims -= key
 	table_eaters -= prisoner
-	on_cell_emptied(emptied, prisoner.stat == DEAD)
+	on_cell_emptied(emptied)
 
 /datum/outpost_prison/proc/add_log(text)
 	entries = list(list("time" = station_time_timestamp("hh:mm"), "text" = text)) + entries

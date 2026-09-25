@@ -289,7 +289,7 @@
 	first.adjustBruteLoss(-100)
 	first.recover()
 
-	// Staff killing one who is down while restless: the same, and the death fine.
+	// Staff killing one who is down while restless: the same, and no fine.
 	var/datum/bank_account/treasury = trouble_fund(home, 5000)
 	second.apply_damage(90, BRUTE)
 	TEST_ASSERT(second.beaten_left > 0, "A prisoner at 10 health did not collapse")
@@ -302,7 +302,7 @@
 	hit_with_toolbox(warden, second)
 	TEST_ASSERT_EQUAL(second.stat, DEAD, "A downed prisoner at 10 health survived a toolbox")
 	TEST_ASSERT(second.death_blamed, "The death was not put down to staff")
-	TEST_ASSERT_EQUAL(treasury.account_balance, 4000, "A death in custody took [5000 - treasury.account_balance], not 1000") // OUTPOST_PRISON_DEATH_FINE
+	TEST_ASSERT_EQUAL(treasury.account_balance, 5000, "A death in custody was fined [5000 - treasury.account_balance]")
 	TEST_ASSERT(prison.riot_active, "Staff killing a prisoner in a restless wing started no riot")
 	TEST_ASSERT_EQUAL(first.trouble, "riot", "The surviving prisoner did not riot")
 	prison.admin_calm()
@@ -670,14 +670,14 @@
 	TEST_ASSERT_EQUAL(plain.health, 1, "150 damage left a standing prisoner at [plain.health] health, not 1")
 	TEST_ASSERT(plain.beaten_left > 0 && plain.can_be_dragged(), "A prisoner spared a killing blow did not collapse")
 	TEST_ASSERT_EQUAL(treasury.account_balance, 5000, "A blow nobody was blamed for cost the treasury")
-	// A hit on the downed one kills, and staff get the blame: a 1000 cr fine (OUTPOST_PRISON_DEATH_FINE).
+	// A hit on the downed one kills, and staff get the blame, but no fine.
 	warden.forceMove(prison_spot(home, 5, 10))
 	hit_with_toolbox(warden, plain)
 	TEST_ASSERT_EQUAL(plain.stat, DEAD, "A hit on a downed prisoner at 1 health did not kill")
 	TEST_ASSERT(plain.death_blamed, "The death was not put down to staff")
-	TEST_ASSERT_EQUAL(treasury.account_balance, 4000, "A death in custody took [5000 - treasury.account_balance], not 1000")
+	TEST_ASSERT_EQUAL(treasury.account_balance, 5000, "A death in custody was fined [5000 - treasury.account_balance]")
 	var/list/newest = prison.entries[1]
-	TEST_ASSERT(findtext(newest["text"], "1000"), "The death fine was not logged: [newest["text"]]")
+	TEST_ASSERT(findtext(newest["text"], "put down to staff"), "The staff's blame was not logged: [newest["text"]]")
 	// An experiment's subject dies on the experiment's account, not staff's.
 	rival.forceMove(prison_spot(home, 6, 10))
 	rival.experiment_subject = TRUE
@@ -688,7 +688,7 @@
 			break
 		hit_with_toolbox(warden, rival)
 	TEST_ASSERT_EQUAL(rival.stat, DEAD, "Staff could not finish off the downed subject")
-	TEST_ASSERT_EQUAL(treasury.account_balance, 4000, "An experiment subject's death was fined")
+	TEST_ASSERT_EQUAL(treasury.account_balance, 5000, "An experiment subject's death was fined")
 	// Forced damage (admin tools) is not spared.
 	fighter.adjustBruteLoss(200, forced = TRUE)
 	TEST_ASSERT_EQUAL(fighter.stat, DEAD, "Forced damage was spared")

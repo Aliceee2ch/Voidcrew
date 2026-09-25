@@ -552,7 +552,7 @@
 	prison.loose_tick(10)
 	TEST_ASSERT_EQUAL(subject.phase, "leaving", "Once the experiment was over, the loose subject did not get away") // PRISONER_LEAVING
 
-	// A specimen host who dies out of the cell block does not burst there, and their body is not collected meanwhile.
+	// A specimen host who dies out of the cell block does not burst there, and stays on the roster meanwhile.
 	var/mob/living/basic/outpost_prisoner/host = trouble_prisoner(prison, yard)
 	TEST_ASSERT(prison.start_experiment("changeling", host), "The host could not take the specimen")
 	var/datum/outpost_changeling_event/event = prison.changeling_event()
@@ -561,12 +561,13 @@
 	TEST_ASSERT(prison.held_for_experiment(host), "The experiment does not hold the specimen's host")
 	host.forceMove(prison_spot(home, 12, 3))
 	host.death()
-	prison.tick(130) // past OUTPOST_PRISON_CORPSE_PICKUP
-	TEST_ASSERT(!QDELETED(host) && host.phase == "present", "The host's body was collected before the burst")
+	prison.tick(130)
+	TEST_ASSERT(!QDELETED(host) && host.phase == "present" && (host in prison.prisoners), "The host's body left the roster before the burst")
 	TEST_ASSERT(prison.experiment_active(), "The host dying called the specimen off")
 	TEST_ASSERT(prison.experiment_end_admin(), "The specimen could not be called off")
 	prison.tick(1)
-	TEST_ASSERT(QDELETED(host) || host.phase == "leaving", "A body the experiment no longer needs was not collected")
+	TEST_ASSERT(!(host in prison.prisoners), "A body out of the cell block that the experiment no longer needs stayed on the roster")
+	qdel(host)
 	settle_prison_air(home)
 
 // ===== CREATURES =====

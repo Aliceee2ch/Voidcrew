@@ -53,7 +53,14 @@
 /// More health per living player on the level beyond the first, at emergence, up to the cap
 #define OUTPOST_HORROR_HEALTH_PER_PLAYER 100
 #define OUTPOST_HORROR_EXTRA_PLAYERS_MAX 3
+/// Brute damage it takes per point dealt: the chitin turns some of it
 #define OUTPOST_HORROR_DAMAGE_COEFF 0.85
+/// Burn damage it takes per point dealt: fire and lasers hurt it double, standing or down
+#define OUTPOST_HORROR_BURN_COEFF 2
+/// Burn damage a second it takes on fire while standing, before OUTPOST_HORROR_BURN_COEFF
+#define OUTPOST_HORROR_FIRE_DAMAGE 5
+/// Fire stacks it loses a second (basic mobs lose 5, so a lick of flame goes out before it burns)
+#define OUTPOST_HORROR_FIRE_DECAY -1
 #define OUTPOST_HORROR_SPEED 2
 /// The arm blade
 #define OUTPOST_HORROR_BLADE_DAMAGE 22
@@ -126,8 +133,9 @@
 #define OUTPOST_CHANGELING_REMAINS_TIME (10 SECONDS)
 
 // ----- the horror's regeneration -----
-// At 0 health it goes down regenerating instead of dying. It dies for good when its body is
-// destroyed, gibbed or dusted, when it is in vacuum while down, or when an admin kills it.
+// At 0 health it goes down regenerating instead of dying, vented rooms included. It dies for good
+// when its body is destroyed, gibbed or dusted, when its body is put out into open space off the
+// outpost while it is down, or when an admin kills it.
 /// Seconds it stays down before it gets up again; they count only while a member of the wing is home
 #define OUTPOST_HORROR_REGEN_TIME 45
 /// Share of its health it gets up with
@@ -136,10 +144,8 @@
 #define OUTPOST_HORROR_RISE_WARNING 5
 /// Damage its body can take while it is down before it bursts, dead for good
 #define OUTPOST_HORROR_REMAINS 200
-/// Damage a second fire does to its body while it is down
+/// Burn damage a second fire does to its body while it is down, before OUTPOST_HORROR_BURN_COEFF doubles it
 #define OUTPOST_HORROR_REMAINS_BURN 10
-/// Pressure (kPa) below which it counts as in vacuum: down there, it freezes, dead for good
-#define OUTPOST_HORROR_VACUUM_PRESSURE HAZARD_LOW_PRESSURE
 
 // ----- afterwards -----
 /// Mood each prisoner who saw a death loses when the experiment ends

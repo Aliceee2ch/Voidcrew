@@ -17,7 +17,9 @@
  *   (/datum/component/experiment_damage_ledger). Each is paid once per experiment.
  * - A creature stays until the crew puts it down or an admin ends the experiment. One that gets out
  *   of the wing sets off the containment breach alarm. One taken off the outpost (onto a ship, say)
- *   is recovered by Kessler at once, for a fee that becomes debt (experiment_recover()).
+ *   is recovered by Kessler at once, for a fee that becomes debt (experiment_recover()). The one
+ *   exception is the changeling's horror, down and regenerating, out in open space: it dies there
+ *   for good, which puts it down (outpost_prison_horror.dm).
  * - The dosed subject or the specimen's host is the experiment's until it ends
  *   (held_for_experiment()): not released, transferred, beamed out as escaped or dropped from the roster dead.
  * - While a creature is live, riots and fights wait, and prisoners run for their cells and ask to
@@ -178,8 +180,9 @@
 
 /**
  * The creatures and the leash. A creature off the outpost is recovered at once (for the fee only
- * if it walked while the crew was home). One out of the wing sets off the containment breach alarm,
- * once. Otherwise they stay until they are put down. A specimen whose creatures are all gone without
+ * if it walked while the crew was home), except the horror's body, down in open space, which dies
+ * there for good instead. One out of the wing sets off the containment breach alarm, once.
+ * Otherwise they stay until they are put down. A specimen whose creatures are all gone without
  * being put down (deleted outright) has failed.
  */
 /datum/outpost_prison/proc/creatures_tick(seconds, home)
@@ -194,6 +197,10 @@
 	var/out_of_wing = FALSE
 	for(var/mob/living/creature as anything in live)
 		if(!outpost_holds(creature))
+			// Its own move into space (on_moved()) usually got there first; this catches the rest.
+			var/mob/living/basic/outpost_experiment/horror/spaced = creature
+			if(istype(spaced) && spaced.die_if_spaced())
+				return
 			var/carried = !isturf(creature.loc) || !!creature.pulledby || !!creature.buckled
 			add_log("[creature.name] was taken off the outpost.")
 			// With nobody home to stop it, a visitor who led it onto their ship does not bill the owner.

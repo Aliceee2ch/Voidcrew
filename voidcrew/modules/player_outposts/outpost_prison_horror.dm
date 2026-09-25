@@ -29,6 +29,7 @@
  * admins. Ambient NPCs are killed, never absorbed.
  *
  * Its shield turns aside a quarter of the hits that come at its face, never from the side or back.
+ * Burns hurt it double, standing or down, and set alight it keeps burning for a few seconds.
  * Doors that will not open for it, it pries; kept from its quarry, it breaks interior windows
  * toward them. It never breaches the prison wing's outer ring, never a wall or window with
  * anything but the outpost's own floor beyond, and never steps off the outpost's ground.
@@ -37,9 +38,11 @@
  * to act or absorb, turrets leave it alone, and after OUTPOST_HORROR_REGEN_TIME (counted only while
  * a member of the wing is home) it gets up with half its health and fights on. To kill it for good,
  * destroy the body while it is down (OUTPOST_HORROR_REMAINS more damage, and it bursts), gib or dust
- * it, or get it into vacuum, where it freezes. It also dies for good if it collapses in vacuum. The
- * containment bonus and the end of the experiment come only with that final death. The first
- * collapse is announced to the outpost; prisoners go on hiding while it is down.
+ * it, or space it: drag, push or throw its body off the outpost into open space (a space tile in
+ * none of the outpost's areas), where it freezes the moment it arrives. A vented room inside the
+ * outpost does not count; it regenerates there as anywhere else. The containment bonus and the end
+ * of the experiment come only with that final death. The first collapse is announced to the
+ * outpost; prisoners go on hiding while it is down.
  */
 
 /// Trait source for standing still: unfolding, winding up, channelling, staggered or prying
@@ -48,6 +51,9 @@
 #define HORROR_GRIP_TRAIT "outpost_horror_grip"
 /// The pulsing outline it has while it lies regenerating
 #define HORROR_REGEN_FILTER "outpost_horror_regen"
+/// The pale blue it turns, and what is seen, when it freezes out in space
+#define HORROR_FROZEN_COLOUR "#a8c8f0"
+#define HORROR_SPACED_MESSAGE "freezes solid in the cold of space, and its flesh stops moving."
 /// The horror's faction: it fights everything else
 #define FACTION_OUTPOST_HORROR "outpost_horror"
 /// Blackboard keys
@@ -79,7 +85,7 @@
 	maxHealth = OUTPOST_HORROR_BASE_HEALTH
 	health = OUTPOST_HORROR_BASE_HEALTH
 	speed = OUTPOST_HORROR_SPEED
-	damage_coeff = list(BRUTE = OUTPOST_HORROR_DAMAGE_COEFF, BURN = OUTPOST_HORROR_DAMAGE_COEFF, TOX = 0, STAMINA = 0, OXY = 0)
+	damage_coeff = list(BRUTE = OUTPOST_HORROR_DAMAGE_COEFF, BURN = OUTPOST_HORROR_BURN_COEFF, TOX = 0, STAMINA = 0, OXY = 0)
 	melee_damage_lower = OUTPOST_HORROR_BLADE_DAMAGE
 	melee_damage_upper = OUTPOST_HORROR_BLADE_DAMAGE
 	melee_attack_cooldown = OUTPOST_HORROR_BLADE_COOLDOWN
@@ -102,8 +108,10 @@
 	unsuitable_atmos_damage = 0
 	unsuitable_cold_damage = 0
 	unsuitable_heat_damage = 0
-	// It catches fire, which breaks an absorb or a mend; with no heat damage the flames do nothing else.
+	// It catches fire, which breaks an absorb or a mend, and burns it (on_fire_stack()): it has no heat
+	// damage for tg's fire to work through. It burns for a few seconds, not the moment most basic mobs get.
 	basic_mob_flags = FLAMMABLE_MOB
+	fire_stack_decay_rate = OUTPOST_HORROR_FIRE_DECAY
 	mobility_flags = MOBILITY_FLAGS_REST_CAPABLE_DEFAULT
 	rotate_on_lying = TRUE
 	blood_volume = BLOOD_VOLUME_NORMAL
@@ -151,7 +159,7 @@
 	var/stasis_tell_left = 0
 	/// It has warned, while down, that it is getting up
 	var/rise_warned = FALSE
-	/// The next death() is for good: an admin's kill, vacuum, or its body destroyed
+	/// The next death() is for good: an admin's kill, open space, or its body destroyed
 	var/final_death = FALSE
 
 /mob/living/basic/outpost_experiment/horror/Initialize(mapload)
@@ -236,12 +244,18 @@
 	SIGNAL_HANDLER
 	return COMPONENT_BLOCK_MOB_CHANGE
 
-/// Never a step off the outpost's ground: no docked ships, no space
+/**
+ * Never a step off the outpost's ground: no docked ships, no space. The one way off is for its body,
+ * down and regenerating, to be dragged, pushed or thrown out into open space, where it dies
+ * (on_moved()). Never onto a ship or any other ground.
+ */
 /mob/living/basic/outpost_experiment/horror/proc/check_ground(datum/source, atom/new_loc)
 	SIGNAL_HANDLER
 	if(!isturf(new_loc) || !event)
 		return NONE
 	if(!event.on_outpost_ground(loc) || event.on_outpost_ground(new_loc))
+		return NONE
+	if(can_be_spaced() && event.in_open_space(new_loc))
 		return NONE
 	return COMPONENT_MOVABLE_BLOCK_PRE_MOVE
 
@@ -253,19 +267,21 @@
 	INVOKE_ASYNC(src, PROC_REF(collect_remains))
 
 /**
- * At 0 health it goes down regenerating (start_regenerating()) instead of dying. While it is down,
- * every update of its health lands here again and changes nothing. It dies for good when gibbed or
- * dusted, after die_for_good(), or when it collapses in vacuum, which stops its regeneration outright.
+ * At 0 health it goes down regenerating (start_regenerating()) instead of dying, wherever it is on
+ * the outpost, vented rooms included. While it is down, every update of its health lands here again
+ * and changes nothing. It dies for good when gibbed or dusted, after die_for_good(), or when it
+ * collapses out in open space off the outpost, where a downed body could not lie regenerating anyway.
  */
 /mob/living/basic/outpost_experiment/horror/death(gibbed)
 	if(stat != DEAD && !gibbed && !final_death)
 		if(regenerating)
 			return FALSE
-		if(!in_vacuum())
+		if(!in_open_space())
 			start_regenerating()
 			return FALSE
 		final_death = TRUE
-		death_message = "freezes solid, and its flesh stops moving."
+		add_atom_colour(HORROR_FROZEN_COLOUR, FIXED_COLOUR_PRIORITY)
+		death_message = HORROR_SPACED_MESSAGE
 	end_absorb()
 	mend_left = 0
 	clear_busy()
@@ -296,7 +312,7 @@
  * Goes down regenerating: on the floor and out of it, its health held at 0. It cannot act or
  * absorb, and turrets leave it be. After OUTPOST_HORROR_REGEN_TIME (regen_tick()) it gets up with
  * OUTPOST_HORROR_REGEN_HEALTH of its health, unless its body is destroyed first (damage_remains())
- * or it is in vacuum. Returns TRUE if it went down.
+ * or put out into open space (die_if_spaced()). Returns TRUE if it went down.
  */
 /mob/living/basic/outpost_experiment/horror/proc/start_regenerating()
 	if(regenerating || stat == DEAD || QDELETED(src))
@@ -315,7 +331,7 @@
 	set_stat(UNCONSCIOUS)
 	bruteloss = maxHealth
 	updatehealth()
-	// Its body can be dragged about while it is down, but never off the outpost's ground (check_ground()).
+	// Its body can be dragged about while it is down, but off the outpost's ground only into open space (check_ground()).
 	move_resist = MOVE_RESIST_DEFAULT
 	visible_message(span_boldwarning("[src] collapses, but its flesh keeps moving."))
 	playsound(src, 'sound/effects/magic/demon_dies.ogg', 60, TRUE, 2)
@@ -325,17 +341,18 @@
 	return TRUE
 
 /**
- * `seconds` down: vacuum freezes it, fire eats at its body, it twitches, and if `home` (a member of
- * the wing is home) the clock to getting up runs, with a warning OUTPOST_HORROR_RISE_WARNING before.
+ * `seconds` down: fire eats at its body, it twitches, and if `home` (a member of the wing is home)
+ * the clock to getting up runs, with a warning OUTPOST_HORROR_RISE_WARNING before. Out in open space
+ * it dies instead, if on_moved() has not seen to that already.
  */
 /mob/living/basic/outpost_experiment/horror/proc/regen_tick(seconds, home = TRUE)
 	if(!regenerating || stat == DEAD || QDELETED(src) || HAS_TRAIT(src, TRAIT_GODMODE))
 		return
-	if(in_vacuum())
-		freeze_solid()
+	if(die_if_spaced())
 		return
+	// Burning eats its body; OUTPOST_HORROR_BURN_COEFF doubles it, as it does any burn.
 	if(on_fire)
-		apply_damage(OUTPOST_HORROR_REMAINS_BURN * seconds, BURN, forced = TRUE)
+		apply_damage(OUTPOST_HORROR_REMAINS_BURN * seconds, BURN)
 		if(QDELETED(src) || stat == DEAD)
 			return
 	stasis_tells(seconds)
@@ -421,17 +438,38 @@
 	log_game("PLAYER OUTPOST PRISON: the changeling horror's body was destroyed at [AREACOORD(src)]")
 	gib()
 
-/// Down in vacuum: it freezes solid, dead for good
-/mob/living/basic/outpost_experiment/horror/proc/freeze_solid()
-	if(QDELETED(src) || stat == DEAD)
-		return
-	add_atom_colour("#a8c8f0", FIXED_COLOUR_PRIORITY)
-	log_game("PLAYER OUTPOST PRISON: the changeling horror froze in vacuum at [AREACOORD(src)]")
-	die_for_good("freezes solid, and its flesh stops moving.")
+/**
+ * Whether its body, down, may be spaced: regenerating, and not dead or held by Kessler's team (or
+ * an admin's godmode).
+ */
+/mob/living/basic/outpost_experiment/horror/proc/can_be_spaced()
+	return regenerating && stat != DEAD && !QDELETED(src) && !HAS_TRAIT(src, TRAIT_GODMODE)
 
 /**
- * Dies for good, down or not: an admin's kill, vacuum or its body destroyed. `message` replaces its
- * death message. Returns TRUE if it died.
+ * Whether its body lies out in open space off the outpost (/datum/outpost_changeling_event/proc/in_open_space()).
+ * One with no experiment goes by the tile alone: a space tile in space's own area.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/in_open_space()
+	if(event)
+		return event.in_open_space(src)
+	var/turf/here = get_turf(src)
+	return isspaceturf(here) && istype(here.loc, /area/space)
+
+/**
+ * Down and out in open space off the outpost: it freezes solid, dead for good. That is its final
+ * death like any other, so the containment bonus and the end of the experiment come with it.
+ * Returns TRUE if it died.
+ */
+/mob/living/basic/outpost_experiment/horror/proc/die_if_spaced()
+	if(!can_be_spaced() || !in_open_space())
+		return FALSE
+	add_atom_colour(HORROR_FROZEN_COLOUR, FIXED_COLOUR_PRIORITY)
+	log_game("PLAYER OUTPOST PRISON: the changeling horror was spaced at [AREACOORD(src)]")
+	return die_for_good(HORROR_SPACED_MESSAGE)
+
+/**
+ * Dies for good, down or not: an admin's kill, open space or its body destroyed. `message` replaces
+ * its death message. Returns TRUE if it died.
  */
 /mob/living/basic/outpost_experiment/horror/proc/die_for_good(message)
 	if(QDELETED(src) || stat == DEAD)
@@ -441,16 +479,6 @@
 		death_message = message
 	death()
 	return stat == DEAD
-
-/// Whether it lies in vacuum: on a space tile, or where the pressure is below OUTPOST_HORROR_VACUUM_PRESSURE
-/mob/living/basic/outpost_experiment/horror/proc/in_vacuum()
-	var/turf/here = get_turf(src)
-	if(!isopenturf(here))
-		return FALSE
-	if(isspaceturf(here))
-		return TRUE
-	var/datum/gas_mixture/air = here.return_air()
-	return !air || air.return_pressure() < OUTPOST_HORROR_VACUUM_PRESSURE
 
 /// A dark red outline that pulses while it lies regenerating
 /mob/living/basic/outpost_experiment/horror/proc/start_regeneration_look()
@@ -465,8 +493,11 @@
 
 /mob/living/basic/outpost_experiment/horror/examine(mob/user)
 	. = ..()
-	if(regenerating && stat != DEAD)
+	if(stat == DEAD)
+		return
+	if(regenerating)
 		. += span_warning("It's still moving.")
+	. += span_notice("It shies away from fire.")
 
 /// Down and regenerating, it is no target for turrets
 /mob/living/basic/outpost_experiment/horror/turret_target()
@@ -615,6 +646,17 @@
 		return NONE
 	show_deflect("\the [shot]")
 	return COMPONENT_BULLET_BLOCKED
+
+/**
+ * Each tick of burning while it stands: OUTPOST_HORROR_FIRE_DAMAGE a second, doubled by
+ * OUTPOST_HORROR_BURN_COEFF. tg's fire only warms a basic mob, and it has no heat damage. Down,
+ * regen_tick() burns its body instead.
+ */
+/mob/living/basic/outpost_experiment/horror/on_fire_stack(seconds_per_tick, datum/status_effect/fire_handler/fire_stacks/fire_handler)
+	. = ..()
+	if(stat != CONSCIOUS || regenerating || HAS_TRAIT(src, TRAIT_GODMODE))
+		return
+	apply_damage(OUTPOST_HORROR_FIRE_DAMAGE * seconds_per_tick, BURN)
 
 /// Fire breaks an absorb or a mend
 /mob/living/basic/outpost_experiment/horror/proc/on_ignited(datum/source)
@@ -784,11 +826,13 @@
 	SIGNAL_HANDLER
 	INVOKE_ASYNC(src, PROC_REF(interrupt_absorb), null)
 
-/// Moved off its spot mid-absorb: the grip breaks
+/// Moved off its spot mid-absorb: the grip breaks. Its body, down, moved out into open space: it dies on arrival.
 /mob/living/basic/outpost_experiment/horror/proc/on_moved(datum/source, atom/old_loc, dir, forced)
 	SIGNAL_HANDLER
 	if(busy == "absorb")
 		INVOKE_ASYNC(src, PROC_REF(interrupt_absorb), "knocked off its meal")
+	if(can_be_spaced() && in_open_space())
+		INVOKE_ASYNC(src, PROC_REF(die_if_spaced))
 
 // ===== DOORS AND WINDOWS =====
 
@@ -1603,6 +1647,8 @@
 #undef HORROR_BUSY_TRAIT
 #undef HORROR_GRIP_TRAIT
 #undef HORROR_REGEN_FILTER
+#undef HORROR_FROZEN_COLOUR
+#undef HORROR_SPACED_MESSAGE
 #undef FACTION_OUTPOST_HORROR
 #undef BB_OUTPOST_HORROR_ABILITY
 #undef BB_OUTPOST_HORROR_ABILITY_TARGET

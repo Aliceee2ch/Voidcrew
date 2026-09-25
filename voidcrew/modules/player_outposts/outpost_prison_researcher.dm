@@ -21,7 +21,8 @@
 
 /**
  * Advances the researcher's visit and the wait for the next one by `seconds`. The first visit is
- * scheduled when the wing's first prisoner is in; the waits only count while `home`.
+ * scheduled when the wing's first prisoner is in, and the next whenever nothing is out and nothing
+ * is scheduled; the waits only count while `home`.
  */
 /datum/outpost_prison/proc/researcher_tick(seconds, home)
 	if(researcher)
@@ -46,6 +47,12 @@
 			return
 		visits_started = TRUE
 		researcher_wait = rand(OUTPOST_EXPERIMENT_FIRST_VISIT_MIN, OUTPOST_EXPERIMENT_FIRST_VISIT_MAX)
+		return
+	// Nothing out and nothing scheduled: the item was used up, eaten or lost without starting
+	// anything, or the researcher was deleted without leaving. The next visit is 35-50 minutes off.
+	if(isnull(researcher_wait) && !experiment_active() && !length(live_items()))
+		pending_multiplier = 1
+		researcher_wait = rand(OUTPOST_EXPERIMENT_GAP_MIN, OUTPOST_EXPERIMENT_GAP_MAX)
 		return
 	if(!home || isnull(researcher_wait))
 		return

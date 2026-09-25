@@ -176,6 +176,15 @@
 	TEST_ASSERT_EQUAL(target.health, target.maxHealth, "The researcher could be hurt")
 	TEST_ASSERT_NULL(prison.researcher, "A hurt researcher kept the offer open")
 	TEST_ASSERT_EQUAL(prison.sweetener, sweet, "Hurting the researcher sweetened the next offer")
+
+	// Deleted without leaving (gibbed, dusted, an admin): the next visit is still scheduled.
+	var/mob/living/basic/outpost_kessler_staff/researcher/doomed = prison.spawn_researcher(TRUE)
+	TEST_ASSERT_NOTNULL(doomed, "An admin could not send the researcher")
+	TEST_ASSERT_NULL(prison.researcher_wait, "A visit was scheduled while the researcher waited")
+	qdel(doomed)
+	TEST_ASSERT_NULL(prison.researcher, "A deleted researcher kept the offer open")
+	prison.experiments_tick(1)
+	TEST_ASSERT(prison.researcher_wait >= 2100 && prison.researcher_wait <= 3000, "A deleted researcher left the next visit at [prison.researcher_wait], not 35-50 minutes off") // OUTPOST_EXPERIMENT_GAP_MIN/_MAX
 	settle_prison_air(home)
 
 // ===== ITEMS =====
@@ -222,6 +231,14 @@
 	prison.experiments_tick(1)
 	TEST_ASSERT(QDELETED(stale), "A serum outlived its 10 minutes")
 	TEST_ASSERT(prison.researcher_wait >= 2100 && prison.researcher_wait <= 3000, "A spoiled serum did not schedule the next visit")
+	// Gone before the prison noticed, and dropped from its list by a console refresh first: still scheduled.
+	var/obj/item/outpost_experiment/serum/lost = new(prison_spot(home, 8, 9), prison, "hulk")
+	prison.researcher_wait = null
+	qdel(lost)
+	prison.experiment_payload()
+	TEST_ASSERT(!length(prison.experiment_items), "The console refresh did not drop the deleted serum")
+	prison.experiments_tick(1)
+	TEST_ASSERT(prison.researcher_wait >= 2100 && prison.researcher_wait <= 3000, "A serum lost before the prison noticed left no visit scheduled")
 	TEST_ASSERT(run_loc_floor_bottom_left.z != prison.wing_z(), "The test floor is on the outpost's level")
 	var/obj/item/outpost_experiment/specimen/traveller = new(prison_spot(home, 8, 9), prison, "changeling")
 	traveller.forceMove(run_loc_floor_bottom_left)

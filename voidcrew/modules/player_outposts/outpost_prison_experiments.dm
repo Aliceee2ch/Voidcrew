@@ -584,8 +584,8 @@
 
 /**
  * Items spoil after OUTPOST_EXPERIMENT_ITEM_LIFETIME and are destroyed off the wing's level (a ship,
- * another outpost, cryo). The last one gone without starting anything is a lapsed offer: the
- * researcher is due in 35-50 minutes.
+ * another outpost, cryo). The last one gone without starting anything is a lapsed offer, which
+ * researcher_tick() notices.
  */
 /datum/outpost_prison/proc/items_tick()
 	if(!length(experiment_items))
@@ -600,9 +600,6 @@
 		if(!where || where.z != z)
 			log_game("PLAYER OUTPOST PRISON: a Kessler [label.kind] left the level of '[outpost?.name]' and was destroyed")
 			label.destroy_item()
-	if(!length(live_items()) && !experiment && !researcher && isnull(researcher_wait) && visits_started)
-		pending_multiplier = 1
-		researcher_wait = rand(OUTPOST_EXPERIMENT_GAP_MIN, OUTPOST_EXPERIMENT_GAP_MAX)
 
 // ===== THE CONSOLE =====
 

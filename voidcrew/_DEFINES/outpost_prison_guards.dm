@@ -95,8 +95,6 @@
 #define OUTPOST_GUARD_PRIORITY_LEASH 8
 #define OUTPOST_GUARD_PRIORITY_SHELTER 9
 
-/// Trait source for a guard's riot stance: rioters can't swap places past them
-#define OUTPOST_GUARD_RIOT_TRAIT "outpost_guard_riot"
 /// Trait source for the beam holding a guard still
 #define OUTPOST_GUARD_BEAM_TRAIT "outpost_guard_beam"
 /// Trait source for a guard lying down, out of it

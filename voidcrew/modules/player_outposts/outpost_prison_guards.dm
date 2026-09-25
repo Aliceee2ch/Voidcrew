@@ -484,8 +484,6 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	response.expires_at = world.time + OUTPOST_GUARD_RESPONSE_TIMEOUT
 	set_varspeed(OUTPOST_GUARD_SPEED_HURRY)
 	set_baton(TRUE)
-	if(kind == "riot")
-		ADD_TRAIT(src, TRAIT_NOMOBSWAP, OUTPOST_GUARD_RIOT_TRAIT)
 	ai_controller?.CancelActions()
 	return response
 
@@ -494,7 +492,6 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	if(!response)
 		return
 	QDEL_NULL(response)
-	REMOVE_TRAIT(src, TRAIT_NOMOBSWAP, OUTPOST_GUARD_RIOT_TRAIT)
 	if(!QDELETED(src))
 		set_varspeed(OUTPOST_GUARD_SPEED_WALK)
 		set_baton(FALSE)
@@ -714,7 +711,6 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	if(get_area(src) == prison.wing)
 		outside_seconds = 0
 		return TRUE
-	job.reached = TRUE
 	if(!job.spot)
 		job.spot = prison.guard_office_spot(src)
 	if(!job.spot)
@@ -1056,7 +1052,8 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 
 /**
  * The leash: a guard off the wing's level is recalled at once; one out of the wing for
- * OUTPOST_GUARD_LEASH_SECONDS walks back, or with nobody about to see it, is recalled.
+ * OUTPOST_GUARD_LEASH_SECONDS walks back, or with nobody about to see it (or still out after
+ * twice that), is recalled.
  */
 /datum/outpost_prison/proc/guard_leash_check()
 	var/z = wing_z()
@@ -1075,7 +1072,8 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		guard.outside_seconds += OUTPOST_GUARD_CHECK_SECONDS
 		if(guard.outside_seconds < OUTPOST_GUARD_LEASH_SECONDS)
 			continue
-		if(!guard.ai_running())
+		// Nobody about to watch them walk back, or they could not find the way: called back.
+		if(!guard.ai_running() || guard.outside_seconds >= OUTPOST_GUARD_LEASH_SECONDS * 2)
 			guard.recall()
 		else if(guard.response?.kind != "leash")
 			guard.give_response("leash", OUTPOST_GUARD_PRIORITY_LEASH, "leash", null, guard_office_spot(guard))

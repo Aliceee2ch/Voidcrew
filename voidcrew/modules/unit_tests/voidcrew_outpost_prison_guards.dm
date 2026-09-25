@@ -566,6 +566,19 @@
 	prison.crew_home_override = null
 	prison.presence_tick(1)
 	TEST_ASSERT(!prison.crew_home(), "Guards counted as the crew being home")
+
+	// The leash: out of the wing for 30 seconds with nobody about to see them walk back, and they
+	// are called back for a minute (OUTPOST_GUARD_LEASH_SECONDS, OUTPOST_GUARD_OFF_LEVEL_AWAY).
+	var/turf/outside = get_step(prison_spot(home, 9, 1), SOUTH)
+	TEST_ASSERT(outside && get_area(outside) != prison.wing, "No tile outside the wing's entrance")
+	var/mob/living/basic/outpost_prison_guard/wanderer = guard_test_spawn(prison, outside, awake = FALSE)
+	var/datum/outpost_guard_record/wanderer_record = wanderer.record
+	for(var/i in 1 to 10)
+		prison.guards_tick(5)
+		if(wanderer.phase == "leaving")
+			break
+	TEST_ASSERT_EQUAL(wanderer.phase, "leaving", "A guard out of the wing was not called back")
+	TEST_ASSERT_EQUAL(wanderer_record.away_left, 60, "A called-back guard is away for [wanderer_record.away_left] s, not 60")
 	settle_prison_air(home)
 
 // ===== WHAT A GUARD TELLS YOU =====

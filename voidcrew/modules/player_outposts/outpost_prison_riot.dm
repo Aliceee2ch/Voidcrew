@@ -401,13 +401,14 @@
 				prisoner.cancel_threat()
 				continue
 			prisoner.face_atom(person)
-			if(prisoner.talking)
+			// A talk, or a member picking one from the talk menu (outpost_prison_warden_tools.dm), holds the threat
+			if(prisoner.talking || prisoner.held_by_talk_menu())
 				continue
 			prisoner.threat_left -= seconds
 			if(prisoner.threat_left <= 0)
 				prisoner.decide_swing(person)
 			continue
-		if(prisoner.talking || prisoner.swing_ref || prisoner.threat_cooldown > 0 || prisoner.mood >= threat_mood_ceiling())
+		if(prisoner.talking || prisoner.held_by_talk_menu() || prisoner.swing_ref || prisoner.threat_cooldown > 0 || prisoner.mood >= threat_mood_ceiling())
 			continue
 		var/mob/living/nearby = prisoner.staff_nearby(PRISONER_THREAT_RANGE, spare_helpers = TRUE)
 		// Who they square up to depends on who it is (outpost_prison_social.dm).

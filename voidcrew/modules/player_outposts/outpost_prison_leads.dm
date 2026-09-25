@@ -3,8 +3,8 @@
  *
  * Owner: XG (extras-plan.md 4.16). Some prisoners know where an uncharted wreck sits: 30% of
  * arrivals carry a lead, and hint at it now and then while a member is near and the wing is ready
- * to give one. A member asks from the talk menu ("What do you know?", offered on every prisoner so
- * the question gives nothing away); the answer lands on the asker's ship helm as a Rumors waypoint.
+ * to give one. A member asks from the talk menu ("Rumour", offered on every prisoner so the
+ * question gives nothing away); the answer lands on the asker's ship helm as a Rumors waypoint.
  *
  * A content prisoner tells the truth: a real space ruin the ship has not charted, seen or been told
  * about. An unhappy one may lie instead: a real-sounding ruin name and an empty spot on the
@@ -13,7 +13,7 @@
  * - mood shows who might lie, and a prisoner under OUTPOST_PRISON_LEAD_REFUSE_MOOD refuses outright;
  * - a liar usually shows a tell when answering (an honest teller now and then does too);
  * - a content prisoner who saw it may call it out a few seconds later;
- * - any other prisoner who was in the wing can be asked about the tip for a while;
+ * - any other prisoner who was in the wing can be asked about the tip for a while ("Tip");
  * - true tips never point at anything the ship has charted, seen or flown past, so a tip at a spot
  *   the helm already knows is empty is a lie;
  * - flying within sight of a lie renames its waypoint "nothing there", and the liar owns up when
@@ -23,7 +23,9 @@
  */
 
 /// The talk menu's question, offered on every prisoner
-#define LEAD_ASK_CHOICE "What do you know?"
+#define LEAD_ASK_CHOICE "Rumour"
+/// The talk menu's question about the newest tip a prisoner saw given
+#define LEAD_TIP_CHOICE "Tip"
 /// This package's dialogue file (tells and fake names; its "lines" are found by context name)
 #define LEAD_DIALOGUE_FILE "outpost_prison_leads.json"
 
@@ -120,16 +122,14 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 
 // ===== THE TALK MENU =====
 
-/// "What do you know?" on every prisoner, and "Ask about [name]'s tip" on those who saw a recent one (the newest); members only
+/// "Rumour" on every prisoner, and "Tip" on those who saw a recent one given; members only
 /datum/outpost_prison/proc/leads_talk_choices(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	var/list/choices = list()
 	if(!prisoner || !user || !is_member(user))
 		return choices
-	choices[LEAD_ASK_CHOICE] = image(icon = 'icons/hud/radial_fishing.dmi', icon_state = "misaligned_question_mark")
-	// Only the newest tip they saw, so the menu never shows the same icon twice
-	var/list/vouchable = lead_vouchable(prisoner)
-	if(length(vouchable))
-		choices[lead_vouch_choice(vouchable[length(vouchable)])] = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_lore")
+	choices[LEAD_ASK_CHOICE] = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_rumour")
+	if(lead_newest_vouchable(prisoner))
+		choices[LEAD_TIP_CHOICE] = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_tip")
 	return choices
 
 /// Runs a talk menu choice of this package; TRUE if it was one. May sleep.
@@ -137,16 +137,19 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 	if(choice == LEAD_ASK_CHOICE)
 		lead_ask(prisoner, user)
 		return TRUE
-	// Newest first, so the latest tip under a name is the one asked about
-	for(var/index in length(open_leads) to 1 step -1)
-		var/datum/outpost_prison_lead/lead = open_leads[index]
-		if(choice == lead_vouch_choice(lead))
-			lead_ask_about(prisoner, user, lead)
+	if(choice == LEAD_TIP_CHOICE)
+		var/datum/outpost_prison_lead/lead = lead_newest_vouchable(prisoner)
+		if(!lead)
+			prisoner.balloon_alert(user, "nothing to add")
 			return TRUE
+		lead_ask_about(prisoner, user, lead)
+		return TRUE
 	return FALSE
 
-/datum/outpost_prison/proc/lead_vouch_choice(datum/outpost_prison_lead/lead)
-	return "Ask about [lead.teller_name]'s tip"
+/// The newest tip `prisoner` can be asked about (lead_vouchable()), or null
+/datum/outpost_prison/proc/lead_newest_vouchable(mob/living/basic/outpost_prisoner/prisoner)
+	var/list/vouchable = lead_vouchable(prisoner)
+	return length(vouchable) ? vouchable[length(vouchable)] : null
 
 /// Open leads `prisoner` saw given, recent enough to ask about, that they did not give and have not answered for
 /datum/outpost_prison/proc/lead_vouchable(mob/living/basic/outpost_prisoner/prisoner)
@@ -200,7 +203,7 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 	prisoner.face_atom(user)
 	return TRUE
 
-/// "What do you know?": the checks and the talk, then give_lead() for the asker's ship
+/// "Rumour": the checks and the talk, then give_lead() for the asker's ship
 /datum/outpost_prison/proc/lead_ask(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	if(!lead_can_ask(prisoner, user))
 		return FALSE
@@ -222,7 +225,7 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 	give_lead(prisoner, ship, user)
 	return TRUE
 
-/// "Ask about [name]'s tip": the checks and the talk, then lead_vouch()
+/// "Tip": the checks and the talk, then lead_vouch()
 /datum/outpost_prison/proc/lead_ask_about(mob/living/basic/outpost_prisoner/prisoner, mob/living/user, datum/outpost_prison_lead/lead)
 	if(!lead_can_ask(prisoner, user))
 		return FALSE
@@ -262,7 +265,7 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 	return clamp(chance, 0, 100)
 
 /**
- * The answer to "What do you know?", once the talk is done. They refuse (after a recent unprovoked
+ * The answer to "Rumour", once the talk is done. They refuse (after a recent unprovoked
  * hit by the asker, or under OUTPOST_PRISON_LEAD_REFUSE_MOOD, keeping the lead either way), have
  * nothing (not a carrier, or the wing's gap is running: the same line for both), have nothing left
  * (no ruin to tell of: the lead and the gap are kept), or tell: the truth, or a lie by
@@ -655,4 +658,5 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 			grid[(tile_y - 1) * OVERMAP_SIZE + tile_x] = TRUE
 
 #undef LEAD_ASK_CHOICE
+#undef LEAD_TIP_CHOICE
 #undef LEAD_DIALOGUE_FILE

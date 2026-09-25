@@ -245,9 +245,9 @@
 	owner.set_mood(70)
 	neighbour.set_mood(70)
 	prison.contraband_force_rolls = TRUE
-	TEST_ASSERT(("Hands on the wall" in prison.contraband_talk_choices(owner, member)), "The talk menu offers members no pat-down")
+	TEST_ASSERT(("Search" in prison.contraband_talk_choices(owner, member)), "The talk menu offers members no pat-down") // CONTRABAND_PATDOWN_CHOICE
 	TEST_ASSERT(!length(prison.contraband_talk_choices(owner, visitor)), "The talk menu offers a visitor a pat-down")
-	TEST_ASSERT(!prison.contraband_talk_act(owner, member, "What are you in for?"), "The pat-down took another package's choice")
+	TEST_ASSERT(!prison.contraband_talk_act(owner, member, "Crime"), "The pat-down took another package's choice") // PRISON_TALK_CRIME
 	TEST_ASSERT_NULL(prison.contraband_pat_down(owner, visitor), "A visitor patted a prisoner down")
 	// Nothing on them: 3 mood once per five minutes (OUTPOST_CONTRABAND_PATDOWN_MOOD), and someone may speak up for them
 	TEST_ASSERT_EQUAL(prison.contraband_pat_down(owner, member), "empty", "A pat-down of a prisoner carrying nothing found something")
@@ -324,20 +324,57 @@
 	TEST_ASSERT_EQUAL(prison.contraband_fight_mult(owner, neighbour), 1, "The drink outlasted 120 seconds")
 	TEST_ASSERT_EQUAL(prison.contraband_spat_mult(), 1, "The wing stayed quarrelsome after the drink wore off")
 
-	// Pulling the bag out of the cistern by hand is a find: logged, and the owner loses 3
+	// The cistern by hand. With the lid on, a click is tg's own and nothing comes out; a right click flushes.
 	bag = prison.contraband_brew_into(cell, toilet)
 	TEST_ASSERT_NOTNULL(bag, "No second batch went into the cistern")
+	var/weight_with_bag = toilet.w_items
 	owner.set_mood(70)
 	cell.searched_at = 0
 	member.forceMove(prison_spot(home, 3, 15))
 	member.drop_all_held_items()
-	toilet.cistern_open = TRUE
+	owner.stand_up()
+	toilet.cistern_open = FALSE
 	toilet.cover_open = FALSE
 	toilet.attack_hand(member, list())
-	TEST_ASSERT(member.is_holding(bag), "Reaching into the cistern did not bring out the pruno")
-	TEST_ASSERT_NULL(prison.contraband_pruno(cell), "The cell still counts pruno that was found")
-	TEST_ASSERT(abs(owner.mood - 67) < 0.01, "Finding pruno cost its owner [70 - owner.mood] mood, not 3")
-	TEST_ASSERT(findtext(contraband_last_log(prison), "found pruno in cell"), "The pruno find was not logged: [contraband_last_log(prison)]")
+	TEST_ASSERT(!DOING_INTERACTION_WITH_TARGET(member, toilet), "A click on a toilet with its lid on started a search")
+	TEST_ASSERT_EQUAL(prison.contraband_pruno(cell), bag, "A click on a toilet with its lid on took the pruno")
+	TEST_ASSERT_NULL(prison.contraband_search_cistern(member, toilet), "A cistern with its lid on was searched")
+	TEST_ASSERT_EQUAL(toilet.attack_hand_secondary(member, list()), SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN, "A right click on a cell toilet did not flush it")
+	TEST_ASSERT(toilet.flushing, "A right click on a cell toilet did not flush it")
+	TEST_ASSERT_EQUAL(prison.contraband_pruno(cell), bag, "Flushing took the pruno")
+	// With the lid off (tg's crowbar), a visitor's click is refused, "members only", so nobody reaches in round the search's rules
+	toilet.cistern_open = TRUE
+	TEST_ASSERT(toilet.attack_hand(visitor, list()), "A visitor's click on an open cell cistern went through")
+	TEST_ASSERT(!visitor.is_holding(bag) && prison.contraband_pruno(cell) == bag, "A visitor reached into an open cell cistern")
+	TEST_ASSERT_NULL(prison.contraband_search_cistern(visitor, toilet), "A visitor searched a cistern")
+	// A member's click is the search, not tg's instant grab: four seconds (OUTPOST_CONTRABAND_SEARCH_TIME), the pruno in hand, a find: logged, the owner denies it and loses 3
+	TEST_ASSERT(toilet.attack_hand(member, list()), "A member's click on an open cell cistern went on to tg's own")
+	TEST_ASSERT(!member.is_holding(bag) && prison.contraband_pruno(cell) == bag, "A member's click on an open cell cistern grabbed the pruno at once")
+	TEST_ASSERT(DOING_INTERACTION_WITH_TARGET(member, toilet), "A member's click on an open cell cistern started no search")
+	TEST_ASSERT(wait_until(CALLBACK(member, TYPE_PROC_REF(/mob, is_holding), bag), 8 SECONDS), "A member's click on the open cistern never brought out the pruno")
+	TEST_ASSERT_NULL(prison.contraband_pruno(cell), "The cell still counts pruno found in the cistern")
+	TEST_ASSERT(!(bag in toilet.cistern_items), "The found pruno is still in the cistern")
+	TEST_ASSERT_EQUAL(toilet.w_items, weight_with_bag - bag.w_class, "The cistern still counts the found pruno's weight")
+	TEST_ASSERT(abs(owner.mood - 67) < 0.01, "Finding pruno in the cistern cost its owner [70 - owner.mood] mood, not 3")
+	TEST_ASSERT(contraband_line_for(owner.last_line, "shakedown_found"), "The owner said [owner.last_line] when pruno was found in the cistern")
+	TEST_ASSERT(findtext(contraband_last_log(prison), "in the cistern of cell"), "The cistern find was not logged: [contraband_last_log(prison)]")
+	member.drop_all_held_items()
+	// Nothing in it, after the gap (OUTPOST_CONTRABAND_SEARCH_GAP): an innocent cell, 6 to the owner and 1 to each prisoner watching (_EMPTY_MOOD, _ONLOOKER_MOOD)
+	cell.searched_at = world.time - 5 MINUTES - 1
+	neighbour.set_mood(70)
+	TEST_ASSERT_EQUAL(prison.contraband_search_cistern(member, toilet), "empty", "A search of an empty cistern found something")
+	TEST_ASSERT(abs(owner.mood - 61) < 0.01, "An empty cistern search cost its owner [67 - owner.mood] mood, not 6")
+	TEST_ASSERT(abs(neighbour.mood - 69) < 0.01, "An empty cistern search cost an onlooker [70 - neighbour.mood] mood, not 1")
+	TEST_ASSERT(contraband_line_for(owner.last_line, "shakedown_empty"), "The owner said [owner.last_line] after an empty cistern search")
+	// Something that is not contraband is handed over, but the search still counts as empty
+	var/obj/item/soap/planted = allocate(/obj/item/soap)
+	planted.forceMove(toilet)
+	LAZYADD(toilet.cistern_items, planted)
+	toilet.w_items += planted.w_class
+	TEST_ASSERT_EQUAL(prison.contraband_search_cistern(member, toilet), "empty", "A search that turned up only soap counted as a find")
+	TEST_ASSERT(member.is_holding(planted), "The soap in the cistern was not handed over")
+	member.drop_all_held_items()
+	toilet.cistern_open = FALSE
 	prison.contraband_force_rolls = null
 	settle_prison_air(home)
 

@@ -9,8 +9,9 @@
  * fights, climbing, smashing, eating or activities, and a runner's loose clock waits. Anyone can
  * drag them, and a member can take them through the wing's staff doors (outpost_prisoner_escorted()).
  * Cuffs kept on past PRISONER_CUFFED_GRACE sour them and stop their pay like a lock-in, unless it
- * is for good reason: the wing is in protective custody, or they owe lockdown. A member's empty
- * hand takes the cuffs off: real cuffs go to the member's hand, cable and zipties are cut away.
+ * is for good reason: the wing is in protective custody, or they owe lockdown. A member takes the
+ * cuffs off from the talk menu ("Uncuff"), or with an empty hand while they are down: real cuffs go
+ * to the member's hand, cable and zipties are cut away.
  * The cuffs drop to the floor when the prisoner dies, beams out or is deleted.
  *
  * Lockdown. A rioter shut in a cell, and a runner caught after getting out during a riot, owes
@@ -147,7 +148,7 @@
 // ===== UNCUFFING =====
 
 /**
- * A member takes the cuffs off with an empty hand, over PRISONER_UNCUFF_TIME. Returns TRUE if
+ * A member takes the cuffs off by hand, over PRISONER_UNCUFF_TIME. Returns TRUE if
  * they came off. Sleeps.
  */
 /mob/living/basic/outpost_prisoner/proc/uncuff_by(mob/living/user)

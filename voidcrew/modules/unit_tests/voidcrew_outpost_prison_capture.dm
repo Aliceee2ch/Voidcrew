@@ -244,12 +244,13 @@
 	visitor.forceMove(prison_spot(home, 9, 8))
 	click_wrapper(visitor, prisoner)
 	TEST_ASSERT(!prisoner.cuff_work && prisoner.cuffs, "A visitor started taking the cuffs off")
-	// A member's empty hand, not in combat mode: two seconds, and real cuffs go to their hand.
+	TEST_ASSERT(!prisoner.talk_menu_act(visitor, "Uncuff") && prisoner.cuffs, "A visitor took the cuffs off from the talk menu") // PRISON_TALK_UNCUFF
+	// A member's "Uncuff" on the talk menu (an empty hand, not in combat mode): two seconds, and real cuffs go to their hand.
 	warden.drop_all_held_items()
 	warden.set_combat_mode(FALSE)
-	click_wrapper(warden, prisoner)
-	TEST_ASSERT(prisoner.cuff_work, "A member's empty hand did not start taking the cuffs off")
-	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_management, capture_uncuffed), prisoner), 6 SECONDS), "A member's empty hand never took the cuffs off")
+	TEST_ASSERT("Uncuff" in prisoner.talk_menu_choices(warden), "A cuffed prisoner's talk menu has no Uncuff")
+	TEST_ASSERT(prisoner.talk_menu_act(warden, "Uncuff"), "A member's Uncuff did not take the cuffs off")
+	TEST_ASSERT(capture_uncuffed(prisoner), "A member's Uncuff left the cuffs on")
 	TEST_ASSERT(warden.is_holding(cuffs), "The real cuffs did not go to the warden's hand")
 	TEST_ASSERT(!prisoner.can_be_dragged(), "An uncuffed prisoner on their feet can still be dragged")
 	TEST_ASSERT_EQUAL(prisoner.move_resist, MOVE_FORCE_VERY_STRONG, "An uncuffed prisoner is still light enough to drag")

@@ -304,10 +304,12 @@
 	asked.set_mood(80)
 	asked.carries_lead = TRUE
 	TEST_ASSERT(!length(prison.leads_talk_choices(asked, visitor)), "A visitor was offered a question")
-	TEST_ASSERT(prison.leads_talk_act(asked, visitor, "What do you know?"), "The question was not recognised")
+	TEST_ASSERT(prison.leads_talk_act(asked, visitor, "Rumour"), "The question was not recognised") // LEAD_ASK_CHOICE
 	TEST_ASSERT(asked.carries_lead && !length(prison.open_leads), "A visitor got the wing's lead")
 	TEST_ASSERT(length(prison.leads_talk_choices(asked, member)), "A member was not offered the question")
-	TEST_ASSERT(prison.leads_talk_act(asked, member, "What do you know?"), "The member's question was not recognised")
+	TEST_ASSERT(("Rumour" in prison.leads_talk_choices(asked, member)), "The member's menu has no Rumour")
+	TEST_ASSERT(!("Tip" in prison.leads_talk_choices(asked, member)), "A prisoner who saw no tip could be asked about one") // LEAD_TIP_CHOICE
+	TEST_ASSERT(prison.leads_talk_act(asked, member, "Rumour"), "The member's question was not recognised")
 	TEST_ASSERT(leads_said(asked, "lead_no_ship"), "A member with no ship did not hear lead_no_ship")
 	TEST_ASSERT(asked.carries_lead && !length(prison.open_leads), "A member with no ship got the wing's lead")
 	TEST_ASSERT(!prison.leads_talk_act(asked, member, "Something else"), "The leads took another package's choice")
@@ -406,10 +408,11 @@
 	lie.witnesses += WEAKREF(voucher)
 	lie.witnesses += WEAKREF(unsure)
 	prison.open_leads += lie
-	var/choice = "Ask about [teller.real_name]'s tip"
+	var/choice = "Tip" // LEAD_TIP_CHOICE
 	var/list/values = list("{teller}" = teller.speech_name())
 
 	TEST_ASSERT(choice in prison.leads_talk_choices(voucher, member), "A witness could not be asked about the tip")
+	TEST_ASSERT_EQUAL(prison.lead_newest_vouchable(voucher), lie, "Tip on the witness's menu is not about the tip they saw")
 	TEST_ASSERT(!(choice in prison.leads_talk_choices(teller, member)), "The teller could be asked about their own tip")
 	TEST_ASSERT(!(choice in prison.leads_talk_choices(newcomer, member)), "A prisoner who did not see the tip could be asked about it")
 

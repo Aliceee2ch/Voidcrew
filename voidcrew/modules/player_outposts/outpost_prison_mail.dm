@@ -388,7 +388,8 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 		prisoner.balloon_alert(user, "not theirs")
 		INVOKE_ASYNC(prisoner, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "mail_not_mine")
 		return ITEM_INTERACT_BLOCKING
-	if(prisoner.talking || !prisoner.will_listen())
+	// Fighting, squaring up, climbing, lying beaten, or already busy with staff: they won't take it
+	if(prisoner.in_trouble() || !prisoner.will_listen())
 		prisoner.balloon_alert(user, "not listening")
 		INVOKE_ASYNC(prisoner, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "talk_refuse")
 		return ITEM_INTERACT_BLOCKING

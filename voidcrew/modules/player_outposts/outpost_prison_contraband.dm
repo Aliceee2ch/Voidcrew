@@ -467,7 +467,8 @@
 		return null
 	if(prisoner.stat != CONSCIOUS || prisoner.phase != PRISONER_PRESENT)
 		return null
-	if(prisoner.talking)
+	// Fighting, squaring up, climbing, lying beaten or already being talked to: not now
+	if(prisoner.in_trouble())
 		prisoner.balloon_alert(user, "busy")
 		return null
 	if(!prisoner.will_listen())

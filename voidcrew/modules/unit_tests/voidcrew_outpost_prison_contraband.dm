@@ -270,6 +270,11 @@
 	// Someone who won't talk won't put their hands on the wall either (PRISONER_TALK_MIN_MOOD 10)
 	owner.set_mood(5)
 	TEST_ASSERT_NULL(prison.contraband_pat_down(owner, member), "A prisoner at mood 5 let themselves be patted down")
+	// Nor does anyone in the middle of trouble: squaring up, fighting, climbing, lying beaten
+	owner.set_mood(70)
+	owner.threat_ref = WEAKREF(member)
+	TEST_ASSERT_NULL(prison.contraband_pat_down(owner, member), "A prisoner squaring up to staff was patted down")
+	owner.threat_ref = null
 
 	// Brewing: six seconds at the tank (OUTPOST_CONTRABAND_BREW_TIME), with nobody watching, puts tg's pruno bag in tg's cistern
 	member.forceMove(prison_spot(home, 10, 3))

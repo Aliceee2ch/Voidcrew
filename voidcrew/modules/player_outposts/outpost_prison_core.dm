@@ -683,6 +683,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		lockdown_tick(prisoner, seconds)
 		// Pulled while calm, and in trouble since: they shake the pull off (outpost_prison_warden_tools.dm).
 		prisoner.shake_off_pull()
+		// Hitting back at a player runs its course (outpost_prison_trouble.dm).
+		prisoner.retaliation_tick(seconds)
 		prisoner.drift_mood(seconds)
 		if(serving)
 			check_release(prisoner)

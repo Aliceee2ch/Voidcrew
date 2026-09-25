@@ -1604,6 +1604,51 @@
 				"Walk away."
 			]
 		},
+		"retaliate": {
+			"any": [
+				"You want to hit me? Fine.",
+				"Big mistake.",
+				"Oh, you did not just do that.",
+				"That's it. Come here.",
+				"You'll pay for that.",
+				"Hit me again. I dare you.",
+				"Right. My turn.",
+				"You picked the wrong guy.",
+				"Nobody hits me for nothing."
+			],
+			"chatty": [
+				"Oh, we're doing this? Okay, let's do this.",
+				"Hey! What was that for? You want some?",
+				"You hit like my aunt. My turn."
+			],
+			"grumpy": [
+				"That's the last thing you'll do today.",
+				"You're going to regret that.",
+				"Now I'm angry."
+			]
+		},
+		"cower_hit": {
+			"any": [
+				"Okay! Okay! I'm going.",
+				"Hey, stop! I didn't do anything!",
+				"Alright, I get it. Backing off.",
+				"What was that for?",
+				"Easy! I'm moving.",
+				"Don't hit me again.",
+				"Fine, fine. I'm out of your way.",
+				"Ow! Alright, I'm going."
+			],
+			"nervous": [
+				"Please don't! I'm sorry, I'm going!",
+				"I didn't do anything! Leave me alone!",
+				"Okay, okay, just stop hitting me."
+			],
+			"cheerful": [
+				"Ow. Okay. Message received.",
+				"Alright, alright. No need for that.",
+				"Ouch. I'll just be over here, then."
+			]
+		},
 		"threat_backed_down": {
 			"any": [
 				"Fine. Fine.",

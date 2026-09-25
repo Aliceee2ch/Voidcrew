@@ -386,7 +386,8 @@
  */
 /datum/outpost_prison/proc/threats_tick(seconds)
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.phase != PRISONER_PRESENT || prisoner.trouble || !prisoner.trouble_can_act() || !prisoner.ai_running() || !in_cell_block(prisoner))
+		// Someone in trouble keeps a swing only while hitting back at a player (outpost_prison_trouble.dm).
+		if(prisoner.phase != PRISONER_PRESENT || (prisoner.trouble && !prisoner.retaliating()) || !prisoner.trouble_can_act() || !prisoner.ai_running() || !in_cell_block(prisoner))
 			prisoner.cancel_threat()
 			continue
 		if(prisoner.threat_ref)

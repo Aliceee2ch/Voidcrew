@@ -1358,3 +1358,150 @@
 	TEST_ASSERT(!second.talk_down(warden), "Talk stopped a fight with blows flying")
 	TEST_ASSERT(first.fight == brawl, "Talk ended a fight with blows flying")
 	settle_prison_air(home)
+
+// ===== HITTING BACK =====
+
+/datum/unit_test/voidcrew_outpost_prison_retaliation
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_retaliation/proc/is_down(mob/living/basic/outpost_prisoner/prisoner)
+	return prisoner.can_be_dragged()
+
+/datum/unit_test/voidcrew_outpost_prison_retaliation/proc/is_up(mob/living/basic/outpost_prisoner/prisoner)
+	return !prisoner.can_be_dragged()
+
+/datum/unit_test/voidcrew_outpost_prison_retaliation/Run()
+	// The odds: 70 to 30 at mood 50 (PRISONER_HIT_FIGHT_WEIGHT, _COWER_WEIGHT), half a point a mood point
+	// (PRISONER_HIT_REACTION_PER_MOOD), doubled for grumpy fighting and nervous backing off, never under 5.
+	var/list/weights = outpost_prisoner_hit_reaction_weights(50, "chatty")
+	TEST_ASSERT_EQUAL(weights["fight"], 70, "A chatty prisoner at 50 hits back with weight [weights["fight"]], not 70") // PRISONER_HIT_FIGHT
+	TEST_ASSERT_EQUAL(weights["cower"], 30, "A chatty prisoner at 50 backs off with weight [weights["cower"]], not 30") // PRISONER_HIT_COWER
+	weights = outpost_prisoner_hit_reaction_weights(10, "grumpy")
+	TEST_ASSERT_EQUAL(weights["fight"], 180, "A grumpy prisoner at 10 hits back with weight [weights["fight"]], not 180")
+	TEST_ASSERT_EQUAL(weights["cower"], 10, "A grumpy prisoner at 10 backs off with weight [weights["cower"]], not 10")
+	weights = outpost_prisoner_hit_reaction_weights(90, "nervous")
+	TEST_ASSERT(weights["cower"] > weights["fight"], "A nervous prisoner at 90 is likelier to hit back than back off")
+	weights = outpost_prisoner_hit_reaction_weights(0, "grumpy")
+	TEST_ASSERT_EQUAL(weights["cower"], 5, "Backing off fell to weight [weights["cower"]], not the floor of 5") // PRISONER_HIT_REACTION_MIN_WEIGHT
+
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("hitbackowner")
+	TEST_ASSERT_NOTNULL(home, "The hitting back test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_awake_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/carbon/human/warden = make_player(prison_spot(home, 9, 8), "hitbackowner")
+
+	// A calm prisoner hit by a player hits back (the roll forced): at the attacker, with a line.
+	prison.forced_hit_reaction = "fight" // PRISONER_HIT_FIGHT
+	hit_with_toolbox(warden, prisoner)
+	TEST_ASSERT(prisoner.health < 100, "The toolbox missed")
+	TEST_ASSERT(prisoner.retaliating(), "A calm prisoner hit by a player did not hit back")
+	TEST_ASSERT_EQUAL(prisoner.swing_ref?.resolve(), warden, "The prisoner is not going for the player who hit them")
+	TEST_ASSERT_EQUAL(prisoner.trouble_target(), warden, "The prisoner's target is not the player who hit them")
+	TEST_ASSERT(is_line_for(prisoner.last_line, "retaliate"), "Hitting back, the prisoner said [prisoner.last_line]")
+	TEST_ASSERT(prisoner.in_trouble() && !prisoner.routine_allowed(), "Hitting back left the routine running")
+	TEST_ASSERT(!prisoner.pull_allowed(), "A prisoner hitting back may be pulled")
+	// The blow itself keeps its penalty: unprovoked, -15 (PRISONER_MOOD_HIT_BY_STAFF).
+	TEST_ASSERT(abs(prisoner.mood - 55) < 0.01, "The blow left mood at [prisoner.mood], not 55")
+	// Hitting them back now is self-defence.
+	COOLDOWN_RESET(prisoner, staff_hit_cooldown)
+	TEST_ASSERT(!prisoner.hit_by_staff(warden), "Hitting a prisoner who is hitting back cost mood")
+	TEST_ASSERT(prisoner.last_hit_justified, "Hitting a prisoner who is hitting back was unprovoked")
+	// One blow does not end it.
+	var/brute_before = warden.getBruteLoss()
+	TEST_ASSERT(prisoner.confront(warden), "The prisoner hitting back could not land a blow")
+	TEST_ASSERT(warden.getBruteLoss() > brute_before, "The prisoner's blow did no harm")
+	TEST_ASSERT(prisoner.retaliating(), "One blow ended the prisoner hitting back")
+	// Turrets answer it as a swing at staff.
+	var/obj/machinery/porta_turret/prison_test_probe/probe = allocate(/obj/machinery/porta_turret/prison_test_probe, prison_spot(home, 11, 10))
+	TEST_ASSERT(prisoner.turret_trouble(), "A turret does not count hitting back as trouble")
+	TEST_ASSERT_EQUAL(outpost_prison_turret_verdict(prisoner, probe), 2, "A turret's verdict spares a prisoner hitting back") // OUTPOST_PRISON_TURRET_SHOOT
+	// The trouble tick keeps it going while the player is in reach.
+	prison.tick(1)
+	TEST_ASSERT(prisoner.retaliating(), "The prisoner stopped hitting back with the player beside them")
+
+	// Out of the cell block, the player is out of reach: they wait, and after 10 seconds (PRISONER_RETALIATE_LOST_TIME) let it drop.
+	var/list/bounds = prison.upgrade.footprint_bounds
+	var/turf/outside = locate(bounds[1] + 8, bounds[2] - 2, bounds[5])
+	TEST_ASSERT(!prison.in_cell_block(outside), "The spot outside the wing is in the cell block")
+	warden.forceMove(outside)
+	TEST_ASSERT_NULL(prisoner.trouble_target(), "The prisoner went after a player out of the cell block")
+	prison.tick(5)
+	TEST_ASSERT(prisoner.retaliating(), "The prisoner let it drop before 10 seconds")
+	prison.tick(5)
+	TEST_ASSERT(!prisoner.retaliating() && isnull(prisoner.swing_ref) && isnull(prisoner.retaliate_ref), "The prisoner went on hitting back 10 seconds after losing the player")
+
+	// It ends on its own after 30 seconds (PRISONER_RETALIATE_TIME), the player beside them or not.
+	warden.forceMove(prison_spot(home, 9, 8))
+	COOLDOWN_RESET(prisoner, hit_reaction_cooldown)
+	prisoner.set_mood(70)
+	hit_with_toolbox(warden, prisoner)
+	TEST_ASSERT(prisoner.retaliating(), "The second blow did not make them hit back")
+	prison.tick(28)
+	TEST_ASSERT(prisoner.retaliating(), "Hitting back ended before 30 seconds")
+	prison.tick(3)
+	prison.tick(1)
+	TEST_ASSERT(!prisoner.retaliating() && isnull(prisoner.retaliate_ref), "Hitting back went on past 30 seconds")
+
+	// Put down, they stop.
+	COOLDOWN_RESET(prisoner, hit_reaction_cooldown)
+	hit_with_toolbox(warden, prisoner)
+	TEST_ASSERT(prisoner.retaliating(), "The third blow did not make them hit back")
+	prisoner.adjustStaminaLoss(200)
+	TEST_ASSERT(prisoner.can_be_dragged(), "A prisoner in stamina crit can't be dragged")
+	prison.tick(1)
+	TEST_ASSERT(!prisoner.retaliating() && isnull(prisoner.retaliate_ref), "A prisoner put down went on hitting back")
+	prisoner.setStaminaLoss(0)
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(is_up), prisoner), 8 SECONDS), "The prisoner never got up")
+
+	// A baton that puts them down gets no reaction.
+	COOLDOWN_RESET(prisoner, hit_reaction_cooldown)
+	var/batoned_at = world.time
+	trouble_baton(warden, prisoner)
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(is_down), prisoner), 4 SECONDS), "The baton did not put the prisoner down")
+	// Past the 2.5 seconds a stamina hit waits (PRISONER_STAMINA_REACT_DELAY)
+	sleep(max(0, batoned_at + 3 SECONDS - world.time))
+	TEST_ASSERT(!prisoner.retaliating(), "A baton that put them down made them hit back")
+	TEST_ASSERT(!istype(prisoner.activity, /datum/prisoner_activity/cower), "A baton that put them down made them back off")
+	warden.drop_all_held_items()
+	prisoner.setStaminaLoss(0)
+	prisoner.SetKnockdown(0)
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(is_up), prisoner), 8 SECONDS), "The prisoner never got up after the baton")
+	// A stamina hit that leaves them standing: they react once the wait is over.
+	COOLDOWN_RESET(prisoner, hit_reaction_cooldown)
+	SEND_SIGNAL(prisoner, COMSIG_ATOM_WAS_ATTACKED, warden, ATTACKER_STAMINA_ATTACK)
+	TEST_ASSERT(!prisoner.retaliating(), "A stamina hit made them hit back before the wait")
+	sleep(3 SECONDS)
+	TEST_ASSERT(prisoner.retaliating(), "A stamina hit that left them standing got no reaction")
+	prisoner.end_retaliation()
+
+	// Backing off, the roll forced: a few tiles away from the player, with a line, and no swing.
+	prison.forced_hit_reaction = "cower" // PRISONER_HIT_COWER
+	COOLDOWN_RESET(prisoner, hit_reaction_cooldown)
+	prisoner.set_mood(70)
+	hit_with_toolbox(warden, prisoner)
+	TEST_ASSERT(!prisoner.retaliating(), "A prisoner backing off hit back")
+	var/datum/prisoner_activity/cower/backing = prisoner.activity
+	TEST_ASSERT(istype(backing), "A prisoner backing off is doing [prisoner.activity?.name || "nothing"]")
+	TEST_ASSERT(!backing.interruptible && !backing.leisure, "Backing off is leisure or can be interrupted")
+	TEST_ASSERT(!backing.spot || (get_dist(backing.spot, warden) > get_dist(prisoner, warden) && get_dist(prisoner, backing.spot) <= 3), "Backing off heads for [backing.spot], not up to 3 tiles further from the player") // PRISONER_COWER_STEP
+	TEST_ASSERT(is_line_for(prisoner.last_line, "cower_hit"), "Backing off, the prisoner said [prisoner.last_line]")
+	prisoner.end_activity()
+
+	// Already in trouble, they turn on whoever hit them, without a roll.
+	var/mob/living/carbon/human/bystander = make_player(prison_spot(home, 7, 9), "hitbackbystander")
+	var/mob/living/basic/outpost_prisoner/rioter = trouble_awake_prisoner(prison, prison_spot(home, 7, 8))
+	rioter.start_rioting(FALSE)
+	hit_with_toolbox(bystander, rioter)
+	TEST_ASSERT_EQUAL(rioter.swing_ref?.resolve(), bystander, "A rioter did not turn on the player who hit them")
+	TEST_ASSERT_EQUAL(rioter.trouble, "riot", "Turning on the player ended the riot for them") // PRISONER_TROUBLE_RIOT
+	prison.tick(1)
+	TEST_ASSERT(rioter.retaliating(), "The trouble tick called off a rioter turning on the player who hit them")
+	rioter.calm_down()
+	rioter.end_retaliation()
+
+	// A guard's blow is not a player's.
+	var/mob/living/basic/outpost_prison_guard/guard = guard_test_spawn(prison, prison_spot(home, 10, 9), awake = FALSE)
+	TEST_ASSERT_NOTNULL(guard, "The guard did not arrive")
+	TEST_ASSERT(!prisoner.may_react_to_hit(guard), "A guard's blow gets a reaction")
+	prison.forced_hit_reaction = null
+	settle_prison_air(home)

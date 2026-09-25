@@ -333,7 +333,7 @@
  * Someone talking to them or working on their cuffs does not count.
  */
 /mob/living/basic/outpost_prisoner/proc/calm_for_pull()
-	return stat == CONSCIOUS && phase == PRISONER_PRESENT && !trouble && !threat_ref && !swing_ref && !climb_ref && beaten_left <= 0
+	return stat == CONSCIOUS && phase == PRISONER_PRESENT && !trouble && !threat_ref && !swing_ref && !climb_ref && beaten_left <= 0 && !retaliating()
 
 /// Anyone may pull them while they are down or cuffed, or while they are calm
 /mob/living/basic/outpost_prisoner/proc/pull_allowed()

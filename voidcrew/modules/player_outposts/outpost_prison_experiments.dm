@@ -344,6 +344,9 @@
 	if(!experiment)
 		return
 	var/key = REF(creature)
+	// A creature from an earlier experiment, collected after this one began, is none of its business.
+	if(!experiment.creature_refs[key])
+		return
 	var/was_down = experiment.downed[key]
 	experiment.forget_creature(key)
 	if(was_down || experiment.resolved || experiment.form == "changeling")
@@ -401,15 +404,23 @@
 		add_log("The experiment was called off.")
 	return had_any
 
-/// Ends everything to do with experiments at once, with no pay and no fee: for the admin panel, abandoning and deleting
+/**
+ * Ends everything to do with experiments at once, with no pay and no fee: for the admin panel,
+ * abandoning and deleting. `instant` (the prison is being deleted) also deletes the bodies still
+ * waiting for Kessler, whose collection timers go with the prison.
+ */
 /datum/outpost_prison/proc/end_experiments_quietly(instant = FALSE)
 	if(experiment)
+		if(instant)
+			for(var/key in experiment.creature_refs.Copy())
+				var/datum/weakref/creature_ref = experiment.creature_refs[key]
+				var/mob/living/creature = creature_ref?.resolve()
+				experiment.downed[key] = TRUE
+				if(!QDELETED(creature))
+					qdel(creature)
 		for(var/mob/living/creature as anything in experiment.live_creatures())
 			experiment.downed[REF(creature)] = TRUE
-			if(instant)
-				qdel(creature)
-			else
-				kessler_collect(WEAKREF(creature), FALSE)
+			kessler_collect(WEAKREF(creature), FALSE)
 		var/mob/living/basic/outpost_prisoner/subject = experiment.subject()
 		if(subject)
 			subject.experiment_subject = FALSE

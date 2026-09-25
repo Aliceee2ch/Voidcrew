@@ -259,6 +259,9 @@
 		return NONE
 	if(can_be_dragged())
 		return PROJECTILE_INTERRUPT_HIT_PHASE
+	// Someone watching may remark on a turret's shot (outpost_prison_security.dm)
+	if(istype(shot.firer, /obj/machinery/porta_turret))
+		prison?.note_turret_hit(src)
 	hit_by_staff(shot.firer)
 	return NONE
 
@@ -401,6 +404,7 @@
 /mob/living/basic/outpost_prisoner/proc/clear_trouble()
 	cancel_threat()
 	stop_climb()
+	clear_turret_reaction()
 	if(fight)
 		if(prison)
 			prison.end_fight(fight)
@@ -426,7 +430,7 @@
  * they did. Staff who kick it away or pick it up leave them their fists.
  */
 /mob/living/basic/outpost_prisoner/proc/back_to_rioting()
-	if(QDELETED(src) || !is_rioting() || stat != CONSCIOUS || can_be_dragged() || has_shiv() || held_item || !isturf(loc))
+	if(QDELETED(src) || !is_rioting() || surrendered_to_turret() || stat != CONSCIOUS || can_be_dragged() || has_shiv() || held_item || !isturf(loc))
 		return FALSE
 	var/obj/item/knife/shiv/shiv = locate() in loc
 	if(!shiv || !take_item(shiv))
@@ -442,6 +446,7 @@
 	trouble = null
 	loose_left = 0
 	note_trouble_ended()
+	clear_turret_reaction()
 	riot_target_ref = null
 	riot_target_hits = 0
 	riot_victim_ref = null
@@ -881,7 +886,12 @@
 
 /datum/ai_planning_subtree/outpost_prisoner_trouble/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
 	var/mob/living/basic/outpost_prisoner/prisoner = controller.pawn
-	if(!istype(prisoner) || !prisoner.in_trouble())
+	if(!istype(prisoner))
+		return
+	// Walking away from a turret's warning comes first (outpost_prison_security.dm)
+	if(prisoner.plan_turret_retreat(controller))
+		return SUBTREE_RETURN_FINISH_PLANNING
+	if(!prisoner.in_trouble())
 		return
 	var/atom/target = prisoner.trouble_target()
 	if(target)

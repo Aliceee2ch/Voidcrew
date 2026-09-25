@@ -533,13 +533,6 @@ $bad: #e7a296;
   small:first-child { margin-right: auto; }
   small.OutpostPrison__tone--bad { color: $bad; }
 }
-.OutpostPrison__turrets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  padding-top: 8px;
-}
-.OutpostPrison__turret { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; white-space: nowrap; }
 .OutpostPrison__log {
   padding-top: 6px;
   font-size: 11px;

@@ -18,8 +18,9 @@
  * - outpost_prison_prisoner.dm and outpost_prison_routine.dm: the prisoners, their needs and days;
  * - outpost_prison_trouble.dm and outpost_prison_riot.dm: mood, fights, riots and escapes;
  * - outpost_prison_experiments.dm: the researcher's experiments;
- * - outpost_prison_extras.dm: where the extras (guards, turrets, reputation, pastimes,
- *   contraband, mail, leads) hook in.
+ * - outpost_prison_security.dm: what turrets players build do about the prison's mobs;
+ * - outpost_prison_extras.dm: where the extras (guards, reputation, pastimes, contraband, mail,
+ *   leads) hook in.
  *
  * Supplies: prisoners take food and clean uniforms only from the serving hatches (or from a
  * person's hand), never off a floor or a table, so the hatches, OUTPOST_PRISON_HATCH_CAPACITY

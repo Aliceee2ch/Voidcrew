@@ -1,35 +1,5 @@
 {
 	"lines": {
-		"turret_warned": {
-			"any": [
-				"Get that thing off me!",
-				"Alright, alright!",
-				"Turn that thing off!",
-				"You gonna shoot me? Go on then.",
-				"Hey, easy with that!"
-			],
-			"grumpy": [
-				"Point that somewhere else.",
-				"I'm not scared of a toaster.",
-				"Try it. See what happens."
-			],
-			"nervous": [
-				"Okay! Okay, I'm stopping!",
-				"Don't shoot, don't shoot!"
-			],
-			"chatty": [
-				"Whoa, whoa, we're just talking here!",
-				"Easy there, buddy. Nobody's doing anything."
-			],
-			"cheerful": [
-				"Heh. Worth a try.",
-				"Okay, okay, I'm going."
-			],
-			"quiet": [
-				"Tch.",
-				"Fine."
-			]
-		},
 		"turret_hit": {
 			"any": [
 				"Ouch. That's gotta hurt.",

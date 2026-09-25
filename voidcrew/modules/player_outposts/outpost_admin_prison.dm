@@ -44,7 +44,6 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_guard_spawn", // {}: a free guard, ignoring the cap
 	"prison_guard_remove", // {ref}
 	"prison_guard_down", // {ref}
-	"prison_turret_spawn", // {}: a loose stun turret at the warden's console
 	"prison_rep", // {key, score}: -10 to 10
 	"prison_affinity", // {a_ref, b_ref, value}: -100 to 100
 	"prison_birthday", // {ref}

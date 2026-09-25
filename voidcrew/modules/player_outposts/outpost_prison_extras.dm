@@ -3,7 +3,8 @@
  *
  * Owner: X0 (frozen). The prison wing's extras are built in packages, each in its own files:
  * - XA, NPC guards: outpost_prison_guards.dm, outpost_prison_guard_routine.dm;
- * - XB, stun turrets and the yard's feel: outpost_prison_security.dm, outpost_prison_ambience.dm;
+ * - XB, the yard's feel: outpost_prison_ambience.dm (built turrets and the prison are in
+ *   outpost_prison_security.dm);
  * - XC, staff reputation and the talk menu: outpost_prison_social.dm, outpost_prison_warden_tools.dm;
  * - XD, friends, games and birthdays: outpost_prison_life.dm, outpost_prison_pastimes.dm;
  * - XF, contraband and mail: outpost_prison_contraband.dm, outpost_prison_mail.dm;
@@ -90,7 +91,6 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 /// Advances every package by `seconds`; the prison's tick() calls it after experiments_tick()
 /datum/outpost_prison/proc/extras_tick(seconds)
 	guards_tick(seconds)
-	security_tick(seconds)
 	ambience_tick(seconds)
 	social_tick(seconds)
 	life_tick(seconds)
@@ -102,7 +102,6 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 /// The prison is being deleted
 /datum/outpost_prison/proc/extras_destroy()
 	guards_destroy()
-	security_destroy()
 	ambience_destroy()
 	social_destroy()
 	life_destroy()
@@ -182,21 +181,17 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 /datum/outpost_prison/proc/extras_payload(mob/user)
 	return list(
 		"guards" = guards_payload(user),
-		"security" = security_payload(user),
 		"mail" = mail_payload(user),
 	)
 
 /// A warden console action a package handles; TRUE if one did
 /datum/outpost_prison/proc/extras_act(action, list/params, mob/user)
-	if(guards_act(action, params, user))
-		return TRUE
-	return security_act(action, params, user)
+	return guards_act(action, params, user)
 
 /// The admin panel's "extras" block
 /datum/outpost_prison/proc/extras_admin_payload()
 	return list(
 		"guards" = guards_admin_payload(),
-		"security" = security_admin_payload(),
 		"social" = social_admin_payload(),
 		"life" = life_admin_payload(),
 		"contraband" = contraband_admin_payload(),
@@ -207,9 +202,6 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 /// An admin action a package handles: a line for the admin log, or null when no package took it
 /datum/outpost_prison/proc/extras_admin_act(action, list/params, mob/user)
 	. = guards_admin_act(action, params, user)
-	if(.)
-		return
-	. = security_admin_act(action, params, user)
 	if(.)
 		return
 	. = social_admin_act(action, params, user)

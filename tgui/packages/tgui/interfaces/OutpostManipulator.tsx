@@ -202,8 +202,6 @@ type AdminGuard = {
   response: string;
 };
 
-type AdminTurret = { ref: string; state: string; mounted: BooleanLike };
-
 type AdminRep = { key: string; name: string; score: number; label: string };
 
 type AdminLife = {
@@ -260,7 +258,6 @@ type AdminLeads = {
  */
 type PrisonAdminExtras = {
   guards?: AdminGuard[];
-  security?: AdminTurret[];
   social?: AdminRep[];
   life?: AdminLife | [];
   contraband?: AdminContraband | [];
@@ -1862,7 +1859,7 @@ const PrisonerRow = ({
   );
 };
 
-// ===== Prison extras (outpost_prison_extras.dm): guards, turrets, reputation, life, contraband, mail, leads =====
+// ===== Prison extras (outpost_prison_extras.dm): guards, reputation, life, contraband, mail, leads =====
 
 /** An extras block sent as an object; an empty list means its package has not landed yet. */
 function extrasBlock<T>(value: T | unknown[] | null | undefined): T | null {
@@ -1912,7 +1909,6 @@ const PrisonExtrasTools = ({
   act,
 }: ExtrasToolsProps) => {
   const guards = extrasRows(extras.guards);
-  const turrets = extrasRows(extras.security);
   const reps = extrasRows(extras.social);
   const life = extrasBlock<AdminLife>(extras.life);
   const contraband = extrasBlock<AdminContraband>(extras.contraband);
@@ -1978,31 +1974,6 @@ const PrisonExtrasTools = ({
                 >
                   Remove
                 </Button.Confirm>
-              </Box>
-            ))}
-          </LabeledList.Item>
-        ) : null}
-        {Array.isArray(extras.security) ? (
-          <LabeledList.Item label="Turrets">
-            <Button
-              compact
-              icon="plus"
-              disabled={busy}
-              tooltip="Loose, at the warden's console"
-              onClick={() => act('prison_turret_spawn', {})}
-            >
-              Spawn
-            </Button>
-            {turrets.map((turret, index) => (
-              <Box
-                inline
-                key={turret.ref}
-                className="OutpostPrisonAdmin__turret"
-                ml={1.5}
-              >
-                {`${index + 1}: ${turret.state || '?'}${
-                  turret.mounted ? '' : ', loose'
-                }`}
               </Box>
             ))}
           </LabeledList.Item>

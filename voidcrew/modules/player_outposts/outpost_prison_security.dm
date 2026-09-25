@@ -1,156 +1,452 @@
 /**
- * # Prison security: wing stun turrets
+ * # Prison security: built turrets
  *
- * Owner: XB (extras-plan.md 4.2). Up to two stun turrets bought at the warden's console and
- * mounted on cell-block walls facing in. They warn, then fire disabler beams only at violence
- * already under way, hatch climbers and prisoners loose in the wing, and only while a member is
- * home. Rioters go for them first. Numbers in voidcrew/_DEFINES/outpost_prison_security.dm.
+ * Players build their own turrets (tg's portable turret: a frame, an energy gun and a proximity
+ * sensor). Whatever a turret's settings, the prison's mobs follow one rule with it,
+ * outpost_prison_turret_verdict():
+ * - A prisoner is shot only while making real trouble: rioting or breaking out, loose, swinging at
+ *   staff, climbing a hatch, or fighting past the argument. Never while down, cuffed, shut in a
+ *   cell or dead, while backing off from a warning, or after giving up. Inside the wing, only by a
+ *   turret they could walk up to and smash, so a turret behind the office glass or inside a
+ *   bolted cell shoots nobody in the cell block.
+ * - Guards and Kessler's people are never shot.
+ * - The experiments' creatures are shot as hull turrets shoot them, in the turret's own mode.
+ * Anything that is not the prison's is up to the turret, as tg has it.
  *
- * A turret belongs to the prison that sold it and does nothing for any other. It arrives loose and
- * switched off on the warden console's tile, and is dragged into a wall of the cell block from the
- * far side, so its muzzle looks into the cell block. Whether it may fire is checked again at every
- * look: the tile in front of it must still be cell-block floor a prisoner could stand on, and it
- * only answers a prisoner who could walk up to it, so nobody can wall it, table it or window it off
- * from the rioters it shoots. Carried off the outpost, it forgets the wing, so a stolen turret
- * frees its slot and one taken away and brought back never works again.
+ * A shot at a prisoner is always a stun shot: the turret's own if its gun has a stamina or
+ * electrode setting, else a disabler beam, whatever the mode. Before the first shot at a prisoner
+ * it has not warned lately, the turret warns them and holds fire for a moment, and the prisoner
+ * decides what to do about it (react_to_turret()). Its shots pass through anyone the rule spares,
+ * and a lethal shot passes through every prisoner. Rioters go for turrets they can reach before
+ * any fixture (priority_smash_target()).
  *
- * What a turret answers: a prisoner of its own wing, on their feet in the wing, rioting (warned
- * during the riot's wind-up, fired on after), in a fight past the argument, swinging at staff,
- * climbing over a hatch, or loose in the wing. Never a calm, threatening, wrecking, downed or
- * confined prisoner, a player, a guard, the researcher or a creature. Its beams pass through
- * everyone else.
+ * On a player outpost a turret's controls, and a turret control panel's, answer only to the
+ * outpost's members, as a hull turret's do there (ship_defense_turret.dm).
+ *
+ * Hull defense turrets and trader outpost turrets keep their own rules (uses_outpost_turret_rules()).
+ * Numbers in voidcrew/_DEFINES/outpost_prison_security.dm.
  */
 
 /// portable_turret.dm #undefs its own TURRET_STUN, so the value is restated here
 #define PRISON_TURRET_STUN 0
-/// How often the prison checks its turrets are still on the outpost, in seconds
-#define PRISON_TURRET_CHECK_SECONDS 10
 
-/// Whether `thing` is a wing stun turret a prison sold
-/proc/is_outpost_prison_stun_turret(atom/thing)
-	return istype(thing, /obj/machinery/porta_turret/ship_defense/outpost_prison)
+// ===== THE RULE =====
+
+/**
+ * What a turret following the prison's rules does about `target`: OUTPOST_PRISON_TURRET_SHOOT,
+ * OUTPOST_PRISON_TURRET_SPARE, or OUTPOST_PRISON_TURRET_NOT_MINE for anything that is not the
+ * prison's. `turret` is the turret asking, for the reach rule; without one it is left out.
+ */
+/proc/outpost_prison_turret_verdict(mob/living/target, obj/machinery/porta_turret/turret)
+	if(!isliving(target))
+		return OUTPOST_PRISON_TURRET_NOT_MINE
+	if(is_outpost_prisoner(target))
+		var/mob/living/basic/outpost_prisoner/prisoner = target
+		return prisoner.turret_verdict(turret)
+	if(is_outpost_prison_guard(target) || istype(target, /mob/living/basic/outpost_kessler_staff))
+		return OUTPOST_PRISON_TURRET_SPARE
+	// The experiments' creatures (outpost_prison_creatures.dm, outpost_prison_changeling.dm): until dead, subdued or in Kessler's hands
+	if(is_outpost_prison_mob(target) || is_outpost_experiment_mob(target))
+		return (target.stat != DEAD && is_hostile_creature(target)) ? OUTPOST_PRISON_TURRET_SHOOT : OUTPOST_PRISON_TURRET_SPARE
+	return OUTPOST_PRISON_TURRET_NOT_MINE
+
+/// Whether a projectile type is a stun shot: stamina damage, or tg's electrode
+/proc/outpost_prison_stun_projectile(projectile_type)
+	if(!ispath(projectile_type, /obj/projectile))
+		return FALSE
+	if(ispath(projectile_type, /obj/projectile/energy/electrode))
+		return TRUE
+	var/obj/projectile/shot = projectile_type
+	return initial(shot.damage_type) == STAMINA && initial(shot.damage) > 0
+
+/mob/living/basic/outpost_prisoner
+	/// What they did about a turret's warning while rioting (OUTPOST_PRISON_TURRET_GIVE_UP, _BACK_OFF or _DEFY), the turret, and when that runs out
+	var/turret_reaction
+	var/datum/weakref/turret_reaction_ref
+	var/turret_reaction_until = 0
+	/// Where they are walking after a turret's warning, and the world.time they stop walking; until then no turret shoots them
+	var/turf/turret_retreat_spot
+	var/turret_retreat_until = 0
+
+/// A turret's verdict on them; see outpost_prison_turret_verdict()
+/mob/living/basic/outpost_prisoner/proc/turret_verdict(obj/machinery/porta_turret/turret)
+	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || can_be_dragged() || is_confined())
+		return OUTPOST_PRISON_TURRET_SPARE
+	if(surrendered_to_turret() || backing_off_from_turret() || !turret_trouble())
+		return OUTPOST_PRISON_TURRET_SPARE
+	// Inside the wing, only a turret they could walk up to and smash
+	if(turret && prison && get_area(src) == prison.wing && !reachable?[get_turf(turret)])
+		return OUTPOST_PRISON_TURRET_SPARE
+	return OUTPOST_PRISON_TURRET_SHOOT
+
+/// The trouble a turret answers: rioting or breaking out, loose, swinging at staff, climbing a hatch, or fighting past the argument. Threats, arguments and wrecking a cell are not.
+/mob/living/basic/outpost_prisoner/proc/turret_trouble()
+	if(is_rioting() || trouble == PRISONER_TROUBLE_LOOSE || climb_ref || swing_ref?.resolve())
+		return TRUE
+	return trouble == PRISONER_TROUBLE_FIGHT && fight?.fighting
+
+/// A rioter who gave up at a turret's warning: in the riot until staff bolt them in, but doing nothing
+/mob/living/basic/outpost_prisoner/proc/surrendered_to_turret()
+	return turret_reaction == OUTPOST_PRISON_TURRET_GIVE_UP && is_rioting()
+
+/// Walking away after backing off from a turret's warning
+/mob/living/basic/outpost_prisoner/proc/backing_off_from_turret()
+	return world.time < turret_retreat_until
+
+/// Forgets what a turret's warning made them do: a riot starting or ending clears it
+/mob/living/basic/outpost_prisoner/proc/clear_turret_reaction()
+	turret_reaction = null
+	turret_reaction_ref = null
+	turret_reaction_until = 0
+	turret_retreat_spot = null
+	turret_retreat_until = 0
+
+// ===== THE TURRET =====
+
+/obj/machinery/porta_turret
+	/// REF() of prisoners it warned -> world.time of the warning (outpost_prison_security.dm)
+	var/list/prison_warned_at
+
+/**
+ * Whether the prison's rules and the outpost's control lock hold for this turret: for every
+ * turret players can build or bring. Hull defense turrets and trader outpost turrets have their own.
+ */
+/obj/machinery/porta_turret/proc/uses_outpost_turret_rules()
+	return TRUE
+
+/obj/machinery/porta_turret/ship_defense/uses_outpost_turret_rules()
+	return FALSE
+
+/obj/machinery/porta_turret/outpost/uses_outpost_turret_rules()
+	return FALSE
+
+/// The stock scan found `targets`; the prison's mobs the rule spares are dropped before one is picked
+/obj/machinery/porta_turret/tryToShootAt(list/atom/movable/targets)
+	if(!uses_outpost_turret_rules())
+		return ..()
+	for(var/mob/living/target in targets.Copy())
+		if(outpost_prison_turret_verdict(target, src) == OUTPOST_PRISON_TURRET_SPARE)
+			targets -= target
+	if(length(targets))
+		return ..()
+	// Nothing left to shoot: down, as when the stock scan finds nothing
+	if(!always_up)
+		popDown()
+	return FALSE
+
+/**
+ * At a prisoner: only while the rule says so, once its warning is done with, never in a riot's
+ * wind-up, and only ever a stun shot, whatever the mode and the gun. Anything else as tg has it.
+ */
+/obj/machinery/porta_turret/shootAt(atom/movable/target)
+	if(!uses_outpost_turret_rules() || !is_outpost_prisoner(target))
+		return ..()
+	if(!prison_may_fire_at(target))
+		return null
+	var/old_mode = mode
+	var/old_projectile = stun_projectile
+	var/old_sound = stun_projectile_sound
+	mode = PRISON_TURRET_STUN
+	if(!outpost_prison_stun_projectile(stun_projectile))
+		stun_projectile = /obj/projectile/beam/disabler
+		stun_projectile_sound = 'sound/items/weapons/taser2.ogg'
+	. = ..()
+	mode = old_mode
+	stun_projectile = old_projectile
+	stun_projectile_sound = old_sound
+	if(mode != PRISON_TURRET_STUN)
+		update_appearance()
+
+/// Whether it may fire at `prisoner` now. The first time in a while it warns them instead, and holds fire for OUTPOST_PRISON_TURRET_WARN_TIME.
+/obj/machinery/porta_turret/proc/prison_may_fire_at(mob/living/basic/outpost_prisoner/prisoner)
+	if(outpost_prison_turret_verdict(prisoner, src) != OUTPOST_PRISON_TURRET_SHOOT)
+		return FALSE
+	var/warned = LAZYACCESS(prison_warned_at, REF(prisoner))
+	if(!warned || world.time - warned >= OUTPOST_PRISON_TURRET_REWARN_TIME)
+		warn_prisoner(prisoner)
+		return FALSE
+	if(world.time - warned < OUTPOST_PRISON_TURRET_WARN_TIME)
+		return FALSE
+	// A riot's wind-up is warned, not fired on
+	return !(prisoner.is_rioting() && prisoner.prison?.riot_windup_left > 0)
+
+/// The warning: a red line on them, a triple beep and "Step away.", and they decide what to do about it. Returns what they did.
+/obj/machinery/porta_turret/proc/warn_prisoner(mob/living/basic/outpost_prisoner/prisoner)
+	for(var/key in prison_warned_at?.Copy())
+		if(world.time - prison_warned_at[key] >= OUTPOST_PRISON_TURRET_REWARN_TIME)
+			LAZYREMOVE(prison_warned_at, key)
+	LAZYSET(prison_warned_at, REF(prisoner), world.time)
+	setDir(get_dir(base, prisoner))
+	Beam(prisoner, icon_state = "r_beam", time = OUTPOST_PRISON_TURRET_WARN_TIME)
+	playsound(src, 'sound/machines/beep/triple_beep.ogg', 40, FALSE)
+	say("Step away.")
+	return prisoner.react_to_turret(src)
+
+/// A turret following the prison's rules lands no shot on anyone the rule spares, and no lethal one on a prisoner
+/obj/projectile/can_hit_target(atom/target, direct_target = FALSE, ignore_loc = FALSE, cross_failed = FALSE)
+	if(isliving(target) && istype(firer, /obj/machinery/porta_turret) && !outpost_prison_turret_shot_lands(src, target))
+		return FALSE
+	return ..()
+
+/// Whether `shot`, fired by a turret, may land on `target`
+/proc/outpost_prison_turret_shot_lands(obj/projectile/shot, mob/living/target)
+	var/obj/machinery/porta_turret/turret = shot.firer
+	if(!turret.uses_outpost_turret_rules())
+		return TRUE
+	switch(outpost_prison_turret_verdict(target, turret))
+		if(OUTPOST_PRISON_TURRET_NOT_MINE)
+			return TRUE
+		if(OUTPOST_PRISON_TURRET_SPARE)
+			return FALSE
+	return !is_outpost_prisoner(target) || outpost_prison_stun_projectile(shot.type)
+
+// ===== THE WARNING, FROM THE PRISONER'S SIDE =====
+
+/// Percent chance someone swinging at staff or fighting backs off at a turret's warning: likelier the better their mood, never certain either way
+/proc/outpost_prisoner_turret_backoff_chance(mood)
+	var/share = clamp(mood, 0, 100) / 100
+	var/chance = OUTPOST_PRISON_TURRET_BACKOFF_AT_0 + (OUTPOST_PRISON_TURRET_BACKOFF_AT_100 - OUTPOST_PRISON_TURRET_BACKOFF_AT_0) * share
+	return clamp(round(chance), OUTPOST_PRISON_TURRET_CHANCE_MIN, OUTPOST_PRISON_TURRET_CHANCE_MAX)
+
+/**
+ * A warned rioter's odds, as weights: list(give up, back off, defy). A better mood leans to giving
+ * up and a worse one to defying; nervous and cheerful rioters give up more, grumpy ones defy more.
+ * No outcome ever drops below OUTPOST_PRISON_TURRET_RIOT_MIN_WEIGHT.
+ */
+/proc/outpost_prisoner_turret_riot_weights(mood, personality)
+	var/shift = clamp(mood, 0, 100) - OUTPOST_PRISON_TURRET_RIOT_MID_MOOD
+	var/give_up = OUTPOST_PRISON_TURRET_RIOT_GIVE_UP + shift * OUTPOST_PRISON_TURRET_RIOT_GIVE_UP_PER_MOOD
+	var/back_off = OUTPOST_PRISON_TURRET_RIOT_BACK_OFF
+	var/defy = OUTPOST_PRISON_TURRET_RIOT_DEFY - shift * OUTPOST_PRISON_TURRET_RIOT_DEFY_PER_MOOD
+	if(personality == "nervous" || personality == "cheerful")
+		give_up *= OUTPOST_PRISON_TURRET_RIOT_PERSONALITY_MULT
+	else if(personality == "grumpy")
+		defy *= OUTPOST_PRISON_TURRET_RIOT_PERSONALITY_MULT
+	return list(
+		OUTPOST_PRISON_TURRET_GIVE_UP = max(round(give_up), OUTPOST_PRISON_TURRET_RIOT_MIN_WEIGHT),
+		OUTPOST_PRISON_TURRET_BACK_OFF = max(round(back_off), OUTPOST_PRISON_TURRET_RIOT_MIN_WEIGHT),
+		OUTPOST_PRISON_TURRET_DEFY = max(round(defy), OUTPOST_PRISON_TURRET_RIOT_MIN_WEIGHT),
+	)
+
+/**
+ * A turret warned them. What they do is a roll that mood tilts but never settles:
+ * - swinging at staff or fighting: back off (drop it, step away, no squaring up for the threat
+ *   cooldown), or carry on and take the stun;
+ * - climbing a hatch: climb back down, or keep climbing;
+ * - rioting: give up (the shiv goes down and they walk back to their cell for staff to bolt), back
+ *   off (riot on out of the turret's sight), or defy it (go for the turret).
+ * Loose prisoners run on the outpost patrol AI and take no notice. Returns what they did, or null.
+ */
+/mob/living/basic/outpost_prisoner/proc/react_to_turret(obj/machinery/porta_turret/turret)
+	if(QDELETED(turret) || stat != CONSCIOUS || phase != PRISONER_PRESENT || can_be_dragged())
+		return null
+	var/reaction
+	if(is_rioting())
+		reaction = prison?.forced_turret_reaction || pick_weight(outpost_prisoner_turret_riot_weights(mood, personality))
+		switch(reaction)
+			if(OUTPOST_PRISON_TURRET_GIVE_UP)
+				turret_give_up(turret)
+			if(OUTPOST_PRISON_TURRET_BACK_OFF)
+				turret_back_off_riot(turret)
+			else
+				reaction = OUTPOST_PRISON_TURRET_DEFY
+				turret_defy(turret)
+	else if(climb_ref)
+		reaction = turret_roll(OUTPOST_PRISON_TURRET_CLIMB_DOWN_CHANCE)
+		if(reaction == OUTPOST_PRISON_TURRET_BACK_OFF)
+			stop_climb(fell = TRUE)
+	else if(swing_ref?.resolve() || (trouble == PRISONER_TROUBLE_FIGHT && fight?.fighting))
+		reaction = turret_roll(outpost_prisoner_turret_backoff_chance(mood))
+		if(reaction == OUTPOST_PRISON_TURRET_BACK_OFF)
+			turret_stand_down(turret)
+	else
+		return null
+	face_atom(turret)
+	INVOKE_ASYNC(src, PROC_REF(say_context), reaction == OUTPOST_PRISON_TURRET_DEFY ? "turret_defies" : "turret_backs_off")
+	return reaction
+
+/// Backing off with `chance` percent, else defying. The prison's forced_turret_reaction settles it instead, for tests.
+/mob/living/basic/outpost_prisoner/proc/turret_roll(chance)
+	var/forced = prison?.forced_turret_reaction
+	if(forced)
+		return forced == OUTPOST_PRISON_TURRET_DEFY ? OUTPOST_PRISON_TURRET_DEFY : OUTPOST_PRISON_TURRET_BACK_OFF
+	return prob(chance) ? OUTPOST_PRISON_TURRET_BACK_OFF : OUTPOST_PRISON_TURRET_DEFY
+
+/mob/living/basic/outpost_prisoner/proc/set_turret_reaction(reaction, obj/machinery/porta_turret/turret, duration)
+	turret_reaction = reaction
+	turret_reaction_ref = WEAKREF(turret)
+	turret_reaction_until = world.time + duration
+
+/// Heads for `spot`, if there is one; no turret shoots them for `duration` meanwhile
+/mob/living/basic/outpost_prisoner/proc/start_turret_retreat(turf/spot, duration)
+	turret_retreat_spot = spot
+	turret_retreat_until = world.time + duration
+
+/// Swinging or fighting, and backing off: they drop it, step away from the turret and whoever they were going for, and don't square up again for the threat cooldown
+/mob/living/basic/outpost_prisoner/proc/turret_stand_down(obj/machinery/porta_turret/turret)
+	var/mob/living/other = swing_ref?.resolve() || fight?.opponent_of(src)
+	cancel_threat()
+	threat_cooldown = max(threat_cooldown, PRISONER_THREAT_COOLDOWN)
+	if(fight)
+		prison?.end_fight(fight)
+	stop_blows()
+	ai_controller?.CancelActions()
+	start_turret_retreat(pick_turret_retreat(turret, FALSE, other), OUTPOST_PRISON_TURRET_RETREAT_TIME)
+
+/// A rioter who gives up: the shiv goes down and they walk back to their own cell. Bolted in, they are out of the riot, owing lockdown (outpost_prison_capture.dm).
+/mob/living/basic/outpost_prisoner/proc/turret_give_up(obj/machinery/porta_turret/turret)
+	set_turret_reaction(OUTPOST_PRISON_TURRET_GIVE_UP, turret, 0)
+	cancel_threat()
+	drop_shiv()
+	riot_target_ref = null
+	riot_target_hits = 0
+	riot_victim_ref = null
+	ai_controller?.CancelActions()
+	start_turret_retreat(own_cell_spot(), OUTPOST_PRISON_TURRET_SURRENDER_WALK_TIME)
+	update_bubble()
+	prison?.add_log("[real_name] gave up rioting at a turret's warning.")
+
+/// A rioter who backs off: still rioting, but out of the turret's sight, and leaving alone what it can see for a while
+/mob/living/basic/outpost_prisoner/proc/turret_back_off_riot(obj/machinery/porta_turret/turret)
+	set_turret_reaction(OUTPOST_PRISON_TURRET_BACK_OFF, turret, OUTPOST_PRISON_TURRET_AVOID_TIME)
+	// The turret too: under its cover it does not show up in its own view
+	LAZYSET(riot_skips, REF(turret), turret_reaction_until)
+	for(var/obj/thing in view(turret.scan_range, turret))
+		if(reachable?[get_turf(thing)])
+			LAZYSET(riot_skips, REF(thing), turret_reaction_until)
+	riot_target_ref = null
+	riot_target_hits = 0
+	riot_victim_ref = null
+	ai_controller?.CancelActions()
+	start_turret_retreat(pick_turret_retreat(turret, TRUE), OUTPOST_PRISON_TURRET_RETREAT_TIME)
+
+/// A rioter who defies it: they go for the turret before anything else (riot_target()), and get shot on the way
+/mob/living/basic/outpost_prisoner/proc/turret_defy(obj/machinery/porta_turret/turret)
+	set_turret_reaction(OUTPOST_PRISON_TURRET_DEFY, turret, OUTPOST_PRISON_TURRET_DEFY_TIME)
+	LAZYREMOVE(riot_skips, REF(turret))
+	ai_controller?.CancelActions()
+
+/// The turret a rioter defied, while they still mean to smash it and can get at it
+/mob/living/basic/outpost_prisoner/proc/defied_turret()
+	if(turret_reaction != OUTPOST_PRISON_TURRET_DEFY || world.time >= turret_reaction_until || !is_rioting())
+		return null
+	var/obj/machinery/porta_turret/turret = turret_reaction_ref?.resolve()
+	if(!turret || !prison?.still_smashable(turret, src))
+		return null
+	return turret
+
+/// Where a rioter who gave up waits: their bed, or any free tile of their own cell they can walk to
+/mob/living/basic/outpost_prisoner/proc/own_cell_spot()
+	if(!cell)
+		return null
+	var/obj/structure/bed/bed = cell.bed()
+	var/turf/bed_turf = bed ? get_turf(bed) : null
+	if(bed_turf && walkable?[bed_turf] && (bed_turf == loc || !tile_taken(bed_turf)))
+		return bed_turf
+	for(var/turf/tile as anything in cell.turfs)
+		if(walkable?[tile] && (tile == loc || !tile_taken(tile)))
+			return tile
+	return null
+
+/**
+ * Where they back off to from `turret`. A rioter (`out_of_sight`) goes to the nearest tile they
+ * can walk to that it cannot see, or failing that the one farthest from it; anyone else a tile or
+ * two away, as far as they can get from it and from `other`. Null if nowhere will do.
+ */
+/mob/living/basic/outpost_prisoner/proc/pick_turret_retreat(obj/machinery/porta_turret/turret, out_of_sight = FALSE, mob/living/other)
+	if(!length(walkable))
+		return null
+	var/turf/here = get_turf(src)
+	var/list/seen
+	if(out_of_sight)
+		seen = list()
+		for(var/turf/tile in view(turret.scan_range, turret))
+			seen[tile] = TRUE
+	var/turf/best
+	var/best_score = -INFINITY
+	for(var/turf/tile as anything in walkable)
+		if(tile == here || tile_taken(tile) || !may_loiter(tile))
+			continue
+		var/score
+		if(out_of_sight)
+			// Anywhere out of its sight beats anywhere in it: the nearer the better out of it, the farther from it in it
+			score = seen[tile] ? get_dist(tile, turret) - 1000 : -get_dist(here, tile)
+		else
+			if(get_dist(here, tile) > OUTPOST_PRISON_TURRET_STEP_BACK)
+				continue
+			score = get_dist(tile, turret) + (other ? get_dist(tile, other) : 0)
+		if(score > best_score)
+			best = tile
+			best_score = score
+	return best
+
+/**
+ * Plans the walk after a turret's warning, from the trouble subtree: TRUE while they are on the
+ * way. At the spot, or out of time, they stop; one who gave up and got to their bed sits on it.
+ */
+/mob/living/basic/outpost_prisoner/proc/plan_turret_retreat(datum/ai_controller/controller)
+	if(!turret_retreat_spot)
+		return FALSE
+	if(loc == turret_retreat_spot || world.time >= turret_retreat_until)
+		finish_turret_retreat()
+		return FALSE
+	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || can_be_dragged() || pulledby || climb_ref)
+		return FALSE
+	controller.queue_behavior(/datum/ai_behavior/outpost_prisoner_turret_retreat)
+	return TRUE
+
+/mob/living/basic/outpost_prisoner/proc/finish_turret_retreat()
+	var/turf/spot = turret_retreat_spot
+	turret_retreat_spot = null
+	if(!surrendered_to_turret() || loc != spot || !cell?.contains(src) || !(locate(/obj/structure/bed) in loc))
+		return
+	var/obj/machinery/door/door = cell.door()
+	sit_on_edge(door ? get_cardinal_dir(src, door) : SOUTH)
+
+/// Walks to where they are backing off to
+/datum/ai_behavior/outpost_prisoner_turret_retreat
+	behavior_flags = AI_BEHAVIOR_REQUIRE_MOVEMENT
+	required_distance = 0
+	action_cooldown = 0.5 SECONDS
+
+/datum/ai_behavior/outpost_prisoner_turret_retreat/setup(datum/ai_controller/controller)
+	var/mob/living/basic/outpost_prisoner/prisoner = controller.pawn
+	var/turf/spot = prisoner?.turret_retreat_spot
+	if(!spot)
+		return FALSE
+	prisoner.stand_up()
+	set_movement_target(controller, spot)
+	return TRUE
+
+/datum/ai_behavior/outpost_prisoner_turret_retreat/perform(seconds_per_tick, datum/ai_controller/controller)
+	var/mob/living/basic/outpost_prisoner/prisoner = controller.pawn
+	if(!prisoner?.turret_retreat_spot || prisoner.loc != prisoner.turret_retreat_spot)
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+	prisoner.finish_turret_retreat()
+	return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
 
 // ===== THE PRISON'S SIDE =====
 
 /datum/outpost_prison
-	/// Weakrefs to the stun turrets this wing sold that still answer to it: mounted, loose or broken
-	var/list/stun_turrets = list()
-	/// Seconds since the turrets were last checked for being carried off the outpost
-	var/turret_check_clock = 0
 	/// Between onlookers remarking on a turret hit, and between rioters shouting to go for one
 	COOLDOWN_DECLARE(turret_hit_line_cooldown)
 	COOLDOWN_DECLARE(turret_smash_line_cooldown)
-
-/// Every few seconds: a turret carried off the outpost stops answering to the wing. The turrets' own looking and firing runs on the machine clock.
-/datum/outpost_prison/proc/security_tick(seconds)
-	turret_check_clock += seconds
-	if(turret_check_clock < PRISON_TURRET_CHECK_SECONDS)
-		return
-	turret_check_clock = 0
-	for(var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret as anything in live_stun_turrets())
-		if(get_outpost_from_atom(turret) == outpost)
-			continue
-		release_stun_turret(turret)
-		add_log("A stun turret was taken off the outpost. It no longer answers to the wing.")
-
-/// The turrets hold only a weakref to the prison, which dies with it; they are left guarding nothing.
-/datum/outpost_prison/proc/security_destroy()
-	stun_turrets.Cut()
-
-/// The stun turrets this wing sold that still exist and still answer to it; the rest are dropped from the list
-/datum/outpost_prison/proc/live_stun_turrets()
-	var/list/live = list()
-	for(var/datum/weakref/turret_ref as anything in stun_turrets.Copy())
-		var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret = turret_ref?.resolve()
-		if(QDELETED(turret) || turret.prison_ref?.resolve() != src)
-			stun_turrets -= turret_ref
-			continue
-		live += turret
-	return live
-
-/// A new turret for this wing, loose and switched off on `where`
-/datum/outpost_prison/proc/make_stun_turret(turf/where)
-	var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret = new(where)
-	turret.prison_ref = WEAKREF(src)
-	stun_turrets += WEAKREF(turret)
-	return turret
-
-/// A turret stops answering to this wing and frees its slot
-/datum/outpost_prison/proc/release_stun_turret(obj/machinery/porta_turret/ship_defense/outpost_prison/turret)
-	for(var/datum/weakref/turret_ref as anything in stun_turrets.Copy())
-		if(turret_ref?.resolve() == turret)
-			stun_turrets -= turret_ref
-	turret.forget_prison()
+	/// For tests: what a warned prisoner does (OUTPOST_PRISON_TURRET_GIVE_UP, _BACK_OFF or _DEFY) instead of rolling for it
+	var/forced_turret_reaction
 
 /**
- * A manager buys a turret from the treasury. The price is taken before the turret is made, and
- * a treasury that cannot cover it is refused, never put in debt. Returns the turret, or the
- * reason it was refused.
- */
-/datum/outpost_prison/proc/buy_stun_turret(mob/user)
-	if(!ismob(user) || QDELETED(outpost) || !outpost.can_manage(user))
-		return "managers only"
-	if(length(live_stun_turrets()) >= OUTPOST_PRISON_TURRET_MAX)
-		return "no room for another turret"
-	// The warden's console, or the middle of the wing
-	var/turf/drop = alarm_turf()
-	if(!drop)
-		return "nowhere to put it"
-	outpost.ensure_home_services()
-	var/datum/bank_account/treasury = outpost.treasury
-	if(!treasury?.adjust_money(-OUTPOST_PRISON_TURRET_COST, "Wing stun turret, bought by [user.ckey || user.name]"))
-		return "insufficient funds"
-	note_spending(OUTPOST_PRISON_TURRET_COST, "Wing stun turret")
-	var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret = make_stun_turret(drop)
-	add_log("[user.name] bought a stun turret for [OUTPOST_PRISON_TURRET_COST] cr.")
-	log_game("PLAYER OUTPOST PRISON: [key_name(user)] bought a stun turret for [OUTPOST_PRISON_TURRET_COST] cr at '[outpost?.name]'")
-	playsound(drop, 'sound/machines/ping.ogg', 40, TRUE)
-	return turret
-
-/// The warden console's "security" block (build plan section 8)
-/datum/outpost_prison/proc/security_payload(mob/user)
-	var/list/turrets = list()
-	for(var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret as anything in live_stun_turrets())
-		turrets += list(list("ref" = REF(turret), "state" = turret.console_state()))
-	var/manager = ismob(user) && !QDELETED(outpost) && outpost.can_manage(user)
-	var/datum/bank_account/treasury = outpost?.treasury
-	return list(
-		"turret_max" = OUTPOST_PRISON_TURRET_MAX,
-		"turret_cost" = OUTPOST_PRISON_TURRET_COST,
-		"can_buy" = !!(manager && length(turrets) < OUTPOST_PRISON_TURRET_MAX && treasury?.has_money(OUTPOST_PRISON_TURRET_COST)),
-		"turrets" = turrets,
-	)
-
-/// turret_buy {}; TRUE if handled
-/datum/outpost_prison/proc/security_act(action, list/params, mob/user)
-	if(action != "turret_buy")
-		return FALSE
-	var/result = buy_stun_turret(user)
-	if(!user)
-		return TRUE
-	// The answer shows over the warden's console, as its own buttons' answers do.
-	var/turf/console_turf = alarm_turf()
-	var/atom/speaker = (console_turf && (locate(/obj/machinery/computer/outpost_prison_warden) in console_turf)) || user
-	if(istext(result))
-		speaker.balloon_alert(user, result)
-		playsound(speaker, 'sound/machines/buzz/buzz-sigh.ogg', 30, TRUE)
-	else
-		speaker.balloon_alert(user, "turret delivered")
-	return TRUE
-
-/**
- * What a rioter goes for before any fixture: the nearest unbroken stun turret of this wing they
- * can reach and have not given up on, or null. A rioter newly going for one may shout about it.
+ * What a rioter goes for before any fixture: the nearest unbroken turret following the prison's
+ * rules that they can reach and have not given up on, or null. A rioter newly going for one may
+ * shout about it.
  */
 /datum/outpost_prison/proc/priority_smash_target(mob/living/basic/outpost_prisoner/rioter)
 	if(!rioter?.reachable)
 		return null
-	var/obj/machinery/porta_turret/ship_defense/outpost_prison/nearest
+	var/obj/machinery/porta_turret/nearest
 	var/nearest_distance = INFINITY
-	for(var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret as anything in live_stun_turrets())
-		if(turret.machine_stat & BROKEN)
-			continue
-		if(!rioter.reachable[get_turf(turret)] || LAZYACCESS(rioter.riot_skips, REF(turret)) > world.time)
+	for(var/turf/tile as anything in rioter.reachable)
+		var/obj/machinery/porta_turret/turret = locate() in tile
+		if(!turret || !turret.uses_outpost_turret_rules() || (turret.machine_stat & BROKEN) || LAZYACCESS(rioter.riot_skips, REF(turret)) > world.time)
 			continue
 		var/distance = get_dist(rioter, turret)
 		if(distance < nearest_distance)
@@ -161,395 +457,126 @@
 		INVOKE_ASYNC(rioter, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "turret_smash")
 	return nearest
 
-/// The admin panel's turrets: list of {ref, state, mounted}
-/datum/outpost_prison/proc/security_admin_payload()
-	var/list/rows = list()
-	for(var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret as anything in live_stun_turrets())
-		rows += list(list(
-			"ref" = REF(turret),
-			"state" = turret.console_state(),
-			"mounted" = turret.mounted(),
-		))
-	return rows
-
-/// prison_turret_spawn {}: a free turret, loose and off, at the warden's console. A log line, list("error" = text), or null.
-/datum/outpost_prison/proc/security_admin_act(action, list/params, mob/user)
-	if(action != "prison_turret_spawn")
-		return null
-	var/turf/drop = alarm_turf()
-	if(!drop)
-		return list("error" = "The prison wing has nowhere to put a turret.")
-	make_stun_turret(drop)
-	add_log("A stun turret was delivered.")
-	return "spawned a wing stun turret at the prison wing's warden console"
-
-// ===== THE TURRET =====
-
-/obj/machinery/porta_turret/ship_defense/outpost_prison
-	name = "wing stun turret"
-	desc = "A stubby disabler mount for a prison wing's cell block. Its targeting computer knows the wing's own inmates and nobody else, and only fires on the ones already fighting, rioting, climbing out or loose."
-	icon_state = "turretCover"
-	// It arrives loose, in plain sight and switched off; mounting and switching on are the crew's job.
-	anchored = FALSE
-	invisibility = INVISIBILITY_NONE
-	on = FALSE
-	mode = PRISON_TURRET_STUN
-	use_power = IDLE_POWER_USE
-	idle_power_usage = OUTPOST_PRISON_TURRET_IDLE_POWER
-	scan_range = OUTPOST_PRISON_TURRET_SCAN_RANGE
-	shot_delay = OUTPOST_PRISON_TURRET_SHOT_DELAY
-	stun_projectile = /obj/projectile/beam/disabler/outpost_prison
-	stun_projectile_sound = 'sound/items/weapons/taser2.ogg'
-	lethal_projectile = /obj/projectile/beam/disabler/outpost_prison
-	lethal_projectile_sound = 'sound/items/weapons/taser2.ogg'
-	max_integrity = OUTPOST_PRISON_TURRET_INTEGRITY
-	integrity_failure = OUTPOST_PRISON_TURRET_FAILURE
-	mob_hits_to_disable = OUTPOST_PRISON_TURRET_MOB_HITS
-	target_wildlife = FALSE
-	// No multitool buffer and no turret control panel: either would get round allowed_operator().
-	locked = TRUE
-	controllock = TRUE
-	/// The prison that sold it; it does nothing for any other
-	var/datum/weakref/prison_ref
-	/// The prisoner it is dealing with, so it does not flit between two
-	var/datum/weakref/engaged_ref
-	/// REF() of prisoners it warned -> world.time of the warning
-	var/list/warned_at
-
-/// The prison it answers to, if that prison still exists
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/home_prison()
-	var/datum/outpost_prison/prison = prison_ref?.resolve()
-	return QDELETED(prison) ? null : prison
-
-/// It stops answering to any wing: it will not mount, and does nothing mounted
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/forget_prison()
-	prison_ref = null
-	engaged_ref = null
-	warned_at = null
-
-/// Bolted into a wall
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/mounted()
-	return !!(anchored && isclosedturf(loc))
-
-/// "loose", "broken", "no_power", "on" or "off", for the warden's console
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/console_state()
-	if(!anchored)
-		return "loose"
-	if(machine_stat & BROKEN)
-		return "broken"
-	if(machine_stat & NOPOWER)
-		return "no_power"
-	return on ? "on" : "off"
-
-// ----- the mount rule -----
-
-/// Whether `front` is open cell-block floor of `prison` a prisoner could stand on, so a rioter can always get at a turret looking over it
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/muzzle_ok(datum/outpost_prison/prison, turf/front)
-	if(!prison || !front || isclosedturf(front) || front.loc != prison.wing)
+/// A turret's shot is about to land on `target`: now and then someone watching says something
+/datum/outpost_prison/proc/note_turret_hit(mob/living/basic/outpost_prisoner/target)
+	if(!COOLDOWN_FINISHED(src, turret_hit_line_cooldown) || !prob(OUTPOST_PRISON_TURRET_HIT_LINE_CHANCE))
 		return FALSE
-	return prison.in_cell_block(front) && prison.prisoner_can_stand(front)
-
-/// Whether a turret bolted into `wall`, looking out in `mount_dir`, would sit in a cell-block wall of `prison` facing into the cell block
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/mount_spot_ok(datum/outpost_prison/prison, turf/wall, mount_dir)
-	if(!prison || !isclosedturf(wall) || !(mount_dir in GLOB.cardinals))
-		return FALSE
-	if(wall.loc != prison.wing || !prison.in_cell_block(wall))
-		return FALSE
-	return muzzle_ok(prison, get_step(wall, mount_dir))
-
-/// The cell-block tile it looks and fires over, while it is mounted where it may be and nothing blocks that tile; else null
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/muzzle(datum/outpost_prison/prison)
-	if(!prison || !anchored || !isclosedturf(loc) || !wall_turret_direction)
-		return null
-	if(!mount_spot_ok(prison, loc, wall_turret_direction))
-		return null
-	return get_step(loc, wall_turret_direction)
-
-/**
- * Dragged onto a wall: only a member may mount it, only for its own wing, and only in a cell-block
- * wall with open cell-block floor on the far side. The rule is checked again once the parent's
- * bolting is done, since the wall or the floor may have changed meanwhile.
- */
-/obj/machinery/porta_turret/ship_defense/outpost_prison/mouse_drop_dragged(atom/over, mob/user, src_location, over_location, params)
-	var/turf/wall = over
-	if(!isclosedturf(wall) || anchored)
-		return ..()
-	if(!allowed_operator(user))
-		balloon_alert(user, "members only!")
-		return
-	var/datum/outpost_prison/prison = home_prison()
-	if(!prison)
-		balloon_alert(user, "it has no wing to guard")
-		return
-	var/mount_dir = get_dir(src, wall)
-	if((mount_dir in GLOB.cardinals) && !mount_spot_ok(prison, wall, mount_dir))
-		balloon_alert(user, "mount it on a cell block wall, facing in")
-		return
-	var/turf/from = loc
-	..()
-	if(!anchored || loc != wall)
-		return
-	if(!mount_spot_ok(prison, wall, mount_dir))
-		set_anchored(FALSE)
-		forceMove(from)
-		update_appearance()
-		balloon_alert(user, "mount it on a cell block wall, facing in")
-		return
-	prison.add_log("A stun turret was mounted.")
-	check_should_process()
-
-// ----- controls -----
-
-/// Its controls answer to the members of the wing that bought it. A turret with no wing guards nothing, so it is nobody's lock.
-/obj/machinery/porta_turret/ship_defense/outpost_prison/allowed_operator(mob/user)
-	if(isAdminGhostAI(user))
-		return TRUE
-	var/datum/outpost_prison/prison = home_prison() || get_outpost_prison(src)
-	if(!prison)
-		return TRUE
-	return prison.is_member(user)
-
-/obj/machinery/porta_turret/ship_defense/outpost_prison/interact(mob/user)
-	if(!allowed_operator(user))
-		update_last_used(user)
-		balloon_alert(user, "members only!")
-		return TRUE
-	return ..()
-
-/// Nothing to set: it has one rule
-/obj/machinery/porta_turret/ship_defense/outpost_prison/click_alt(mob/user)
-	balloon_alert(user, "no settings")
-	return CLICK_ACTION_BLOCKING
-
-/**
- * The parent's wrench (bolts, while it is off) and crowbar (salvage, once it is broken) answer to
- * members only, and the wrench never bolts it to a floor, which would get round the mount rule.
- * Unbolted out of a wall, it comes out on the unbolter's side.
- */
-/obj/machinery/porta_turret/ship_defense/outpost_prison/attackby(obj/item/attacking_item, mob/user, list/modifiers, list/attack_modifiers)
-	var/tool = attacking_item.tool_behaviour
-	var/broken = machine_stat & BROKEN
-	var/wrenching = tool == TOOL_WRENCH && !broken && !on
-	if(wrenching || (tool == TOOL_CROWBAR && broken))
-		if(!allowed_operator(user))
-			balloon_alert(user, "members only!")
-			return TRUE
-		if(wrenching && !anchored)
-			balloon_alert(user, "mount it on a cell block wall, facing in")
-			return TRUE
-	var/turf/was_in = loc
-	. = ..()
-	if(wrenching && !QDELETED(src) && !anchored && isclosedturf(was_in) && loc == was_in && isturf(user.loc) && user.Adjacent(src))
-		forceMove(user.loc)
-
-/obj/machinery/porta_turret/ship_defense/outpost_prison/atom_break(damage_flag)
-	. = ..()
-	if(.)
-		home_prison()?.add_log("A stun turret was smashed.")
-
-/obj/machinery/porta_turret/ship_defense/outpost_prison/examine(mob/user)
-	. = ..()
-	// The hull turret's own lines are about wildlife, boarders and ship crews; this one has none of those.
-	var/list/lines = .
-	for(var/line in lines.Copy())
-		if(findtext(line, "wildlife") || findtext(line, "boarding") || findtext(line, "the hull"))
-			lines -= line
-	var/datum/outpost_prison/prison = home_prison()
-	if(prison)
-		. += span_notice("It answers to the members of the outpost that bought it.")
-	else
-		. += span_notice("Its targeting computer has no wing to guard.")
-	if(!(machine_stat & BROKEN))
-		. += span_notice("It is switched [on ? "on" : "off"].")
-	if(!anchored)
-		. += span_notice("It is loose.")
-	else if(prison && !muzzle(prison))
-		. += span_warning("It can't see into the cell block from where it is.")
-
-// ----- targets -----
-
-/**
- * Whether it would warn `creature`: a prisoner of its own wing, on their feet in the wing and not
- * shut in a cell, who is rioting, fighting past the argument, swinging at staff, climbing a hatch
- * or loose, while a member of the wing is home. Only a prisoner who could walk up to it and smash
- * it: a turret boxed in behind windows, or looking out of a bolted cell, shoots nobody.
- */
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/warn_target(mob/living/creature)
-	var/mob/living/basic/outpost_prisoner/prisoner = creature
-	if(!istype(prisoner))
-		return FALSE
-	var/datum/outpost_prison/prison = home_prison()
-	if(!prison || prisoner.prison != prison || !prison.crew_home())
-		return FALSE
-	if(prisoner.phase != PRISONER_PRESENT || prisoner.stat != CONSCIOUS || prisoner.can_be_dragged() || get_area(prisoner) != prison.wing)
-		return FALSE
-	var/answers = prisoner.is_rioting() || prisoner.swing_ref || prisoner.climb_ref || prisoner.trouble == PRISONER_TROUBLE_LOOSE
-	if(!answers && prisoner.trouble == PRISONER_TROUBLE_FIGHT)
-		answers = prisoner.fight?.fighting
-	if(!answers)
-		return FALSE
-	if(!prisoner.reachable?[get_turf(src)])
-		return FALSE
-	return !prisoner.is_confined()
-
-/// Whether it would fire on `creature`: as warn_target(), except that a rioter during the riot's wind-up is only warned
-/obj/machinery/porta_turret/ship_defense/outpost_prison/valid_target(mob/living/creature)
-	if(!warn_target(creature))
-		return FALSE
-	var/mob/living/basic/outpost_prisoner/prisoner = creature
-	return !(prisoner.is_rioting() && prisoner.prison.riot_windup_left > 0)
-
-// ----- looking, warning and firing -----
-
-/obj/machinery/porta_turret/ship_defense/outpost_prison/process()
-	if(!on || (machine_stat & (NOPOWER|BROKEN)))
-		return PROCESS_KILL
-	think()
-
-/**
- * One look over the cell block: warns or fires at the prisoner it is dealing with, or the nearest
- * one making the kind of trouble it answers. Nothing while nobody from the wing is home. Returns
- * TRUE if it warned or fired.
- */
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/think()
-	if(!on || (machine_stat & (NOPOWER|BROKEN)))
-		return FALSE
-	var/datum/outpost_prison/prison = home_prison()
-	if(!prison || !prison.crew_home())
-		return FALSE
-	var/turf/front = muzzle(prison)
-	if(!front)
-		return FALSE
-	if(!raised && !raising)
-		INVOKE_ASYNC(src, PROC_REF(raise))
-	// The cheap checks first: most of the time nobody in the wing is making that kind of trouble.
-	var/list/candidates = list()
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prison.prisoners)
-		if(get_dist(front, prisoner) <= scan_range && warn_target(prisoner))
-			candidates += prisoner
-	if(!length(candidates))
-		engaged_ref = null
-		return FALSE
-	var/list/seen = view(scan_range, front)
-	var/mob/living/basic/outpost_prisoner/engaged = engaged_ref?.resolve()
-	if(engaged && (engaged in candidates) && (engaged in seen))
-		return engage(engaged)
-	var/mob/living/basic/outpost_prisoner/nearest
-	var/nearest_distance = INFINITY
-	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in candidates)
-		if(!(prisoner in seen))
-			continue
-		var/distance = get_dist(front, prisoner)
-		if(distance < nearest_distance)
-			nearest = prisoner
-			nearest_distance = distance
-	if(!nearest)
-		engaged_ref = null
-		return FALSE
-	return engage(nearest)
-
-/// Deals with `target`: a warning if they have not had one lately, else a shot once the warning's time is up
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/engage(mob/living/basic/outpost_prisoner/target)
-	engaged_ref = WEAKREF(target)
-	setDir(get_dir(src, target))
-	var/warned = LAZYACCESS(warned_at, REF(target))
-	if(!warned || world.time - warned >= OUTPOST_PRISON_TURRET_REWARN_TIME)
-		warn(target)
-		return TRUE
-	if(world.time - warned < OUTPOST_PRISON_TURRET_WARN_TIME)
-		return FALSE
-	return fire_at(target)
-
-/**
- * The warning: a red line on them, a triple beep and "Step away.", at most once per target per
- * OUTPOST_PRISON_TURRET_REWARN_TIME. The first shot follows OUTPOST_PRISON_TURRET_WARN_TIME later
- * if they are still at it.
- */
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/warn(mob/living/basic/outpost_prisoner/target)
-	if(warned_at)
-		for(var/key in warned_at.Copy())
-			if(world.time - warned_at[key] >= OUTPOST_PRISON_TURRET_REWARN_TIME)
-				LAZYREMOVE(warned_at, key)
-	LAZYSET(warned_at, REF(target), world.time)
-	if(!raised && !raising)
-		INVOKE_ASYNC(src, PROC_REF(raise))
-	Beam(target, icon_state = "r_beam", time = OUTPOST_PRISON_TURRET_WARN_TIME)
-	playsound(src, 'sound/machines/beep/triple_beep.ogg', 40, FALSE)
-	say("Step away.")
-	target.face_atom(src)
-	INVOKE_ASYNC(target, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "turret_warned")
-	addtimer(CALLBACK(src, PROC_REF(warning_over), WEAKREF(target)), OUTPOST_PRISON_TURRET_WARN_TIME)
-
-/// The warning's time is up: the first shot, if they are still at it
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/warning_over(datum/weakref/target_ref)
-	var/mob/living/basic/outpost_prisoner/target = target_ref?.resolve()
-	if(!target || !on || (machine_stat & (NOPOWER|BROKEN)))
-		return FALSE
-	return fire_at(target)
-
-/// One shot at `target`, if it may fire at them now and can see them. Returns TRUE if it fired.
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/fire_at(mob/living/basic/outpost_prisoner/target)
-	if(!valid_target(target))
-		return FALSE
-	var/turf/front = muzzle(home_prison())
-	if(!front || get_dist(front, target) > scan_range || !(target in view(scan_range, front)))
-		return FALSE
-	if(!raised)
-		if(!raising)
-			INVOKE_ASYNC(src, PROC_REF(raise))
-		return FALSE
-	setDir(get_dir(src, target))
-	return !!shootAt(target)
-
-/// Comes up out of its housing and shows it
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/raise()
-	popUp()
-	update_appearance()
-
-/// One of its shots landed on `target`: now and then someone watching says something
-/obj/machinery/porta_turret/ship_defense/outpost_prison/proc/note_hit(mob/living/basic/outpost_prisoner/target)
-	var/datum/outpost_prison/prison = home_prison()
-	if(!prison || !COOLDOWN_FINISHED(prison, turret_hit_line_cooldown) || !prob(OUTPOST_PRISON_TURRET_HIT_LINE_CHANCE))
-		return FALSE
-	for(var/mob/living/basic/outpost_prisoner/onlooker in shuffle(prison.prisoners))
+	for(var/mob/living/basic/outpost_prisoner/onlooker in shuffle(prisoners))
 		if(onlooker == target || onlooker.stat != CONSCIOUS || onlooker.phase != PRISONER_PRESENT || !onlooker.ai_running() || onlooker.in_trouble())
 			continue
 		if(get_dist(onlooker, target) > 7 || !(target in view(7, onlooker)))
 			continue
-		COOLDOWN_START(prison, turret_hit_line_cooldown, OUTPOST_PRISON_TURRET_HIT_LINE_GAP)
+		COOLDOWN_START(src, turret_hit_line_cooldown, OUTPOST_PRISON_TURRET_HIT_LINE_GAP)
 		onlooker.face_atom(target)
 		INVOKE_ASYNC(onlooker, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "turret_hit")
 		return TRUE
 	return FALSE
 
-// ===== THE BEAM =====
+// ===== CONTROLS =====
 
 /**
- * The turret's disabler beam. It passes through anyone the firing turret would not fire on, so
- * staff, visitors and guards can stand in the line safely, and through the wing's tables, windows
- * and doors, as the hull turret's beam does. No ricochets and no reflections.
+ * Whether `user` may work `machine`'s controls: on a player outpost only its members (the owner,
+ * stewards, treasurers, residents and builders), as for a hull turret bolted there; anywhere
+ * else, or on a claim nobody holds, whoever tg lets.
  */
-/obj/projectile/beam/disabler/outpost_prison
-	damage = OUTPOST_PRISON_TURRET_STAMINA
-	range = OUTPOST_PRISON_TURRET_BEAM_RANGE
-	ricochets_max = 0
-	ricochet_chance = 0
-	reflectable = FALSE
-	projectile_phasing = PASSTABLE | PASSGLASS | PASSGRILLE | PASSCLOSEDTURF | PASSMACHINE | PASSSTRUCTURE | PASSDOORS
+/proc/outpost_turret_controls_allowed(atom/machine, mob/user)
+	if(!ismob(user) || isAdminGhostAI(user))
+		return TRUE
+	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost_from_atom(machine)
+	if(isnull(home) || !home.founder_ckey)
+		return TRUE
+	return home.can_manage(user) || home.can_spend(user) || home.is_resident(user) || home.can_build(user)
 
-/obj/projectile/beam/disabler/outpost_prison/can_hit_target(atom/target, direct_target = FALSE, ignore_loc = FALSE, cross_failed = FALSE)
-	// Not even the aimed-at target is spared the check: someone who stopped being a target mid-flight is missed.
-	if(isliving(target))
-		var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret = firer
-		if(!istype(turret) || !turret.valid_target(target))
-			return FALSE
+/obj/machinery/porta_turret/proc/outpost_controls_allowed(mob/user)
+	return !uses_outpost_turret_rules() || outpost_turret_controls_allowed(src, user)
+
+/// Whether using `tool` on it works its controls: an ID swipe, a wrench while it is off, or a crowbar on its wreck
+/obj/machinery/porta_turret/proc/is_control_tool(obj/item/tool)
+	if(machine_stat & BROKEN)
+		return tool.tool_behaviour == TOOL_CROWBAR
+	if(tool.tool_behaviour == TOOL_WRENCH && !on)
+		return TRUE
+	return !isnull(tool.GetID())
+
+/obj/machinery/porta_turret/ui_interact(mob/user, datum/tgui/ui)
+	if(!ui && !isobserver(user) && !outpost_controls_allowed(user))
+		balloon_alert(user, "controls locked!")
+		return
 	return ..()
 
-/obj/projectile/beam/disabler/outpost_prison/on_hit(atom/target, blocked = 0, pierce_hit)
-	. = ..()
-	var/obj/machinery/porta_turret/ship_defense/outpost_prison/turret = firer
-	if(istype(turret) && is_outpost_prisoner(target))
-		turret.note_hit(target)
+/obj/machinery/porta_turret/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	if(!outpost_controls_allowed(ui.user))
+		balloon_alert(ui.user, "controls locked!")
+		return TRUE
+	return ..()
+
+/obj/machinery/porta_turret/attackby(obj/item/I, mob/user, list/modifiers, list/attack_modifiers)
+	if(is_control_tool(I) && !outpost_controls_allowed(user))
+		balloon_alert(user, "controls locked!")
+		return TRUE
+	return ..()
+
+/obj/machinery/porta_turret/multitool_act(mob/living/user, obj/item/multitool/tool)
+	if(!outpost_controls_allowed(user))
+		balloon_alert(user, "controls locked!")
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/obj/machinery/porta_turret_cover/attackby(obj/item/I, mob/user, list/modifiers, list/attack_modifiers)
+	if(parent_turret && ((I.tool_behaviour == TOOL_WRENCH && !parent_turret.on) || I.GetID()) && !parent_turret.outpost_controls_allowed(user))
+		balloon_alert(user, "controls locked!")
+		return TRUE
+	return ..()
+
+/obj/machinery/porta_turret_cover/multitool_act(mob/living/user, obj/item/multitool/multi_tool)
+	if(parent_turret && !parent_turret.outpost_controls_allowed(user))
+		balloon_alert(user, "controls locked!")
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+// A turret control panel sets every turret linked to it, so it answers to the same people.
+
+/obj/machinery/turretid/ui_interact(mob/user, datum/tgui/ui)
+	if(!ui && !isobserver(user) && !outpost_turret_controls_allowed(src, user))
+		balloon_alert(user, "controls locked!")
+		return
+	return ..()
+
+/obj/machinery/turretid/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	if(!outpost_turret_controls_allowed(src, ui.user))
+		balloon_alert(ui.user, "controls locked!")
+		return TRUE
+	return ..()
+
+/obj/machinery/turretid/attackby(obj/item/attacking_item, mob/user, list/modifiers, list/attack_modifiers)
+	if(attacking_item.GetID() && !outpost_turret_controls_allowed(src, user))
+		balloon_alert(user, "controls locked!")
+		return TRUE
+	return ..()
+
+/obj/machinery/turretid/multitool_act(mob/living/user, obj/item/multitool/multi_tool)
+	if(!outpost_turret_controls_allowed(src, user))
+		balloon_alert(user, "controls locked!")
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+// The switches, reached from the panel and from AI and cyborg clicks
+/obj/machinery/turretid/toggle_on(mob/user)
+	if(user && !outpost_turret_controls_allowed(src, user))
+		balloon_alert(user, "controls locked!")
+		return
+	return ..()
+
+/obj/machinery/turretid/toggle_lethal(mob/user)
+	if(user && !outpost_turret_controls_allowed(src, user))
+		balloon_alert(user, "controls locked!")
+		return
+	return ..()
+
+/obj/machinery/turretid/shoot_silicons(mob/user)
+	if(user && !outpost_turret_controls_allowed(src, user))
+		balloon_alert(user, "controls locked!")
+		return
+	return ..()
 
 #undef PRISON_TURRET_STUN
-#undef PRISON_TURRET_CHECK_SECONDS

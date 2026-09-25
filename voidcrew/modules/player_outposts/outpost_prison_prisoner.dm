@@ -223,7 +223,11 @@
 
 // ===== BEAMING IN AND OUT =====
 
-/// Materialises them where they stand, with the transporter's column, sounds and knit-together
+/**
+ * Materialises them where they stand, with the transporter's column, sounds and knit-together.
+ * They stay PRISONER_ARRIVING, and so do nothing at all (no walking, routine, trouble, speech or
+ * thought bubble), until finish_beam_in() at the very end of the knit.
+ */
 /mob/living/basic/outpost_prisoner/proc/beam_in()
 	phase = PRISONER_ARRIVING
 	alpha = 0
@@ -234,23 +238,34 @@
 		arrived_hurt = TRUE
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
+	// A bubble ignores their alpha: one already up would hang over an empty tile.
+	drop_bubble()
 	var/turf/spot = get_turf(src)
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_PRISON_BEAM_TIME + 1.7 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), OUTPOST_PRISON_BEAM_TIME)
+	addtimer(CALLBACK(src, PROC_REF(knit_in)), OUTPOST_PRISON_BEAM_TIME)
 
-/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
+/// The beam delivers them: the flash, and they knit back together from the feet up, still arriving
+/mob/living/basic/outpost_prisoner/proc/knit_in()
 	if(phase != PRISONER_ARRIVING)
 		return
-	phase = PRISONER_PRESENT
-	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	var/turf/spot = get_turf(src)
 	if(spot)
 		new /obj/effect/temp_visual/transporter_flash(spot)
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
 	transporter_materialise(src, 255)
+	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), transporter_materialise_time())
+
+/// Fully there: only now are they present, free to move, and say hello
+/mob/living/basic/outpost_prisoner/proc/finish_beam_in()
+	if(phase != PRISONER_ARRIVING)
+		return
+	// Whatever is left of the knit, gone: they are solid from here on.
+	transporter_restore(src, 255)
+	phase = PRISONER_PRESENT
+	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
 	// How they came in, if it shows; otherwise hello.
 	if(arrived_hurt && say_context("arrival_hurt"))
@@ -259,7 +274,10 @@
 		return
 	say_context("arrival")
 
-/// Dematerialises them where they stand and deletes them at the end of the beam
+/**
+ * Dematerialises them where they stand and deletes them at the end of the beam. From the start
+ * they are PRISONER_LEAVING: held still, with no routine, trouble, speech or thought bubble.
+ */
 /mob/living/basic/outpost_prisoner/proc/beam_out()
 	if(phase == PRISONER_LEAVING)
 		return
@@ -272,6 +290,7 @@
 	pulledby?.stop_pulling()
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
+	drop_bubble()
 	var/turf/spot = get_turf(src)
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
@@ -556,6 +575,11 @@
 	popped_bubble = null
 	if(thought)
 		vis_contents -= thought
+
+/// Takes any bubble down at once, with no fade: for when they beam in or out
+/mob/living/basic/outpost_prisoner/proc/drop_bubble()
+	deltimer(bubble_timer)
+	end_bubble()
 
 /mob/living/basic/outpost_prisoner/update_overlays()
 	. = ..()
@@ -964,7 +988,8 @@
 		note_carer(user)
 		return NONE
 	var/obj/item/clothing/under/rank/prisoner/outpost/offered = tool
-	if(!istype(offered) || user.combat_mode || stat != CONSCIOUS)
+	// Not while they beam in or out, invisible or half there.
+	if(!istype(offered) || user.combat_mode || stat != CONSCIOUS || phase != PRISONER_PRESENT)
 		return NONE
 	if(cuffs)
 		balloon_alert(user, "cuffed")

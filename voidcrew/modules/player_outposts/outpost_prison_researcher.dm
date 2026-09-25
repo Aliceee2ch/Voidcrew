@@ -272,7 +272,9 @@
 	var/mob/living/basic/outpost_kessler_staff/researcher/doctor = researcher
 	if(QDELETED(doctor))
 		return FALSE
-	doctor.say("I'm leaving!")
+	// Hit while still beaming in: they just go, without a word from thin air.
+	if(!doctor.beaming && !doctor.departing)
+		doctor.say("I'm leaving!")
 	add_log("[doctor.real_name] was attacked and left.")
 	log_game("PLAYER OUTPOST PRISON: the Kessler researcher at '[outpost?.name]' was attacked and left")
 	send_researcher_away(doctor, 0)
@@ -293,7 +295,8 @@
 	// Not the wing's researcher: nobody can take an offer from them, and they hold no reference to the prison.
 	var/mob/living/basic/outpost_kessler_staff/researcher/doctor = new(spot, null)
 	doctor.beam_in()
-	addtimer(CALLBACK(doctor, TYPE_PROC_REF(/mob/living/basic/outpost_kessler_staff/researcher, refuse_wing)), OUTPOST_KESSLER_BEAM_TIME + 1 SECONDS, TIMER_DELETE_ME)
+	// A second after they are all the way in, not while they are still knitting together.
+	addtimer(CALLBACK(doctor, TYPE_PROC_REF(/mob/living/basic/outpost_kessler_staff/researcher, refuse_wing)), OUTPOST_KESSLER_BEAM_TIME + transporter_materialise_time() + 1 SECONDS, TIMER_DELETE_ME)
 	add_log("[doctor.real_name] of Kessler Biolabs came, but would not work in the wing as it is.")
 	return doctor
 
@@ -327,8 +330,12 @@
 	var/datum/outpost_prison/prison
 	/// On the way out
 	var/leaving = FALSE
-	/// Still beaming in
+	/// Still beaming in: held still and silent until the knit is over
 	var/beaming = FALSE
+	/// Beaming out: held still and silent while they dematerialise
+	var/departing = FALSE
+	/// A line of dialogue to say once they have fully materialised, if any
+	var/arrival_line
 
 /mob/living/basic/outpost_kessler_staff/Initialize(mapload, datum/outpost_prison/owner)
 	gender = pick(MALE, FEMALE)
@@ -373,14 +380,19 @@
 	SIGNAL_HANDLER
 	return COMPONENT_BLOCK_MOB_CHANGE
 
-/// Says a line of `context` from the dialogue file
+/// Says a line of `context` from the dialogue file. Never while beaming in or out, invisible or half there.
 /mob/living/basic/outpost_kessler_staff/proc/say_line(context)
+	if(beaming || departing)
+		return null
 	var/line = outpost_experiment_line(context)
 	if(line)
 		say(line)
 	return line
 
-/// Materialises where they stand, with the transporter's column and sounds
+/**
+ * Materialises where they stand, with the transporter's column and sounds. They stay `beaming`
+ * (held still, silent) until finish_beam_in() at the very end of the knit.
+ */
 /mob/living/basic/outpost_kessler_staff/proc/beam_in()
 	beaming = TRUE
 	alpha = 0
@@ -389,19 +401,30 @@
 	if(spot)
 		playsound(spot, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 		new /obj/effect/temp_visual/transporter_beam(spot, OUTPOST_KESSLER_BEAM_TIME + 1.7 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), OUTPOST_KESSLER_BEAM_TIME, TIMER_DELETE_ME)
+	addtimer(CALLBACK(src, PROC_REF(knit_in)), OUTPOST_KESSLER_BEAM_TIME, TIMER_DELETE_ME)
 
-/mob/living/basic/outpost_kessler_staff/proc/finish_beam_in()
-	if(!beaming)
+/// The beam delivers them: the flash, and they knit back together from the feet up, still beaming in
+/mob/living/basic/outpost_kessler_staff/proc/knit_in()
+	if(!beaming || departing)
 		return
-	beaming = FALSE
-	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, OUTPOST_KESSLER_TRAIT)
 	var/turf/spot = get_turf(src)
 	if(spot)
 		new /obj/effect/temp_visual/transporter_flash(spot)
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
 	transporter_materialise(src, 255)
+	addtimer(CALLBACK(src, PROC_REF(finish_beam_in)), transporter_materialise_time(), TIMER_DELETE_ME)
+
+/// Fully there: only now do they talk
+/mob/living/basic/outpost_kessler_staff/proc/finish_beam_in()
+	if(!beaming || departing)
+		return
+	// Whatever is left of the knit, gone: they are solid from here on.
+	transporter_restore(src, 255)
+	beaming = FALSE
+	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, OUTPOST_KESSLER_TRAIT)
+	if(arrival_line)
+		say_line(arrival_line)
 
 /// Leaves after `delay`: beams out and is gone
 /mob/living/basic/outpost_kessler_staff/proc/leave(delay = 0)
@@ -419,6 +442,7 @@
 
 /mob/living/basic/outpost_kessler_staff/proc/beam_out()
 	beaming = FALSE
+	departing = TRUE
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, OUTPOST_KESSLER_TRAIT)
 	var/turf/spot = get_turf(src)
 	if(spot)
@@ -519,8 +543,9 @@
 		agent.leave(OUTPOST_KESSLER_TEAM_TIME)
 		if(!speaker)
 			speaker = agent
+	// Said once they are all the way in, not from thin air.
 	if(speaker)
-		addtimer(CALLBACK(speaker, TYPE_PROC_REF(/mob/living/basic/outpost_kessler_staff, say_line), "kessler_recovery"), OUTPOST_KESSLER_BEAM_TIME, TIMER_DELETE_ME)
+		speaker.arrival_line = "kessler_recovery"
 	creature.visible_message(span_warning("Kessler Biolabs agents beam in around [creature], and a tranquilliser dart drops [creature.p_them()]."))
 	playsound(center, 'sound/items/syringeproj.ogg', 50, TRUE)
 

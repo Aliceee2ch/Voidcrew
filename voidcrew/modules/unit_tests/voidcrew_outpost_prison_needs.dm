@@ -1289,3 +1289,92 @@
 	prison.tick(5)
 	TEST_ASSERT(QDELETED(unwatched_food), "A prisoner left alone on an empty level did not eat off the hatch")
 	settle_prison_air(home)
+
+// ===== NOTHING UNTIL THEY ARE ALL THE WAY IN =====
+
+/**
+ * A prisoner beaming in is arriving, and does nothing at all, until they have finished knitting back
+ * together: the beam's 3 seconds (OUTPOST_PRISON_BEAM_TIME) and then the knit's 1.2
+ * (TRANSPORTER_MATERIALISE_TIME). Until then the routine plans nothing, they say nothing, show no
+ * thought bubble and are held still; after it they are solid, free and able to talk. Beaming out,
+ * the same holds from the start. Guards and Kessler staff beaming in keep quiet too.
+ */
+/datum/unit_test/voidcrew_outpost_prison_beam_gates
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/knitting(mob/living/basic/outpost_prisoner/prisoner)
+	return !!prisoner.get_filter("transporter_dissolve")
+
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/all_in(mob/living/basic/outpost_prisoner/prisoner, mob/living/basic/outpost_prison_guard/guard, mob/living/basic/outpost_kessler_staff/doctor)
+	return prisoner.phase == "present" && guard.phase == "present" && !doctor.beaming
+
+/// Whether nothing about the prisoner can act, talk or show: the gates an arriving or leaving prisoner must fail
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/proc/check_held(mob/living/basic/outpost_prisoner/prisoner, when)
+	var/datum/ai_planning_subtree/outpost_prisoner_routine/routine = GLOB.ai_subtrees[/datum/ai_planning_subtree/outpost_prisoner_routine]
+	TEST_ASSERT(!prisoner.routine_allowed(), "The routine was allowed [when]")
+	TEST_ASSERT_NULL(routine.SelectBehaviors(prisoner.ai_controller, 1), "The routine planned something [when]")
+	TEST_ASSERT_NULL(prisoner.activity, "The prisoner started an activity [when]")
+	TEST_ASSERT(!prisoner.may_speak(), "The prisoner could speak [when]")
+	TEST_ASSERT(!prisoner.say_context("arrival"), "The prisoner said something [when]")
+	TEST_ASSERT(HAS_TRAIT(prisoner, TRAIT_IMMOBILIZED), "The prisoner could move [when]")
+	TEST_ASSERT_NULL(prisoner.bubble, "A thought bubble was due [when]")
+	TEST_ASSERT_NULL(prisoner.popped_bubble, "A thought bubble showed [when]")
+
+/datum/unit_test/voidcrew_outpost_prison_beam_gates/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("beamgateowner")
+	TEST_ASSERT_NOTNULL(home, "The beam gate test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/basic/outpost_prisoner/other = test_prisoner(prison, prison_spot(home, 9, 8))
+	REMOVE_TRAIT(prisoner, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	prison.refresh_reach()
+	// Hungry (PRISONER_HUNGER_HUNGRY 40), so a meal and a thought bubble would both be due.
+	prisoner.arrival_brute = 0
+	prisoner.set_hunger(20)
+	prisoner.beam_in()
+	var/datum/outpost_guard_record/record = prison.add_guard_record(TRUE, /mob/living/basic/outpost_prison_guard)
+	var/mob/living/basic/outpost_prison_guard/guard = record?.guard
+	TEST_ASSERT_NOTNULL(guard, "The test guard did not beam in")
+	var/mob/living/basic/outpost_kessler_staff/researcher/doctor = allocate(/mob/living/basic/outpost_kessler_staff/researcher, prison_spot(home, 12, 3), null)
+	doctor.beam_in()
+
+	// In the beam: arriving, and held.
+	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "Beaming in did not make the prisoner arriving") // PRISONER_ARRIVING
+	check_held(prisoner, "in the beam")
+	TEST_ASSERT(!other.start_conversation(prisoner), "A prisoner opened a conversation with one still beaming in")
+	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard skipped the beam") // OUTPOST_GUARD_ARRIVING
+	TEST_ASSERT(!guard.say_guard("arrival"), "A guard still beaming in spoke")
+	TEST_ASSERT(!guard.on_duty(), "A guard still beaming in was on duty")
+	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher still beaming in spoke")
+
+	// The beam is over (OUTPOST_PRISON_BEAM_TIME 3 s) and they are knitting together: still arriving, still held.
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(knitting), prisoner), 5 SECONDS), "The prisoner never started knitting together after the beam")
+	TEST_ASSERT_EQUAL(prisoner.phase, "arriving", "The prisoner was present before they finished knitting together")
+	check_held(prisoner, "while knitting together")
+	TEST_ASSERT_EQUAL(guard.phase, "arriving", "The guard was on duty before they finished knitting together")
+	TEST_ASSERT(!guard.say_guard("arrival"), "A guard spoke while knitting together")
+	TEST_ASSERT(doctor.beaming, "The researcher finished beaming in before the knit was over")
+	TEST_ASSERT_NULL(doctor.say_line("researcher_offer"), "A researcher spoke while knitting together")
+
+	// All the way in: solid, free and able to talk.
+	TEST_ASSERT(wait_until(CALLBACK(src, PROC_REF(all_in), prisoner, guard, doctor), 3 SECONDS), "The arrivals never finished beaming in")
+	TEST_ASSERT_EQUAL(prisoner.alpha, 255, "The prisoner is not solid once in")
+	TEST_ASSERT_NULL(prisoner.get_filter("transporter_dissolve"), "The prisoner still wears the knit once in")
+	TEST_ASSERT(!HAS_TRAIT(prisoner, TRAIT_IMMOBILIZED), "The prisoner is still held once in")
+	TEST_ASSERT(prisoner.routine_allowed(), "The prisoner's routine did not start once in")
+	TEST_ASSERT(prisoner.may_speak(), "The prisoner cannot speak once in")
+	TEST_ASSERT_EQUAL(prisoner.bubble, "hungry", "The hungry arrival has no thought bubble once in")
+	TEST_ASSERT(guard.on_duty(), "The guard is not on duty once in")
+	TEST_ASSERT_EQUAL(guard.alpha, 255, "The guard is not solid once in")
+	TEST_ASSERT(!HAS_TRAIT(doctor, TRAIT_IMMOBILIZED), "The researcher is still held once in")
+
+	// Beaming out: held, silent and without a bubble from the start.
+	prisoner.beam_out()
+	TEST_ASSERT_EQUAL(prisoner.phase, "leaving", "Beaming out did not make the prisoner leaving") // PRISONER_LEAVING
+	check_held(prisoner, "beaming out")
+	TEST_ASSERT(!other.start_conversation(prisoner), "A prisoner opened a conversation with one beaming out")
+	guard.beam_out()
+	TEST_ASSERT(!guard.say_guard("recalled"), "A guard beaming out spoke")
+	doctor.beam_out()
+	TEST_ASSERT_NULL(doctor.say_line("researcher_leave"), "A researcher beaming out spoke")
+	settle_prison_air(home)

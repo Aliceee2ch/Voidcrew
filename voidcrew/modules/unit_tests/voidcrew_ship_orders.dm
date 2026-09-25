@@ -439,10 +439,13 @@
 	var/list/built_tiles = tile_lines(built.shuttle, built_loose)
 	var/list/spawned_tiles = tile_lines(spawned.shuttle, spawned_loose)
 	var/tile_differences = 0
+	var/rolled_tiles = 0
 	for(var/i in 1 to max(length(built_tiles), length(spawned_tiles)))
 		var/built_line = i <= length(built_tiles) ? built_tiles[i] : "(none)"
 		var/spawned_line = i <= length(spawned_tiles) ? spawned_tiles[i] : "(none)"
-		if(built_line != spawned_line)
+		if(built_line != spawned_line && rolled_alike(built_line, spawned_line))
+			rolled_tiles++
+		else if(built_line != spawned_line)
 			if(tile_differences < 5)
 				problems += "tile [i]: built [built_line]; spawned [spawned_line]"
 			tile_differences++
@@ -477,7 +480,7 @@
 		problems += "[length(built_atmos)] pipe problems, spawned with [length(spawned_atmos)]: [built_atmos.Join("; ")]"
 	for(var/problem in problems)
 		TEST_FAIL("[label]: [problem]")
-	var/summary = "[length(problems) ? "[length(problems)] differences" : "identical"]; [length(built_tiles)] tiles, [built_cargo["items"]]/[spawned_cargo["items"]] items, [built_cargo["mobs"]]/[spawned_cargo["mobs"]] creatures, [built_loose_count]/[spawned_loose_count] loose structures ([loose_tiles] tiles differ); swept [swept]; left off-hull [left]"
+	var/summary = "[length(problems) ? "[length(problems)] differences" : "identical"]; [length(built_tiles)] tiles, [built_cargo["items"]]/[spawned_cargo["items"]] items, [built_cargo["mobs"]]/[spawned_cargo["mobs"]] creatures, [built_loose_count]/[spawned_loose_count] loose structures ([loose_tiles] tiles differ), [rolled_tiles] fittings rolled differently; swept [swept]; left off-hull [left]"
 	leave_bay(built, home, order.hull_type)
 	spawned.shuttle.admin_delete_shuttle()
 	return summary
@@ -553,3 +556,39 @@
 		sleep(1)
 	TEST_ASSERT(SSair.can_fire, "Atmospherics was left paused")
 	sleep(5)
+
+/**
+ * Whether two tile lines differ only by what a random spawner picked: the same turf and room,
+ * the same number of fittings, and every differing fitting paired with a relative (the same
+ * /obj/x/y family, such as a cardboard box and a metal one). The build moves the objects the
+ * load made and never swaps one type for another, so such a swap is the load's own roll.
+ */
+/datum/unit_test/voidcrew_checkpoints/every_ship/ship_orders/proc/rolled_alike(built_line, spawned_line)
+	var/list/built_parts = splittext(built_line, " ")
+	var/list/spawned_parts = splittext(spawned_line, " ")
+	if(length(built_parts) != 3 || length(spawned_parts) != 3)
+		return FALSE
+	if(built_parts[1] != spawned_parts[1] || built_parts[2] != spawned_parts[2])
+		return FALSE
+	var/list/built_things = splittext(built_parts[3], ",")
+	var/list/spawned_things = splittext(spawned_parts[3], ",")
+	if(length(built_things) != length(spawned_things))
+		return FALSE
+	for(var/thing in built_things.Copy())
+		if(thing in spawned_things)
+			built_things -= thing
+			spawned_things -= thing
+	for(var/thing in built_things)
+		var/list/family = splittext(thing, "/")
+		if(length(family) < 4)
+			return FALSE
+		var/prefix = "/[family[2]]/[family[3]]/[family[4]]"
+		var/matched
+		for(var/other in spawned_things)
+			if(other == prefix || findtext(other, "[prefix]/") == 1)
+				matched = other
+				break
+		if(!matched)
+			return FALSE
+		spawned_things -= matched
+	return TRUE

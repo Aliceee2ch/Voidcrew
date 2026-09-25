@@ -142,6 +142,8 @@
 	var/mob/living/absorbing
 	var/turf/absorb_turf
 	var/channel_damage = 0
+	/// tg's changeling absorb sounds, looping while the proboscis drains its victim
+	var/datum/looping_sound/changeling_absorb/absorb_loop
 	/// Seconds of fleshmend left
 	var/mend_left = 0
 	/// Who hurt it last, and when
@@ -795,6 +797,8 @@
 		return
 	visible_message(span_userdanger("A proboscis slides out of [src]'s mouth and sinks into [absorbing]!"))
 	playsound(src, 'sound/effects/magic/demon_consume.ogg', 80, TRUE, 4)
+	QDEL_NULL(absorb_loop)
+	absorb_loop = new(src, TRUE)
 	absorbing.add_atom_colour(list(0.6,0.3,0.3,0, 0.3,0.6,0.3,0, 0.3,0.3,0.6,0, 0,0,0,1, 0,0,0,0), TEMPORARY_COLOUR_PRIORITY)
 
 /// Third beat: the absorb completes
@@ -867,6 +871,7 @@
 
 /// Lets go of the victim, if any
 /mob/living/basic/outpost_experiment/horror/proc/end_absorb()
+	QDEL_NULL(absorb_loop)
 	var/mob/living/victim = absorbing
 	absorbing = null
 	absorb_turf = null

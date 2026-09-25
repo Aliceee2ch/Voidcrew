@@ -1,0 +1,135 @@
+{
+  "Version": 1,
+  "ID": "patrol_bee",
+  "Description": "",
+  "Hull": {
+    "Type": "/datum/map_template/shuttle/voidcrew/patrol_bee",
+    "Name": "Patrol Bee",
+    "Prefix": "_maps/voidcrew/ships/",
+    "Port": "ship",
+    "Suffix": "patrol_bee_nanotrasen",
+    "Slots": [
+      "Upper_Cargo",
+      "closet",
+      "cleanroom",
+      "service"
+    ],
+    "Themes": [
+      {
+        "ID": "standard",
+        "Name": "NanoTrasen",
+        "Suffix": "patrol_bee_nanotrasen",
+        "Slots": [
+          "Upper_Cargo",
+          "closet",
+          "cleanroom",
+          "service"
+        ],
+        "Default": true
+      }
+    ],
+    "Modules": [
+      {
+        "ID": "mining_bay_basic",
+        "Name": "Mining Bay",
+        "Slot": "Upper_Cargo",
+        "File": "patrol_bee/mining_bay_basic.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": true
+      },
+      {
+        "ID": "bitrunning_den",
+        "Name": "Bitrunning Den",
+        "Slot": "Upper_Cargo",
+        "File": "patrol_bee/bitrunning_den.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": false
+      },
+      {
+        "ID": "cargo_mech_bay",
+        "Name": "Cargo Mech Bay",
+        "Slot": "Upper_Cargo",
+        "File": "patrol_bee/cargo_mech_bay.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": false
+      },
+      {
+        "ID": "closet_basic",
+        "Name": "Toilet",
+        "Slot": "closet",
+        "File": "patrol_bee/toilet.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": true
+      },
+      {
+        "ID": "custodial_closet",
+        "Name": "Custodial Closet",
+        "Slot": "closet",
+        "File": "patrol_bee/custodial_closet.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": false
+      },
+      {
+        "ID": "cleanroom_basic",
+        "Name": "Surgery Theater",
+        "Slot": "cleanroom",
+        "File": "patrol_bee/surgery_theater.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": true
+      },
+      {
+        "ID": "pharmacy_lab",
+        "Name": "Pharmacy Lab",
+        "Slot": "cleanroom",
+        "File": "patrol_bee/pharmacy_lab.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": false
+      },
+      {
+        "ID": "research_lab",
+        "Name": "Research Lab",
+        "Slot": "cleanroom",
+        "File": "patrol_bee/research_lab.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": false
+      },
+      {
+        "ID": "service_basic",
+        "Name": "Full Kitchen",
+        "Slot": "service",
+        "File": "patrol_bee/full_kitchen.dmm",
+        "Themes": [
+          "standard"
+        ],
+        "Default": true
+      }
+    ]
+  },
+  "Crew": 4,
+  "Hidden": false,
+  "Cost": 0,
+  "PartCosts": {
+    "module/bitrunning_den": {},
+    "module/cargo_mech_bay": {},
+    "module/custodial_closet": {},
+    "module/pharmacy_lab": {},
+    "module/research_lab": {}
+  },
+  "PortDirection": 2
+}

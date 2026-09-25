@@ -22,38 +22,15 @@
 	density = TRUE
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 
+/// Drone bays sit in the far corners, so their sounds carry across the whole bay.
+#define CHECKPOINT_DRONE_BAY_SOUND_RANGE 20
+#define CHECKPOINT_DRONE_BAY_SOUND_FULL 28
+
 /obj/structure/checkpoint_drone_bay/proc/launch()
 	flick("make", src)
-	playsound(src, 'voidcrew/sound/checkpoint/drone_launch.ogg', 50, TRUE, pressure_affected = FALSE)
 
 /obj/structure/checkpoint_drone_bay/proc/receive()
 	flick("recharge", src)
-	playsound(src, 'voidcrew/sound/checkpoint/drone_dock.ogg', 40, TRUE, pressure_affected = FALSE)
-
-/// The yard's working noise, played from the middle of the hull while the drones build.
-/datum/looping_sound/checkpoint_yard
-	mid_sounds = list('voidcrew/sound/checkpoint/construction_yard_loop.ogg' = 1)
-	mid_length = 6.07 SECONDS
-	volume = 30
-	extra_range = 12
-	falloff_distance = 10
-	pressure_affected = FALSE
-
-/// Carries the yard noise. Bay turfs are replaced as the hull goes down, so the loop needs its own holder.
-/obj/effect/checkpoint_yard_sound
-	name = "construction noise"
-	invisibility = INVISIBILITY_ABSTRACT
-	anchored = TRUE
-	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
-	var/datum/looping_sound/checkpoint_yard/soundloop
-
-/obj/effect/checkpoint_yard_sound/Initialize(mapload)
-	. = ..()
-	soundloop = new(src, TRUE)
-
-/obj/effect/checkpoint_yard_sound/Destroy()
-	QDEL_NULL(soundloop)
-	return ..()
 
 /// What a working yard drone sounds like: welding, wrenching, screwing and cutting.
 GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
@@ -94,6 +71,8 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	var/datum/weakref/cradle_ref
 	/// Set once the job lets the drone go; it then flies home on its own and docks.
 	var/returning_until = 0
+	/// The drones released together. The last one home plays the dock sound to the bay.
+	var/datum/checkpoint_drone_flock/flock
 
 /obj/effect/checkpoint_build_drone/Initialize(mapload, obj/structure/checkpoint_drone_bay/cradle)
 	. = ..()
@@ -105,6 +84,8 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 /// The visit stays referenced so the job can put it back in the queue.
 /obj/effect/checkpoint_build_drone/Destroy()
 	STOP_PROCESSING(SSfastprocess, src)
+	flock?.leave(src)
+	flock = null
 	QDEL_NULL(work_beam)
 	QDEL_NULL(work_effect)
 	return ..()
@@ -114,8 +95,10 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	return cradle ? get_turf(cradle) : null
 
 /// Released by the job: fly back to the drone bay and dock, or give up after a while.
-/obj/effect/checkpoint_build_drone/proc/return_home()
+/obj/effect/checkpoint_build_drone/proc/return_home(datum/checkpoint_drone_flock/released_with)
 	finish_work()
+	flock = released_with
+	flock?.drones += src
 	returning_until = world.time + 30 SECONDS
 	START_PROCESSING(SSfastprocess, src)
 
@@ -190,3 +173,27 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	hologram.alpha = 110
 	hologram.color = "#80dfff"
 	underlays += hologram
+
+#undef CHECKPOINT_DRONE_BAY_SOUND_RANGE
+#undef CHECKPOINT_DRONE_BAY_SOUND_FULL
+
+/// Drones released together. When the last one is gone, the bay hears them dock.
+/datum/checkpoint_drone_flock
+	var/datum/turf_reservation/yard
+	var/list/obj/effect/checkpoint_build_drone/drones = list()
+
+/datum/checkpoint_drone_flock/New(datum/turf_reservation/yard)
+	src.yard = yard
+
+/datum/checkpoint_drone_flock/Destroy()
+	yard = null
+	drones = null
+	return ..()
+
+/datum/checkpoint_drone_flock/proc/leave(obj/effect/checkpoint_build_drone/drone)
+	drones -= drone
+	if(length(drones))
+		return
+	if(!QDELETED(yard))
+		play_to_checkpoint_yard(yard, CHECKPOINT_YARD_DOCK_SOUND)
+	qdel(src)

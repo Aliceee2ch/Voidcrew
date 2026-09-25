@@ -93,6 +93,9 @@
 #define CHECKPOINT_BUILD_SURVEY_TIME (4 SECONDS)
 /// Time a drone spends on one tile before its pieces appear.
 #define CHECKPOINT_BUILD_WORK_TIME (0.4 SECONDS)
+/// Played once to everyone in the bay when the drones leave, and when the last one docks.
+#define CHECKPOINT_YARD_LAUNCH_SOUND 'voidcrew/sound/checkpoint/drone_launch.ogg'
+#define CHECKPOINT_YARD_DOCK_SOUND 'voidcrew/sound/checkpoint/drone_dock.ogg'
 #define CHECKPOINT_BUILD_MIN_DRONES 8
 #define CHECKPOINT_BUILD_MAX_DRONES 16
 /// Tiles a drone crosses per controller tick (SSfastprocess, 0.2 seconds).

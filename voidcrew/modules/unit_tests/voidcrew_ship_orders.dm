@@ -357,7 +357,12 @@
 	var/mob/living/carbon/human/buyer = make_player(run_loc_floor_bottom_left, "orderequalbuyer")
 	var/list/report = list()
 	var/configurations = 0
+	var/position = 0
+	var/sharded = FALSE
 	for(var/datum/map_template/shuttle/voidcrew/hull as anything in get_ship_order_hulls())
+		if(!voidcrew_test_shard_takes(++position))
+			sharded = TRUE
+			continue
 		var/datum/ship_order/defaults = new(hull)
 		report += "[hull.type] defaults ([defaults.theme?.id]): [compare_order(home, buyer, defaults)]"
 		configurations++
@@ -372,7 +377,8 @@
 				names += module.id
 		report += "[hull.type] [custom.theme?.id] with [names.Join(", ")]: [compare_order(home, buyer, custom)]"
 		configurations++
-	TEST_ASSERT(configurations >= 14, "Only [configurations] configurations were built")
+	if(!sharded)
+		TEST_ASSERT(configurations >= 14, "Only [configurations] configurations were built")
 	log_test("Orders against create_ship():\n[report.Join("\n")]")
 
 /// The most expensive non-default theme, with the first non-default module in every slot.

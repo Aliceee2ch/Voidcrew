@@ -241,6 +241,8 @@
 	SIGNAL_HANDLER
 	hit_by_staff(user)
 	stop_blows()
+	// A stabbing or a snap they were working up to is off (outpost_prison_incidents.dm).
+	prison?.wildcard_batoned(src, user)
 
 /// Drops the shiv and pauses their attacks for PRISONER_BATON_STOP
 /mob/living/basic/outpost_prisoner/proc/stop_blows()
@@ -276,6 +278,9 @@
 	if(is_outpost_prison_guard(attacker))
 		return TRUE
 	if(trouble || climb_ref)
+		return TRUE
+	// Working up to a stabbing or a snap (outpost_prison_incidents.dm)
+	if(prison?.wildcard_brooding(src))
 		return TRUE
 	if(trouble_ended_at && world.time - trouble_ended_at <= PRISONER_PROVOKED_TIME)
 		return TRUE
@@ -593,7 +598,8 @@
 	// Nobody puts the boot in on a prisoner who is already down, and no prisoner kills another.
 	if(other.can_be_dragged())
 		return FALSE
-	var/damage = min(rand(PRISONER_FIGHT_HIT_MIN, PRISONER_FIGHT_HIT_MAX), other.health - 1)
+	// A shiv (a stabbing, outpost_prison_incidents.dm) hits as hard as it does at staff.
+	var/damage = min(has_shiv() ? rand(PRISONER_SHIV_MIN, PRISONER_SHIV_MAX) : rand(PRISONER_FIGHT_HIT_MIN, PRISONER_FIGHT_HIT_MAX), other.health - 1)
 	do_attack_animation(other, attack_vis_effect)
 	playsound(other, attack_sound, 50, TRUE)
 	other.visible_message(span_danger("[src] [attack_verb_continuous] [other]!"))
@@ -769,7 +775,9 @@
 		return FALSE
 	var/threatening = threat_ref?.resolve() == user || swing_ref?.resolve() == user
 	var/arguing = fight && !fight.fighting
-	if(!threatening && !arguing && !COOLDOWN_FINISHED(src, talk_cooldown))
+	// Working up to a stabbing or a snap: a talk can always call it off (outpost_prison_incidents.dm)
+	var/brooding = prison?.wildcard_brooding(src)
+	if(!threatening && !arguing && !brooding && !COOLDOWN_FINISHED(src, talk_cooldown))
 		balloon_alert(user, "talked out for now")
 		return FALSE
 	talking = TRUE
@@ -794,6 +802,9 @@
 	else if(threat_ref?.resolve() == user || swing_ref?.resolve() == user)
 		cancel_threat()
 		say("Fine. Fine.")
+		said = TRUE
+	else if(prison?.wildcard_talked_down(src, user))
+		// It says its own line
 		said = TRUE
 	if(COOLDOWN_FINISHED(src, talk_cooldown))
 		COOLDOWN_START(src, talk_cooldown, PRISONER_TALK_COOLDOWN)

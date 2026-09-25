@@ -40,6 +40,8 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_experiment", // {ref, form: hulk|fly|nightmare|changeling}: that prisoner is dosed now
 	"prison_changeling_stage", // {stage: burst|horror}: the changeling event skips ahead
 	"prison_experiment_end", // {}: ends the experiment with no fee
+	"prison_incident", // {kind: stab|snap|fight, tell}: a wildcard incident now, past its clock; tell 1 plays the tell first
+	"prison_wing_event", // {kind: lights|vent|toilet}: a wing event now, past its clock
 	// The extras (outpost_prison_extras.dm); each package validates its own params
 	"prison_guard_spawn", // {}: a free guard, ignoring the cap
 	"prison_guard_remove", // {ref}
@@ -333,6 +335,35 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 				error = "The experiment did not end."
 				return
 			record(user, home, "end the prison experiment without a fee")
+		if("prison_incident")
+			var/kind = params["kind"]
+			if(!istext(kind) || !(kind in list("stab", "snap", "fight")))
+				error = "Invalid incident kind."
+				return
+			var/with_tell = admin_bool(params["tell"]) == TRUE
+			var/refusal = prison.wildcard_refusal(kind)
+			if(refusal)
+				error = refusal
+				return
+			// Past the clock; the tell only when asked for (a fight's argument always plays)
+			if(!prison.start_wildcard(kind, skip_tell = !with_tell))
+				error = "Nobody in the cell block can do that now."
+				return
+			record(user, home, "start a prison [kind] incident[with_tell ? " with its tell" : ""]")
+		if("prison_wing_event")
+			var/kind = params["kind"]
+			if(!istext(kind) || !(kind in list("lights", "vent", "toilet")))
+				error = "Invalid wing event."
+				return
+			var/refusal = prison.wing_event_refusal(kind)
+			if(refusal)
+				error = refusal
+				return
+			if(!prison.start_wing_event(kind))
+				error = "The wing event did not start."
+				return
+			prison.wing_event_admin_started()
+			record(user, home, "start a prison wing event ([kind])")
 		else
 			// The extras' own actions: a log line when done, list("error" = text) when refused
 			var/result = prison.extras_admin_act(action, params, user)
@@ -427,6 +458,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 		"outage_debt" = round(outage_debt),
 		"extras" = extras_admin_payload(),
 		"experiment" = experiment_block(),
+		"incidents" = incidents_admin_payload(),
 	)
 
 // ===== EXPERIMENTS =====

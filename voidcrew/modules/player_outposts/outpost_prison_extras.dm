@@ -7,7 +7,8 @@
  * - XC, staff reputation and the talk menu: outpost_prison_social.dm, outpost_prison_warden_tools.dm;
  * - XD, friends, games and birthdays: outpost_prison_life.dm, outpost_prison_pastimes.dm;
  * - XF, contraband and mail: outpost_prison_contraband.dm, outpost_prison_mail.dm;
- * - XG, interrogation and leads: outpost_prison_leads.dm.
+ * - XG, interrogation and leads: outpost_prison_leads.dm;
+ * - wildcard incidents and wing events: outpost_prison_incidents.dm, outpost_prison_wing_events.dm.
  *
  * This file joins them to the prison: one call from each place in the core files, fanning out
  * to every package that needs it, so no package edits another's file or the core files. Each
@@ -98,6 +99,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 	contraband_tick(seconds)
 	mail_tick(seconds)
 	leads_tick(seconds)
+	wildcard_tick(seconds)
+	wing_events_tick(seconds)
 
 /// The prison is being deleted
 /datum/outpost_prison/proc/extras_destroy()
@@ -109,6 +112,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 	contraband_destroy()
 	mail_destroy()
 	leads_destroy()
+	wildcard_destroy()
+	wing_events_destroy()
 
 /// The outpost was abandoned, before its prisoners are transferred out
 /datum/outpost_prison/proc/extras_abandon()
@@ -126,6 +131,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 	contraband_prisoner_leaving(prisoner)
 	mail_prisoner_leaving(prisoner)
 	leads_prisoner_leaving(prisoner)
+	wildcard_prisoner_leaving(prisoner)
 
 /// Something went on a serving hatch; TRUE if a package took the event and the usual call-out should not follow
 /datum/outpost_prison/proc/extras_hatch_stocked(obj/structure/table/reinforced/prison_hatch/hatch, list/stocked, mob/user)
@@ -151,7 +157,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 /// Extra sentences for a prisoner's examine text, from every package that has one; XB's examine() shows them
 /datum/outpost_prison/proc/examine_extra_lines(mob/living/basic/outpost_prisoner/prisoner, mob/user)
 	var/list/lines = list()
-	for(var/line in list(relationship_examine(prisoner), contraband_examine(prisoner, user), leads_examine(prisoner, user)))
+	for(var/line in list(relationship_examine(prisoner), contraband_examine(prisoner, user), leads_examine(prisoner, user), wildcard_examine(prisoner)))
 		if(istext(line) && length(line))
 			lines += line
 	return lines

@@ -12,10 +12,19 @@
  * Spontaneous lines wait out a per-prisoner cooldown (longer for quiet ones) and a short
  * cooldown shared by the whole wing, so a full wing never talks over itself. Replies, thanks,
  * arrivals and releases skip the prisoner's own cooldown.
+ *
+ * Other files say lines by context name as things happen (a stocked hatch, a fight, a riot, an
+ * experiment); voidcrew_outpost_prison_dialogue.dm checks the file has every context they use.
+ * Complaints about a dirty or dark wing get likelier as the score falls, and with staff in sight
+ * the prisoner points at the mess or the dead light they mean.
  */
 
 #define PRISONER_DIALOGUE_FILE "outpost_prisoners.json"
 #define PRISONER_DIALOGUE_DIR "voidcrew/modules/player_outposts/strings"
+/// Percent chance of a complaint about a clean or lit score of 0; none at PRISON_WING_MOOD_LINE and above
+#define PRISONER_COMPLAINT_MAX_CHANCE 50
+/// How far a complaining prisoner looks for the mess or the dead light to point at
+#define PRISONER_POINT_RANGE 5
 
 /// One top-level entry of the dialogue file, or an empty list
 /proc/outpost_prisoner_dialogue(key)
@@ -179,11 +188,11 @@
 	if(health_factor() < PRISONER_BLEED_BELOW && prob(50))
 		return list("hurt", null)
 	if(prison)
-		if(!prison.powered_score && prob(40))
+		if(prison.powered_score < 100 && prob(40))
 			return list("no_power", null)
-		if(prison.lit_score < 50 && prob(40))
+		if(prob(outpost_prisoner_complaint_chance(prison.lit_score)))
 			return list("dark", null)
-		if(prison.clean_score < 60 && prob(30))
+		if(prob(outpost_prisoner_complaint_chance(prison.clean_score)))
 			return list("dirty_prison", null)
 	if(prob(30) && staff_in_view())
 		return list("staff_near", null)
@@ -209,9 +218,85 @@
 		return FALSE
 	if(!say_context(choice[1], choice[2]))
 		return FALSE
+	show_complaint(choice[1])
 	COOLDOWN_START(src, speech_cooldown, rand(35, 80) SECONDS * speech_pace())
 	prison.note_speech()
 	return TRUE
 
+// ===== COMPLAINTS =====
+
+/**
+ * Percent chance a prisoner with nothing more pressing to say complains about a clean or lit score:
+ * none at PRISON_WING_MOOD_LINE or above, rising in a straight line to PRISONER_COMPLAINT_MAX_CHANCE
+ * at 0, the same shape as the mood the score costs.
+ */
+/proc/outpost_prisoner_complaint_chance(score)
+	return PRISONER_COMPLAINT_MAX_CHANCE * clamp((PRISON_WING_MOOD_LINE - score) / PRISON_WING_MOOD_LINE, 0, 1)
+
+/// How bad something on the floor looks, for picking what to point at: 0 if it is not mess, 3 for vomit and blood pools, otherwise 1
+/proc/outpost_prisoner_eyesore(atom/movable/thing)
+	if(istype(thing, /obj/item/trash) || istype(thing, /obj/item/cigbutt) || istype(thing, /obj/item/shard))
+		return 1
+	if(!istype(thing, /obj/effect/decal/cleanable))
+		return 0
+	var/obj/effect/decal/cleanable/mess = thing
+	if(!mess.is_mopped || istype(mess, /obj/effect/decal/cleanable/crayon))
+		return 0
+	if(istype(mess, /obj/effect/decal/cleanable/vomit))
+		return 3
+	if(istype(mess, /obj/effect/decal/cleanable/blood) && !istype(mess, /obj/effect/decal/cleanable/blood/drip) && !istype(mess, /obj/effect/decal/cleanable/blood/footprints) && !istype(mess, /obj/effect/decal/cleanable/blood/tracks))
+		return 3
+	return 1
+
+/// A piece of mess on the worst tile of the cell block's floor they can see nearby, or null
+/mob/living/basic/outpost_prisoner/proc/worst_mess_in_view()
+	var/list/tile_load = list()
+	var/atom/movable/worst
+	var/worst_load = 0
+	for(var/atom/movable/thing in view(PRISONER_POINT_RANGE, src))
+		var/weight = outpost_prisoner_eyesore(thing)
+		if(!weight || !isturf(thing.loc))
+			continue
+		if(prison && (get_area(thing) != prison.wing || !prison.in_cell_block(thing)))
+			continue
+		var/load = tile_load[thing.loc] + weight
+		tile_load[thing.loc] = load
+		if(load > worst_load)
+			worst_load = load
+			worst = thing
+	return worst
+
+/// The nearest light in the wing they can see that gives no light, or null
+/mob/living/basic/outpost_prisoner/proc/dead_light_in_view()
+	var/obj/machinery/light/nearest
+	var/nearest_distance = INFINITY
+	for(var/obj/machinery/light/fixture in view(PRISONER_POINT_RANGE, src))
+		if(fixture.status == LIGHT_OK && fixture.has_power())
+			continue
+		if(prison && get_area(fixture) != prison.wing)
+			continue
+		var/distance = get_dist(src, fixture)
+		if(distance < nearest_distance)
+			nearest = fixture
+			nearest_distance = distance
+	return nearest
+
+/**
+ * After a dirty_prison or dark line, with staff in sight, points at what they mean: the worst mess
+ * or the dead light near them. Returns what they pointed at, or null.
+ */
+/mob/living/basic/outpost_prisoner/proc/show_complaint(context)
+	if(context != "dirty_prison" && context != "dark")
+		return null
+	if(stat != CONSCIOUS || !isturf(loc) || !staff_in_view())
+		return null
+	var/atom/movable/target = context == "dark" ? dead_light_in_view() : worst_mess_in_view()
+	if(!target)
+		return null
+	_pointed(target)
+	return target
+
 #undef PRISONER_DIALOGUE_FILE
 #undef PRISONER_DIALOGUE_DIR
+#undef PRISONER_COMPLAINT_MAX_CHANCE
+#undef PRISONER_POINT_RANGE

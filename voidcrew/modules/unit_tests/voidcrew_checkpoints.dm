@@ -247,11 +247,6 @@
 			removed_smes_cells = TRUE
 			bank.RefreshParts()
 	var/datum/ship_checkpoint_ui/registry_test/panel = allocate(__IMPLIED_TYPE__, home, terminal, captain)
-	panel.open_bay_view()
-	var/first_view = panel.bay_view.assigned_map
-	TEST_ASSERT(get_turf(bay.dock) in panel.bay_view.vis_contents, "The checkpoint console's bay view does not show the landing pad")
-	panel.open_bay_view()
-	TEST_ASSERT(panel.bay_view.assigned_map != first_view, "A reopened bay view reused its map key")
 	TEST_ASSERT_NOTNULL(panel.save_denial(visitor, bay), "A non-captain could register the hull")
 	TEST_ASSERT(panel.prepare_save(captain, bay), "Could not prepare a real hull: [panel.error]")
 	TEST_ASSERT(!findtext(panel.quote.tgm, "/obj/item"), "The snapshot includes items")

@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
-  ByondUi,
   LabeledList,
   NoticeBox,
   ProgressBar,
@@ -14,7 +12,6 @@ import { Window } from '../layouts';
 
 type Data = {
   outpost: string;
-  bay_view: string | null;
   working: BooleanLike;
   error: string | null;
   notice: string | null;
@@ -48,13 +45,8 @@ export const ShipCheckpoint = () => {
   const cost = data.has_checkpoint ? data.update_cost : data.save_cost;
   const rebuilds = data.rebuilds || [];
   return (
-    <Window width={560} height={860} title={`${data.outpost} Checkpoints`}>
+    <Window width={560} height={640} title={`${data.outpost} Checkpoints`}>
       <Window.Content scrollable>
-        {!!data.bay_view && (
-          <Section title="Ship bay">
-            <BayView key={data.bay_view} mapRef={data.bay_view} />
-          </Section>
-        )}
         {!!data.error && <NoticeBox danger>{data.error}</NoticeBox>}
         {!!data.notice && <NoticeBox success>{data.notice}</NoticeBox>}
         {!!data.working && <NoticeBox>Processing checkpoint...</NoticeBox>}
@@ -161,35 +153,5 @@ export const ShipCheckpoint = () => {
         </Section>
       </Window.Content>
     </Window>
-  );
-};
-
-/**
- * Live view of the bay pad. A map control measures its box once, when it mounts, and the
- * window is still settling right after opening, so the control mounts a moment later.
- * The server registers the view into it only once it exists.
- */
-const BayView = ({ mapRef }: { mapRef: string }) => {
-  const { act } = useBackend<Data>();
-  const [settled, setSettled] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(true), 300);
-    return () => clearTimeout(timer);
-  }, []);
-  useEffect(() => {
-    if (settled) {
-      act('bay_view_mounted', { map: mapRef });
-    }
-  }, [settled, mapRef]);
-  if (!settled) {
-    return <Box height="260px" />;
-  }
-  return (
-    <ByondUi
-      key={mapRef}
-      width="100%"
-      height="260px"
-      params={{ id: mapRef, type: 'map' }}
-    />
   );
 };

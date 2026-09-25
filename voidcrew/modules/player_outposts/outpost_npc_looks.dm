@@ -1,0 +1,99 @@
+/**
+ * # Outpost NPC looks
+ *
+ * Human-looking basic mobs on outposts (prisoners, loiterers, and later guards) wear an outfit on
+ * a human body. tg's set_dynamic_human_appearance() builds that body on a fixed, bald, pale dummy
+ * and caches one appearance per outfit, so everyone in the same outfit has the same face and a
+ * male body whatever their gender.
+ *
+ * Here each look is a random person: skin tone, hair, facial hair and eyes, on a body that matches
+ * the gender. A look is keyed by outfit, gender and a look number from 1 to OUTPOST_NPC_LOOK_COUNT,
+ * built once on a throwaway dummy and cached, so a crowd costs at most OUTPOST_NPC_LOOK_COUNT x 2
+ * appearances per outfit.
+ */
+
+/// How many different people wear each outfit, per gender
+#define OUTPOST_NPC_LOOK_COUNT 8
+/// Chance a man's look has a beard or moustache
+#define OUTPOST_NPC_FACIAL_HAIR_CHANCE 55
+
+/// Built looks by outpost_npc_look_key()
+GLOBAL_LIST_EMPTY(outpost_npc_looks)
+
+/// A look number to give a new NPC
+/proc/random_outpost_npc_look_number()
+	return rand(1, OUTPOST_NPC_LOOK_COUNT)
+
+/// The cache key of a look. Anything but FEMALE gets a male body.
+/proc/outpost_npc_look_key(outfit_path, gender, look_number)
+	return "[outfit_path]|[gender == FEMALE ? FEMALE : MALE]|[look_number]"
+
+/**
+ * The appearance of person `look_number` of `gender` wearing `outfit_path`, built the first time
+ * it is asked for. Building equips an outfit, which can sleep, so call this from an async proc.
+ */
+/proc/get_outpost_npc_look(outfit_path, gender, look_number)
+	gender = gender == FEMALE ? FEMALE : MALE
+	var/key = outpost_npc_look_key(outfit_path, gender, look_number)
+	var/look = GLOB.outpost_npc_looks[key]
+	if(look)
+		return look
+	var/mob/living/carbon/human/dummy/dummy = new
+	// As get_dynamic_human_appearance() does: a dead dummy skips mob spawner side effects.
+	dummy.stat = DEAD
+	randomize_human_normie(dummy, update_body = FALSE)
+	dummy.gender = gender
+	dummy.physique = gender
+	dummy.set_hairstyle(outpost_npc_hairstyle(gender) || dummy.hairstyle, update = FALSE)
+	var/facial_hair = "Shaved"
+	if(gender == MALE && prob(OUTPOST_NPC_FACIAL_HAIR_CHANCE))
+		facial_hair = outpost_npc_facial_hairstyle() || facial_hair
+	dummy.set_facial_hairstyle(facial_hair, update = FALSE)
+	dummy.skin_tone = pick(GLOB.skin_tones)
+	dummy.underwear = "Nude"
+	dummy.undershirt = "Nude"
+	dummy.socks = "Nude"
+	// Without is_creating the limbs keep the skin tone they were made with.
+	dummy.update_body(is_creating = TRUE)
+	if(outfit_path)
+		dummy.equipOutfit(outfit_path, visuals_only = TRUE)
+	look = dummy.appearance
+	qdel(dummy)
+	// Two NPCs can build the same look at once; the first one built is kept.
+	if(!GLOB.outpost_npc_looks[key])
+		GLOB.outpost_npc_looks[key] = look
+	return GLOB.outpost_npc_looks[key]
+
+/**
+ * Dresses `target` as person `look_number` of `gender` wearing `outfit_path`, the way
+ * set_dynamic_human_appearance() dresses a mob. Can sleep; see get_outpost_npc_look().
+ */
+/proc/set_outpost_npc_look(atom/target, outfit_path, gender, look_number)
+	var/look = get_outpost_npc_look(outfit_path, gender, look_number)
+	if(QDELETED(target) || !look)
+		return
+	target.icon = 'icons/mob/human/human.dmi'
+	target.icon_state = ""
+	target.appearance_flags |= KEEP_TOGETHER
+	target.copy_overlays(look, cut_old = TRUE)
+
+/// A random hairstyle that randomize_human_normie() would give, or null
+/proc/outpost_npc_hairstyle(gender)
+	for(var/attempt in 1 to 10)
+		var/style_name = random_hairstyle(gender)
+		var/datum/sprite_accessory/style = SSaccessories.hairstyles_list[style_name]
+		if(style?.natural_spawn && !style.locked)
+			return style_name
+	return null
+
+/// A random beard or moustache that randomize_human_normie() would give, or null
+/proc/outpost_npc_facial_hairstyle()
+	for(var/attempt in 1 to 10)
+		var/style_name = random_facial_hairstyle(MALE)
+		var/datum/sprite_accessory/style = SSaccessories.facial_hairstyles_list[style_name]
+		if(style?.icon_state && style.natural_spawn && !style.locked)
+			return style_name
+	return null
+
+#undef OUTPOST_NPC_LOOK_COUNT
+#undef OUTPOST_NPC_FACIAL_HAIR_CHANCE

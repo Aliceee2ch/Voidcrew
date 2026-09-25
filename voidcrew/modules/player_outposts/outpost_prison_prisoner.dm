@@ -78,6 +78,8 @@
 	var/locked_in_seconds = 0
 	/// Outfit whose look they wear
 	var/outfit_path
+	/// Which of the people wearing that outfit they look like (outpost_npc_looks.dm)
+	var/look_number = 1
 	/// Which thought bubble shows, if any
 	var/bubble
 	/// Which grime overlay they show: 0 none, 1 dirty, 2 filthy
@@ -136,6 +138,7 @@
 	var/list/crimes = outpost_prisoner_dialogue("crimes")
 	crime = length(crimes) ? pick(crimes) : "unpaid docking fees"
 	outfit_path = pick(/datum/outfit/outpost_prisoner, /datum/outfit/outpost_prisoner/glasses, /datum/outfit/outpost_prisoner/beanie)
+	look_number = random_outpost_npc_look_number()
 	INVOKE_ASYNC(src, PROC_REF(build_look))
 	// One shared list: element arguments are keyed by list reference.
 	var/static/list/edible_types = list(/obj/item/food)
@@ -174,8 +177,11 @@
 		held_item = null
 		update_appearance(UPDATE_OVERLAYS)
 
+/// Dresses them as their own person in their outfit, with a body to match their gender. Can sleep.
 /mob/living/basic/outpost_prisoner/proc/build_look()
-	set_dynamic_human_appearance(list(src, outfit_path))
+	set_outpost_npc_look(src, outfit_path, gender, look_number)
+	if(QDELETED(src))
+		return
 	update_appearance(UPDATE_OVERLAYS)
 
 /**

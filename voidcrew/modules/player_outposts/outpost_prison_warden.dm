@@ -3,7 +3,7 @@
  *
  * The prison wing's roster and intake switch (OutpostPrison.tsx). Anyone may look; only the
  * outpost's managers may open or close intake. It has no circuit board, so it only exists where a
- * prison wing was placed.
+ * prison wing was placed. What it shows comes from the prison's ui_payload(), below.
  */
 /obj/machinery/computer/outpost_prison_warden
 	name = "warden's console"
@@ -59,3 +59,44 @@
 				return TRUE
 			prison.set_intake(!prison.intake_open, user)
 			return TRUE
+
+// ===== THE PRISON'S SIDE =====
+
+/// Prisoners in cell order, then any without a cell
+/datum/outpost_prison/proc/roster_order()
+	var/list/ordered = list()
+	for(var/datum/outpost_prison_cell/cell as anything in cells)
+		if(cell.occupant && (cell.occupant in prisoners))
+			ordered += cell.occupant
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		ordered |= prisoner
+	return ordered
+
+/// The warden console's ui_data (OutpostPrison.tsx)
+/datum/outpost_prison/proc/ui_payload(mob/user)
+	var/list/roster = list()
+	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in roster_order())
+		roster += list(list(
+			"ref" = REF(prisoner),
+			"name" = prisoner.real_name,
+			"cell" = prisoner.cell?.number || 0,
+			"crime" = prisoner.crime,
+			"sentence_left" = prisoner.stat == DEAD ? 0 : max(0, round(prisoner.sentence_left)),
+			"status" = prisoner.console_status(),
+		))
+	var/list/alarm = alarm_state()
+	return list(
+		"linked" = TRUE,
+		"powered" = is_powered(),
+		"intake_open" = intake_open,
+		"next_arrival" = (intake_open && !isnull(arrival_countdown)) ? round(arrival_countdown) : null,
+		"capacity" = capacity,
+		"pay_rate" = round(pay_rate(), 0.1),
+		"paid_total" = paid_total,
+		"can_manage" = !!outpost?.can_manage(user),
+		"conditions" = conditions_payload(),
+		"prisoners" = roster,
+		"log" = entries.Copy(),
+		"alarm" = alarm[1],
+		"alarm_text" = alarm[2],
+	)

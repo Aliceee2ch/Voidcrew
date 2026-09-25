@@ -10,16 +10,16 @@
  * - riot: tension held at PRISON_TENSION_RIOT for PRISON_RIOT_HOLD seconds, or a spark while
  *   restless (power cut, lights out, a prisoner beaten down or killed by staff).
  *
- * In a riot the wing's lights strobe red (driven here, not by the fire alarm, so no firelocks
- * drop), an alarm sounds and the outpost is told. Rioters pull shivs, go for staff, smash the
- * wing's fixtures and now and then the doors out. A rioter who is stunned or beaten drops the
- * shiv and calms down. The riot is over when no rioter is on their feet outside a bolted cell.
+ * In a riot the wing's lights strobe red (outpost_prison_conditions.dm, not the fire alarm, so no
+ * firelocks drop), an alarm sounds and the outpost is told. Rioters pull shivs, go for staff,
+ * smash the wing's fixtures and now and then the doors out. A rioter who is stunned or beaten
+ * drops the shiv and calms down. The riot is over when no rioter is on their feet outside a bolted cell.
  * Left for PRISON_RIOT_BREAKOUT_TIME it turns into a breakout: the rioters go all out for the
  * exits.
  *
- * The cell block is everything prisoners can reach from the cells without passing a staff door or
- * a serving hatch, worked out once when the wing is placed. A prisoner outside it on their own
- * feet has escaped: they go loose on the outpost patrol AI and have OUTPOST_PRISON_LOOSE_TIME
+ * The cell block (outpost_prison_containment.dm) is everything prisoners can reach from the cells
+ * without passing a staff door or a serving hatch. A prisoner outside it on their own feet has
+ * escaped: they go loose on the outpost patrol AI and have OUTPOST_PRISON_LOOSE_TIME
  * seconds outside it before they are gone for good, which fines the treasury. Dragged back into
  * the cell block while down, they are recaptured.
  *
@@ -54,81 +54,40 @@
 	var/list/fights = list()
 	/// Seconds to the next look for a fight
 	var/fight_check_left = PRISONER_FIGHT_CHECK
-	/// The cell block: turf = TRUE, for every tile inside it and the fixtures along its edge
-	var/list/cell_block = list()
-	/// Red strobe state
-	var/riot_lights_on = FALSE
-	var/strobe_bright = TRUE
-	var/strobe_timer
-	/// Weakrefs to the lights the strobe drives
-	var/list/riot_lights
+	/// Admin and test override of crew_home(): null follows the crew, TRUE or FALSE forces it
+	var/crew_home_override = null
 	COOLDOWN_DECLARE(escape_announce_cooldown)
 
-// ===== THE CELL BLOCK =====
+// ===== THE CREW, ARRIVALS AND CONFINEMENT =====
 
-/**
- * Floods out from the cells across everything prisoners could walk, whatever the bolts, stopping
- * at staff doors and at anything solid. Solid tiles along the edge (windows, the serving hatches,
- * doors) are part of it; the tiles past them are not.
- */
-/datum/outpost_prison/proc/refresh_cell_block()
-	var/list/found = list()
-	var/list/queue = list()
-	for(var/datum/outpost_prison_cell/cell as anything in cells)
-		for(var/turf/tile as anything in cell.turfs)
-			if(!found[tile])
-				found[tile] = TRUE
-				queue += tile
-	var/index = 1
-	while(index <= length(queue))
-		var/turf/current = queue[index++]
-		for(var/direction in GLOB.cardinals)
-			var/turf/next = get_step(current, direction)
-			if(!next || found[next] || next.loc != wing || isclosedturf(next))
-				continue
-			found[next] = TRUE
-			if(cell_block_passable(next))
-				queue += next
-	cell_block = found
+/// Advances presence by `seconds`: works out whether a member of the wing is home
+/datum/outpost_prison/proc/presence_tick(seconds)
+	return
 
-/// Whether the cell block flood carries on through a tile
-/datum/outpost_prison/proc/cell_block_passable(turf/tile)
-	for(var/atom/movable/thing as anything in tile)
-		if(istype(thing, /obj/machinery/door/airlock/security/prison_staff))
-			return FALSE
-		if(istype(thing, /obj/machinery/door) || ismob(thing))
-			continue
-		if(thing.density)
-			return FALSE
+/// Whether a member of the wing is home: awake and playing on the wing's level
+/datum/outpost_prison/proc/crew_home()
+	if(!isnull(crew_home_override))
+		return crew_home_override
 	return TRUE
 
-/// Whether something is in the cell block. A wing without cells has no cell block to leave.
-/datum/outpost_prison/proc/in_cell_block(atom/thing)
-	var/turf/tile = get_turf(thing)
-	if(!tile)
-		return FALSE
-	return !length(cell_block) || cell_block[tile]
+/// The mood a new arrival starts with
+/datum/outpost_prison/proc/arrival_mood()
+	return PRISONER_MOOD_START
 
-/// Whether a tile on the cell block's edge has the outside of the cell block beyond it
-/datum/outpost_prison/proc/leads_out_of_cell_block(turf/tile)
-	for(var/direction in GLOB.cardinals)
-		var/turf/beside = get_step(tile, direction)
-		if(beside && beside.loc == wing && !isclosedturf(beside) && !cell_block[beside])
-			return TRUE
+/// Advances a prisoner's confinement clock by `seconds`: time shut in their cell counts up, time out of it resets it
+/datum/outpost_prison/proc/update_locked_in(mob/living/basic/outpost_prisoner/prisoner, seconds)
+	if(prisoner.is_confined())
+		prisoner.locked_in_seconds += seconds
+	else
+		prisoner.locked_in_seconds = 0
+
+/// Whether shutting prisoners in their cells is for their own safety right now, so it costs nothing
+/datum/outpost_prison/proc/protective_custody()
 	return FALSE
 
-/// The nearest free tile of the wing outside the cell block, for an admin breakout
-/datum/outpost_prison/proc/outside_spot_near(atom/from)
-	var/turf/best
-	var/best_distance = INFINITY
-	for(var/turf/open/tile in wing_turfs())
-		if(cell_block[tile] || tile.is_blocked_turf(TRUE) || (locate(/obj/machinery/door) in tile))
-			continue
-		var/distance = get_dist(from, tile)
-		if(distance < best_distance)
-			best = tile
-			best_distance = distance
-	return best
+/// A prisoner's cell was unbolted
+/datum/outpost_prison/proc/on_unbolted(mob/living/basic/outpost_prisoner/prisoner)
+	return
 
 // ===== TENSION AND STAGES =====
 
@@ -153,13 +112,6 @@
 		return FALSE
 	prisoner.death_blamed = TRUE
 	return trouble_event(PRISON_SPIKE_KILLED, "[prisoner.real_name] was killed by staff")
-
-/// Power cuts and the lights going out, noticed when the condition scores are refreshed
-/datum/outpost_prison/proc/note_condition_changes(old_lit, old_powered)
-	if(old_powered && !powered_score)
-		trouble_event(PRISON_SPIKE_POWER_CUT, "the power went out")
-	else if(old_lit >= PRISON_DARK_BELOW && lit_score < PRISON_DARK_BELOW)
-		trouble_event(PRISON_SPIKE_LIGHTS_OUT, "the lights went out")
 
 /// 100 minus the mean mood of the prisoners in the cell block, plus the spike
 /datum/outpost_prison/proc/compute_tension()
@@ -619,59 +571,7 @@
 		return pick(exits)
 	return length(fixture_list) ? pick(fixture_list) : null
 
-// ===== LIGHTS, ALARM, ANNOUNCEMENTS =====
-
-/// The strobe runs through a riot, and through a breakout until the rioters who got out are dealt with
-/datum/outpost_prison/proc/update_riot_lights()
-	set_riot_lights(riot_active || (broke_out && loose_count()))
-
-/**
- * Puts the wing's lights in emergency red and strobes them, or puts them back. Driven directly
- * rather than through the fire alarm, so no firelocks close. The lights' switch counts are put
- * back afterwards, so a riot does not make them burn out sooner.
- */
-/datum/outpost_prison/proc/set_riot_lights(on)
-	on = !!on
-	if(on == riot_lights_on)
-		return
-	riot_lights_on = on
-	if(on)
-		riot_lights = list()
-		for(var/turf/tile as anything in wing_turfs())
-			for(var/obj/machinery/light/fixture in tile)
-				var/switches = fixture.switchcount
-				fixture.major_emergency = TRUE
-				fixture.update(FALSE)
-				fixture.switchcount = switches
-				riot_lights += WEAKREF(fixture)
-		strobe_bright = TRUE
-		strobe_timer = addtimer(CALLBACK(src, PROC_REF(strobe_step)), PRISON_STROBE_INTERVAL, TIMER_STOPPABLE | TIMER_DELETE_ME)
-		return
-	if(strobe_timer)
-		deltimer(strobe_timer)
-		strobe_timer = null
-	for(var/datum/weakref/light_ref as anything in riot_lights)
-		var/obj/machinery/light/fixture = light_ref.resolve()
-		if(!fixture)
-			continue
-		var/switches = fixture.switchcount
-		fixture.major_emergency = FALSE
-		fixture.update(FALSE)
-		fixture.switchcount = switches
-	riot_lights = null
-
-/// One half of the strobe: bright red, then dim red
-/datum/outpost_prison/proc/strobe_step()
-	strobe_timer = null
-	if(QDELETED(src) || !riot_lights_on)
-		return
-	strobe_bright = !strobe_bright
-	for(var/datum/weakref/light_ref as anything in riot_lights)
-		var/obj/machinery/light/fixture = light_ref.resolve()
-		if(!fixture || !fixture.on || fixture.status != LIGHT_OK || !fixture.major_emergency)
-			continue
-		fixture.set_light(l_power = strobe_bright ? fixture.bulb_power : PRISON_STROBE_DIM)
-	strobe_timer = addtimer(CALLBACK(src, PROC_REF(strobe_step)), PRISON_STROBE_INTERVAL, TIMER_STOPPABLE | TIMER_DELETE_ME)
+// ===== ALARM AND ANNOUNCEMENTS =====
 
 /// Where the wing's alarm sounds from: the warden's console, or the middle of the wing
 /datum/outpost_prison/proc/alarm_turf()
@@ -709,6 +609,26 @@
 	if(riot_active)
 		return breaking_out ? list("breakout", "Prisoners breaking out") : list("riot", "Riot in the yard")
 	return list(null, null)
+
+/// The warden console's trouble block: the stage, tension, the riot's clocks and who is loose where
+/datum/outpost_prison/proc/trouble_payload()
+	var/list/loose = list()
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.trouble != PRISONER_TROUBLE_LOOSE || prisoner.phase != PRISONER_PRESENT || prisoner.stat == DEAD)
+			continue
+		loose += list(list(
+			"name" = prisoner.real_name,
+			"area" = get_area_name(prisoner),
+			"time_left" = max(0, round(prisoner.loose_left)),
+		))
+	return list(
+		"stage" = stage,
+		"tension" = round(tension),
+		"subdued_left" = null,
+		"riot_imminent" = FALSE,
+		"breakout_in" = (riot_active && !breaking_out) ? max(0, round(PRISON_RIOT_BREAKOUT_TIME - riot_elapsed)) : null,
+		"loose" = loose,
+	)
 
 // ===== ESCAPES =====
 
@@ -814,17 +734,6 @@
 	update_riot_lights()
 	return fine
 
-/// Takes up to `amount` from the outpost treasury. Returns what was taken.
-/datum/outpost_prison/proc/charge_fine(amount, reason)
-	if(QDELETED(outpost))
-		return 0
-	outpost.ensure_home_services()
-	var/datum/bank_account/treasury = outpost.treasury
-	var/fine = min(amount, treasury?.account_balance)
-	if(fine <= 0 || !treasury.adjust_money(-fine, reason))
-		return 0
-	return fine
-
 // ===== TURRETS =====
 
 /**
@@ -872,5 +781,19 @@
 		windoor.autoclose = FALSE
 		if(windoor.density)
 			INVOKE_ASYNC(windoor, TYPE_PROC_REF(/obj/machinery/door/window, open), BYPASS_DOOR_CHECKS)
+
+// ===== ADMIN HOOKS =====
+
+/// Transfers out the rioters of a sit-in, as if nobody had come back for them
+/datum/outpost_prison/proc/transfer_rioters()
+	return
+
+/// Puts the wing in the quiet that follows a riot, for `seconds`
+/datum/outpost_prison/proc/set_subdued(seconds)
+	return
+
+/// Has a prisoner start wrecking their cell
+/datum/outpost_prison/proc/start_wreck(mob/living/basic/outpost_prisoner/prisoner)
+	return
 
 #undef PRISON_ESCAPE_ANNOUNCE_GAP

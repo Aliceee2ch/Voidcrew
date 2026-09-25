@@ -1,86 +1,13 @@
 /**
- * Prison trouble (step 3): mood, the wing's stages and sparks, threats and swings at staff,
- * fights, the beaten state, riots with their lights and shivs, the serving hatch climb, escapes,
- * the loose clock and its fine, recapture, the turret rule and the admin buttons.
+ * Prison trouble: mood, the wing's stages and sparks, threats and swings at staff, fights, the
+ * beaten state, riots with their lights and shivs, the serving hatch climb, escapes, the loose
+ * clock and its fine, recapture and the turret rule.
  *
  * Voidcrew defines are not visible from test files, so tuning values appear as literals with the
  * define named beside them. Prisons are driven with tick() (or the trouble procs it calls) with
  * their own processing stopped; nobody is on the level, so the AI sleeps and the tests call the
- * blows (confront()) themselves. Fixtures come from voidcrew_outpost_prison.dm.
+ * blows (confront()) themselves. Fixtures are in voidcrew_outpost_prison_helpers.dm.
  */
-
-/// A prison claim with trouble switched on and every bulb working
-/datum/unit_test/voidcrew_outpost_management/proc/trouble_test_claim(owner_key)
-	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim(owner_key)
-	if(!home)
-		return null
-	var/datum/outpost_prison/prison = test_prison(home)
-	prison.trouble_enabled = TRUE
-	for(var/turf/tile as anything in prison.wing_turfs())
-		for(var/obj/machinery/light/fixture in tile)
-			if(fixture.status != LIGHT_OK)
-				fixture.fix()
-	prison.refresh_conditions()
-	return home
-
-/// A prisoner with a known personality at mood 70, booked in and standing still at `spot`
-/datum/unit_test/voidcrew_outpost_management/proc/trouble_prisoner(datum/outpost_prison/prison, turf/spot, personality = "chatty")
-	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, spot)
-	prisoner.personality = personality
-	prisoner.set_mood(70)
-	return prisoner
-
-/datum/unit_test/voidcrew_outpost_management/proc/drift_is(mob/living/basic/outpost_prisoner/prisoner, expected)
-	return abs(prisoner.mood_drift_per_minute() - expected) < 0.01
-
-/datum/unit_test/voidcrew_outpost_management/proc/set_moods(list/prisoners, mood)
-	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in prisoners)
-		prisoner.set_mood(mood)
-
-/datum/unit_test/voidcrew_outpost_management/proc/all_lights(datum/outpost_prison/prison)
-	var/list/lights = list()
-	for(var/turf/tile as anything in prison.wing_turfs())
-		for(var/obj/machinery/light/fixture in tile)
-			lights += fixture
-	return lights
-
-/datum/unit_test/voidcrew_outpost_management/proc/set_wing_power(datum/outpost_prison/prison, on)
-	var/obj/machinery/power/apc/apc = prison.wing.apc
-	apc.operating = on
-	apc.update()
-	prison.refresh_conditions()
-
-/datum/unit_test/voidcrew_outpost_management/proc/hit_with_toolbox(mob/living/carbon/human/attacker, mob/living/target)
-	var/obj/item/storage/toolbox/toolbox = attacker.get_active_held_item()
-	if(!istype(toolbox))
-		attacker.drop_all_held_items()
-		toolbox = allocate(/obj/item/storage/toolbox)
-		attacker.put_in_active_hand(toolbox)
-	attacker.set_combat_mode(TRUE)
-	click_wrapper(attacker, target)
-	attacker.set_combat_mode(FALSE)
-
-/// Whether `line` is one of the dialogue file's lines for `context`, for any personality
-/datum/unit_test/voidcrew_outpost_management/proc/is_line_for(line, context)
-	var/list/lines = outpost_prisoner_dialogue("lines")
-	var/list/entry = lines[context]
-	if(!islist(entry) || !line)
-		return FALSE
-	for(var/pool_key in entry)
-		for(var/candidate in entry[pool_key])
-			if(findtext(candidate, "{"))
-				// A line with placeholders: compare what is left of it around them.
-				var/list/parts = splittext(candidate, regex("\\{\[a-z_\]+\\}"))
-				var/all_found = TRUE
-				for(var/part in parts)
-					if(length(part) && !findtext(line, part))
-						all_found = FALSE
-						break
-				if(all_found)
-					return TRUE
-			else if(candidate == line)
-				return TRUE
-	return FALSE
 
 // ===== MOOD =====
 
@@ -98,21 +25,9 @@
 	qdel(fresh_arrival)
 	TEST_ASSERT(abs(prison.conditions_score() - 100) < 0.01, "The mood test wing is not in perfect condition")
 
-	// Per minute: a well kept prisoner in a wing with every condition at 80+ gains 2.
+	// Per minute: a well kept prisoner in a wing with every condition at 80+ gains 2. What needs
+	// and the wing add is tested in voidcrew_outpost_prison_mood_needs and _mood_wing.
 	TEST_ASSERT(drift_is(prisoner, 2), "A well kept prisoner drifts [prisoner.mood_drift_per_minute()], not +2")
-	prisoner.set_hunger(30)
-	TEST_ASSERT(drift_is(prisoner, 2 - 3), "Hungry drifts [prisoner.mood_drift_per_minute()], not -1") // PRISONER_MOOD_HUNGRY
-	prisoner.set_hunger(10)
-	TEST_ASSERT(drift_is(prisoner, 2 - 8), "Starving drifts [prisoner.mood_drift_per_minute()], not -6") // PRISONER_MOOD_STARVING
-	prisoner.set_hunger(100)
-	prisoner.set_uniform_grime(60)
-	TEST_ASSERT(drift_is(prisoner, 2 - 2), "A dirty uniform drifts [prisoner.mood_drift_per_minute()], not 0") // PRISONER_MOOD_DIRTY
-	prisoner.set_uniform_grime(90)
-	TEST_ASSERT(drift_is(prisoner, 2 - 5), "A filthy uniform drifts [prisoner.mood_drift_per_minute()], not -3") // PRISONER_MOOD_FILTHY
-	prisoner.set_uniform_grime(0)
-	prisoner.adjustBruteLoss(50)
-	TEST_ASSERT(drift_is(prisoner, 2 - 4), "Half health drifts [prisoner.mood_drift_per_minute()], not -2") // 4 x missing x 2
-	prisoner.adjustBruteLoss(-50)
 	prisoner.activity = new /datum/prisoner_activity/chat(prisoner)
 	TEST_ASSERT(drift_is(prisoner, 2 + 1), "Chatting drifts [prisoner.mood_drift_per_minute()], not +3") // PRISONER_MOOD_ACTIVITY
 	prisoner.end_activity(cancel_ai = FALSE)
@@ -125,26 +40,6 @@
 	prisoner.locked_in_seconds = 200
 	TEST_ASSERT(drift_is(prisoner, 2 - 7), "Bolted in 3.3 minutes drifts [prisoner.mood_drift_per_minute()], not -5")
 	prisoner.locked_in_seconds = 0
-
-	// The wing: dirty below 60 clean, dark below 50 lit, unpowered. Each also loses the +2.
-	var/list/mess = list()
-	for(var/x in 3 to 11)
-		mess += allocate(/obj/effect/decal/cleanable/dirt, prison_spot(home, x, 7))
-	prison.refresh_conditions()
-	TEST_ASSERT_EQUAL(prison.clean_score, 55, "Nine pieces of mess did not leave the wing at 55 clean")
-	TEST_ASSERT(drift_is(prisoner, -3), "A dirty wing drifts [prisoner.mood_drift_per_minute()], not -3") // PRISONER_MOOD_DIRTY_WING
-	QDEL_LIST(mess)
-	var/list/lights = all_lights(prison)
-	for(var/obj/machinery/light/fixture as anything in lights)
-		fixture.break_light_tube()
-	prison.refresh_conditions()
-	TEST_ASSERT(drift_is(prisoner, -4), "A dark wing drifts [prisoner.mood_drift_per_minute()], not -4") // PRISONER_MOOD_DARK
-	for(var/obj/machinery/light/fixture as anything in lights)
-		fixture.fix()
-	set_wing_power(prison, FALSE)
-	TEST_ASSERT(drift_is(prisoner, -5 - 4), "An unpowered, dark wing drifts [prisoner.mood_drift_per_minute()], not -9") // PRISONER_MOOD_NO_POWER
-	set_wing_power(prison, TRUE)
-	TEST_ASSERT(drift_is(prisoner, 2), "The wing did not recover (drift [prisoner.mood_drift_per_minute()])")
 
 	// Personality scales the losses: grumpy 1.4, nervous 1.2, chatty 1, quiet 0.9, cheerful 0.7.
 	prisoner.set_hunger(10)
@@ -171,20 +66,8 @@
 	prison.tick(60)
 	TEST_ASSERT(abs(prisoner.mood - 72) < 0.01, "A minute well kept left mood at [prisoner.mood], not 72")
 
-	// Instant changes: a meal +10, a clean uniform +8, treatment +8, a hit by staff -15.
-	prisoner.set_mood(40)
-	prisoner.set_hunger(20)
-	var/obj/item/food/prison_ration/meal = new(prison_spot(home, 8, 8))
-	prisoner.finish_meal(meal, prison_spot(home, 8, 8), null)
-	TEST_ASSERT(abs(prisoner.mood - 50) < 0.01, "A meal left mood at [prisoner.mood], not 50") // PRISONER_MOOD_FED
-	prisoner.set_uniform_grime(80)
-	var/obj/item/clothing/under/rank/prisoner/outpost/fresh = new(prison_spot(home, 8, 8))
-	prisoner.swap_uniform(fresh, prison_spot(home, 8, 8))
-	TEST_ASSERT(abs(prisoner.mood - 58) < 0.01, "A clean uniform left mood at [prisoner.mood], not 58") // PRISONER_MOOD_CLEAN_UNIFORM
-	prisoner.adjustBruteLoss(30)
-	COOLDOWN_START(prisoner, treatment_window, 20 SECONDS)
-	prisoner.adjustBruteLoss(-30)
-	TEST_ASSERT(abs(prisoner.mood - 66) < 0.01, "Treatment left mood at [prisoner.mood], not 66") // PRISONER_MOOD_TREATED
+	// A hit by staff -15.
+	prisoner.set_mood(66)
 	var/mob/living/carbon/human/warden = make_player(prison_spot(home, 9, 8), "moodowner")
 	var/spike_before = prison.tension_spike
 	hit_with_toolbox(warden, prisoner)
@@ -774,94 +657,4 @@
 	TEST_ASSERT(is_hostile_creature(target), "A turret would not shoot a loose prisoner outside the wing")
 	TEST_ASSERT(is_loose_outpost_prisoner(target), "A loose prisoner outside the wing is not a turret target")
 	target.forceMove(prison_spot(home, 10, 4))
-	settle_prison_air(home)
-
-// ===== ADMIN TOOLS =====
-
-/datum/unit_test/voidcrew_outpost_prison_trouble_admin
-	parent_type = /datum/unit_test/voidcrew_outpost_management
-
-/datum/unit_test/voidcrew_outpost_prison_trouble_admin/Run()
-	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("troubleadminowner")
-	TEST_ASSERT_NOTNULL(home, "The trouble admin test prison did not load")
-	var/datum/outpost_prison/prison = test_prison(home)
-	var/mob/living/carbon/human/operator = make_player(prison_spot(home, 8, 4), "troubleadmin")
-	var/datum/outpost_manipulator/unit_test/prison/panel = allocate(__IMPLIED_TYPE__, operator)
-	panel.selected = home
-	var/mob/living/basic/outpost_prisoner/first = trouble_prisoner(prison, prison_spot(home, 7, 8))
-	var/mob/living/basic/outpost_prisoner/second = trouble_prisoner(prison, prison_spot(home, 9, 8))
-	var/mob/living/basic/outpost_prisoner/third = trouble_prisoner(prison, prison_spot(home, 12, 8))
-
-	// The section carries tension, stage and the breakout countdown; each row mood, state and loose time.
-	var/list/section = panel.ui_data(operator)["selected"]["prison"]
-	for(var/key in list("tension", "stage", "breakout_in"))
-		TEST_ASSERT(key in section, "The prison section sends no [key]")
-	TEST_ASSERT_EQUAL(section["stage"], "calm", "A calm wing's stage is [section["stage"]]")
-	TEST_ASSERT_NULL(section["breakout_in"], "A calm wing has a breakout countdown")
-	var/list/row = section["prisoners"][1]
-	for(var/key in list("mood", "state", "loose_left"))
-		TEST_ASSERT(key in row, "A prisoner row sends no [key]")
-	TEST_ASSERT_EQUAL(row["state"], "normal", "A calm prisoner's state is [row["state"]]")
-	TEST_ASSERT_NULL(row["loose_left"], "A prisoner in the yard has a loose countdown")
-
-	// Mood, one and all.
-	panel.manage_outpost(home, operator, "prison_set", list("ref" = REF(first), "field" = "mood", "value" = 20))
-	TEST_ASSERT(abs(first.mood - 20) < 0.01, "Setting mood left it at [first.mood]")
-	panel.manage_outpost(home, operator, "prison_set", list("ref" = REF(first), "field" = "mood", "value" = "lots"))
-	TEST_ASSERT(panel.error && abs(first.mood - 20) < 0.01, "A non-number mood was accepted")
-	panel.manage_outpost(home, operator, "prison_all", list("what" = "enrage"))
-	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in list(first, second, third))
-		TEST_ASSERT(prisoner.mood < 20, "Enrage left [prisoner] at [prisoner.mood]")
-	panel.manage_outpost(home, operator, "prison_all", list("what" = "calm"))
-	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in list(first, second, third))
-		TEST_ASSERT(prisoner.mood > 99, "Calm all left [prisoner] at [prisoner.mood]")
-
-	// A fight with the nearest other; refused with nobody free to fight.
-	panel.manage_outpost(home, operator, "prison_fight", list("ref" = REF(first)))
-	TEST_ASSERT(first.fight && first.fight == second.fight, "The admin fight did not pair the nearest prisoner")
-	TEST_ASSERT_EQUAL(panel.ui_data(operator)["selected"]["prison"]["prisoners"][1]["state"], "fighting", "A fighter's state is not fighting")
-	panel.manage_outpost(home, operator, "prison_fight", list("ref" = REF(third)))
-	TEST_ASSERT(panel.error, "A fight with nobody free to fight was accepted")
-	TEST_ASSERT(isnull(third.trouble) && !third.fight, "A refused fight changed the prisoner")
-	panel.manage_outpost(home, operator, "prison_calm", list())
-	TEST_ASSERT(!first.fight && isnull(first.trouble), "Calm did not end the fight")
-	TEST_ASSERT(abs(first.mood - 70) < 0.01, "Calm set mood to [first.mood], not 70")
-
-	// A riot everyone joins; a second is refused.
-	panel.manage_outpost(home, operator, "prison_riot", list())
-	TEST_ASSERT(prison.riot_active, "The admin riot did not start")
-	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in list(first, second, third))
-		TEST_ASSERT_EQUAL(prisoner.trouble, "riot", "[prisoner] stayed out of the admin riot")
-	section = panel.ui_data(operator)["selected"]["prison"]
-	TEST_ASSERT_EQUAL(section["breakout_in"], 180, "The riot's breakout is due in [section["breakout_in"]]")
-	TEST_ASSERT_EQUAL(section["prisoners"][1]["state"], "rioting", "A rioter's state is [section["prisoners"][1]["state"]]")
-	panel.manage_outpost(home, operator, "prison_riot", list())
-	TEST_ASSERT(panel.error, "A second riot was accepted")
-	panel.manage_outpost(home, operator, "prison_calm", list())
-	TEST_ASSERT(!prison.riot_active, "Calm did not end the riot")
-	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in list(first, second, third))
-		TEST_ASSERT(isnull(prisoner.trouble) && !istype(prisoner.held_item, /obj/item/knife/shiv), "[prisoner] kept rioting after the calm")
-
-	// A breakout: out of the cell block and loose; refused for someone already loose.
-	panel.manage_outpost(home, operator, "prison_breakout", list("ref" = REF(second)))
-	TEST_ASSERT_EQUAL(second.trouble, "loose", "The admin breakout did not set the prisoner loose")
-	TEST_ASSERT(!prison.in_cell_block(second), "The admin breakout left the prisoner in the cell block")
-	TEST_ASSERT_EQUAL(prison.alarm_state()[1], "breakout", "An admin breakout shows the [prison.alarm_state()[1]] alarm")
-	var/list/loose_row
-	for(var/list/prisoner_row as anything in panel.ui_data(operator)["selected"]["prison"]["prisoners"])
-		if(prisoner_row["ref"] == REF(second))
-			loose_row = prisoner_row
-	TEST_ASSERT_EQUAL(loose_row["state"], "loose", "A loose prisoner's state is [loose_row["state"]]")
-	TEST_ASSERT_EQUAL(loose_row["loose_left"], 300, "A loose prisoner shows [loose_row["loose_left"]] s left")
-	var/turf/breakout_spot = get_turf(second)
-	panel.manage_outpost(home, operator, "prison_breakout", list("ref" = REF(second)))
-	TEST_ASSERT(panel.error, "Breaking out a loose prisoner was accepted")
-	TEST_ASSERT_EQUAL(get_turf(second), breakout_spot, "A refused breakout moved the prisoner")
-	panel.manage_outpost(home, operator, "prison_breakout", list("ref" = "not a ref"))
-	TEST_ASSERT(panel.error, "A breakout for a bad reference was accepted")
-	panel.manage_outpost(home, operator, "prison_all", list("what" = "riot"))
-	TEST_ASSERT(panel.error, "An unknown prisoner-wide action was accepted")
-
-	// Every successful action was logged once: set, enrage, calm all, fight, calm, riot, calm, breakout.
-	TEST_ASSERT_EQUAL(length(panel.operations), 8, "The manipulator logged [length(panel.operations)] trouble actions: [jointext(panel.operations, "; ")]")
 	settle_prison_air(home)

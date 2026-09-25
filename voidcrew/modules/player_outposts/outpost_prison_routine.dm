@@ -24,25 +24,15 @@
 /// Seconds an activity type is skipped after a prisoner gives up on it
 #define ACTIVITY_GIVE_UP_TIME (60 SECONDS)
 
-/// Leisure activities, picked by weight when no need or duty comes first
-GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
-	/datum/prisoner_activity/rest,
-	/datum/prisoner_activity/rest/sleep,
-	/datum/prisoner_activity/sit_bed,
-	/datum/prisoner_activity/toilet,
-	/datum/prisoner_activity/sink,
-	/datum/prisoner_activity/basketball,
-	/datum/prisoner_activity/read,
-	/datum/prisoner_activity/water,
-	/datum/prisoner_activity/chat,
-	/datum/prisoner_activity/pace,
-	/datum/prisoner_activity/window,
-	/datum/prisoner_activity/call_out,
-	/datum/prisoner_activity/wander,
-	// Unhappy wings only (outpost_prison_trouble.dm)
-	/datum/prisoner_activity/bang_door,
-	/datum/prisoner_activity/gather,
-))
+/// Leisure activities, picked by weight when no need or duty comes first: every activity type with `leisure` set
+GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
+
+/proc/outpost_prisoner_leisure_types()
+	var/list/types = list()
+	for(var/datum/prisoner_activity/activity_type as anything in subtypesof(/datum/prisoner_activity))
+		if(initial(activity_type.leisure))
+			types += activity_type
+	return types
 
 // ===== PRISONER SIDE =====
 
@@ -296,6 +286,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 	var/name = "hanging around"
 	/// Dialogue context for lines said while doing it, if any
 	var/context
+	/// Whether it is picked as leisure, by weight, when no need or duty comes first
+	var/leisure = FALSE
 	/// Weight when picking leisure, before personality
 	var/weight = 10
 	/// Weight multipliers by personality
@@ -390,6 +382,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Lying on their bed, awake
 /datum/prisoner_activity/rest
 	name = "resting"
+	leisure = TRUE
 	context = "resting"
 	weight = 10
 	personality_weights = list("grumpy" = 1.5, "quiet" = 1.5, "chatty" = 0.6, "cheerful" = 0.8)
@@ -436,6 +429,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Perched on the edge of their bed
 /datum/prisoner_activity/sit_bed
 	name = "sitting on their bed"
+	leisure = TRUE
 	context = "idle"
 	weight = 6
 	min_duration = 20 SECONDS
@@ -465,6 +459,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 
 /datum/prisoner_activity/toilet
 	name = "using the toilet"
+	leisure = TRUE
 	weight = 3
 	min_duration = 10 SECONDS
 	max_duration = 25 SECONDS
@@ -493,6 +488,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 
 /datum/prisoner_activity/sink
 	name = "washing up"
+	leisure = TRUE
 	weight = 3
 	min_duration = 8 SECONDS
 	max_duration = 15 SECONDS
@@ -517,6 +513,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Standing inside a bolted cell door, calling through it
 /datum/prisoner_activity/call_out
 	name = "calling through the cell door"
+	leisure = TRUE
 	context = "locked_in"
 	weight = 0
 	min_duration = 20 SECONDS
@@ -548,6 +545,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Pacing up and down, sometimes working out
 /datum/prisoner_activity/pace
 	name = "pacing"
+	leisure = TRUE
 	context = "pacing"
 	weight = 6
 	personality_weights = list("nervous" = 2, "grumpy" = 1.3, "quiet" = 0.8)
@@ -621,6 +619,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Standing somewhere for a bit
 /datum/prisoner_activity/wander
 	name = "hanging around"
+	leisure = TRUE
 	context = "idle"
 	weight = 4
 	min_duration = 10 SECONDS
@@ -639,6 +638,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Looking out of a window
 /datum/prisoner_activity/window
 	name = "looking out the window"
+	leisure = TRUE
 	context = "window"
 	weight = 5
 	personality_weights = list("nervous" = 1.5, "quiet" = 1.5)
@@ -663,6 +663,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// A drink at the water cooler
 /datum/prisoner_activity/water
 	name = "getting a drink"
+	leisure = TRUE
 	context = "water"
 	weight = 4
 	min_duration = 10 SECONDS
@@ -691,6 +692,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Shooting hoops. Two can play: whoever is closer gets the rebound.
 /datum/prisoner_activity/basketball
 	name = "shooting hoops"
+	leisure = TRUE
 	context = "basketball"
 	weight = 8
 	personality_weights = list("cheerful" = 1.8, "chatty" = 1.2, "quiet" = 0.5, "nervous" = 0.7)
@@ -805,6 +807,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// A book off the shelf, read in the chair by the bookcase. The book goes back, or stays out.
 /datum/prisoner_activity/read
 	name = "reading"
+	leisure = TRUE
 	context = "reading"
 	weight = 7
 	personality_weights = list("quiet" = 1.8, "nervous" = 1.2, "cheerful" = 0.8, "chatty" = 0.7)
@@ -919,6 +922,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 /// Walks over to another prisoner and talks with them
 /datum/prisoner_activity/chat
 	name = "chatting"
+	leisure = TRUE
 	weight = 7
 	personality_weights = list("chatty" = 2, "cheerful" = 1.5, "grumpy" = 0.6, "quiet" = 0.4)
 	min_duration = 30 SECONDS
@@ -983,6 +987,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, list(
 
 /// The other half of a chat: stays put and faces whoever came over
 /datum/prisoner_activity/chat/listen
+	leisure = FALSE
 	weight = 0
 
 /datum/prisoner_activity/chat/listen/New(mob/living/basic/outpost_prisoner/doer, mob/living/basic/outpost_prisoner/talker)

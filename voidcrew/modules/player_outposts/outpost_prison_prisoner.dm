@@ -131,6 +131,7 @@
 	ADD_TRAIT(src, TRAIT_NO_CONTAINMENT, INNATE_TRAIT)
 	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, INNATE_TRAIT)
 	setup_trouble()
+	setup_containment()
 	last_health = health
 
 /mob/living/basic/outpost_prisoner/Destroy()
@@ -306,6 +307,22 @@
 /// Care, 0-100: the mean of fed, clean and health
 /mob/living/basic/outpost_prisoner/proc/care()
 	return (fed_factor() + clean_factor() + health_factor()) / 3
+
+/// What their needs do to their mood per minute: list(gain, loss), before personality
+/mob/living/basic/outpost_prisoner/proc/needs_mood_per_minute()
+	var/loss = 0
+	if(hunger < PRISONER_HUNGER_STARVING)
+		loss += PRISONER_MOOD_STARVING
+	else if(hunger < PRISONER_HUNGER_HUNGRY)
+		loss += PRISONER_MOOD_HUNGRY
+	if(uniform_grime >= PRISONER_GRIME_FILTHY)
+		loss += PRISONER_MOOD_FILTHY
+	else if(uniform_grime >= PRISONER_GRIME_DIRTY)
+		loss += PRISONER_MOOD_DIRTY
+	var/missing = 1 - health_factor() / 100
+	if(missing > 0)
+		loss += PRISONER_MOOD_HURT * missing
+	return list(0, loss)
 
 /mob/living/basic/outpost_prisoner/proc/wants_food()
 	return stat == CONSCIOUS && hunger < PRISONER_HUNGER_SEEK

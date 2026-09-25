@@ -5,8 +5,19 @@
  * The wing has one cell per prisoner. While intake is open, prisoners beam one at a time into
  * empty cells. Each prisoner in the wing earns the outpost treasury OUTPOST_PRISON_BASE_PAY a
  * minute, scaled by how well they are kept (care) and how well the wing is kept (conditions); see
- * the pay model in voidcrew/_DEFINES/player_outposts.dm. At the end of a sentence the prisoner
- * heads back to their cell, beams out and a release bonus is paid.
+ * the pay model in voidcrew/_DEFINES/outpost_prison_economy.dm. At the end of a sentence the
+ * prisoner heads back to their cell, beams out and a release bonus is paid.
+ *
+ * This file holds the wing itself, its cells, supplies and furniture, claims, speech and the
+ * clock. The rest of the prison lives beside it:
+ * - outpost_prison_economy.dm: pay, fines, intake, arrivals, releases, deaths;
+ * - outpost_prison_warden.dm: the warden's console and its data;
+ * - outpost_prison_conditions.dm: the clean, lit and powered scores and the riot strobe;
+ * - outpost_prison_containment.dm: reach, the cell block, confinement and wing members;
+ * - outpost_prison_doors.dm: the wing's doors and bolt buttons;
+ * - outpost_prison_prisoner.dm and outpost_prison_routine.dm: the prisoners, their needs and days;
+ * - outpost_prison_trouble.dm and outpost_prison_riot.dm: mood, fights, riots and escapes;
+ * - outpost_prison_experiments.dm: the researcher's experiments.
  *
  * Everything that advances with time goes through tick(seconds), which process() calls every
  * second, so tests can advance a prison by minutes in one call. The random mess prisoners leave,
@@ -15,8 +26,8 @@
 
 GLOBAL_LIST_EMPTY(outpost_prisons)
 
-/// How often the condition scores, the wing's furniture and the prisoners' reach are refreshed, in seconds
-#define PRISON_REFRESH_SECONDS 5
+/// How often prisoners whose AI is asleep help themselves to supplies, in seconds
+#define PRISON_SUPPLY_REFRESH_SECONDS 5
 /// The largest a cell's inside can be, in tiles
 #define PRISON_CELL_MAX_TILES 16
 
@@ -28,24 +39,11 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	/// The wing's cells, in number order
 	var/list/datum/outpost_prison_cell/cells = list()
 	var/capacity = OUTPOST_PRISON_CAPACITY
-	var/intake_open = FALSE
-	/// Seconds until the next prisoner beams in, or null while none is due
-	var/arrival_countdown
-	/// Seconds into the current pay minute
-	var/pay_clock = 0
-	/// Credits earned and not yet deposited; deposits are whole credits, once a minute
-	var/pay_owed = 0
-	/// Everything this prison has paid into the treasury
-	var/paid_total = 0
 	/// Warden console log, newest first: list(list("time", "text"))
 	var/list/entries = list()
-	/// Condition scores, 0 to 100
-	var/clean_score = 100
-	var/lit_score = 100
-	var/powered_score = 100
-	/// Seconds since the scores were refreshed
-	var/refresh_clock = 0
-	/// The wing's furniture by category ("bed", "stool", "hoop", ...), refreshed with the scores
+	/// Seconds since prisoners whose AI is asleep last helped themselves to supplies
+	var/supply_clock = 0
+	/// The wing's furniture by category ("bed", "stool", "hoop", ...), refreshed with the condition scores
 	var/list/fixtures = list()
 	/// REF() of anything a prisoner is using -> that prisoner
 	var/list/claims = list()
@@ -80,6 +78,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	claims.Cut()
 	fixtures.Cut()
 	cell_block.Cut()
+	if(upgrade?.prison == src)
+		upgrade.prison = null
 	upgrade = null
 	outpost = null
 	wing = null
@@ -97,10 +97,6 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		if(tile.loc == wing)
 			turfs += tile
 	return turfs
-
-/// Whether the wing's APC gives its machines power
-/datum/outpost_prison/proc/is_powered()
-	return !!wing?.powered(AREA_USAGE_EQUIP)
 
 /// Cells free for a new arrival
 /datum/outpost_prison/proc/free_slots()
@@ -234,134 +230,34 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	door.bolt()
 	refresh_reach()
 
-// ===== CONDITIONS =====
+// ===== SUPPLIES AND FURNITURE =====
 
-/// Recounts mess, lights and furniture, checks power, and refreshes where prisoners can reach
-/datum/outpost_prison/proc/refresh_conditions()
-	var/old_lit = lit_score
-	var/old_powered = powered_score
-	var/mess = 0
-	var/lights = 0
-	var/working = 0
-	var/list/found = list(
-		"bed" = list(),
-		"stool" = list(),
-		"reading_chair" = list(),
-		"table" = list(),
-		"hatch" = list(),
-		"toilet" = list(),
-		"sink" = list(),
-		"hoop" = list(),
-		"bookcase" = list(),
-		"cooler" = list(),
-		"window" = list(),
+/// Advances supplies by `seconds`: every PRISON_SUPPLY_REFRESH_SECONDS, prisoners whose AI is asleep help themselves
+/datum/outpost_prison/proc/supply_tick(seconds)
+	supply_clock += seconds
+	if(supply_clock < PRISON_SUPPLY_REFRESH_SECONDS)
+		return
+	supply_clock = 0
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		prisoner.fend_for_self()
+
+/// What the serving hatches hold: list("meals", "clean_suits", "dirty_suits", "capacity", "lasts_minutes")
+/datum/outpost_prison/proc/hatch_stock()
+	return list(
+		"meals" = 0,
+		"clean_suits" = 0,
+		"dirty_suits" = 0,
+		"capacity" = 0,
+		"lasts_minutes" = null,
 	)
-	for(var/turf/tile as anything in wing_turfs())
-		for(var/atom/movable/thing as anything in tile)
-			if(istype(thing, /obj/effect/decal/cleanable) || istype(thing, /obj/item/trash))
-				mess++
-			else if(istype(thing, /obj/machinery/light))
-				var/obj/machinery/light/fixture = thing
-				lights++
-				if(fixture.status == LIGHT_OK && fixture.has_power())
-					working++
-			else if(istype(thing, /obj/structure/bed))
-				found["bed"] += thing
-			else if(istype(thing, /obj/structure/chair/stool))
-				found["stool"] += thing
-			else if(istype(thing, /obj/structure/chair/comfy))
-				found["reading_chair"] += thing
-			else if(istype(thing, /obj/structure/table/reinforced/prison_hatch))
-				found["hatch"] += thing
-			else if(istype(thing, /obj/structure/table))
-				found["table"] += thing
-			else if(istype(thing, /obj/structure/toilet))
-				found["toilet"] += thing
-			else if(istype(thing, /obj/structure/sink))
-				found["sink"] += thing
-			else if(istype(thing, /obj/structure/hoop))
-				found["hoop"] += thing
-			else if(istype(thing, /obj/structure/bookcase))
-				found["bookcase"] += thing
-			else if(istype(thing, /obj/structure/reagent_dispensers/water_cooler))
-				found["cooler"] += thing
-			else if(istype(thing, /obj/structure/window) && on_wing_edge(tile))
-				found["window"] += thing
-	fixtures = found
-	clean_score = max(0, 100 - mess * OUTPOST_PRISON_MESS_PENALTY)
-	lit_score = lights ? round(100 * working / lights) : 0
-	powered_score = is_powered() ? 100 : 0
-	refresh_reach()
-	// A power cut or the lights going out puts the wing on edge (outpost_prison_riot.dm).
-	note_condition_changes(old_lit, old_powered)
 
-/// Whether a tile is on the outside edge of the wing, so a window there looks out
-/datum/outpost_prison/proc/on_wing_edge(turf/tile)
-	for(var/direction in GLOB.cardinals)
-		var/turf/beside = get_step(tile, direction)
-		if(!beside || beside.loc != wing)
-			return TRUE
+/// Whether someone is waiting at a serving hatch that has nothing they need
+/datum/outpost_prison/proc/hatch_shortage()
 	return FALSE
 
-/// Conditions, 0 to 100: the mean of the clean, lit and powered scores
-/datum/outpost_prison/proc/conditions_score()
-	return (clean_score + lit_score + powered_score) / 3
-
-/**
- * Whether a prisoner could stand on this tile. Cell doors open for them unless bolted or
- * unpowered; staff doors never do.
- */
-/datum/outpost_prison/proc/prisoner_can_stand(turf/tile)
-	if(isclosedturf(tile))
-		return FALSE
-	for(var/atom/movable/thing as anything in tile)
-		if(istype(thing, /obj/machinery/door/airlock/security/prison_staff))
-			return FALSE
-		if(istype(thing, /obj/machinery/door/airlock))
-			var/obj/machinery/door/airlock/airlock = thing
-			if(airlock.density && (airlock.locked || airlock.welded || !airlock.hasPower()))
-				return FALSE
-			continue
-		if(istype(thing, /obj/machinery/door) || ismob(thing))
-			continue
-		if(thing.density)
-			return FALSE
-	return TRUE
-
-/// Refreshes where every prisoner can walk and reach
-/datum/outpost_prison/proc/refresh_reach()
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		refresh_prisoner_reach(prisoner)
-
-/**
- * Floods out from a prisoner to the ground they can walk on, then adds each tile beside it
- * (tables, the serving hatch). Items on those tiles are the ones they can go and pick up; food
- * seen through the office windows is not.
- */
-/datum/outpost_prison/proc/refresh_prisoner_reach(mob/living/basic/outpost_prisoner/prisoner)
-	var/list/walked = list()
-	var/list/reach = list()
-	var/turf/start = get_turf(prisoner)
-	if(start?.loc == wing)
-		var/list/queue = list(start)
-		walked[start] = TRUE
-		var/index = 1
-		while(index <= length(queue))
-			var/turf/current = queue[index++]
-			for(var/direction in GLOB.cardinals)
-				var/turf/next = get_step(current, direction)
-				if(!next || walked[next] || next.loc != wing || !prisoner_can_stand(next))
-					continue
-				walked[next] = TRUE
-				queue += next
-		for(var/turf/standing as anything in walked)
-			reach[standing] = TRUE
-			for(var/direction in GLOB.cardinals)
-				var/turf/beside = get_step(standing, direction)
-				if(beside?.loc == wing)
-					reach[beside] = TRUE
-	prisoner.walkable = walked
-	prisoner.reachable = reach
+/// Fills every serving hatch, meals first, then clean uniforms. For the admin panel.
+/datum/outpost_prison/proc/fill_hatches()
+	return
 
 /**
  * The nearest thing a prisoner can reach that they want: food, or a cleaner uniform when
@@ -487,19 +383,17 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 			prisoner.speech_tick()
 
 /**
- * Advances the prison by `seconds`: pay and sentences first, on the state at the start of the
- * step, then needs, moods, releases, body collection, trouble (outpost_prison_riot.dm), arrivals
- * and the minute's deposit. Prisoners who are fighting earn nothing; rioting or loose, they earn
- * nothing and their sentence stops.
+ * Advances the prison by `seconds`, in a fixed order: who is home, the condition scores, reach,
+ * supplies; then for each prisoner body collection, pay and sentence, needs, confinement, mood,
+ * and release; then trouble (outpost_prison_riot.dm), experiments, arrivals and deposits.
+ * Prisoners who are fighting earn nothing; rioting or loose, they earn nothing and their sentence
+ * stops. Each part keeps its own cadence inside its own tick proc; keep this order as it is.
  */
 /datum/outpost_prison/proc/tick(seconds)
-	refresh_clock += seconds
-	if(refresh_clock >= PRISON_REFRESH_SECONDS)
-		refresh_clock = 0
-		refresh_conditions()
-		for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-			prisoner.fend_for_self()
-	var/conditions = conditions_score() / 100
+	presence_tick(seconds)
+	conditions_tick(seconds)
+	containment_tick(seconds)
+	supply_tick(seconds)
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners.Copy())
 		if(QDELETED(prisoner) || prisoner.phase != PRISONER_PRESENT)
 			continue
@@ -511,148 +405,19 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		var/serving = prisoner.serving_sentence()
 		if(serving)
 			var/served = min(seconds, prisoner.sentence_left)
-			var/care = prisoner.earning_pay() ? prisoner.care() / 100 : 0
-			pay_owed += OUTPOST_PRISON_BASE_PAY * care * conditions * served / 60
-			prisoner.served_seconds += served
-			prisoner.kept_seconds += care * conditions * served
+			accrue_pay(prisoner, served)
 			prisoner.sentence_left -= served
 		prisoner.adjust_needs(seconds)
-		var/datum/outpost_prison_cell/holding = cell_at(get_turf(prisoner))
-		if(holding?.is_bolted())
-			prisoner.locked_in_seconds += seconds
-		else
-			prisoner.locked_in_seconds = 0
+		update_locked_in(prisoner, seconds)
 		prisoner.drift_mood(seconds)
-		if(!serving)
-			continue
-		if(prisoner.sentence_left <= 0)
-			release(prisoner)
-		else if(prisoner.sentence_left <= OUTPOST_PRISON_RELEASE_WALK && !istype(prisoner.activity, /datum/prisoner_activity/go_home) && !prisoner.in_trouble())
-			// Time to head back to the cell; the routine picks this up.
-			prisoner.end_activity()
-
+		if(serving)
+			check_release(prisoner)
 	trouble_tick(seconds)
-
-	if(intake_open && free_slots())
-		if(isnull(arrival_countdown))
-			arrival_countdown = rand(OUTPOST_PRISON_REFILL_MIN, OUTPOST_PRISON_REFILL_MAX)
-		arrival_countdown -= seconds
-		while(arrival_countdown <= 0 && free_slots() && is_powered())
-			if(!admit_next())
-				break
-			arrival_countdown += rand(OUTPOST_PRISON_ARRIVAL_GAP_MIN, OUTPOST_PRISON_ARRIVAL_GAP_MAX)
-		arrival_countdown = free_slots() ? max(arrival_countdown, 0) : null
-	else
-		arrival_countdown = null
-
-	pay_clock += seconds
-	while(pay_clock >= 60)
-		pay_clock -= 60
-		deposit_pay()
-
-// ===== MONEY =====
-
-/// Pays the outpost treasury. Returns TRUE if it was paid.
-/datum/outpost_prison/proc/pay_treasury(amount, reason)
-	if(amount <= 0 || QDELETED(outpost))
-		return FALSE
-	outpost.ensure_home_services()
-	if(!outpost.treasury?.adjust_money(amount, reason))
-		return FALSE
-	paid_total += amount
-	return TRUE
-
-/// Deposits the whole credits owed; the fraction waits for next minute
-/datum/outpost_prison/proc/deposit_pay()
-	// The epsilon keeps float error from turning 32 owed into 31.99999 and a credit short.
-	var/whole = round(pay_owed + 0.001)
-	if(whole >= 1 && pay_treasury(whole, "Prison wing stipend"))
-		pay_owed -= whole
-		return whole
-	return 0
-
-/// What a prisoner earns the treasury per minute right now
-/datum/outpost_prison/proc/prisoner_pay_rate(mob/living/basic/outpost_prisoner/prisoner)
-	if(prisoner.stat == DEAD || prisoner.phase != PRISONER_PRESENT || !prisoner.earning_pay())
-		return 0
-	return OUTPOST_PRISON_BASE_PAY * prisoner.care() / 100 * conditions_score() / 100
-
-/// What every prisoner earns the treasury per minute right now
-/datum/outpost_prison/proc/pay_rate()
-	var/total = 0
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		total += prisoner_pay_rate(prisoner)
-	return total
+	experiments_tick(seconds)
+	intake_tick(seconds)
+	pay_tick(seconds)
 
 // ===== COMINGS AND GOINGS =====
-
-/datum/outpost_prison/proc/set_intake(open, mob/user)
-	open = !!open
-	if(open == intake_open)
-		return
-	intake_open = open
-	arrival_countdown = (intake_open && free_slots()) ? OUTPOST_PRISON_FIRST_ARRIVAL : null
-	if(user)
-		log_game("PLAYER OUTPOST: [key_name(user)] [intake_open ? "opened" : "closed"] prison intake at '[outpost?.name]'")
-
-/// Beams a new prisoner into the lowest-numbered empty cell. Returns them, or null.
-/datum/outpost_prison/proc/admit_next()
-	if(!free_slots())
-		return null
-	for(var/datum/outpost_prison_cell/cell as anything in cells)
-		if(cell.occupant)
-			continue
-		var/turf/spot = cell.arrival_turf()
-		if(!spot)
-			continue
-		var/mob/living/basic/outpost_prisoner/prisoner = new(spot)
-		admit(prisoner, cell)
-		prisoner.beam_in()
-		return prisoner
-	return null
-
-/// Books a prisoner into a cell (the first free one when none is given)
-/datum/outpost_prison/proc/admit(mob/living/basic/outpost_prisoner/prisoner, datum/outpost_prison_cell/into)
-	if(!into)
-		for(var/datum/outpost_prison_cell/cell as anything in cells)
-			if(!cell.occupant)
-				into = cell
-				break
-	prisoner.prison = src
-	prisoners |= prisoner
-	if(into)
-		into.occupant = prisoner
-		prisoner.cell = into
-	prisoner.sentence_left = rand(OUTPOST_PRISON_SENTENCE_MIN, OUTPOST_PRISON_SENTENCE_MAX)
-	refresh_prisoner_reach(prisoner)
-	add_log("[prisoner.real_name] arrived in cell [into ? into.number : "-"], [round(prisoner.sentence_left / 60)] min sentence.")
-
-/// Sentence served: pays the release bonus and beams the prisoner out of wherever they stand
-/datum/outpost_prison/proc/release(mob/living/basic/outpost_prisoner/prisoner)
-	if(prisoner.phase != PRISONER_PRESENT || prisoner.stat == DEAD)
-		return 0
-	var/average = prisoner.served_seconds ? prisoner.kept_seconds / prisoner.served_seconds : 0
-	var/bonus = round(OUTPOST_PRISON_RELEASE_BONUS * average)
-	pay_treasury(bonus, "Prison release: [prisoner.real_name]")
-	add_log("[prisoner.real_name] released, +[bonus] cr.")
-	prisoner.say_context("release")
-	prisoner.beam_out()
-	return bonus
-
-/datum/outpost_prison/proc/on_prisoner_death(mob/living/basic/outpost_prisoner/prisoner)
-	prisoner.body_pickup_left = OUTPOST_PRISON_CORPSE_PICKUP
-	add_log("[prisoner.real_name] died.")
-	prisoner.died_at = world.time
-	prisoner.clear_trouble()
-	if(prisoner.staff_to_blame())
-		blame_death(prisoner)
-	if(!loose_count() && !riot_active)
-		broke_out = FALSE
-	update_riot_lights()
-
-/// The corrections service takes a body away
-/datum/outpost_prison/proc/collect(mob/living/basic/outpost_prisoner/prisoner)
-	prisoner.beam_out()
 
 /// Drops a prisoner from the roster and their cell, and starts refilling it
 /datum/outpost_prison/proc/forget(mob/living/basic/outpost_prisoner/prisoner)
@@ -666,70 +431,21 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	if(!loose_count() && !riot_active)
 		broke_out = FALSE
 	update_riot_lights()
-	if(prisoner.cell?.occupant == prisoner)
-		prisoner.cell.occupant = null
+	var/datum/outpost_prison_cell/emptied = prisoner.cell
+	if(emptied?.occupant == prisoner)
+		emptied.occupant = null
 	prisoner.cell = null
 	prisoner.prison = null
 	for(var/key in claims.Copy())
 		if(claims[key] == prisoner)
 			claims -= key
-	if(intake_open && isnull(arrival_countdown))
-		arrival_countdown = rand(OUTPOST_PRISON_REFILL_MIN, OUTPOST_PRISON_REFILL_MAX)
+	on_cell_emptied(emptied, prisoner.stat == DEAD)
 
 /datum/outpost_prison/proc/add_log(text)
 	entries = list(list("time" = station_time_timestamp("hh:mm"), "text" = text)) + entries
 	if(length(entries) > OUTPOST_PRISON_LOG_LENGTH)
 		entries.Cut(OUTPOST_PRISON_LOG_LENGTH + 1)
 	log_game("PLAYER OUTPOST PRISON: '[outpost?.name]': [text]")
-
-// ===== WARDEN CONSOLE DATA =====
-
-/// Prisoners in cell order, then any without a cell
-/datum/outpost_prison/proc/roster_order()
-	var/list/ordered = list()
-	for(var/datum/outpost_prison_cell/cell as anything in cells)
-		if(cell.occupant && (cell.occupant in prisoners))
-			ordered += cell.occupant
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		ordered |= prisoner
-	return ordered
-
-/datum/outpost_prison/proc/conditions_payload()
-	return list(
-		"clean" = clean_score,
-		"lit" = lit_score,
-		"powered" = powered_score,
-		"score" = round(conditions_score()),
-	)
-
-/// The warden console's ui_data (OutpostPrison.tsx)
-/datum/outpost_prison/proc/ui_payload(mob/user)
-	var/list/roster = list()
-	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in roster_order())
-		roster += list(list(
-			"ref" = REF(prisoner),
-			"name" = prisoner.real_name,
-			"cell" = prisoner.cell?.number || 0,
-			"crime" = prisoner.crime,
-			"sentence_left" = prisoner.stat == DEAD ? 0 : max(0, round(prisoner.sentence_left)),
-			"status" = prisoner.console_status(),
-		))
-	var/list/alarm = alarm_state()
-	return list(
-		"linked" = TRUE,
-		"powered" = is_powered(),
-		"intake_open" = intake_open,
-		"next_arrival" = (intake_open && !isnull(arrival_countdown)) ? round(arrival_countdown) : null,
-		"capacity" = capacity,
-		"pay_rate" = round(pay_rate(), 0.1),
-		"paid_total" = paid_total,
-		"can_manage" = !!outpost?.can_manage(user),
-		"conditions" = conditions_payload(),
-		"prisoners" = roster,
-		"log" = entries.Copy(),
-		"alarm" = alarm[1],
-		"alarm_text" = alarm[2],
-	)
 
 // ===== CELL =====
 
@@ -738,18 +454,23 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	var/number = 0
 	var/datum/outpost_prison/prison
 	var/datum/weakref/door_ref
+	/// Where the door stood, so a door rebuilt there is still the cell's
+	var/turf/door_turf
 	var/datum/weakref/bed_ref
 	/// The tiles inside, and the same as a set (turf = TRUE)
 	var/list/turfs
 	var/list/turf_set
 	/// The prisoner who owns it
 	var/mob/living/basic/outpost_prisoner/occupant
+	/// world.time from which the cell may take a new arrival
+	var/ready_at = 0
 
 /datum/outpost_prison_cell/New(datum/outpost_prison/owner, obj/machinery/door/airlock/security/glass/outpost_prison_cell/door, list/inside)
 	. = ..()
 	prison = owner
 	number = door.cell_number
 	door_ref = WEAKREF(door)
+	door_turf = get_turf(door)
 	turfs = inside
 	turf_set = list()
 	for(var/turf/tile as anything in inside)
@@ -763,12 +484,20 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		occupant.cell = null
 	occupant = null
 	prison = null
+	door_turf = null
 	turfs = null
 	turf_set = null
 	return ..()
 
+/// The cell's door: the one it was found with, or any airlock since built where it stood
 /datum/outpost_prison_cell/proc/door()
-	return door_ref?.resolve()
+	var/obj/machinery/door/airlock/door = door_ref?.resolve()
+	if(door)
+		return door
+	for(var/obj/machinery/door/airlock/rebuilt in door_turf)
+		if(!QDELETED(rebuilt))
+			return rebuilt
+	return null
 
 /// The cell's bed, while it is still inside the cell
 /datum/outpost_prison_cell/proc/bed()
@@ -789,5 +518,5 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 		return get_turf(bed)
 	return length(turfs) ? turfs[1] : null
 
-#undef PRISON_REFRESH_SECONDS
+#undef PRISON_SUPPLY_REFRESH_SECONDS
 #undef PRISON_CELL_MAX_TILES

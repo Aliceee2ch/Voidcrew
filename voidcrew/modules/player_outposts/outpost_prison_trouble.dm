@@ -4,7 +4,7 @@
  * Mood, 0 to 100, drifts every minute with how a prisoner is kept (hunger, uniform, injuries,
  * being bolted in) and how the wing is kept (dark, dirty, unpowered, or all good), and jumps with
  * events: a meal, a clean uniform, treatment, being hit by staff, seeing a fight. Personality
- * scales the losses. See the numbers in voidcrew/_DEFINES/player_outposts.dm.
+ * scales the losses. See the numbers in voidcrew/_DEFINES/outpost_prison_trouble.dm.
  *
  * Unhappy prisoners make trouble:
  * - Below PRISONER_THREAT_MOOD, staff who come within two tiles in the cell block get threatened
@@ -134,30 +134,15 @@
 /mob/living/basic/outpost_prisoner/proc/set_mood(amount)
 	mood = clamp(amount, 0, 100)
 
-/// What their mood does per minute as things stand, personality included
+/**
+ * What their mood does per minute as things stand, personality included: their needs
+ * (needs_mood_per_minute()), the state of the wing (wing_mood_per_minute()) and the rest below.
+ */
 /mob/living/basic/outpost_prisoner/proc/mood_drift_per_minute()
-	var/loss = 0
-	var/gain = 0
-	if(hunger < PRISONER_HUNGER_STARVING)
-		loss += PRISONER_MOOD_STARVING
-	else if(hunger < PRISONER_HUNGER_HUNGRY)
-		loss += PRISONER_MOOD_HUNGRY
-	if(uniform_grime >= PRISONER_GRIME_FILTHY)
-		loss += PRISONER_MOOD_FILTHY
-	else if(uniform_grime >= PRISONER_GRIME_DIRTY)
-		loss += PRISONER_MOOD_DIRTY
-	var/missing = 1 - health_factor() / 100
-	if(missing > 0)
-		loss += PRISONER_MOOD_HURT * missing
-	if(prison && trouble != PRISONER_TROUBLE_LOOSE)
-		if(prison.lit_score < PRISON_DARK_BELOW)
-			loss += PRISONER_MOOD_DARK
-		if(prison.clean_score < PRISON_DIRTY_BELOW)
-			loss += PRISONER_MOOD_DIRTY_WING
-		if(!prison.powered_score)
-			loss += PRISONER_MOOD_NO_POWER
-		if(prison.clean_score >= PRISON_GOOD_CONDITIONS && prison.lit_score >= PRISON_GOOD_CONDITIONS && prison.powered_score >= PRISON_GOOD_CONDITIONS)
-			gain += PRISONER_MOOD_GOOD_WING
+	var/list/from_needs = needs_mood_per_minute()
+	var/list/from_wing = wing_mood_per_minute()
+	var/gain = from_needs[1] + from_wing[1]
+	var/loss = from_needs[2] + from_wing[2]
 	if(locked_in_seconds > OUTPOST_PRISON_LOCKED_IN_COMPLAINT)
 		loss += PRISONER_MOOD_LOCKED_IN + round((locked_in_seconds - OUTPOST_PRISON_LOCKED_IN_COMPLAINT) / 60)
 	if(istype(activity, /datum/prisoner_activity/basketball) || istype(activity, /datum/prisoner_activity/read) || istype(activity, /datum/prisoner_activity/chat))
@@ -643,6 +628,7 @@
 /datum/prisoner_activity/bang_door
 	name = "banging on a door"
 	context = "grumbling"
+	leisure = TRUE
 	weight = 0
 	personality_weights = list("grumpy" = 1.5, "cheerful" = 0.5, "quiet" = 0.7)
 	min_duration = 15 SECONDS
@@ -702,6 +688,7 @@
 /datum/prisoner_activity/gather
 	name = "gathering in the yard"
 	context = "restless"
+	leisure = TRUE
 	weight = 0
 	personality_weights = list("nervous" = 0.6, "quiet" = 0.7, "grumpy" = 1.3)
 	min_duration = 20 SECONDS

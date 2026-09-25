@@ -24,9 +24,36 @@
 
 /obj/structure/checkpoint_drone_bay/proc/launch()
 	flick("make", src)
+	playsound(src, 'voidcrew/sound/checkpoint/drone_launch.ogg', 50, TRUE, pressure_affected = FALSE)
 
 /obj/structure/checkpoint_drone_bay/proc/receive()
 	flick("recharge", src)
+	playsound(src, 'voidcrew/sound/checkpoint/drone_dock.ogg', 40, TRUE, pressure_affected = FALSE)
+
+/// The yard's working noise, played from the middle of the hull while the drones build.
+/datum/looping_sound/checkpoint_yard
+	mid_sounds = list('voidcrew/sound/checkpoint/construction_yard_loop.ogg' = 1)
+	mid_length = 6.07 SECONDS
+	volume = 30
+	extra_range = 12
+	falloff_distance = 10
+	pressure_affected = FALSE
+
+/// Carries the yard noise. Bay turfs are replaced as the hull goes down, so the loop needs its own holder.
+/obj/effect/checkpoint_yard_sound
+	name = "construction noise"
+	invisibility = INVISIBILITY_ABSTRACT
+	anchored = TRUE
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
+	var/datum/looping_sound/checkpoint_yard/soundloop
+
+/obj/effect/checkpoint_yard_sound/Initialize(mapload)
+	. = ..()
+	soundloop = new(src, TRUE)
+
+/obj/effect/checkpoint_yard_sound/Destroy()
+	QDEL_NULL(soundloop)
+	return ..()
 
 /// What a working yard drone sounds like: welding, wrenching, screwing and cutting.
 GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(

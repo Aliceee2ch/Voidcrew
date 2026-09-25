@@ -84,6 +84,7 @@
 	var/obj/structure/overmap/ship/vessel
 	var/list/markers = list()
 	var/list/obj/effect/checkpoint_build_drone/drones = list()
+	var/obj/effect/checkpoint_yard_sound/yard_sound
 	var/next_phase_at = 0
 	var/last_progress_at = 0
 	var/captain_wait_until = 0
@@ -602,6 +603,26 @@
 		drones += new /obj/effect/checkpoint_build_drone(cradle ? get_turf(cradle) : fallback, cradle)
 	for(var/obj/structure/checkpoint_drone_bay/cradle as anything in cradles)
 		cradle.launch()
+	if(!yard_sound)
+		yard_sound = new(hull_centre())
+
+/// The bay tile nearest the middle of the saved hull.
+/datum/checkpoint_construction/proc/hull_centre()
+	var/low_x = INFINITY
+	var/low_y = INFINITY
+	var/high_x = 0
+	var/high_y = 0
+	var/turf/any_tile
+	for(var/index in hull_indices)
+		var/turf/tile = bay_turfs[index]
+		any_tile = tile
+		low_x = min(low_x, tile.x)
+		low_y = min(low_y, tile.y)
+		high_x = max(high_x, tile.x)
+		high_y = max(high_y, tile.y)
+	if(!any_tile)
+		return get_turf(bay.dock)
+	return locate(round((low_x + high_x) / 2), round((low_y + high_y) / 2), any_tile.z)
 
 /// One bounded pass over the drones: travel, finish work, or take the next visit.
 /datum/checkpoint_construction/proc/run_drones()
@@ -1390,6 +1411,7 @@
 	for(var/turf/marked as anything in markers)
 		qdel(markers[marked])
 	markers.Cut()
+	QDEL_NULL(yard_sound)
 	var/site_remains = !QDELETED(bay) && !QDELETED(home)
 	for(var/obj/effect/checkpoint_build_drone/drone as anything in drones)
 		if(drone?.visit)

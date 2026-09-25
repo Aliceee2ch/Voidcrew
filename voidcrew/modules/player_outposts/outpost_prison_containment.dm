@@ -428,19 +428,18 @@
 	SIGNAL_HANDLER
 	return COMPONENT_BLOCK_MOB_CHANGE
 
-/// In custody, the dead stay dead: the corrections service has already logged the death
+/// The dead stay dead: the corrections service has already logged the death, whether or not the body is still in the cell block
 /mob/living/basic/outpost_prisoner/can_be_revived()
-	if(prison && phase == PRISONER_PRESENT)
+	if(died_at || (prison && phase == PRISONER_PRESENT))
 		return FALSE
 	return ..()
 
-/// Someone tried to bring a dead prisoner back: the body is collected at once
+/// Someone tried to bring a dead prisoner back
 /mob/living/basic/outpost_prisoner/proc/on_revive_attempt(datum/source, full_heal_flags)
 	SIGNAL_HANDLER
 	if(stat != DEAD || !prison || phase != PRISONER_PRESENT)
 		return
-	prison.add_log("Someone tried to revive [real_name]. The corrections service has already logged the death and collected the body.")
-	INVOKE_ASYNC(prison, TYPE_PROC_REF(/datum/outpost_prison, collect), src)
+	prison.add_log("Someone tried to revive [real_name]. The corrections service has already logged the death.")
 
 /**
  * Whether they are shut in their cell: standing in a cell with its door bolted shut, or with

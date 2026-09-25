@@ -98,12 +98,11 @@
 	TEST_ASSERT_EQUAL(outpost_prison_turret_verdict(hulk, probe), 1, "The rule shoots a subdued hulk")
 	hulk.subdued = FALSE
 
-	// Inside the wing, only a turret they could walk up to and smash
+	// A turret they cannot walk up to, such as one behind the office glass, covers them too
 	rioter.reachable = list()
-	TEST_ASSERT_EQUAL(outpost_prison_turret_verdict(rioter, probe), 1, "The rule shoots a rioter who cannot reach the turret")
-	TEST_ASSERT(!(rioter in probe_targets(probe)), "A turret the rioter cannot reach went for them")
+	TEST_ASSERT_EQUAL(outpost_prison_turret_verdict(rioter, probe), 2, "The rule spares a rioter who cannot reach the turret")
+	TEST_ASSERT(rioter in probe_targets(probe), "A turret the rioter cannot reach left them alone")
 	prison.refresh_prisoner_reach(rioter)
-	TEST_ASSERT_EQUAL(outpost_prison_turret_verdict(rioter, probe), 2, "The rule stopped shooting a rioter once their reach came back")
 
 	// The kinds of trouble: threats, arguments and wrecking a cell are not worth a shot; the rest are
 	REMOVE_TRAIT(downed, TRAIT_INCAPACITATED, TRAIT_SOURCE_UNIT_TESTS)
@@ -137,7 +136,7 @@
 	downed.trouble = null
 	qdel(brawl)
 
-	// A prisoner shut in a cell is never shot, and a turret built inside a bolted cell shoots nobody in the yard
+	// A prisoner shut in a cell is never shot, even by a turret shut in with them
 	var/datum/outpost_prison_cell/holding = calm.cell
 	TEST_ASSERT_NOTNULL(holding, "The calm prisoner has no cell")
 	var/list/free_tiles = list()
@@ -157,7 +156,6 @@
 	TEST_ASSERT_EQUAL(outpost_prison_turret_verdict(calm, cell_probe), 1, "The rule shoots a rioter bolted in their cell")
 	var/list/from_the_cell = probe_targets(cell_probe)
 	TEST_ASSERT(!(calm in from_the_cell), "A turret in a bolted cell went for the rioter shut in with it")
-	TEST_ASSERT(!(rioter in from_the_cell), "A turret in a bolted cell went for a rioter in the yard, who cannot reach it")
 	calm.trouble = null
 	cell_door.unbolt()
 	settle_prison_air(home)

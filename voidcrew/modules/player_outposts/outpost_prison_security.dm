@@ -6,15 +6,14 @@
  * outpost_prison_turret_verdict():
  * - A prisoner is shot only while making real trouble: rioting or breaking out, loose, swinging at
  *   staff, climbing a hatch, or fighting past the argument. Never while down, cuffed, shut in a
- *   cell or dead, while backing off from a warning, or after giving up. Inside the wing, only by a
- *   turret they could walk up to and smash, so a turret behind the office glass or inside a
- *   bolted cell shoots nobody in the cell block.
+ *   cell or dead, while backing off from a warning, or after giving up. A turret behind the office
+ *   glass covers the yard too: its shots at prisoners go through glass.
  * - Guards and Kessler's people are never shot.
  * - The experiments' creatures are shot as hull turrets shoot them, in the turret's own mode.
  * Anything that is not the prison's is up to the turret, as tg has it.
  *
  * A shot at a prisoner is always a stun shot: the turret's own if its gun has a stamina or
- * electrode setting, else a disabler beam, whatever the mode. Before the first shot at a prisoner
+ * electrode setting that goes through glass, else a disabler beam, whatever the mode. Before the first shot at a prisoner
  * it has not warned lately, the turret warns them and holds fire for a moment, and the prisoner
  * decides what to do about it (react_to_turret()). Its shots pass through anyone the rule spares,
  * and a lethal shot passes through every prisoner. Rioters go for turrets they can reach before
@@ -35,7 +34,7 @@
 /**
  * What a turret following the prison's rules does about `target`: OUTPOST_PRISON_TURRET_SHOOT,
  * OUTPOST_PRISON_TURRET_SPARE, or OUTPOST_PRISON_TURRET_NOT_MINE for anything that is not the
- * prison's. `turret` is the turret asking, for the reach rule; without one it is left out.
+ * prison's. `turret` is the turret asking, if any.
  */
 /proc/outpost_prison_turret_verdict(mob/living/target, obj/machinery/porta_turret/turret)
 	if(!isliving(target))
@@ -73,9 +72,6 @@
 	if(stat != CONSCIOUS || phase != PRISONER_PRESENT || can_be_dragged() || is_confined())
 		return OUTPOST_PRISON_TURRET_SPARE
 	if(surrendered_to_turret() || backing_off_from_turret() || !turret_trouble())
-		return OUTPOST_PRISON_TURRET_SPARE
-	// Inside the wing, only a turret they could walk up to and smash
-	if(turret && prison && get_area(src) == prison.wing && !reachable?[get_turf(turret)])
 		return OUTPOST_PRISON_TURRET_SPARE
 	return OUTPOST_PRISON_TURRET_SHOOT
 
@@ -147,7 +143,9 @@
 	var/old_projectile = stun_projectile
 	var/old_sound = stun_projectile_sound
 	mode = PRISON_TURRET_STUN
-	if(!outpost_prison_stun_projectile(stun_projectile))
+	// A turret behind the office glass covers the yard, so the shot has to go through glass
+	var/obj/projectile/own_stun = stun_projectile
+	if(!outpost_prison_stun_projectile(own_stun) || !(initial(own_stun.pass_flags) & PASSGLASS))
 		stun_projectile = /obj/projectile/beam/disabler
 		stun_projectile_sound = 'sound/items/weapons/taser2.ogg'
 	. = ..()

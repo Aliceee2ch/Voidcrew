@@ -48,7 +48,7 @@ A turret you build (a turret frame, an energy gun and a proximity sensor) knows 
 
 Before its first shot at a prisoner, a turret warns them with a red beam and "Step away." Some back off, some rioters give up and walk back to their cell for you to bolt them in, and some keep going and get stunned. A happier prisoner is likelier to listen.
 
-Inside the wing a turret only fires on prisoners who could walk up to it, so one behind the office glass or in a locked cell won't cover the yard. Rioters go for turrets they can reach and smash them. Only the outpost's members can use a turret's controls or a turret control panel, or unbolt a turret.
+A turret behind the office glass covers the yard: its stun shots go through glass. Rioters go for turrets they can reach and smash them. Only the outpost's members can use a turret's controls or a turret control panel, or unbolt a turret.
 
 ## Talking to prisoners
 

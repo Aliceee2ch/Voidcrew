@@ -87,11 +87,13 @@
 	cuff_work = FALSE
 	if(QDELETED(src))
 		return FALSE
-	if(!done || QDELETED(restraints) || restraints.loc != user || cuff_refusal(user, restraints))
+	// A borg's cuffs are part of its module: it dispenses a pair, as tg's cuffs do for borgs.
+	var/dispense = iscyborg(user)
+	if(!done || QDELETED(restraints) || (restraints.loc != user && !dispense) || cuff_refusal(user, restraints))
 		balloon_alert(user, "failed to cuff!")
 		return FALSE
 	var/success_sound = restraints.cuffsuccesssound
-	if(!apply_cuffs(restraints, user))
+	if(!apply_cuffs(restraints, user, dispense))
 		balloon_alert(user, "failed to cuff!")
 		return FALSE
 	playsound(src, success_sound, 30, TRUE, -2)
@@ -101,21 +103,26 @@
 
 /**
  * Puts `restraints` on them at once; zipties become their used pair, as on people. `user`, if
- * any, gives them up from their hands. What they hold drops and whatever they were up to stops.
- * Returns TRUE if they are cuffed.
+ * any, gives them up from their hands, unless `dispense` (a borg), which puts on a new pair of the
+ * same kind instead. What they hold drops and whatever they were up to stops. Returns TRUE if they
+ * are cuffed.
  */
-/mob/living/basic/outpost_prisoner/proc/apply_cuffs(obj/item/restraints/handcuffs/restraints, mob/living/user)
+/mob/living/basic/outpost_prisoner/proc/apply_cuffs(obj/item/restraints/handcuffs/restraints, mob/living/user, dispense = FALSE)
 	if(cuffs || QDELETED(restraints) || stat == DEAD)
 		return FALSE
-	if(user && !user.temporarilyRemoveItemFromInventory(restraints))
-		return FALSE
 	var/obj/item/restraints/handcuffs/worn = restraints
-	if(restraints.trashtype)
-		var/trash_path = restraints.trashtype
-		worn = new trash_path(src)
-		qdel(restraints)
+	if(dispense)
+		var/dispensed_path = restraints.trashtype || restraints.type
+		worn = new dispensed_path(src)
 	else
-		restraints.forceMove(src)
+		if(user && !user.temporarilyRemoveItemFromInventory(restraints))
+			return FALSE
+		if(restraints.trashtype)
+			var/trash_path = restraints.trashtype
+			worn = new trash_path(src)
+			qdel(restraints)
+		else
+			restraints.forceMove(src)
 	if(QDELETED(worn) || worn.loc != src)
 		return FALSE
 	cuffs = worn

@@ -1,6 +1,7 @@
 /**
- * Outpost cargo dock: the free catalog entry, the landing pad at every rotation, and outpost
- * freight landing on it with no elevator and no freight berth.
+ * Outpost cargo dock: the free catalog entry, the landing pad at every rotation, outpost
+ * freight landing on it with no elevator and no freight berth, the ferry refusing to land on
+ * anything it would crush, and the dock's area being released when its claim is torn down.
  *
  * Voidcrew defines are not visible from test files, so sizes and messages appear as literals.
  * The map (outpost_upgrade_cargo_dock.dmm) is 16x13 with its entrance on the south edge; the
@@ -344,3 +345,141 @@
 	home.lobby_panels = saved_elevator_panels
 	saved_elevator_panels = null
 	settle_cargo_dock_air(room_turfs)
+
+// ===== THE FERRY NEVER LANDS ON ANYTHING =====
+
+/// Freight is dispatched and landed by hand here, so the real timers never fire mid-test.
+/datum/unit_test/voidcrew_launch_cargo_fixture/outpost_cargo_dock_delivery/obstruction
+
+/**
+ * One obstruction, twice: the console refuses to dispatch while `obstruction` is on the pad,
+ * and freight dispatched to a clear pad refuses to land once it is put there. Both refunds are
+ * exact, the cart survives, and the obstruction (and anyone inside it) is untouched.
+ * `obstruction` starts and ends off the pad, on `holding`.
+ */
+/datum/unit_test/voidcrew_launch_cargo_fixture/outpost_cargo_dock_delivery/obstruction/proc/check_refusal(obj/structure/overmap/dynamic/player_outpost/home, datum/supply_order/order, price, atom/movable/obstruction, turf/pad_spot, turf/holding, label)
+	var/datum/voidcrew_cargo_shuttle/outpost/ferry = home.freight
+	var/balance = home.treasury.account_balance
+	obstruction.forceMove(pad_spot)
+	var/refusal = ferry.call_shuttle()
+	TEST_ASSERT(findtext(refusal, "Cargo dock is obstructed by"), "Freight was dispatched to a pad with [label] on it: [refusal || "no refusal"]")
+	TEST_ASSERT(findtext(refusal, obstruction.name), "The dispatch refusal does not name [label]: [refusal]")
+	TEST_ASSERT_EQUAL(ferry.state, 0, "A refused dispatch left the freight busy ([label])")
+	TEST_ASSERT_NULL(ferry.shuttle_port, "A refused dispatch prepared a ferry ([label])")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, balance, "A refused dispatch charged the treasury ([label])")
+
+	obstruction.forceMove(holding)
+	TEST_ASSERT_NULL(ferry.call_shuttle(), "Freight was not dispatched to the cleared pad ([label])")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, balance - price, "Dispatch did not reserve the order ([label])")
+	obstruction.forceMove(pad_spot)
+	deltimer(ferry.warmup_timer)
+	TEST_ASSERT(!ferry.complete_arrival(), "The ferry landed on [label]")
+	TEST_ASSERT(findtext(ferry.last_error, "Cargo dock is obstructed by"), "The refused landing gave the wrong reason ([label]): [ferry.last_error]")
+	TEST_ASSERT_EQUAL(ferry.state, 0, "The refused landing left the freight busy ([label])")
+	TEST_ASSERT_NULL(ferry.shuttle_port, "The refused landing left its ferry behind ([label])")
+	TEST_ASSERT_NULL(ferry.landing_warning_timer, "The refused landing left its alarm armed ([label])")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, balance, "The refused landing was not refunded exactly ([label])")
+	TEST_ASSERT(order in home.cargo_cart, "The refused landing lost the order ([label])")
+	TEST_ASSERT_NULL(order.ship_paid_cost, "The refused order is still marked paid ([label])")
+	TEST_ASSERT(!QDELETED(obstruction) && obstruction.loc == pad_spot, "The refused landing still moved or deleted [label]")
+	for(var/mob/living/occupant as anything in obstruction.get_all_contents_type(/mob/living))
+		TEST_ASSERT(occupant.stat != DEAD, "The refused landing still killed [occupant] ([label])")
+	obstruction.forceMove(holding)
+
+/datum/unit_test/voidcrew_launch_cargo_fixture/outpost_cargo_dock_delivery/obstruction/Run()
+	save_economy()
+	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
+	test_home = home
+	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.founder_ckey = "cargodockobstruction"
+	TEST_ASSERT(home.load_level(), "The cargo pad obstruction outpost did not load")
+	var/result = place_test_cargo_dock(home, list(0))
+	TEST_ASSERT(istype(result, /datum/outpost_upgrade/cargo_dock), "The cargo dock could not be placed: [result]")
+	var/datum/outpost_upgrade/cargo_dock/dock = result
+	var/obj/docking_port/stationary/outpost_cargo_dock/pad = dock.pad
+	TEST_ASSERT_NOTNULL(pad, "The cargo dock has no pad")
+	var/datum/voidcrew_cargo_shuttle/outpost/ferry = home.freight
+	var/list/rect = cargo_dock_rect(pad)
+	var/turf/pad_spot = locate(rect[1] + 5, rect[2] + 3, pad.z)
+	var/turf/holding = home.arrival_turf
+	TEST_ASSERT_NOTNULL(holding, "The claim has no arrival spot to keep test objects on")
+	TEST_ASSERT_NULL(pad.pad_obstruction(), "The freshly placed pad already counts as obstructed")
+
+	home.treasury.account_balance = 10000
+	var/datum/supply_pack/voidcrew_outpost_cancel_during_generation/pack = new
+	var/datum/supply_order/order = new(pack)
+	order.manifest_can_fail = FALSE
+	home.cargo_cart += order
+	var/price = order.get_final_cost()
+
+	// Someone standing on the pad.
+	var/mob/living/carbon/human/consistent/bystander = allocate(/mob/living/carbon/human/consistent, holding)
+	check_refusal(home, order, price, bystander, pad_spot, holding, "a person")
+	// Someone in a crate: the crate is what the refusal names.
+	var/obj/structure/closet/crate/crate = allocate(/obj/structure/closet/crate, holding)
+	var/mob/living/basic/mouse/stowaway = allocate(/mob/living/basic/mouse, crate)
+	check_refusal(home, order, price, crate, pad_spot, holding, "a mouse in a crate")
+	// Something neither anchored nor dense still counts while someone is inside it.
+	var/obj/structure/closet/body_bag/bag = allocate(/obj/structure/closet/body_bag, holding)
+	TEST_ASSERT(!bag.density && !bag.anchored, "The body bag fixture is anchored or dense")
+	stowaway.forceMove(bag)
+	check_refusal(home, order, price, bag, pad_spot, holding, "a mouse in a body bag")
+	// An anchored machine, which the landing would delete.
+	var/obj/machinery/recharger/machine = allocate(/obj/machinery/recharger, holding)
+	TEST_ASSERT(machine.anchored && !machine.density, "The recharger fixture is not an anchored, open machine")
+	check_refusal(home, order, price, machine, pad_spot, holding, "an anchored machine")
+
+	// Loose items and grime do not block, and the landing pushes the items clear.
+	var/obj/item/crowbar/loose_item = allocate(/obj/item/crowbar, pad_spot)
+	allocate(/obj/effect/decal/cleanable/dirt, pad_spot)
+	TEST_ASSERT_NULL(pad.pad_obstruction(), "A loose item or a decal counted as an obstruction")
+	TEST_ASSERT_NULL(ferry.call_shuttle(), "Freight was not dispatched to a pad with only loose items on it")
+	// The pad's alarm is due 10 seconds before the landing.
+	TEST_ASSERT_NOTNULL(ferry.landing_warning_timer, "Dispatch set no landing alarm")
+	TEST_ASSERT_EQUAL(timeleft(ferry.warmup_timer) - timeleft(ferry.landing_warning_timer), 10 SECONDS, "The landing alarm is not due 10 seconds before the landing")
+	TEST_ASSERT(!ferry.warn_landing(ferry.delivery_generation + 1), "An alarm for another delivery went off")
+	TEST_ASSERT(ferry.warn_landing(ferry.delivery_generation), "The landing alarm did not reach the pad")
+	TEST_ASSERT(length(ferry.shuttle_port.ripples), "The landing alarm did not mark the ferry's footprint")
+	deltimer(ferry.warmup_timer)
+	TEST_ASSERT(ferry.complete_arrival(), "Freight did not land on a pad with only loose items on it: [ferry.last_error]")
+	TEST_ASSERT_EQUAL(ferry.shuttle_port.get_docked(), pad, "The ferry is not docked on the pad")
+	TEST_ASSERT_NULL(ferry.landing_warning_timer, "The landing left its alarm armed")
+	TEST_ASSERT(!length(ferry.shuttle_port.ripples), "The landing left its warning ripples behind")
+	TEST_ASSERT(!QDELETED(loose_item), "The landing destroyed a loose item on the pad")
+	TEST_ASSERT(!(order in home.cargo_cart), "The landed order stayed in the cart")
+	TEST_ASSERT_EQUAL(home.treasury.account_balance, 10000 - price, "The landed order was not charged once")
+	TEST_ASSERT(!QDELETED(bystander) && bystander.stat != DEAD, "The bystander did not survive the test")
+
+	TEST_ASSERT(ferry.send_shuttle(), "The ferry could not be sent away")
+	deltimer(ferry.warmup_timer)
+	TEST_ASSERT(ferry.complete_departure(), "The ferry could not depart: [ferry.last_error]")
+	settle_test_cargo_dock(home)
+
+// ===== THE DOCK'S AREA IS RELEASED =====
+
+/// SSmapping.areas_in_z used to keep the cargo dock's area after its claim was torn down.
+/datum/unit_test/voidcrew_outpost_cargo_dock_area_release
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_cargo_dock_area_release/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("cargodockrelease")
+	TEST_ASSERT_NOTNULL(home, "The cargo dock release outpost did not load")
+	var/result = place_test_cargo_dock(home)
+	TEST_ASSERT(istype(result, /datum/outpost_upgrade/cargo_dock), "The cargo dock could not be placed: [result]")
+	var/datum/outpost_upgrade/cargo_dock/dock = result
+	var/area/voidcrew/player_outpost/cargo_dock/dock_area = dock.installed_area
+	TEST_ASSERT(istype(dock_area), "The placed cargo dock recorded no area")
+	var/z_key = "[dock.footprint_bounds[5]]"
+	var/registrations = 0
+	for(var/area/listed as anything in SSmapping.areas_in_z[z_key])
+		if(listed == dock_area)
+			registrations++
+	TEST_ASSERT_EQUAL(registrations, 1, "The cargo dock's area is registered [registrations] times on its level")
+	settle_test_cargo_dock(home)
+
+	qdel(home)
+	var/deadline = world.time + 30 SECONDS
+	UNTIL(QDELETED(dock_area) || world.time > deadline)
+	TEST_ASSERT(QDELETED(dock_area), "Tearing the claim down did not delete the cargo dock's area")
+	for(var/level_key in SSmapping.areas_in_z)
+		TEST_ASSERT(!(dock_area in SSmapping.areas_in_z[level_key]), "SSmapping.areas_in_z still holds the deleted cargo dock area on z [level_key]")

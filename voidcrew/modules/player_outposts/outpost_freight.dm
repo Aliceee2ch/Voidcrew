@@ -6,6 +6,10 @@
 	var/last_error
 	/// Changes when dispatch or teardown replaces the operation owning a yielding callback.
 	var/delivery_generation = 0
+	/// How long before the landing the pad sounds its alarm
+	var/landing_warning_time = 10 SECONDS
+	/// Timer for that alarm
+	var/landing_warning_timer
 
 /datum/voidcrew_cargo_shuttle/outpost/New(obj/structure/overmap/dynamic/player_outpost/site)
 	home = site
@@ -39,7 +43,7 @@
 /datum/voidcrew_cargo_shuttle/outpost/proc/dispatch_orders()
 	if(state != CARGO_SHUTTLE_AWAY || busy)
 		return "Freight is already dispatched"
-	var/error = availability_error()
+	var/error = availability_error() || pad_obstruction_error()
 	if(error)
 		return error
 	delivery_generation++
@@ -72,8 +76,32 @@
 	warmup_started = world.time
 	stall_deadline = world.time + CARGO_SHUTTLE_WARMUP + CARGO_SHUTTLE_STALL_GRACE
 	warmup_timer = addtimer(CALLBACK(src, PROC_REF(complete_arrival)), CARGO_SHUTTLE_WARMUP, TIMER_STOPPABLE)
+	landing_warning_timer = addtimer(CALLBACK(src, PROC_REF(warn_landing), delivery_generation), max(CARGO_SHUTTLE_WARMUP - landing_warning_time, 0), TIMER_STOPPABLE)
 	busy = FALSE
+	home.ship_notify("Freight inbound in [CARGO_SHUTTLE_WARMUP / (1 SECONDS)] seconds. Clear the cargo dock's landing pad.", "CARGO", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify.ogg', 30)
 	return null
+
+/// Why freight cannot land on the pad right now, or null when it is clear.
+/datum/voidcrew_cargo_shuttle/outpost/proc/pad_obstruction_error()
+	var/obj/docking_port/stationary/outpost_cargo_dock/pad = home?.cargo_dock_port()
+	var/atom/movable/obstruction = pad?.pad_obstruction()
+	if(!obstruction)
+		return null
+	return "Cargo dock is obstructed by \the [obstruction]; clear the landing pad and retry"
+
+/**
+ * Timer callback, landing_warning_time before the ferry lands: the pad's alarm, and ripples
+ * over the ferry's footprint (the usual shuttle warning; the landing clears them).
+ */
+/datum/voidcrew_cargo_shuttle/outpost/proc/warn_landing(generation)
+	if(QDELETED(src) || generation != delivery_generation || state != CARGO_SHUTTLE_ARRIVING)
+		return FALSE
+	var/obj/docking_port/stationary/outpost_cargo_dock/pad = home?.cargo_dock_port()
+	if(!pad?.warn_landing(landing_warning_time / (1 SECONDS)))
+		return FALSE
+	if(!QDELETED(shuttle_port))
+		shuttle_port.create_ripples(pad, landing_warning_time)
+	return TRUE
 
 /// Refunding a cancelled reservation does not create new market stock or a second payment.
 /datum/voidcrew_cargo_shuttle/outpost/proc/cancel_pending()
@@ -90,6 +118,8 @@
 
 /datum/voidcrew_cargo_shuttle/outpost/cleanup_shuttle()
 	delivery_generation++
+	deltimer(landing_warning_timer)
+	landing_warning_timer = null
 	cancel_pending()
 	. = ..()
 	busy = FALSE
@@ -127,6 +157,8 @@
 	if(state != CARGO_SHUTTLE_ARRIVING || busy)
 		return FALSE
 	warmup_timer = null
+	deltimer(landing_warning_timer)
+	landing_warning_timer = null
 	busy = TRUE
 	var/operation_generation = delivery_generation
 	var/error = availability_error()
@@ -139,8 +171,12 @@
 			error = "Cargo dock is occupied"
 		else if(shuttle_port.canDock(pad) != SHUTTLE_CAN_DOCK)
 			error = "The cargo ferry does not fit the cargo dock"
-		else if(shuttle_port.initiate_docking(pad) != DOCKING_SUCCESS)
-			error = "Cargo dock is obstructed; clear the landing pad and retry"
+		else
+			// The landing would gib or delete whatever is on the pad, so it never lands on
+			// anything. Checked here, with nothing yielding before the move starts.
+			error = pad_obstruction_error()
+			if(!error && shuttle_port.initiate_docking(pad) != DOCKING_SUCCESS)
+				error = "Cargo dock is obstructed; clear the landing pad and retry"
 	if(QDELETED(src) || operation_generation != delivery_generation)
 		return FALSE
 	if(!error)
@@ -149,6 +185,9 @@
 		last_error = error
 		busy = FALSE
 		cleanup_shuttle()
+		log_shuttle("OUTPOST FREIGHT: landing at [home || "a deleted claim"] refused, orders refunded: [error]")
+		if(!QDELETED(home))
+			home.ship_notify("Freight could not land and was refunded. [error].", "CARGO", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 30)
 		return FALSE
 	var/list/turf/available = list()
 	for(var/turf/open/floor/location in get_cargo_bay_turfs())

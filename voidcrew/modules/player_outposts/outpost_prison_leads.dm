@@ -179,14 +179,17 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 /// A few seconds face to face, as a talk-down takes; FALSE if it was cut short or they stopped listening
 /datum/outpost_prison/proc/lead_face_to_face(mob/living/basic/outpost_prisoner/prisoner, mob/living/user, self_message)
 	prisoner.lead_questioned = TRUE
+	// Put back as found: the talk menu may already hold it and clear it itself.
+	var/was_talking = prisoner.talking
 	prisoner.talking = TRUE
 	prisoner.ai_controller?.CancelActions()
 	prisoner.face_atom(user)
 	user.face_atom(prisoner)
 	user.visible_message(span_notice("[user] asks [prisoner] something quietly."), span_notice(self_message))
 	var/finished = do_after(user, OUTPOST_PRISON_LEAD_ASK_TIME, target = prisoner)
-	prisoner.lead_questioned = FALSE
-	prisoner.talking = FALSE
+	if(!QDELETED(prisoner))
+		prisoner.lead_questioned = FALSE
+		prisoner.talking = was_talking
 	if(!finished || QDELETED(prisoner) || QDELETED(user) || prisoner.prison != src || prisoner.stat != CONSCIOUS || prisoner.phase != PRISONER_PRESENT)
 		return FALSE
 	if(!prisoner.will_listen())
@@ -391,30 +394,30 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 /**
  * Where a lie points: list(x, y, band) in relative overmap coordinates, or null when no tile is
  * fair. The band is drawn with the weights of the true candidates' bands, so a lie is no likelier
- * than the truth to send a crew into the deep; a band with no clear tile gives way to the next.
+ * than the truth to send a crew into the deep; bands with no clear tile are left out of the draw.
  */
 /datum/outpost_prison/proc/lead_lie_spot(obj/structure/overmap/ship/ship, list/candidates)
+	var/list/spots_by_band = lead_lie_spots(outpost_lead_ship_position(ship))
 	var/list/band_weights = list()
 	for(var/obj/structure/overmap/space_ruin/ruin as anything in candidates)
-		band_weights["[outpost_lead_band(get_turf(ruin))]"] += 1
-	var/list/ship_position = outpost_lead_ship_position(ship)
-	while(length(band_weights))
-		var/band_key = pick_weight(band_weights)
-		band_weights -= band_key
-		var/band = text2num(band_key)
-		var/list/spots = lead_lie_spots(band, ship_position)
-		if(length(spots))
-			var/list/spot = pick(spots)
-			return list(spot[1], spot[2], band)
-	return null
+		var/band_key = "[outpost_lead_band(get_turf(ruin))]"
+		if(length(spots_by_band[band_key]))
+			band_weights[band_key] += 1
+	if(!length(band_weights))
+		return null
+	var/band_key = pick_weight(band_weights)
+	var/list/spot = pick(spots_by_band[band_key])
+	return list(spot[1], spot[2], text2num(band_key))
 
 /**
- * Every tile a lie in `band` may point at, as list(x, y) pairs: in the flyable part of the
- * overmap, in the band, with nothing on it, no ruin, planet or outpost within SHIP_VIEW_RANGE, and
- * out of sight of `ship_position` (null when the ship is not on the overmap). A crew that flies
- * there sees nothing that could pass for the place they were told of.
+ * Every tile a lie may point at, as band ("1") -> list of list(x, y): in the flyable part of the
+ * overmap, with nothing on it, no ruin, planet or player outpost within SHIP_VIEW_RANGE, and out
+ * of sight of `ship_position` (null when the ship is not on the overmap). A crew that flies there
+ * sees nothing that could pass for the place they were told of. One pass over the chart, as a
+ * bought star chart's; it runs once per lie, and a wing gives at most one lead per
+ * OUTPOST_PRISON_LEAD_GAP.
  */
-/datum/outpost_prison/proc/lead_lie_spots(band, list/ship_position)
+/datum/outpost_prison/proc/lead_lie_spots(list/ship_position)
 	var/list/in_sight = new /list(OVERMAP_SIZE * OVERMAP_SIZE)
 	for(var/obj/structure/overmap/site in GLOB.overmap_objects)
 		if(QDELETED(site) || !site.sensor_detectable)
@@ -427,18 +430,19 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 			outpost_lead_stamp_sight(in_sight, coords)
 	if(ship_position)
 		outpost_lead_stamp_sight(in_sight, ship_position)
-	var/list/spots = list()
+	var/list/spots_by_band = list()
 	for(var/tile_x in 2 to OVERMAP_SIZE - 1)
 		for(var/tile_y in 2 to OVERMAP_SIZE - 1)
 			if(in_sight[(tile_y - 1) * OVERMAP_SIZE + tile_x])
 				continue
 			var/turf/open/overmap/tile = outpost_lead_overmap_turf(tile_x, tile_y)
-			if(!istype(tile) || outpost_lead_band(tile) != band)
+			if(!istype(tile) || (locate(/obj/structure/overmap) in tile))
 				continue
-			if(locate(/obj/structure/overmap) in tile)
-				continue
-			spots += list(list(tile_x, tile_y))
-	return spots
+			var/band_key = "[outpost_lead_band(tile)]"
+			if(!spots_by_band[band_key])
+				spots_by_band[band_key] = list()
+			spots_by_band[band_key] += list(list(tile_x, tile_y))
+	return spots_by_band
 
 /// A lie's ruin name: a space ruin that turns up naturally but is not on the overmap now, so the name alone gives nothing away
 /datum/outpost_prison/proc/lead_fake_name()

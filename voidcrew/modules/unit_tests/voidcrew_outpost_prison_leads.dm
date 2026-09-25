@@ -223,21 +223,21 @@
 	TEST_ASSERT(abs(prison.lead_lie_chance(teller, asker) - 35) < 0.01, "A nervous prisoner's chance is not x0.7")
 
 	// A lie needs a clear tile in some candidate's band; a crowded test overmap may have none
-	var/list/bands = list()
-	for(var/obj/structure/overmap/space_ruin/ruin as anything in prison.lead_candidates(ship))
-		bands |= outpost_lead_band(get_turf(ruin))
+	var/list/spots_by_band = prison.lead_lie_spots(outpost_lead_ship_position(ship))
 	var/can_lie = FALSE
-	for(var/band in bands)
-		if(length(prison.lead_lie_spots(band, outpost_lead_ship_position(ship))))
+	for(var/obj/structure/overmap/space_ruin/ruin as anything in prison.lead_candidates(ship))
+		if(length(spots_by_band["[outpost_lead_band(get_turf(ruin))]"]))
 			can_lie = TRUE
 			break
+	teller.carries_lead = TRUE
+	prison.lead_test_roll = FALSE
 	if(!can_lie)
+		// With nowhere fair to point, a would-be liar tells the truth
+		TEST_ASSERT_EQUAL(prison.give_lead(teller, ship, asker, TRUE), "truth", "A lie with no clear tile was told anyway")
 		TEST_NOTICE(src, "The test overmap has no tile clear enough for a lie; the lie checks were skipped")
 		settle_prison_air(home)
 		return
 
-	teller.carries_lead = TRUE
-	prison.lead_test_roll = FALSE
 	TEST_ASSERT_EQUAL(prison.give_lead(teller, ship, asker, TRUE), "lie", "A forced lie was not told")
 	var/datum/outpost_prison_lead/lead = leads_newest(prison)
 	TEST_ASSERT(lead?.lie, "The lie was not tracked as one")

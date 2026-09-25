@@ -11,9 +11,9 @@
  * - A cell toilet overflows: the same gurgle, then that cell's floor is wet for a while and a
  *   little dirty. The water only slips people who run, and prisoners never slip.
  * One comes every PRISON_WING_EVENT_GAP_MIN to _MAX seconds of crew-home time, while there are
- * prisoners in the wing and nothing else is going on (no riot, nobody loose, no experiment). Each is
- * logged on the warden console and shows in the wing, and prisoners who see it say something and
- * step out of the mess. None of them fines anyone. Numbers in
+ * prisoners in the wing and nothing else is going on (no riot, nobody loose; an experiment under way
+ * holds nothing, owner 2026-09-25). Each is logged on the warden console and shows in the wing, and
+ * prisoners who see it say something and step out of the mess. None of them fines anyone. Numbers in
  * voidcrew/_DEFINES/outpost_prison_incidents.dm.
  *
  * Only fixtures in the cell block take part, so vents built in the office never soak up a backup,
@@ -52,8 +52,6 @@ GLOBAL_LIST_INIT(outpost_prison_vent_filth, list(
 		return "riot"
 	if(loose_count())
 		return "someone loose"
-	if(experiment_active())
-		return "experiment"
 	if(!wildcard_prisoner_count())
 		return "no prisoners"
 	return null

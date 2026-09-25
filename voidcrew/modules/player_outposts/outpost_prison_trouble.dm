@@ -142,9 +142,9 @@
 /mob/living/basic/outpost_prisoner/proc/ai_running()
 	return outpost_prison_ai_running(src)
 
-/// Whether anything about trouble has them busy, so their routine waits: trouble itself, being talked to, or cuffs going on or off
+/// Whether anything about trouble has them busy, so their routine waits: trouble itself, being talked to, cuffs going on or off, or going at a creature (outpost_prison_panic.dm)
 /mob/living/basic/outpost_prisoner/proc/in_trouble()
-	return trouble || threat_ref || swing_ref || climb_ref || beaten_left > 0 || talking || cuff_work
+	return trouble || threat_ref || swing_ref || climb_ref || beaten_left > 0 || talking || cuff_work || creature_foe()
 
 /// Whether they are on their feet and able to go after a target
 /mob/living/basic/outpost_prisoner/proc/trouble_can_act()
@@ -210,7 +210,8 @@
 	var/loss = from_needs[2]
 	if(!subdued)
 		loss += from_wing[2]
-	if(locked_in_seconds > OUTPOST_PRISON_LOCKED_IN_COMPLAINT)
+	// Hiding in their own cell from a creature, they wanted the door bolted (outpost_prison_panic.dm).
+	if(locked_in_seconds > OUTPOST_PRISON_LOCKED_IN_COMPLAINT && !sheltering_from_creature())
 		loss += PRISONER_MOOD_LOCKED_IN + round((locked_in_seconds - OUTPOST_PRISON_LOCKED_IN_COMPLAINT) / 60)
 	// Cuffs kept on without good reason sour them like a lock-in (outpost_prison_capture.dm).
 	if(cuffs_souring())
@@ -541,12 +542,16 @@
 // ===== STRIKING =====
 
 /**
- * What they are going for now, if they are in trouble and able: the member of staff they decided
- * to swing at, the other fighter, or a rioter's target. Null means hold still.
+ * What they are going for now, if they are in trouble and able: a creature they stood up to
+ * (outpost_prison_panic.dm), the member of staff they decided to swing at, the other fighter, or a
+ * rioter's target. Null means hold still.
  */
 /mob/living/basic/outpost_prisoner/proc/trouble_target()
 	if(!trouble_can_act())
 		return null
+	var/mob/living/foe = creature_foe()
+	if(foe)
+		return foe
 	var/mob/living/swing_at = swing_ref?.resolve()
 	if(swing_at)
 		return swing_at
@@ -618,8 +623,10 @@
 		return FALSE
 	update_melee()
 	if(!is_outpost_prisoner(target))
-		struck_ref = WEAKREF(target)
-		struck_at = world.time
+		// A blow at an experiment's creature is no blow at staff (outpost_prison_panic.dm).
+		if(!is_outpost_experiment_mob(target))
+			struck_ref = WEAKREF(target)
+			struck_at = world.time
 		trouble_line("fight")
 		return !!melee_attack(target)
 	var/mob/living/basic/outpost_prisoner/other = target
@@ -922,8 +929,9 @@
 	var/mob/living/basic/outpost_prisoner/prisoner = controller.pawn
 	if(!istype(prisoner))
 		return
-	// Walking away from a turret's warning comes first (outpost_prison_security.dm)
-	if(prisoner.plan_turret_retreat(controller))
+	// Walking away from a turret's warning comes first (outpost_prison_security.dm), then a rioter
+	// running from a creature (outpost_prison_panic.dm)
+	if(prisoner.plan_turret_retreat(controller) || prisoner.plan_creature_retreat(controller))
 		return SUBTREE_RETURN_FINISH_PLANNING
 	if(!prisoner.in_trouble())
 		return

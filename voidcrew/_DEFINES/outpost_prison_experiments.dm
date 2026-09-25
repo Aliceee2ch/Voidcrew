@@ -98,6 +98,39 @@
 #define OUTPOST_EXPERIMENT_FLY_DISGUST_MOOD 2
 #define OUTPOST_EXPERIMENT_FLY_DISGUST_GAP (60 SECONDS)
 
+// ----- Running from creatures (outpost_prison_panic.dm) -----
+/// A creature this close and in sight frightens a prisoner, as does one loose anywhere in the cell block
+#define OUTPOST_PANIC_SIGHT_RANGE 7
+/// A horror down regenerating frightens only prisoners this close to it
+#define OUTPOST_PANIC_DOWNED_RANGE 2
+/// Seconds with no creature in the cell block or in sight before a frightened prisoner calms down
+#define OUTPOST_PANIC_CALM_TIME 60
+/// A prisoner's move delay while they run (they walk at 2; the hulk moves at 1.8 and the horror at 2)
+#define OUTPOST_PANIC_FLEE_SPEED 1.3
+/// A way home that passes this close to the creature, and no farther from it than they stand, is no way home
+#define OUTPOST_PANIC_PATH_MARGIN 2
+/// Nowhere this close to the creature is somewhere to run to
+#define OUTPOST_PANIC_SPOT_MARGIN 2
+/// Seconds between looks at whether where they are running or hiding still holds
+#define OUTPOST_PANIC_REPLAN_GAP 2
+/// Rioters and fighters roll to run or fight when a creature comes this close
+#define OUTPOST_PANIC_ROLL_RANGE 3
+/// Seconds a rioter's or fighter's roll holds before they roll again
+#define OUTPOST_PANIC_ROLL_HOLD (12 SECONDS)
+/// Percent chance a rioter or fighter goes for the creature rather than running, at the middle mood;
+/// higher below it and lower above, never outside the bounds
+#define OUTPOST_PANIC_FIGHT_CHANCE 25
+#define OUTPOST_PANIC_FIGHT_MID_MOOD 30
+#define OUTPOST_PANIC_FIGHT_PER_MOOD 0.25
+#define OUTPOST_PANIC_FIGHT_MIN 5
+#define OUTPOST_PANIC_FIGHT_MAX 50
+/// Grumpy prisoners go for it this many times as often, nervous and cheerful ones this many times less often
+#define OUTPOST_PANIC_FIGHT_PERSONALITY_MULT 1.5
+/// How long a rioter or fighter keeps going at a creature
+#define OUTPOST_PANIC_STAND_TIME (20 SECONDS)
+/// How long a rioter who runs has to get away before they riot on
+#define OUTPOST_PANIC_RETREAT_TIME (15 SECONDS)
+
 // ----- Creatures: health grows with the crew on the level when they appear -----
 /// Most extra players counted
 #define OUTPOST_EXPERIMENT_EXTRA_PLAYERS_MAX 3

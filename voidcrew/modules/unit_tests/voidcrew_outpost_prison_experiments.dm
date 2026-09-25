@@ -309,13 +309,14 @@
 	TEST_ASSERT_EQUAL(block["subject"], subject.real_name, "The console names the wrong subject")
 	TEST_ASSERT_EQUAL(block["time_left"], 60, "The twitch does not last 60 s") // OUTPOST_EXPERIMENT_TWITCH
 
-	// While it runs: the subject earns nothing, cells are for safety and riots wait; arrivals keep coming.
+	// While it runs the subject earns nothing, and nothing else waits for it: bolting prisoners in is
+	// no protective custody (owner, 2026-09-25), and arrivals keep coming. Riots during an experiment
+	// are in voidcrew_outpost_prison_panic.dm.
 	TEST_ASSERT_EQUAL(prison.pay_factor(subject), 0, "A dosed prisoner still earned")
-	TEST_ASSERT(prison.protective_custody(), "An experiment did not make bolting prisoners in protective custody")
+	TEST_ASSERT(!prison.protective_custody(), "An experiment made bolting prisoners in protective custody")
 	prison.intake_open = TRUE
 	TEST_ASSERT(prison.intake_state() != "experiment", "Arrivals waited for the experiment")
 	prison.intake_open = FALSE
-	TEST_ASSERT(!prison.start_riot("test"), "A riot started during an experiment")
 
 	// The twitch waits for the crew, and for the subject to be in the cell block.
 	prison.crew_home_override = FALSE
@@ -345,7 +346,8 @@
 	TEST_ASSERT(!ismegafauna(hulk), "The hulk counts as megafauna")
 	sleep(2)
 	TEST_ASSERT(!QDELETED(hulk), "The megafauna ban removed the hulk from the prison wing")
-	TEST_ASSERT(istype(buddy.activity, /datum/prisoner_activity/creature_panic), "A prisoner did not run for their cell")
+	// Loose in the yard in plain sight of them (outpost_prison_panic.dm)
+	TEST_ASSERT(istype(buddy.activity, /datum/prisoner_activity/creature_panic), "A prisoner did not run from the hulk")
 
 	// Put down by the crew: the containment bonus, once.
 	var/mob/living/carbon/human/guard = make_player(prison_spot(home, 8, 9), "serumowner")
@@ -727,7 +729,8 @@
 	TEST_ASSERT_NOTNULL(event, "No changeling event")
 	TEST_ASSERT_EQUAL(prison.experiment_payload()["stage"], "incubating", "The console does not show the incubation")
 
-	// Bolted in while it runs, a prisoner is in protective custody: the lock-in clock does not count.
+	// Bolted in while it incubates, with no creature about, the lock-in clock counts as it always does:
+	// an experiment is no protective custody (owner, 2026-09-25).
 	var/mob/living/basic/outpost_prisoner/inmate = test_prisoner(prison, prison_spot(home, 3, 14))
 	var/datum/outpost_prison_cell/cell_one = prison.cells[1]
 	var/obj/machinery/door/airlock/cell_door = cell_one.door()
@@ -735,7 +738,8 @@
 	prison.refresh_reach()
 	if(inmate.is_confined())
 		prison.update_locked_in(inmate, 150)
-		TEST_ASSERT_EQUAL(inmate.locked_in_seconds, 0, "Bolting a prisoner in during an experiment counted against them")
+		TEST_ASSERT_EQUAL(inmate.locked_in_seconds, 150, "Bolting a prisoner in during an experiment counted [inmate.locked_in_seconds] s, not 150")
+	inmate.locked_in_seconds = 0
 	cell_door.unbolt()
 
 	// The burst: the headslug shows and pays the fee, with no Kessler clock of its own.

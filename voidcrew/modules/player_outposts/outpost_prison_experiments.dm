@@ -22,9 +22,9 @@
  *   for good, which puts it down (outpost_prison_horror.dm).
  * - The dosed subject or the specimen's host is the experiment's until it ends
  *   (held_for_experiment()): not released, transferred, beamed out as escaped or dropped from the roster dead.
- * - While a creature is live, riots and fights wait, and prisoners run for their cells and ask to
- *   be bolted in, which then costs them nothing (protective custody). When it ends, everyone who
- *   saw a prisoner die loses mood and each death adds tension.
+ * - An experiment pauses no trouble: riots, fights, incidents and wing events go on as ever. A
+ *   creature frightens the prisoners it threatens, who run from it (outpost_prison_panic.dm). When
+ *   it ends, everyone who saw a prisoner die loses mood and each death adds tension.
  * Every clock here counts only while a member of the wing is home (crew_home()).
  */
 
@@ -90,8 +90,9 @@
 		else
 			experiment_tick(seconds, home)
 	researcher_tick(seconds, home)
+	creature_panic_tick(seconds)
 
-/// The experiment under way: the subject, the twitch, the changeling's stages, the creatures and the prisoners' fear
+/// The experiment under way: the subject, the twitch, the changeling's stages and the creatures
 /datum/outpost_prison/proc/experiment_tick(seconds, home)
 	var/datum/outpost_experiment/current = experiment
 	current.follow_changeling()
@@ -104,8 +105,6 @@
 		twitch_tick(seconds, home)
 		return
 	creatures_tick(seconds, home)
-	if(!QDELETED(current) && !current.resolved)
-		panic_tick(seconds)
 
 /**
  * The dosed subject or host: gone before the change, and the experiment fails; outside the cell
@@ -266,8 +265,8 @@
 
 /**
  * A creature showed: the serum's result, the headslug at the burst, or the horror. The first one
- * pays the fee. Sends the prisoners to their cells and watches the creature's death; the horror
- * going down to regenerate is not one. `form` is the experiment's ("hulk", "fly", "nightmare",
+ * pays the fee. Anyone it frightens runs at once (creature_panic_tick()), and its death is watched;
+ * the horror going down to regenerate is not one. `form` is the experiment's ("hulk", "fly", "nightmare",
  * "changeling") or the creature's ("headslug", "horror"). Returns TRUE if it is tracked.
  */
 /datum/outpost_prison/proc/experiment_creature_appeared(mob/living/creature, form)
@@ -297,7 +296,7 @@
 		if(pay_treasury(fee, "Kessler Biolabs data fee"))
 			experiment.fee_paid = fee
 			add_log("Kessler Biolabs paid a [fee] cr data fee.")
-	panic_all()
+	creature_panic_tick(0)
 	return TRUE
 
 /**
@@ -545,28 +544,6 @@
 			count++
 	return count
 
-/// A creature showed: everyone able runs for their own cell and asks to be bolted in
-/datum/outpost_prison/proc/panic_all()
-	var/shouts = 0
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(start_panic(prisoner) && shouts < 2)
-			shouts++
-			prisoner.next_panic_line = world.time
-	if(experiment)
-		experiment.panic_left = 5
-
-/// Every few seconds while a creature is loose: anyone out of the panic is sent back to it
-/datum/outpost_prison/proc/panic_tick(seconds)
-	if(!creature_live())
-		return
-	experiment.panic_left -= seconds
-	if(experiment.panic_left > 0)
-		return
-	experiment.panic_left = 5
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.ai_running())
-			start_panic(prisoner)
-
 /**
  * A creature's victims. The serum subject dying while dosed is an abort: no fee, no bonus, and the
  * researcher says so. A changeling host dying is the changeling event's to handle. Anyone else a
@@ -749,8 +726,6 @@
 	/// Prisoners who saw a prisoner die: REF() -> weakref; and how many prisoners the creatures killed
 	var/list/witnesses = list()
 	var/creature_kills = 0
-	/// Seconds to the next round of sending prisoners to their cells
-	var/panic_left = 0
 
 /datum/outpost_experiment/New(datum/outpost_prison/owner, form, mob/living/basic/outpost_prisoner/subject)
 	. = ..()

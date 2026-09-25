@@ -7,13 +7,8 @@
  * that got it, only on that wing's prisoners, only for OUTPOST_EXPERIMENT_ITEM_LIFETIME, and is
  * destroyed off the wing's level. Tainted food looks like any other food; only a close look shows
  * it. Anyone but one of the wing's prisoners who eats it throws the specimen up, and that is logged.
- *
- * While a creature is loose, prisoners run to their own cells and ask to be bolted in
- * (/datum/prisoner_activity/creature_panic).
+ * What the prisoners do about the creatures is in outpost_prison_panic.dm.
  */
-
-#define ACTIVITY_CONTINUE 0
-#define ACTIVITY_DONE 1
 
 // ===== ITEMS =====
 
@@ -259,80 +254,3 @@
 	. = ..()
 	if(specimen && !QDELETED(specimen))
 		specimen.eaten_by(src)
-
-// ===== FEAR =====
-
-/mob/living/basic/outpost_prisoner
-	/// world.time of their next call to be locked in while a creature is loose
-	var/next_panic_line = 0
-
-/**
- * Sends a prisoner running for their cell while a creature is loose, unless they are dosed, busy
- * with trouble, down, or already hiding. Returns TRUE if they went.
- */
-/datum/outpost_prison/proc/start_panic(mob/living/basic/outpost_prisoner/prisoner)
-	if(prisoner.prison != src || prisoner.experiment_subject || !prisoner.routine_allowed())
-		return FALSE
-	if(istype(prisoner.activity, /datum/prisoner_activity/creature_panic))
-		return FALSE
-	var/datum/prisoner_activity/creature_panic/panic = new(prisoner)
-	if(!panic.setup())
-		qdel(panic)
-		return FALSE
-	prisoner.start_activity(panic)
-	return TRUE
-
-/// A creature is loose: back to their own cell, on the bed, asking to be bolted in until it is over
-/datum/prisoner_activity/creature_panic
-	name = "hiding from the creature"
-	context = "creature_panic"
-	weight = 0
-	interruptible = FALSE
-	var/datum/weakref/bed_ref
-
-/datum/prisoner_activity/creature_panic/setup()
-	var/datum/outpost_prison_cell/home = prisoner.cell
-	var/obj/structure/bed/bed = home?.bed()
-	var/turf/bed_turf = bed ? get_turf(bed) : null
-	if(bed_turf && prisoner.walkable?[bed_turf] && (bed_turf == prisoner.loc || !prisoner.tile_taken(bed_turf)) && claim(bed))
-		bed_ref = WEAKREF(bed)
-		spot = bed_turf
-		return TRUE
-	for(var/turf/tile as anything in home?.turfs)
-		if(prisoner.walkable?[tile] && (tile == prisoner.loc || !prisoner.tile_taken(tile)))
-			spot = tile
-			return TRUE
-	// Their cell is out of reach: they cower where they are.
-	return TRUE
-
-/datum/prisoner_activity/creature_panic/begin()
-	started = TRUE
-	ends_at = INFINITY
-	if(bed_ref?.resolve() && prisoner.cell?.contains(prisoner))
-		var/obj/machinery/door/door = prisoner.cell.door()
-		prisoner.sit_on_edge(door ? get_cardinal_dir(prisoner, door) : SOUTH)
-	else
-		prisoner.manual_emote(pick("cowers.", "backs into a corner.", "freezes."))
-
-/datum/prisoner_activity/creature_panic/tick(seconds)
-	var/datum/outpost_prison/prison = prisoner.prison
-	if(!prison?.creature_live())
-		return ACTIVITY_DONE
-	if(world.time < prisoner.next_panic_line)
-		return ACTIVITY_CONTINUE
-	prisoner.next_panic_line = world.time + OUTPOST_EXPERIMENT_PANIC_GAP * rand(8, 12) / 10 SECONDS
-	// Bolted in, they keep their heads down.
-	var/datum/outpost_prison_cell/home = prisoner.cell
-	if(home?.contains(prisoner) && home.is_bolted())
-		return ACTIVITY_CONTINUE
-	if(!prison.wing_can_speak())
-		return ACTIVITY_CONTINUE
-	prison.note_speech()
-	var/context = "creature_panic"
-	if(prison.experiment?.form == "nightmare" && prob(50))
-		context = "nightmare_fear"
-	prisoner.say_context(context)
-	return ACTIVITY_CONTINUE
-
-#undef ACTIVITY_CONTINUE
-#undef ACTIVITY_DONE

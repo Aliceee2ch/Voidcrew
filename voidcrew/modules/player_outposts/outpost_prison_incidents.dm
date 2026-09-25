@@ -10,8 +10,9 @@
  *
  * The clock rolls once a minute, and only while a member of the wing is home, trouble is on, at
  * least PRISON_INCIDENT_MIN_PRISONERS are in the cell block, and nothing else is going on: no riot,
- * nobody loose, no experiment, no quiet after a riot, no wildcard already under way. After each
- * one, PRISON_INCIDENT_GAP of crew-home time passes before the next can roll.
+ * nobody loose, no quiet after a riot, no wildcard already under way. An experiment under way holds
+ * nothing (owner, 2026-09-25). After each one, PRISON_INCIDENT_GAP of crew-home time passes before
+ * the next can roll.
  *
  * Every kind shows before it hurts:
  * - A stabbing: the attacker stares at the victim and keeps close to them, mutters, and slips a hand
@@ -25,8 +26,9 @@
  *   bolt in. The same things stop it during the tell.
  * - A fight: two prisoners argue, then fight, whatever their mood; the argument is the tell, and a
  *   talk ends it as usual.
- * Examining someone in a tell shows it too (wildcard_examine()). A riot or an experiment that starts
- * meanwhile, or the one they were after going out of reach, lets it blow over.
+ * Examining someone in a tell shows it too (wildcard_examine()). A riot that starts meanwhile, or the
+ * one they were after going out of reach, lets it blow over; a creature that has them running holds
+ * the tell until they calm down (outpost_prison_panic.dm).
  * No wildcard fines anyone by itself; what follows (a riot, an escape, a death, injuries to treat)
  * has its usual consequences. The XF rule that shivs only come out in riots has this one
  * exception, at the owner's request.
@@ -86,8 +88,6 @@
 		return "riot"
 	if(loose_count())
 		return "someone loose"
-	if(experiment_active())
-		return "experiment"
 	if(subdued_left > 0)
 		return "subdued"
 	if(wildcard_gap_left > 0)
@@ -164,19 +164,17 @@
 		return "An incident is already under way."
 	if(riot_active)
 		return "A riot is on."
-	if(kind == "snap" && experiment_active())
-		return "An experiment is under way."
 	return null
 
 /**
  * Whether `prisoner` can be the one a wildcard starts with: awake and on their feet in the cell
  * block, out of trouble and not busy with it, not shut in a cell, owing no lockdown, not an
- * experiment's subject
+ * experiment's subject, and not running from a creature
  */
 /datum/outpost_prison/proc/wildcard_can_act(mob/living/basic/outpost_prisoner/prisoner)
 	if(QDELETED(prisoner) || prisoner.prison != src || prisoner.phase != PRISONER_PRESENT || prisoner.stat != CONSCIOUS)
 		return FALSE
-	if(prisoner.in_trouble() || prisoner.can_be_dragged() || prisoner.pulledby || prisoner.experiment_subject || prisoner.lockdown_left > 0)
+	if(prisoner.in_trouble() || prisoner.can_be_dragged() || prisoner.pulledby || prisoner.experiment_subject || prisoner.lockdown_left > 0 || prisoner.is_panicking())
 		return FALSE
 	if(prisoner.activity?.sleeping)
 		return FALSE
@@ -470,11 +468,11 @@
 		put_away_shiv(actor)
 		qdel(src)
 		return
-	// Gone, in other trouble, or overtaken by a riot or an experiment: it blows over unseen.
+	// Gone, in other trouble, or overtaken by a riot: it blows over unseen.
 	if(QDELETED(actor) || actor.prison != prison || actor.phase != PRISONER_PRESENT || actor.stat != CONSCIOUS || actor.trouble || (kind == "stab" && !target_ok(target)))
 		qdel(src)
 		return
-	if(prison.riot_active || prison.experiment_active())
+	if(prison.riot_active)
 		qdel(src)
 		return
 	// Stunned, floored, beaten or cuffed: whoever did it stopped it.
@@ -482,8 +480,8 @@
 		var/mob/living/stopper = actor.staff_to_blame() ? actor.last_staff_attacker_ref?.resolve() : null
 		stopped_by_staff(stopper, "down")
 		return
-	// Held while someone talks to them, or while they square up to staff
-	if(actor.in_trouble())
+	// Held while someone talks to them, while they square up to staff, or while a creature has them running (outpost_prison_panic.dm)
+	if(actor.in_trouble() || actor.is_panicking())
 		return
 	restart_activity(actor)
 	tell_elapsed += seconds

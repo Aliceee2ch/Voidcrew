@@ -262,24 +262,22 @@
 	if(prisoner.lockdown_out > PRISON_LOCKDOWN_GRACE)
 		let_out_early(prisoner)
 
-/// Served: the crew hears of it once, and the prisoner says so. The usual lock-in rules apply again.
+/// Served: the warden's log notes it once, and the prisoner says so. The usual lock-in rules apply again.
 /datum/outpost_prison/proc/lockdown_served(mob/living/basic/outpost_prisoner/prisoner)
 	prisoner.lockdown_left = 0
 	prisoner.lockdown_out = 0
 	add_log("[prisoner.real_name]'s lockdown is over.")
-	announce("Prison wing: [prisoner.real_name]'s lockdown is over.", SHIP_NOTIFY_NOTICE)
 	if(prisoner.stat == CONSCIOUS)
 		prisoner.say_context("lockdown_over")
 
 /**
- * Let out before the lockdown was served: announced once, and they riot again, joining a riot
+ * Let out before the lockdown was served: logged once, and they riot again, joining a riot
  * that is on or starting one whatever the quiet after the last. Returns TRUE if they are rioting.
  */
 /datum/outpost_prison/proc/let_out_early(mob/living/basic/outpost_prisoner/prisoner)
 	prisoner.lockdown_left = 0
 	prisoner.lockdown_out = 0
 	add_log("[prisoner.real_name] was let out before their lockdown was up.")
-	announce("Prison wing: [prisoner.real_name] was let out before their lockdown was up.", SHIP_NOTIFY_WARNING)
 	if(prisoner.is_rioting())
 		return TRUE
 	if(riot_active)

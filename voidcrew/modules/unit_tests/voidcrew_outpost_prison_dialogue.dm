@@ -29,6 +29,8 @@
 		"hatch_empty", "subdued", "fight_argue_none", "threat_backed_down",
 		"cuffed", "cuffs_off", "lockdown", "lockdown_over",
 		"turret_backs_off", "turret_gives_up", "turret_defies",
+		// Hit by a player (outpost_prison_trouble.dm)
+		"retaliate", "cower_hit",
 		// Wildcard incidents and wing events (outpost_prison_incidents.dm, outpost_prison_wing_events.dm)
 		"incident_brooding", "incident_stab", "incident_stopped", "incident_pacing", "incident_snap",
 		"wing_lights_blown", "wing_vent_backup", "wing_toilet_flood",

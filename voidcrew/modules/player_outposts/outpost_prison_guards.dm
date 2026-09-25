@@ -838,7 +838,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	var/list/guard_reported = list()
 	/// REF() of loose prisoners a guard has called out
 	var/list/guard_loose_called = list()
-	/// Whether the guards' riot hold went out on the radio this riot, and their creature line while a creature is out
+	/// Whether the guards' riot hold was called out this riot, and their creature line while a creature is out
 	var/guard_riot_announced = FALSE
 	var/guard_shelter_called = FALSE
 
@@ -1218,10 +1218,10 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		var/key = REF(prisoner)
 		called[key] = TRUE
 		if(!guard_loose_called[key])
-			// Said aloud and on the outpost radio, where the crew can act on it
+			// Said aloud, and noted in the warden's log
 			var/mob/living/basic/outpost_prison_guard/crier = pick(on_duty)
 			if(crier.say_guard("loose_call", list("{place}" = get_area_name(prisoner))))
-				announce("Prison wing, [crier.real_name]: [crier.last_line]", SHIP_NOTIFY_DANGER)
+				add_log("[crier.real_name]: \"[crier.last_line]\"")
 		if(prisoner.can_be_dragged())
 			continue
 		for(var/mob/living/basic/outpost_prison_guard/guard as anything in on_duty)
@@ -1229,15 +1229,14 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 				break
 	guard_loose_called = called
 
-/// The riot hold goes out on the outpost radio, once a riot
+/// The riot hold is called out once a riot: said aloud, and noted in the warden's log
 /datum/outpost_prison/proc/announce_riot_hold(mob/living/basic/outpost_prison_guard/guard)
 	if(guard_riot_announced)
 		return FALSE
 	guard_riot_announced = TRUE
-	var/line = guard.pick_guard_line("riot_hold")
-	if(!line)
+	if(!guard.say_guard("riot_hold"))
 		return FALSE
-	announce("Prison wing, [guard.real_name]: [line]", SHIP_NOTIFY_DANGER)
+	add_log("[guard.real_name]: \"[guard.last_line]\"")
 	return TRUE
 
 /// Every prisoner who sees a baton strike loses OUTPOST_GUARD_ONLOOKER_MOOD, at most once per OUTPOST_GUARD_ONLOOKER_GAP each; one may say so

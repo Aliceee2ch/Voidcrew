@@ -557,7 +557,7 @@
 			total += OUTPOST_CONTRABAND_SHIV_TENSION
 	return min(total, OUTPOST_CONTRABAND_TENSION_MAX)
 
-/// A few words for the restless announcement when shivs are hidden in the wing, or null
+/// A few words for the restless log line when shivs are hidden in the wing, or null
 /datum/outpost_prison/proc/contraband_cause()
 	return contraband_tension() > 0 ? "word of a shiv" : null
 

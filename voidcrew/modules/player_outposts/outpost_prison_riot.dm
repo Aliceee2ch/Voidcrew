@@ -7,7 +7,7 @@
  * PRISON_TENSION_HYSTERESIS points of slack on the way down so stages do not flicker:
  * - calm, below PRISON_TENSION_GRUMBLING;
  * - grumbling: complaints, pacing, banging on doors;
- * - restless: shouting at staff, gathering in the yard, threats. The crew is told why.
+ * - restless: shouting at staff, gathering in the yard, threats. The warden's log says why.
  * - riot: tension held at PRISON_TENSION_RIOT for PRISON_RIOT_HOLD seconds (the crew is told a
  *   riot is brewing when the hold starts), or a spark while restless (power cut, lights out, a
  *   prisoner beaten down or killed by staff).
@@ -240,7 +240,7 @@
 	return PRISON_STAGE_CALM
 
 /**
- * Works out tension and the stage. Turning restless tells the crew why; tension held at riot
+ * Works out tension and the stage. Turning restless is logged with why; tension held at riot
  * level for PRISON_RIOT_HOLD seconds starts a riot, and the hold itself is announced.
  */
 /datum/outpost_prison/proc/update_stage(seconds)
@@ -265,14 +265,13 @@
 	if(riot_hold >= PRISON_RIOT_HOLD)
 		start_riot("tension boiled over")
 
-/// The wing turned restless: the crew hears about it and why, at most every PRISON_RESTLESS_ANNOUNCE_GAP
+/// The wing turned restless: the warden's log says so and why, at most every PRISON_RESTLESS_ANNOUNCE_GAP
 /datum/outpost_prison/proc/note_restless()
 	if(!COOLDOWN_FINISHED(src, restless_announce_cooldown))
 		return FALSE
 	COOLDOWN_START(src, restless_announce_cooldown, PRISON_RESTLESS_ANNOUNCE_GAP)
 	var/list/causes = restless_causes()
-	add_log("The prisoners are restless.")
-	announce(length(causes) ? "Prison wing: the prisoners are restless: [jointext(causes, ", ")]." : "Prison wing: the prisoners are restless.", SHIP_NOTIFY_WARNING)
+	add_log(length(causes) ? "The prisoners are restless: [jointext(causes, ", ")]." : "The prisoners are restless.")
 	return TRUE
 
 /// What the wing is unhappy about, in a few words each: "3 hungry", "dirty floor", ...
@@ -389,8 +388,9 @@
  */
 /datum/outpost_prison/proc/threats_tick(seconds)
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		// Someone in trouble keeps a swing only while hitting back at a player (outpost_prison_trouble.dm).
 		// Running from a creature, staff are the least of their worries (outpost_prison_panic.dm).
-		if(prisoner.phase != PRISONER_PRESENT || prisoner.trouble || !prisoner.trouble_can_act() || !prisoner.ai_running() || !in_cell_block(prisoner) || prisoner.is_panicking())
+		if(prisoner.phase != PRISONER_PRESENT || (prisoner.trouble && !prisoner.retaliating()) || !prisoner.trouble_can_act() || !prisoner.ai_running() || !in_cell_block(prisoner) || prisoner.is_panicking())
 			prisoner.cancel_threat()
 			continue
 		if(prisoner.threat_ref)
@@ -819,7 +819,7 @@
  * PRISONER_RIOT_CALM_MOOD, the spikes clear and the wing is subdued for PRISON_SUBDUED_TIME.
  * Lockdown they owe stands (outpost_prison_capture.dm).
  */
-/datum/outpost_prison/proc/end_riot(announce_end = TRUE)
+/datum/outpost_prison/proc/end_riot()
 	if(!riot_active)
 		return
 	riot_active = FALSE
@@ -840,8 +840,6 @@
 		add_log("The rioters are out of the cell block.")
 	else
 		add_log("The riot is over.")
-		if(announce_end)
-			announce("The riot in the prison wing is over.", SHIP_NOTIFY_NOTICE)
 	update_riot_lights()
 	check_incident_over()
 
@@ -893,7 +891,7 @@
 		rioter.beam_out()
 	log_game("PLAYER OUTPOST PRISON: [length(rioters)] rioter\s transferred out of '[outpost?.name]' for [charged] cr")
 	announce("The corrections service transferred [length(rioters)] rioter\s out of the prison wing. The outpost was charged [charged] cr.", SHIP_NOTIFY_WARNING)
-	end_riot(announce_end = FALSE)
+	end_riot()
 	return length(rioters)
 
 /// A serving hatch left open on both sides that this prisoner can reach from the yard side
@@ -1075,7 +1073,7 @@
 
 /**
  * A prisoner starts wrecking the cell they stand in: the cell's light breaks, the floor floods
- * and gets dirty, and they hammer on the door. The crew is told. Also the admin panel's hook.
+ * and gets dirty, and they hammer on the door. The warden's log says so. Also the admin panel's hook.
  * Returns TRUE if they started.
  */
 /datum/outpost_prison/proc/start_wreck(mob/living/basic/outpost_prisoner/prisoner)
@@ -1106,7 +1104,6 @@
 	prisoner.say_context_or("wreck", "locked_in")
 	prisoner.update_bubble()
 	add_log("[prisoner.real_name] is wrecking cell [holding.number].")
-	announce("Prison wing: [prisoner.real_name] is wrecking cell [holding.number].", SHIP_NOTIFY_WARNING)
 	return TRUE
 
 /// A wreck goes on: bangs on the door every few seconds, and after PRISONER_WRECK_TIME the bolts shear

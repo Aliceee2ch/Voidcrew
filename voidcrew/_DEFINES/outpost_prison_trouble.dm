@@ -83,6 +83,34 @@
 #define PRISONER_SHIV_MIN 7
 #define PRISONER_SHIV_MAX 10
 
+// A player's blow on a prisoner on their feet: they hit back, or back off
+/// Seconds they go after the attacker before letting it drop
+#define PRISONER_RETALIATE_TIME 30
+/// Seconds the attacker may be out of reach or out of sight before they let it drop
+#define PRISONER_RETALIATE_LOST_TIME 10
+/// How many tiles they chase the attacker, inside the cell block
+#define PRISONER_RETALIATE_CHASE 4
+/// A calm prisoner's weights for hitting back and backing off, at PRISONER_HIT_REACTION_MID_MOOD
+#define PRISONER_HIT_FIGHT_WEIGHT 70
+#define PRISONER_HIT_COWER_WEIGHT 30
+#define PRISONER_HIT_REACTION_MID_MOOD 50
+/// Weight moved from backing off to hitting back for each point of mood below the middle, and back above it
+#define PRISONER_HIT_REACTION_PER_MOOD 0.5
+/// Nervous prisoners back off, and grumpy ones hit back, this many times as often
+#define PRISONER_HIT_REACTION_PERSONALITY_MULT 2
+/// Neither reaction ever drops below this weight
+#define PRISONER_HIT_REACTION_MIN_WEIGHT 5
+/// What a blow makes them do
+#define PRISONER_HIT_FIGHT "fight"
+#define PRISONER_HIT_COWER "cower"
+/// After a stamina-only hit (a baton, a disabler) they react only if still standing this long after
+#define PRISONER_STAMINA_REACT_DELAY (2.5 SECONDS)
+/// Blows closer together than this get one reaction, as a baton reports its hit twice
+#define PRISONER_HIT_REACTION_GAP (1 SECONDS)
+/// How many tiles they back off, and how long they stay there
+#define PRISONER_COWER_STEP 3
+#define PRISONER_COWER_TIME (8 SECONDS)
+
 // Fights between prisoners: squabbles, not beatings
 /// Two prisoners below this mood, within PRISONER_FIGHT_RANGE tiles, may fight
 #define PRISONER_FIGHT_MOOD 40

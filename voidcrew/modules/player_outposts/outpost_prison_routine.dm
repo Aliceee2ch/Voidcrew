@@ -37,9 +37,9 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 
 // ===== PRISONER SIDE =====
 
-/// Whether their routine may run now
+/// Whether their routine may run now: not while down, cuffed, pulled, in trouble or held by the talk menu (outpost_prison_warden_tools.dm)
 /mob/living/basic/outpost_prisoner/proc/routine_allowed()
-	return prison && stat == CONSCIOUS && phase == PRISONER_PRESENT && !can_be_dragged() && !pulledby && !in_trouble()
+	return prison && stat == CONSCIOUS && phase == PRISONER_PRESENT && !can_be_dragged() && !pulledby && !in_trouble() && !held_by_talk_menu()
 
 /// Ends what they are doing, putting things down and getting up
 /mob/living/basic/outpost_prisoner/proc/end_activity(cancel_ai = TRUE)

@@ -890,3 +890,189 @@
 	TEST_ASSERT(rep_score_is(record, 7), "A refused setting moved the score to [record.score]")
 	TEST_ASSERT_NULL(prison.social_admin_act("prison_not_rep", list(), owner), "Another action was taken as a reputation setting")
 	settle_prison_air(home)
+
+// ===== HOLDS: THE TALK MENU AND A PULL =====
+
+/datum/unit_test/voidcrew_outpost_prison_social_holds
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_social_holds/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("holdowner")
+	TEST_ASSERT_NOTNULL(home, "The hold test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.rep_word_chance = 0
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 9, 8), "holdowner")
+	owner.drop_all_held_items()
+	owner.set_combat_mode(FALSE)
+	var/mob/living/carbon/human/visitor = make_player(prison_spot(home, 8, 9), "holdvisitor")
+	visitor.drop_all_held_items()
+	visitor.set_combat_mode(FALSE)
+	var/datum/ai_planning_subtree/outpost_prisoner_routine/planner = allocate(/datum/ai_planning_subtree/outpost_prisoner_routine)
+
+	// The talk menu: while it is open they stand still, facing the member, and the routine plans nothing.
+	TEST_ASSERT(prisoner.routine_allowed(), "A calm prisoner's routine is held before any menu opened")
+	var/datum/weakref/hold = prisoner.hold_for_talk_menu(owner)
+	TEST_ASSERT(prisoner.held_by_talk_menu(), "An open talk menu does not hold the prisoner")
+	TEST_ASSERT(!prisoner.routine_allowed(), "An open talk menu left the routine running")
+	TEST_ASSERT_EQUAL(prisoner.dir, get_dir(prisoner, owner), "The prisoner did not turn to the member")
+	planner.SelectBehaviors(prisoner.ai_controller, 1)
+	TEST_ASSERT_NULL(prisoner.activity, "The routine picked something to do while the talk menu was open")
+	// A member who walks off no longer holds them, even if their menu never closed cleanly.
+	owner.forceMove(prison_spot(home, 11, 8))
+	TEST_ASSERT(!prisoner.held_by_talk_menu(), "A member three tiles away still holds the prisoner")
+	owner.forceMove(prison_spot(home, 9, 8))
+	TEST_ASSERT(prisoner.held_by_talk_menu(), "The member back beside them does not hold them")
+	// Closed, and the talk picked from it over: the routine is theirs again.
+	prisoner.release_talk_menu(hold)
+	TEST_ASSERT(!prisoner.held_by_talk_menu(), "A closed talk menu still holds the prisoner")
+	TEST_ASSERT(prisoner.routine_allowed(), "A closed talk menu left the routine held")
+
+	// A pull: anyone may take hold of a calm prisoner, who drops what they were doing and goes along.
+	var/datum/prisoner_activity/hanging = new(prisoner)
+	prisoner.start_activity(hanging)
+	hanging.arrive()
+	TEST_ASSERT(prisoner.pull_allowed(), "A calm prisoner may not be pulled")
+	owner.start_pulling(prisoner)
+	TEST_ASSERT_EQUAL(owner.pulling, prisoner, "A member could not pull a calm prisoner")
+	TEST_ASSERT_NULL(prisoner.activity, "A pulled prisoner kept on with what they were doing")
+	TEST_ASSERT(!prisoner.routine_allowed(), "A pulled prisoner's routine still runs")
+	TEST_ASSERT_EQUAL(prisoner.move_resist, MOVE_RESIST_DEFAULT, "A calm prisoner being pulled is too heavy to pull")
+	owner.Move(prison_spot(home, 10, 8), EAST)
+	TEST_ASSERT_EQUAL(prisoner.loc, prison_spot(home, 9, 8), "The calm prisoner was not pulled along (at [prisoner.x],[prisoner.y])")
+	TEST_ASSERT_EQUAL(owner.pulling, prisoner, "The pull broke on the first step")
+	var/obj/structure/bed/bed = prison.cells[1].bed()
+	TEST_ASSERT(SEND_SIGNAL(prisoner, COMSIG_MOUSEDROP_ONTO, bed, owner) & COMPONENT_CANCEL_MOUSEDROP_ONTO, "A calm prisoner could be dragged onto a bed")
+	// Let go: heavy again, and they stay where they were left for 3 seconds (PRISON_PULL_RELEASE_HOLD), then carry on.
+	var/turf/left_at = get_turf(prisoner)
+	owner.stop_pulling()
+	TEST_ASSERT_EQUAL(prisoner.move_resist, MOVE_FORCE_VERY_STRONG, "Let go, a prisoner on their feet is light enough to shove")
+	var/datum/prisoner_activity/let_go/still = prisoner.activity
+	TEST_ASSERT(istype(still), "Let go, the prisoner is doing [prisoner.activity?.name || "nothing"], not standing still")
+	TEST_ASSERT(still.started && isnull(still.spot), "Standing still after the pull has them going somewhere")
+	TEST_ASSERT(still.ends_at > world.time && still.ends_at <= world.time + 3 SECONDS, "Standing still after the pull ends [(still.ends_at - world.time) / 10] seconds from now, not within 3")
+	TEST_ASSERT(!still.leisure && !still.interruptible, "Standing still after the pull is leisure or can be interrupted")
+	var/list/walked = list()
+	TEST_ASSERT_EQUAL(drive_activity(prisoner, still, 60, walked), 1, "Standing still after the pull never ended")
+	TEST_ASSERT(!length(walked) && prisoner.loc == left_at, "The prisoner walked off while standing still after the pull")
+	TEST_ASSERT_NULL(prisoner.activity, "Standing still after the pull did not end")
+	TEST_ASSERT(prisoner.routine_allowed(), "The routine did not pick up again after the pull")
+	// A visitor may pull a calm prisoner too.
+	visitor.start_pulling(prisoner)
+	TEST_ASSERT_EQUAL(visitor.pulling, prisoner, "A visitor could not pull a calm prisoner")
+	visitor.stop_pulling()
+	prisoner.end_activity()
+
+	// The staff door rule stands: a calm prisoner is not walked through it, pulled by a member or not.
+	var/obj/machinery/door/airlock/security/prison_staff/staff_door = locate() in prison_spot(home, 9, 6)
+	TEST_ASSERT_NOTNULL(staff_door, "The staff door is not where the map puts it")
+	staff_door.autoclose = FALSE
+	staff_door.open()
+	TEST_ASSERT(!staff_door.density, "The staff door did not open")
+	prisoner.forceMove(prison_spot(home, 9, 7))
+	owner.forceMove(prison_spot(home, 9, 6))
+	owner.start_pulling(prisoner)
+	TEST_ASSERT_EQUAL(owner.pulling, prisoner, "The member could not pull the calm prisoner at the staff door")
+	TEST_ASSERT(!outpost_prisoner_escorted(staff_door, prisoner), "A calm prisoner pulled by a member counts as escorted")
+	TEST_ASSERT(!staff_door.CanAllowThrough(prisoner, SOUTH), "The staff door lets a pulled calm prisoner through")
+	owner.Move(prison_spot(home, 9, 5), SOUTH)
+	TEST_ASSERT_EQUAL(prisoner.loc, prison_spot(home, 9, 7), "A calm prisoner was pulled through the staff door (at [prisoner.x],[prisoner.y])")
+	TEST_ASSERT(owner.pulling != prisoner, "The pull held with a staff door between them")
+	owner.stop_pulling()
+	prisoner.end_activity()
+
+	// A rioter on their feet can't be pulled.
+	var/mob/living/basic/outpost_prisoner/rioter = trouble_prisoner(prison, prison_spot(home, 12, 8))
+	owner.forceMove(prison_spot(home, 13, 8))
+	rioter.start_rioting(FALSE)
+	TEST_ASSERT(!rioter.pull_allowed(), "A rioter on their feet may be pulled")
+	owner.start_pulling(rioter)
+	TEST_ASSERT(owner.pulling != rioter, "Someone pulled a rioter on their feet")
+	TEST_ASSERT_EQUAL(rioter.trouble, "riot", "A pull on a rioter changed their trouble to [rioter.trouble]") // PRISONER_TROUBLE_RIOT
+	TEST_ASSERT_EQUAL(rioter.move_resist, MOVE_FORCE_VERY_STRONG, "A rioter on their feet is light enough to pull")
+	// Calm when taken hold of and rioting since: the prison's next tick shakes the pull off, and they don't stand still for it.
+	rioter.calm_down()
+	owner.start_pulling(rioter)
+	TEST_ASSERT_EQUAL(owner.pulling, rioter, "The calmed rioter could not be pulled")
+	rioter.start_rioting(FALSE)
+	prison.tick(1)
+	TEST_ASSERT(owner.pulling != rioter && isnull(rioter.pulledby), "A prisoner who started rioting mid-pull was still pulled")
+	TEST_ASSERT_EQUAL(rioter.move_resist, MOVE_FORCE_VERY_STRONG, "A rioter who shook off a pull is light enough to pull")
+	TEST_ASSERT(!istype(rioter.activity, /datum/prisoner_activity/let_go), "A rioter who shook off a pull stood still for it")
+	// Cuffed, a rioter can be pulled as before, and let go they don't stand still for it either.
+	TEST_ASSERT(rioter.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The rioter could not be cuffed")
+	owner.start_pulling(rioter)
+	TEST_ASSERT_EQUAL(owner.pulling, rioter, "A cuffed rioter could not be pulled")
+	owner.stop_pulling()
+	TEST_ASSERT(!istype(rioter.activity, /datum/prisoner_activity/let_go), "A cuffed rioter let go stood still for it")
+	rioter.calm_down()
+	rioter.remove_cuffs()
+	qdel(visitor)
+	settle_prison_air(home)
+
+// ===== THE TALK MENU'S ICONS =====
+
+/datum/unit_test/voidcrew_outpost_prison_social_menu_icons
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// "icon|icon_state" of each choice -> the choices showing it; every state must exist
+/datum/unit_test/voidcrew_outpost_prison_social_menu_icons/proc/icons_used(list/choices)
+	var/list/used = list()
+	for(var/choice in choices)
+		var/image/picture = choices[choice]
+		TEST_ASSERT(istype(picture), "The talk menu's [choice] has no image")
+		TEST_ASSERT(icon_exists(picture.icon, picture.icon_state), "The talk menu's [choice] shows [picture.icon_state], which [picture.icon] does not have")
+		var/key = "[picture.icon]|[picture.icon_state]"
+		LAZYADD(used[key], choice)
+	return used
+
+/datum/unit_test/voidcrew_outpost_prison_social_menu_icons/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("iconowner")
+	TEST_ASSERT_NOTNULL(home, "The menu icon test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.rep_word_chance = 0
+	// Cell 1 of the unrotated wing: its bed is at (2,15), and the first prisoner booked in gets it.
+	var/mob/living/basic/outpost_prisoner/prisoner = trouble_prisoner(prison, prison_spot(home, 2, 15))
+	var/mob/living/basic/outpost_prisoner/teller = trouble_prisoner(prison, prison_spot(home, 8, 8))
+	var/mob/living/basic/outpost_prisoner/other_teller = trouble_prisoner(prison, prison_spot(home, 10, 8))
+	var/mob/living/carbon/human/member = make_player(prison_spot(home, 3, 15), "iconowner")
+
+	// Lying on their bed, with two tips they saw given: every choice the menu has is on it.
+	prison.refresh_prisoner_reach(prisoner)
+	var/datum/prisoner_activity/rest/resting = new(prisoner)
+	TEST_ASSERT(resting.setup(), "The prisoner could not lie on their bed")
+	prisoner.start_activity(resting)
+	resting.arrive()
+	TEST_ASSERT(prisoner.buckled, "Resting did not put the prisoner on their bed")
+	for(var/mob/living/basic/outpost_prisoner/giver as anything in list(teller, other_teller))
+		var/datum/outpost_prison_lead/tip = new
+		tip.teller_ref = WEAKREF(giver)
+		tip.teller_name = giver.real_name
+		tip.teller_first_name = giver.speech_name()
+		tip.given_at = world.time
+		tip.witnesses += WEAKREF(prisoner)
+		prison.open_leads += tip
+	var/list/choices = prisoner.talk_menu_choices(member)
+	// PRISON_TALK_HOW, _CRIME, _CELL, _GET_UP, CONTRABAND_PATDOWN_CHOICE, LEAD_ASK_CHOICE
+	for(var/expected in list("How are you doing?", "What are you in for?", "Back to your cell", "On your feet", "Hands on the wall", "What do you know?"))
+		TEST_ASSERT(expected in choices, "The talk menu has no [expected]")
+	// Only the newest tip is asked about, so it has an icon of its own.
+	TEST_ASSERT("Ask about [other_teller.real_name]'s tip" in choices, "The newest tip is not on the menu")
+	TEST_ASSERT(!("Ask about [teller.real_name]'s tip" in choices), "An older tip is on the menu beside the newest")
+	var/list/used = icons_used(choices)
+	for(var/key in used)
+		var/list/names = used[key]
+		TEST_ASSERT_EQUAL(length(names), 1, "The talk menu shows [key] for [english_list(names)]")
+
+	// Cuffed: the pat-down under its other name, and still no icon twice.
+	prisoner.end_activity()
+	TEST_ASSERT(prisoner.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The prisoner could not be cuffed")
+	choices = prisoner.talk_menu_choices(member)
+	TEST_ASSERT("Pat down" in choices, "A cuffed prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CUFFED_CHOICE
+	used = icons_used(choices)
+	for(var/key in used)
+		var/list/names = used[key]
+		TEST_ASSERT_EQUAL(length(names), 1, "A cuffed prisoner's talk menu shows [key] for [english_list(names)]")
+	prisoner.remove_cuffs()
+	prison.open_leads.Cut()
+	settle_prison_air(home)

@@ -17,6 +17,8 @@
  *   prisoner who is already down can be killed.
  * - Below PRISONER_CLIMB_MOOD, a serving hatch left open on both sides gets climbed.
  * Staff who hit a prisoner making trouble, or one who just struck them, cost that prisoner no mood.
+ * A player's blow on a calm prisoner on their feet makes them hit back for a while, or back off
+ * (react_to_hit()); one already making trouble turns on whoever hit them.
  * A member of the wing can talk an unhappy prisoner down with an empty hand.
  * The wing-wide side (tension, stages, fights, riots, escapes, wrecked cells) is in
  * outpost_prison_riot.dm.
@@ -253,18 +255,21 @@
 	if(spared)
 		INVOKE_ASYNC(src, PROC_REF(collapse))
 
-/// Anyone on staff hitting them is noted; see hit_by_staff()
+/// Anyone on staff hitting them is noted (hit_by_staff()), and a player's blow may make them hit back (react_to_hit())
 /mob/living/basic/outpost_prisoner/proc/on_attacked(datum/source, atom/attacker, attack_flags)
 	SIGNAL_HANDLER
 	if(!(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
 		return
 	hit_by_staff(attacker)
+	react_to_hit(attacker, stamina_only = !(attack_flags & ATTACKER_DAMAGING_ATTACK))
 
 /// A baton hit: noted like any other, and whatever blows they were throwing stop at once
 /mob/living/basic/outpost_prisoner/proc/on_batoned(datum/source, mob/living/user, obj/item/melee/baton/baton)
 	SIGNAL_HANDLER
 	hit_by_staff(user)
 	stop_blows()
+	// Still on their feet once the knockdown would have landed, they may hit back.
+	react_to_hit(user, stamina_only = TRUE)
 	// A stabbing or a snap they were working up to is off (outpost_prison_incidents.dm).
 	prison?.wildcard_batoned(src, user)
 
@@ -297,14 +302,17 @@
 
 /**
  * Whether staff hitting them now is deserved: they are fighting, rioting, breaking out, loose,
- * climbing out or wrecking their cell, were doing so a moment ago, or struck this attacker
- * themselves in the last PRISONER_PROVOKED_TIME.
+ * climbing out, wrecking their cell or swinging at staff (hitting back included), were doing so a
+ * moment ago, or struck this attacker themselves in the last PRISONER_PROVOKED_TIME.
  */
 /mob/living/basic/outpost_prisoner/proc/hit_justified(atom/attacker)
 	// A guard only ever strikes violence already under way (outpost_prison_guards.dm).
 	if(is_outpost_prison_guard(attacker))
 		return TRUE
 	if(trouble || climb_ref)
+		return TRUE
+	// Coming at staff, before the first blow lands too: hitting them now is self-defence.
+	if(swing_ref?.resolve())
 		return TRUE
 	// Working up to a stabbing or a snap (outpost_prison_incidents.dm)
 	if(prison?.wildcard_brooding(src))
@@ -351,6 +359,203 @@
 /// Whether staff hit them in the last few seconds, so what happens next is on staff
 /mob/living/basic/outpost_prisoner/proc/staff_to_blame()
 	return last_staff_hit && world.time - last_staff_hit <= PRISONER_STAFF_BLAME_TIME
+
+// ===== HITTING BACK =====
+
+/mob/living/basic/outpost_prisoner
+	/// The player they are hitting back at, the same weakref as swing_ref while it lasts
+	var/datum/weakref/retaliate_ref
+	/// Seconds that player has been out of reach or out of sight
+	var/retaliate_lost = 0
+	/// Blows that land together (a baton reports its hit twice) get one reaction
+	COOLDOWN_DECLARE(hit_reaction_cooldown)
+
+/datum/outpost_prison
+	/// For tests: what a blow makes a calm prisoner do (PRISONER_HIT_FIGHT or _COWER) instead of rolling for it
+	var/forced_hit_reaction
+
+/**
+ * A calm prisoner's odds when a player hits them, as weights: list(hit back, back off). A worse
+ * mood leans to hitting back and a better one to backing off; nervous prisoners back off more,
+ * grumpy ones hit back more. Neither drops below PRISONER_HIT_REACTION_MIN_WEIGHT.
+ */
+/proc/outpost_prisoner_hit_reaction_weights(mood, personality)
+	var/shift = (PRISONER_HIT_REACTION_MID_MOOD - clamp(mood, 0, 100)) * PRISONER_HIT_REACTION_PER_MOOD
+	var/fight = PRISONER_HIT_FIGHT_WEIGHT + shift
+	var/cower = PRISONER_HIT_COWER_WEIGHT - shift
+	if(personality == "nervous")
+		cower *= PRISONER_HIT_REACTION_PERSONALITY_MULT
+	else if(personality == "grumpy")
+		fight *= PRISONER_HIT_REACTION_PERSONALITY_MULT
+	return list(
+		PRISONER_HIT_FIGHT = max(round(fight), PRISONER_HIT_REACTION_MIN_WEIGHT),
+		PRISONER_HIT_COWER = max(round(cower), PRISONER_HIT_REACTION_MIN_WEIGHT),
+	)
+
+/**
+ * Whether a blow from `attacker` gets a reaction: trouble is on in the wing, they are present,
+ * awake, on their feet and free, and the attacker is a player. Guards, machines, mechs, creatures
+ * and other prisoners are not players.
+ */
+/mob/living/basic/outpost_prisoner/proc/may_react_to_hit(atom/attacker)
+	if(!prison?.trouble_enabled || phase != PRISONER_PRESENT || stat != CONSCIOUS || can_be_dragged() || climb_ref || beaten_left > 0)
+		return FALSE
+	if(!isliving(attacker) || is_outpost_prison_guard(attacker))
+		return FALSE
+	return is_outpost_prison_staff(attacker)
+
+/**
+ * A player's blow landed. After a stamina-only hit (a baton, a disabler) they react only if still
+ * standing PRISONER_STAMINA_REACT_DELAY later, so a baton that puts them down gets nothing. The
+ * reaction itself is hit_reaction(). Returns TRUE if one is coming.
+ */
+/mob/living/basic/outpost_prisoner/proc/react_to_hit(atom/attacker, stamina_only = FALSE)
+	if(!may_react_to_hit(attacker) || !COOLDOWN_FINISHED(src, hit_reaction_cooldown))
+		return FALSE
+	COOLDOWN_START(src, hit_reaction_cooldown, PRISONER_HIT_REACTION_GAP)
+	if(stamina_only)
+		addtimer(CALLBACK(src, PROC_REF(react_after_stamina_hit), WEAKREF(attacker)), PRISONER_STAMINA_REACT_DELAY, TIMER_DELETE_ME)
+		return TRUE
+	INVOKE_ASYNC(src, PROC_REF(hit_reaction), attacker)
+	return TRUE
+
+/// A stamina hit's reaction, if they are still standing
+/mob/living/basic/outpost_prisoner/proc/react_after_stamina_hit(datum/weakref/attacker_ref)
+	var/mob/living/attacker = attacker_ref?.resolve()
+	if(QDELETED(src) || !attacker)
+		return
+	hit_reaction(attacker)
+
+/**
+ * What they do about a player's blow. A calm prisoner rolls (outpost_prisoner_hit_reaction_weights(),
+ * or the prison's forced_hit_reaction): hit back (start_retaliation()) or back off (cower_from()).
+ * One already rioting, fighting, squaring up or wrecking goes for the attacker instead, and a
+ * loose one's own AI takes the attacker as its target. Returns PRISONER_HIT_FIGHT, _COWER or null.
+ */
+/mob/living/basic/outpost_prisoner/proc/hit_reaction(mob/living/attacker)
+	if(QDELETED(src) || QDELETED(attacker) || !may_react_to_hit(attacker))
+		return null
+	if(trouble == PRISONER_TROUBLE_LOOSE)
+		ai_controller?.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, attacker)
+		return PRISONER_HIT_FIGHT
+	if(trouble || threat_ref || swing_ref)
+		start_retaliation(attacker, quiet = TRUE)
+		return PRISONER_HIT_FIGHT
+	var/reaction = prison.forced_hit_reaction || pick_weight(outpost_prisoner_hit_reaction_weights(mood, personality))
+	if(reaction == PRISONER_HIT_COWER)
+		cower_from(attacker)
+		return PRISONER_HIT_COWER
+	start_retaliation(attacker)
+	return PRISONER_HIT_FIGHT
+
+/**
+ * Goes for `attacker` for PRISONER_RETALIATE_TIME: a swing at staff (swing_ref) that one blow does
+ * not end, so the swing's walk and blows, and the turrets and guards that answer a swing, all
+ * apply. They chase only PRISONER_RETALIATE_CHASE tiles, inside the cell block. `quiet`: already
+ * in trouble, they turn on the attacker without squaring up.
+ */
+/mob/living/basic/outpost_prisoner/proc/start_retaliation(mob/living/attacker, quiet = FALSE)
+	threat_ref = null
+	threat_left = 0
+	if(trouble)
+		ai_controller?.CancelActions()
+	else
+		// end_activity() stops their walk too.
+		end_activity()
+		ai_controller?.CancelActions()
+		stand_up()
+	retaliate_ref = WEAKREF(attacker)
+	retaliate_lost = 0
+	swing_ref = retaliate_ref
+	swing_left = PRISONER_RETALIATE_TIME
+	face_atom(attacker)
+	if(quiet)
+		trouble_line("retaliate")
+		return
+	manual_emote("squares up to [attacker]!")
+	say_context("retaliate")
+
+/// Whether they are hitting back at a player now
+/mob/living/basic/outpost_prisoner/proc/retaliating()
+	return !!retaliate_ref && swing_ref == retaliate_ref
+
+/// Whether `target` is close enough to go after: in sight, within PRISONER_RETALIATE_CHASE tiles, and in the cell block
+/mob/living/basic/outpost_prisoner/proc/retaliation_in_reach(atom/target)
+	if(!target || target.z != z || get_dist(src, target) > PRISONER_RETALIATE_CHASE || !prison?.in_cell_block(target))
+		return FALSE
+	return (target in view(PRISONER_RETALIATE_CHASE, src))
+
+/**
+ * Hitting back runs its course. It is over when the swing's PRISONER_RETALIATE_TIME runs out
+ * (trouble_counters()) or it is called off (down, cuffed, a turret's warning, a talk), when either
+ * of them is down, or once the attacker has been out of reach for PRISONER_RETALIATE_LOST_TIME.
+ * Called every tick of the prison.
+ */
+/mob/living/basic/outpost_prisoner/proc/retaliation_tick(seconds)
+	if(!retaliate_ref)
+		return
+	var/mob/living/attacker = retaliate_ref.resolve()
+	if(!retaliating() || !attacker || attacker.stat != CONSCIOUS || stat != CONSCIOUS || can_be_dragged() || beaten_left > 0)
+		end_retaliation()
+		return
+	if(retaliation_in_reach(attacker))
+		retaliate_lost = 0
+		return
+	retaliate_lost += seconds
+	if(retaliate_lost >= PRISONER_RETALIATE_LOST_TIME)
+		end_retaliation()
+
+/// Lets it drop: the swing ends, and they won't square up to anyone for the threat cooldown
+/mob/living/basic/outpost_prisoner/proc/end_retaliation()
+	if(retaliating())
+		swing_ref = null
+		swing_left = 0
+		threat_cooldown = max(threat_cooldown, PRISONER_THREAT_COOLDOWN)
+	retaliate_ref = null
+	retaliate_lost = 0
+
+/// Backs off a few tiles from `attacker` with a line, and stays there a moment
+/mob/living/basic/outpost_prisoner/proc/cower_from(mob/living/attacker)
+	end_activity()
+	stand_up()
+	face_atom(attacker)
+	say_context("cower_hit")
+	var/datum/prisoner_activity/cower/backing = new(src)
+	backing.from_ref = WEAKREF(attacker)
+	if(!backing.setup())
+		qdel(backing)
+		return FALSE
+	start_activity(backing)
+	// Nowhere to go: they cower where they stand, and the clock starts now.
+	if(!backing.spot)
+		backing.arrive()
+	return TRUE
+
+/// Backing off from someone who hit them: up to PRISONER_COWER_STEP tiles away from them, for PRISONER_COWER_TIME
+/datum/prisoner_activity/cower
+	name = "backing off"
+	weight = 0
+	interruptible = FALSE
+	min_duration = PRISONER_COWER_TIME
+	max_duration = PRISONER_COWER_TIME
+	var/datum/weakref/from_ref
+
+/datum/prisoner_activity/cower/setup()
+	var/atom/from = from_ref?.resolve()
+	var/turf/here = get_turf(prisoner)
+	if(!from || !here)
+		return FALSE
+	if(!prisoner.walkable)
+		prisoner.prison?.refresh_prisoner_reach(prisoner)
+	var/best_distance = get_dist(here, from)
+	for(var/turf/tile as anything in prisoner.walkable)
+		if(get_dist(here, tile) > PRISONER_COWER_STEP || prisoner.tile_taken(tile) || !prisoner.may_loiter(tile))
+			continue
+		var/distance = get_dist(tile, from)
+		if(distance > best_distance)
+			spot = tile
+			best_distance = distance
+	return TRUE
 
 // ===== BEATEN =====
 
@@ -553,7 +758,8 @@
 	if(foe)
 		return foe
 	var/mob/living/swing_at = swing_ref?.resolve()
-	if(swing_at)
+	// Hitting back goes only so far (retaliation_in_reach()): past that they wait, or get on with their own trouble.
+	if(swing_at && (!retaliating() || retaliation_in_reach(swing_at)))
 		return swing_at
 	if(trouble == PRISONER_TROUBLE_FIGHT)
 		return fight?.opponent_of(src)
@@ -579,7 +785,8 @@
 		return FALSE
 	if(isliving(target))
 		. = strike(target)
-		if(swing_ref?.resolve() == target)
+		// One blow ends a swing, but not hitting back (retaliation_tick()).
+		if(swing_ref?.resolve() == target && !retaliating())
 			swing_ref = null
 			swing_left = 0
 			threat_cooldown = PRISONER_THREAT_COOLDOWN

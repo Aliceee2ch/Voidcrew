@@ -457,6 +457,15 @@
 		subject.experiment_subject = FALSE
 		outpost_experiment_clear_tells(subject)
 		subject.update_bubble()
+#ifdef OUTPOST_CHANGELING_API
+	// The changeling event saw deaths this core does not hear of: the host's burst, and anyone
+	// absorbed who was not a prisoner. Its witnesses join the experiment's, once each.
+	if(!QDELETED(experiment.changeling))
+		for(var/datum/weakref/witness_ref as anything in experiment.changeling.witnesses)
+			var/mob/living/basic/outpost_prisoner/witness = witness_ref?.resolve()
+			if(witness)
+				experiment.witnesses[REF(witness)] = witness_ref
+#endif
 	if(outcome == "failed")
 		QDEL_NULL(experiment.changeling)
 	experiment_aftermath()

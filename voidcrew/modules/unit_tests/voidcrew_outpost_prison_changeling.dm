@@ -140,6 +140,12 @@
 	var/mob/living/basic/outpost_prisoner/lost_host = lost.host
 	lost_host.forceMove(prison_spot(home, 12, 3))
 	TEST_ASSERT(!prison.in_cell_block(lost_host), "The office counts as the cell block")
+	// Nobody home: that clock waits too.
+	prison.crew_home_override = FALSE
+	changeling_ticks(lost, 90)
+	TEST_ASSERT_EQUAL(lost.stage, "incubating", "The specimen was lost while nobody was home")
+	TEST_ASSERT_EQUAL(lost.host_outside, 0, "The host's time out of the cell block ran with nobody home")
+	prison.crew_home_override = TRUE
 	changeling_ticks(lost, 59) // OUTPOST_CHANGELING_HOST_LOST_AFTER
 	TEST_ASSERT_EQUAL(lost.stage, "incubating", "The specimen was lost before a minute out")
 	TEST_ASSERT_EQUAL(lost.incubation_elapsed, 0, "Incubation ran while the host was out of the cell block")
@@ -332,9 +338,8 @@
 	horror.death()
 	TEST_ASSERT_EQUAL(event.stage, "done", "Killing the horror did not end the experiment")
 	TEST_ASSERT(!exit.open && !cell_vent.dented, "Kessler did not refit the vents after the experiment")
-	// The changeling's own aftermath runs only without S4a's experiments core, which has its own.
-	if(!hascall(prison, "experiment_payload"))
-		TEST_ASSERT(bystander.mood < 70, "A prisoner who saw the burst lost no mood afterwards") // OUTPOST_CHANGELING_WITNESS_MOOD
+	// The changeling's own aftermath without S4a; with it, S4a's takes in the event's witnesses.
+	TEST_ASSERT(bystander.mood < 70, "A prisoner who saw the burst lost no mood afterwards") // OUTPOST_CHANGELING_WITNESS_MOOD / OUTPOST_EXPERIMENT_SAW_DEATH_MOOD
 	settle_prison_air(home)
 
 /datum/unit_test/voidcrew_outpost_prison_changeling_emergence/proc/winding_up(mob/living/basic/outpost_experiment/horror/horror)

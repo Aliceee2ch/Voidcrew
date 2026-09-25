@@ -277,8 +277,11 @@
 	// Never released or sent home while it grows.
 	host.sentence_left = max(host.sentence_left, OUTPOST_CHANGELING_HOST_SENTENCE_HOLD)
 	// Out of the cell block, dead or alive, it waits: it never hatches aboard a ship or anywhere else.
+	// The clock that loses it counts only while the crew is home. Not `home`: with S4a that is
+	// also false while the host is out of the cell block.
 	if(!prison.in_cell_block(host))
-		host_outside += seconds
+		if(prison.crew_home())
+			host_outside += seconds
 		if(host_outside >= OUTPOST_CHANGELING_HOST_LOST_AFTER)
 			lose_specimen("the host was taken out of the cell block")
 		return

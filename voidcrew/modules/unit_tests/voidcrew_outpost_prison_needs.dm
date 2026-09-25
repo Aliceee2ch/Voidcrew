@@ -241,12 +241,13 @@
 	prisoner.end_bubble()
 	TEST_ASSERT(!(prisoner.thought in prisoner.vis_contents), "The faded bubble was not taken down")
 
-	// It sits off their right shoulder, not over their head where runechat goes: its top edge
-	// (16 + rest_z + 16 x rest_scale) stays under a message's first line (pixel_z 32, text from about 34).
+	// It sits over their head, a little to the right: its bottom edge (16 + rest_z - 16 x rest_scale)
+	// clears their face (eyes about 26 px up), and it leans right without leaving the head. It never
+	// shows while they talk (below), so runechat, which draws over it, never hides it.
 	var/obj/effect/abstract/outpost_thought/thought = prisoner.thought
 	TEST_ASSERT(thought.rest_scale >= 0.8, "The bubble settles at [thought.rest_scale] scale, too small to read")
-	TEST_ASSERT(16 + thought.rest_z + 16 * thought.rest_scale <= 34, "The bubble's top edge is [16 + thought.rest_z + 16 * thought.rest_scale] px up, into runechat")
-	TEST_ASSERT(thought.pixel_w >= 16, "The bubble is only [thought.pixel_w] px to the side, over their head rather than beside it")
+	TEST_ASSERT(16 + thought.rest_z - 16 * thought.rest_scale >= 26, "The bubble's bottom edge is [16 + thought.rest_z - 16 * thought.rest_scale] px up, over their face")
+	TEST_ASSERT(thought.pixel_w > 0 && thought.pixel_w <= 12, "The bubble is [thought.pixel_w] px to the side, not a little right of their head")
 
 	// Talking puts it away: what they say goes up over their head, so a bubble that is up ducks out of
 	// its way, and none pops for 5 seconds after they say or emote anything (PRISONER_BUBBLE_HUSH).

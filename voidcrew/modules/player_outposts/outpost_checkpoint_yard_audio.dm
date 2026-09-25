@@ -46,20 +46,15 @@
 	if(client)
 		refresh_looping_ambience()
 
-/// Occasional yard noises over the loop. Stand-ins from the base game until custom ones exist.
+/// Occasional yard noises over the loop, each with its own volume. Stand-ins from the base game
+/// until custom ones exist.
 GLOBAL_LIST_INIT(checkpoint_yard_ambience, list(
 	// Metal creaking as the bay frame takes a load
-	'sound/effects/creak/creak1.ogg',
-	'sound/effects/creak/creak2.ogg',
-	'sound/effects/creak/creak3.ogg',
-	// Hull plates settling
-	'sound/effects/structure_stress/pop1.ogg',
-	'sound/effects/structure_stress/pop2.ogg',
-	'sound/effects/structure_stress/pop3.ogg',
-	// Something heavy dropped somewhere in the bay
-	'sound/effects/clang.ogg',
-	// A pneumatic line venting
-	'sound/effects/gas_hissing.ogg',
+	'sound/effects/creak/creak1.ogg' = 35,
+	'sound/effects/creak/creak2.ogg' = 25,
+	'sound/effects/creak/creak3.ogg' = 35,
+	// A pneumatic line venting; the file is loud, so it stays in the background
+	'sound/effects/gas_hissing.ogg' = 12,
 ))
 
 /// Inside a ship bay, the area's own ambience gives way to the yard's.
@@ -68,7 +63,7 @@ GLOBAL_LIST_INIT(checkpoint_yard_ambience, list(
 		return ..()
 	var/sound_file = pick(GLOB.checkpoint_yard_ambience)
 	var/volume_modifier = (M.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_ambience_volume)) / 100
-	var/sound/yard_sound = sound(sound_file, repeat = 0, wait = 0, volume = 35 * volume_modifier, channel = CHANNEL_AMBIENCE)
+	var/sound/yard_sound = sound(sound_file, repeat = 0, wait = 0, volume = GLOB.checkpoint_yard_ambience[sound_file] * volume_modifier, channel = CHANNEL_AMBIENCE)
 	yard_sound.frequency = get_rand_frequency()
 	SEND_SOUND(M, yard_sound)
 	return SSsounds.get_sound_length(sound_file) + rand(20 SECONDS, 50 SECONDS)

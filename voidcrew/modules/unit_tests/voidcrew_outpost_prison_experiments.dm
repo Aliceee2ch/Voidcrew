@@ -330,7 +330,7 @@
 	TEST_ASSERT_EQUAL(prison.experiment.twitch_left, 35, "The twitch ran outside the cell block")
 	subject.forceMove(yard)
 
-	// The change: the hulk where they stood, the fee paid, Kessler's 12 minutes started.
+	// The change: the hulk where they stood, and the fee paid. No clock: it stays until it is put down.
 	prison.experiments_tick(35)
 	var/mob/living/basic/outpost_experiment/hulk/hulk = locate() in yard
 	TEST_ASSERT_NOTNULL(hulk, "The subject did not turn into a hulk")
@@ -339,7 +339,7 @@
 	block = prison.experiment_payload()
 	TEST_ASSERT_EQUAL(block["form"], "hulk", "The console did not name the hulk once it showed")
 	TEST_ASSERT_EQUAL(block["stage"], "live", "The console does not show the hulk loose")
-	TEST_ASSERT_EQUAL(block["time_left"], 720, "Kessler's clock is not 12 minutes") // OUTPOST_EXPERIMENT_KESSLER_TIME
+	TEST_ASSERT_NULL(block["time_left"], "The console shows a clock on a loose hulk ([block["time_left"]] s)")
 	TEST_ASSERT_EQUAL(block["fee_paid"], 600, "The console does not show the fee")
 	TEST_ASSERT_EQUAL(hulk.maxHealth, 350, "A hulk facing nobody has [hulk.maxHealth] health, not 350") // OUTPOST_HULK_HEALTH
 	TEST_ASSERT(!ismegafauna(hulk), "The hulk counts as megafauna")
@@ -411,6 +411,14 @@
 	prison.experiments_tick(60)
 	return locate(/mob/living/basic/outpost_experiment) in yard
 
+/// How many containment breaches the warden's log shows
+/datum/unit_test/voidcrew_outpost_prison_experiment_kessler/proc/breaches_logged(datum/outpost_prison/prison)
+	var/count = 0
+	for(var/list/entry as anything in prison.entries)
+		if(findtext(entry["text"], "got out of the wing"))
+			count++
+	return count
+
 /datum/unit_test/voidcrew_outpost_prison_experiment_kessler/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = experiment_test_claim("kesslerowner")
 	TEST_ASSERT_NOTNULL(home, "The Kessler test prison did not load")
@@ -422,30 +430,34 @@
 	TEST_ASSERT_EQUAL(treasury.account_balance, 300, "The fly's data fee was not 300") // OUTPOST_EXPERIMENT_FEE_FLY
 	TEST_ASSERT_EQUAL(fly.maxHealth, 60, "The fly person has [fly.maxHealth] health, not 60") // OUTPOST_FLY_HEALTH
 
-	// Kessler's clock waits for the crew; after 12 minutes Kessler takes it and bills the treasury, as debt.
+	// No clock: left well past the old 12 minutes, crew home or not, it stays and costs nothing.
 	prison.crew_home_override = FALSE
 	prison.experiments_tick(800)
 	TEST_ASSERT(prison.experiment_active(), "Kessler recovered a creature while nobody was home")
-	TEST_ASSERT_EQUAL(prison.experiment.kessler_left, 720, "Kessler's clock ran with nobody home")
 	prison.crew_home_override = TRUE
-	treasury.adjust_money(-treasury.account_balance, "Test")
-	prison.experiments_tick(720)
-	TEST_ASSERT(!prison.experiment_active(), "Kessler did not recover a creature left 12 minutes")
-	TEST_ASSERT_EQUAL(prison.experiment.stage, "failed", "A recovered creature counted as contained")
-	TEST_ASSERT_EQUAL(prison.treasury_debt(), 500, "The fly's recovery was [prison.treasury_debt()] cr of debt, not 500") // OUTPOST_EXPERIMENT_RECOVERY_FLY
-	TEST_ASSERT(HAS_TRAIT(fly, TRAIT_GODMODE), "A creature Kessler is taking could still be hurt")
-	TEST_ASSERT(!is_hostile_creature(fly), "A turret would shoot a creature Kessler is taking")
-	TEST_ASSERT(wait_until(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(is_qdeleted_ref), WEAKREF(fly)), 12 SECONDS), "Kessler never took the fly away")
-	treasury.account_debt = 0
+	prison.experiments_tick(800)
+	TEST_ASSERT(prison.experiment_active(), "Kessler recovered a creature left alone in the wing") // no OUTPOST_EXPERIMENT_KESSLER_TIME any more
+	TEST_ASSERT(!HAS_TRAIT(fly, TRAIT_GODMODE), "Kessler came for a creature nobody took off the outpost")
+	TEST_ASSERT_EQUAL(prison.treasury_debt(), 0, "Leaving a creature alone ran up [prison.treasury_debt()] cr of debt")
+	TEST_ASSERT_EQUAL(treasury.account_balance, 300, "Leaving a creature alone cost [300 - treasury.account_balance] cr")
+	TEST_ASSERT_NULL(prison.experiment_payload()["time_left"], "The console shows a clock on a creature in the wing")
+	TEST_ASSERT(prison.experiment_end_admin(), "The fly's experiment could not be called off")
+	TEST_ASSERT(wait_until(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(is_qdeleted_ref), WEAKREF(fly)), 12 SECONDS), "Kessler never took the called-off fly away")
 
-	// Walked off the outpost: recovered at once, with the fee.
+	// Walked off the outpost: recovered at once, with the fee, which is debt when the treasury is short.
 	var/mob/living/basic/outpost_experiment/hulk/hulk = creature_for(home, "hulk")
 	TEST_ASSERT(istype(hulk), "No hulk")
-	trouble_fund(home, 5000)
+	treasury.adjust_money(-treasury.account_balance, "Test")
 	hulk.forceMove(run_loc_floor_bottom_left)
 	prison.experiments_tick(1)
 	TEST_ASSERT(!prison.experiment_active(), "A creature off the outpost was not recovered at once")
-	TEST_ASSERT_EQUAL(treasury.account_balance, 3500, "The hulk walking off cost [5000 - treasury.account_balance], not 1500") // OUTPOST_EXPERIMENT_RECOVERY_HULK
+	TEST_ASSERT_EQUAL(prison.experiment.stage, "failed", "A recovered creature counted as contained")
+	TEST_ASSERT_EQUAL(prison.treasury_debt(), 1500, "The hulk walking off was [prison.treasury_debt()] cr of debt, not 1500") // OUTPOST_EXPERIMENT_RECOVERY_HULK
+	TEST_ASSERT(HAS_TRAIT(hulk, TRAIT_GODMODE), "A creature Kessler is taking could still be hurt")
+	TEST_ASSERT(!is_hostile_creature(hulk), "A turret would shoot a creature Kessler is taking")
+	TEST_ASSERT(wait_until(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(is_qdeleted_ref), WEAKREF(hulk)), 12 SECONDS), "Kessler never took the hulk away")
+	treasury.account_debt = 0
+	trouble_fund(home, 3500)
 
 	// Carried off in something: recovered, but no fee.
 	var/mob/living/basic/outpost_experiment/nightmare/nightmare = creature_for(home, "nightmare")
@@ -468,18 +480,19 @@
 	TEST_ASSERT_EQUAL(treasury.account_balance, balance, "A creature that walked off with nobody home cost a recovery fee")
 	prison.crew_home_override = TRUE
 
-	// Out of the wing onto the outpost's own floor: five minutes.
+	// Out of the wing onto the outpost's own floor: the containment breach alarm, once, and still no clock.
 	var/mob/living/basic/outpost_experiment/fly/runner = creature_for(home, "fly")
 	TEST_ASSERT(istype(runner), "No second fly person")
 	runner.forceMove(get_turf(home.management_console))
 	TEST_ASSERT(prison.outpost_holds(runner), "The outpost's own floor did not count as the outpost")
 	prison.experiments_tick(1)
-	TEST_ASSERT_EQUAL(prison.experiment.loose_left, 299, "Leaving the wing did not start Kessler's 5 minutes") // OUTPOST_EXPERIMENT_KESSLER_LOOSE_TIME
-	TEST_ASSERT_EQUAL(prison.experiment_payload()["time_left"], 299, "The console shows the longer clock")
-	prison.experiments_tick(298)
-	TEST_ASSERT(prison.experiment_active(), "Kessler came early for a creature out of the wing")
-	prison.experiments_tick(1)
-	TEST_ASSERT(!prison.experiment_active(), "A creature 5 minutes out of the wing was not recovered")
+	TEST_ASSERT(prison.experiment.breach_announced, "Leaving the wing did not sound the containment breach")
+	TEST_ASSERT_EQUAL(breaches_logged(prison), 1, "Leaving the wing logged [breaches_logged(prison)] breaches, not 1")
+	prison.experiments_tick(400)
+	TEST_ASSERT(prison.experiment_active(), "Kessler recovered a creature out of the wing") // no OUTPOST_EXPERIMENT_KESSLER_LOOSE_TIME any more
+	TEST_ASSERT_NULL(prison.experiment_payload()["time_left"], "The console shows a clock on a creature out of the wing")
+	TEST_ASSERT_EQUAL(breaches_logged(prison), 1, "Staying out of the wing sounded the breach again")
+	TEST_ASSERT(prison.experiment_end_admin(), "The runner's experiment could not be called off")
 
 	// Called off by an admin: no fee.
 	var/mob/living/basic/outpost_experiment/hulk/last = creature_for(home, "hulk")
@@ -489,6 +502,71 @@
 	TEST_ASSERT_NULL(prison.experiment, "The admin end left the experiment")
 	TEST_ASSERT_EQUAL(treasury.account_balance, balance, "Calling the experiment off cost a fee")
 	TEST_ASSERT(HAS_TRAIT(last, TRAIT_GODMODE), "The called-off hulk was not being taken away")
+	settle_prison_air(home)
+
+// ===== THE SUBJECT STAYS =====
+
+/datum/unit_test/voidcrew_outpost_prison_experiment_holds
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_experiment_holds/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = experiment_test_claim("holdowner", trouble = TRUE)
+	TEST_ASSERT_NOTNULL(home, "The hold test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	trouble_fund(home, 0)
+	var/turf/yard = prison_spot(home, 8, 8)
+
+	// A dosed subject whose sentence runs out: the sentence holds and they are not released.
+	var/mob/living/basic/outpost_prisoner/subject = trouble_prisoner(prison, yard)
+	TEST_ASSERT(prison.start_experiment("hulk", subject), "The subject could not be dosed")
+	TEST_ASSERT(prison.held_for_experiment(subject), "The experiment does not hold its subject")
+	subject.sentence_left = 5
+	prison.tick(10)
+	TEST_ASSERT_EQUAL(subject.phase, "present", "A dosed subject was released when their sentence ran out") // PRISONER_PRESENT
+	TEST_ASSERT_EQUAL(subject.sentence_left, 5, "A dosed subject's sentence ran on to [subject.sentence_left] s")
+	subject.sentence_left = 0
+	prison.check_release(subject)
+	TEST_ASSERT_EQUAL(subject.phase, "present", "A dosed subject was released at the end of their sentence")
+	TEST_ASSERT_EQUAL(prison.release(subject), 0, "A dosed subject could be released")
+	TEST_ASSERT_EQUAL(subject.phase, "present", "A dosed subject was beamed out by a release")
+
+	// Rioting, they are not transferred out with the other rioters.
+	var/mob/living/basic/outpost_prisoner/rioter = trouble_prisoner(prison, prison_spot(home, 12, 8))
+	subject.trouble = "riot" // PRISONER_TROUBLE_RIOT
+	rioter.trouble = "riot"
+	prison.riot_active = TRUE
+	prison.transfer_rioters()
+	TEST_ASSERT_EQUAL(subject.phase, "present", "A dosed subject was transferred out with the rioters")
+	TEST_ASSERT_EQUAL(rioter.phase, "leaving", "A rioter who was not a subject was not transferred") // PRISONER_LEAVING
+	subject.trouble = null
+
+	// Loose with their clock run out, they stay put, loose, until the experiment is over.
+	subject.trouble = "loose" // PRISONER_TROUBLE_LOOSE
+	subject.loose_left = 3
+	prison.loose_tick(10)
+	TEST_ASSERT_EQUAL(subject.phase, "present", "A loose subject got away for good")
+	TEST_ASSERT_EQUAL(subject.trouble, "loose", "A loose subject stopped being loose")
+	TEST_ASSERT(subject.loose_left > 0, "A loose subject's clock ran out")
+	TEST_ASSERT(prison.experiment_end_admin(), "The subject's experiment could not be called off")
+	TEST_ASSERT(!prison.held_for_experiment(subject), "The subject is still held once the experiment is over")
+	prison.loose_tick(10)
+	TEST_ASSERT_EQUAL(subject.phase, "leaving", "Once the experiment was over, the loose subject did not get away") // PRISONER_LEAVING
+
+	// A specimen host who dies out of the cell block does not burst there, and their body is not collected meanwhile.
+	var/mob/living/basic/outpost_prisoner/host = trouble_prisoner(prison, yard)
+	TEST_ASSERT(prison.start_experiment("changeling", host), "The host could not take the specimen")
+	var/datum/outpost_changeling_event/event = prison.changeling_event()
+	TEST_ASSERT_NOTNULL(event, "No changeling event")
+	event.stop_self_ticking()
+	TEST_ASSERT(prison.held_for_experiment(host), "The experiment does not hold the specimen's host")
+	host.forceMove(prison_spot(home, 12, 3))
+	host.death()
+	prison.tick(130) // past OUTPOST_PRISON_CORPSE_PICKUP
+	TEST_ASSERT(!QDELETED(host) && host.phase == "present", "The host's body was collected before the burst")
+	TEST_ASSERT(prison.experiment_active(), "The host dying called the specimen off")
+	TEST_ASSERT(prison.experiment_end_admin(), "The specimen could not be called off")
+	prison.tick(1)
+	TEST_ASSERT(QDELETED(host) || host.phase == "leaving", "A body the experiment no longer needs was not collected")
 	settle_prison_air(home)
 
 // ===== CREATURES =====
@@ -664,17 +742,15 @@
 	event.stage = "burst"
 	TEST_ASSERT(prison.experiment_creature_appeared(slug, "changeling"), "The headslug was not tracked")
 	TEST_ASSERT_EQUAL(treasury.account_balance, 600, "The burst paid [treasury.account_balance], not 600") // OUTPOST_EXPERIMENT_FEE_CHANGELING
-	TEST_ASSERT_NULL(prison.experiment.kessler_left, "Kessler's clock ran for the headslug")
 	TEST_ASSERT_EQUAL(prison.experiment_payload()["stage"], "live", "The console does not show the burst")
 	TEST_ASSERT(prison.experiment_creature_appeared(slug, "changeling"), "Reporting the headslug twice failed")
 	TEST_ASSERT_EQUAL(treasury.account_balance, 600, "Reporting the headslug twice paid twice")
 
-	// The horror: no second fee, Kessler's clock starts, and losing the slug to it ends nothing.
+	// The horror: no second fee, and losing the slug to it ends nothing.
 	var/mob/living/basic/horror = allocate(/mob/living/basic/mouse, prison_spot(home, 9, 9))
 	event.stage = "horror"
 	TEST_ASSERT(prison.experiment_creature_appeared(horror, "horror"), "The horror was not tracked")
 	TEST_ASSERT_EQUAL(treasury.account_balance, 600, "The horror paid a second fee")
-	TEST_ASSERT_EQUAL(prison.experiment.kessler_left, 720, "Kessler's clock did not start at the horror")
 	TEST_ASSERT_EQUAL(prison.experiment_payload()["stage"], "horror", "The console does not show the horror")
 	qdel(slug)
 	TEST_ASSERT(prison.experiment_active(), "Losing the headslug ended the specimen")

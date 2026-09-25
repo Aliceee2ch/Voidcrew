@@ -4,10 +4,11 @@
  * The researcher's specimen (outpost_prison_experiments.dm): slipped into a prisoner's food, it
  * hatches inside them. Numbers are in voidcrew/_DEFINES/outpost_prison_changeling.dm.
  *
- * 1. Incubating. Eating the specimen starts a 3-4 minute clock (outpost_changeling_infect()). The
- *    host complains of stomach pain after a minute and coughs and retches after two. 45 seconds
- *    before the burst they go to their bunk and lie down, groaning, their belly heaving. They are
- *    down now and can be dragged. Their sentence is held so they are not released meanwhile.
+ * 1. Incubating. Eating the specimen starts a clock of a minute and a half to two minutes
+ *    (outpost_changeling_infect()). The host complains of stomach pain after 30 seconds and coughs
+ *    and retches after a minute. 22 seconds before the burst they go to their bunk and lie down,
+ *    groaning, their belly heaving. They are down now and can be dragged. Their sentence is held so
+ *    they are not released meanwhile, and a dead host is not collected before the burst.
  * 2. The burst. The host bursts in a spray of gore and a headslug drops out. It heads for the
  *    nearest vent and squeezes in over two seconds; any damage stops it and it tries again. The
  *    data fee is paid now (experiment_creature_appeared()). A host killed early bursts anyway,
@@ -17,10 +18,13 @@
  *    back to the one it just left, and gets louder as it grows: rattles every few seconds, then
  *    clangs, slime and prisoners pointing at the vent, then banging, dented covers, flickering
  *    lights and prisoners begging to be locked in. Wrenching the vent it is in forces it out; it
- *    stays a slug and fights (killing it pays the containment bonus). Left alone, three minutes
- *    after it went in, one vent strains for ten seconds and the horror (outpost_prison_horror.dm)
- *    comes out. It never comes out of a vent in a bolted cell while there is another.
- * 4. The horror, until it dies or Kessler takes it (S4a's recovery clock).
+ *    stays a slug and fights (killing it pays the containment bonus). Left alone, a minute and a
+ *    half after it went in, one vent strains for five seconds and the horror
+ *    (outpost_prison_horror.dm) comes out. It never comes out of a vent in a bolted cell while
+ *    there is another.
+ * 4. The horror, until it dies for good. At 0 health it goes down regenerating and gets up again
+ *    unless its body is destroyed or it is in vacuum; the first time, the outpost is told how to
+ *    finish it (horror_collapsed()). Prisoners shout when it gets back up.
  *
  * Every clock pauses while no member of the wing is home (crew_home()), except a dead host's last
  * three seconds. When it ends, prisoners who saw a death lose mood, each prisoner the creature
@@ -126,6 +130,8 @@
 	var/strain_left = 0
 	/// The horror has left the wing, and the outpost has been told
 	var/breach_announced = FALSE
+	/// The horror has gone down regenerating once, and the outpost has been told how to finish it
+	var/regen_announced = FALSE
 
 	/// Deaths seen so far (REF = TRUE), prisoners the creature killed, and who saw a death (weakrefs)
 	var/list/counted_deaths = list()
@@ -305,7 +311,7 @@
 	if(incubation_elapsed >= incubation_total)
 		burst()
 
-/// The host's complaints: stomach pain after a minute, coughing and retching after two, and small signs between
+/// The host's complaints: stomach pain after OUTPOST_CHANGELING_TELL_PAIN, coughing and retching after OUTPOST_CHANGELING_TELL_RETCH, and small signs between
 /datum/outpost_changeling_event/proc/host_tells(seconds)
 	if(host.stat != CONSCIOUS || host_down)
 		return
@@ -331,7 +337,7 @@
 		: list("winces.", "rubs [host.p_their()] stomach.", "burps, and looks worried about it.")
 	INVOKE_ASYNC(host, TYPE_PROC_REF(/atom, manual_emote), pick(tells))
 
-/// 45 seconds to go: the host heads for their bunk
+/// OUTPOST_CHANGELING_BED_WARNING seconds to go: the host heads for their bunk
 /datum/outpost_changeling_event/proc/start_bed_phase()
 	bed_phase = TRUE
 	bed_walk_left = OUTPOST_CHANGELING_BED_WALK
@@ -575,7 +581,7 @@
 	slug.start_fighting()
 	update_time_left()
 
-/// How loud the vents are: 1 for the first minute, 2 for the second, 3 after
+/// How loud the vents are: 1 until OUTPOST_CHANGELING_NOISE_LOUDER, 2 until OUTPOST_CHANGELING_NOISE_VIOLENT, 3 after
 /datum/outpost_changeling_event/proc/noise_level()
 	if(vent_elapsed < OUTPOST_CHANGELING_NOISE_LOUDER)
 		return 1
@@ -646,7 +652,7 @@
 	new /obj/effect/decal/cleanable/blood/xeno(spot)
 	playsound(spot, 'sound/effects/splat.ogg', 20, TRUE, -2)
 
-/// A prisoner who heard it says so: "something's in the walls" in the second minute, "lock me in" after
+/// A prisoner who heard it says so: "something's in the walls" at noise level 2, "lock me in" at 3
 /datum/outpost_changeling_event/proc/prisoner_remark(level)
 	if(level < 2 || !prison.wing_can_speak())
 		return FALSE
@@ -696,7 +702,7 @@
 	var/datum/outpost_prison_cell/holding = prison?.cell_at(get_turf(candidate))
 	return !!holding?.is_bolted()
 
-/// Ten seconds to go: one vent strains and bulges, as loud as it gets
+/// OUTPOST_CHANGELING_STRAIN_TIME seconds to go: one vent strains and bulges, as loud as it gets
 /datum/outpost_changeling_event/proc/start_strain()
 	var/obj/structure/outpost_kessler_vent/exit = emergence_vent()
 	if(exit && exit != vent)
@@ -790,22 +796,56 @@
 		prison.announce("CONTAINMENT BREACH: the Kessler specimen has left the prison wing!", SHIP_NOTIFY_DANGER)
 		prison.play_alarm()
 #endif
+	// Down and regenerating: its own clock, which also checks for vacuum and fire whoever is home.
+	if(horror.regenerating)
+		horror.regen_tick(seconds, home)
+		if(QDELETED(horror) || horror.stat == DEAD)
+			return
 	if(!home)
 		return
 	remark_left -= seconds
 	if(remark_left > 0)
 		return
 	remark_left = rand(8, 14)
-	if(!prison.wing_can_speak())
-		return
+	horror_remark(horror.regenerating ? "horror_down" : "horror")
+
+/// One prisoner who can see the horror says a `context` line. Returns TRUE if one did.
+/datum/outpost_changeling_event/proc/horror_remark(context)
+	if(QDELETED(horror) || QDELETED(prison) || !prison.wing_can_speak())
+		return FALSE
 	for(var/mob/living/basic/outpost_prisoner/witness in shuffle(prison.prisoners))
 		if(witness.stat != CONSCIOUS || witness.phase != PRISONER_PRESENT || witness.can_be_dragged() || !witness.ai_running())
 			continue
 		if(!(horror in view(7, witness)))
 			continue
 		prison.note_speech()
-		INVOKE_ASYNC(witness, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), "horror")
+		INVOKE_ASYNC(witness, TYPE_PROC_REF(/mob/living/basic/outpost_prisoner, say_context), context)
+		return TRUE
+	return FALSE
+
+/// The horror went down regenerating (outpost_prison_horror.dm). The first time, the outpost is told how to finish it.
+/datum/outpost_changeling_event/proc/horror_collapsed()
+	if(stage != "horror" || QDELETED(prison))
 		return
+	prison.add_log("The horror went down, but it is regenerating.")
+	// A prisoner remarks on it soon.
+	remark_left = min(remark_left, 2)
+	if(regen_announced)
+		return
+	regen_announced = TRUE
+	prison.announce("Prison wing: the specimen is regenerating. Destroy the body or get it into space.", SHIP_NOTIFY_DANGER)
+
+/// The horror is pushing itself back up: a prisoner who can see it shouts about it
+/datum/outpost_changeling_event/proc/horror_rising()
+	if(stage != "horror")
+		return
+	horror_remark("horror_rises")
+
+/// The horror is back on its feet
+/datum/outpost_changeling_event/proc/horror_rose()
+	if(stage != "horror" || QDELETED(prison))
+		return
+	prison.add_log("The horror got back up.")
 
 // ===== WHAT IS ON THE OUTPOST =====
 

@@ -864,12 +864,13 @@
 /**
  * A sit-in nobody dealt with: the corrections service beams every rioter still at large out, with
  * no bonus, for OUTPOST_PRISON_TRANSFER_FEE each as part of the incident. Rioters already shut in a
- * cell stay, and calm with the end of the riot. Also the admin panel's hook. Returns how many went.
+ * cell stay, and calm with the end of the riot, and so does an experiment's subject
+ * (held_for_experiment()). Also the admin panel's hook. Returns how many went.
  */
 /datum/outpost_prison/proc/transfer_rioters()
 	var/list/rioters = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.riot_at_large())
+		if(prisoner.riot_at_large() && !held_for_experiment(prisoner))
 			rioters += prisoner
 	if(!length(rioters))
 		if(riot_active)
@@ -1260,7 +1261,8 @@
  * crew does and wherever the prisoner is, except that a caught prisoner's clock waits: a loose
  * one's while cuffed, a breakout rioter's while not free (down, cuffed or shut in a cell). The
  * crew is told where each one is with PRISON_LOOSE_PING_1 and PRISON_LOOSE_PING_2 seconds left,
- * and at 0 they are gone for good.
+ * and at 0 they are gone for good. An experiment's subject (held_for_experiment()) is not: their
+ * clock stops just short of 0 and they stay, loose, until the experiment is over.
  */
 /datum/outpost_prison/proc/loose_tick(seconds)
 	var/list/pings = list()
@@ -1271,6 +1273,8 @@
 			prisoner.loose_left = 0
 			continue
 		if(prisoner.trouble == PRISONER_TROUBLE_LOOSE ? prisoner.cuffs : !prisoner.riot_free())
+			continue
+		if(prisoner.loose_left <= seconds && held_for_experiment(prisoner))
 			continue
 		var/before = prisoner.loose_left
 		prisoner.loose_left -= seconds

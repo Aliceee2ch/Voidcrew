@@ -4,9 +4,10 @@
 // A Kessler Biolabs researcher visits a well-kept wing now and then and offers a serum (blind:
 // hulk, nightmare or fly person) or, from the second offer on, a specimen (the changeling). A
 // manager may take it. The wing is paid a fee when the creature shows and a containment bonus
-// when it is put down, if the crew did at least half of the damage. A creature left alive too
-// long, or loose outside the wing too long, is recovered by Kessler for a fee that becomes the
-// treasury's debt when it cannot pay. Every clock here counts only while a member is home.
+// when it is put down, if the crew did at least half of the damage. A creature stays until the
+// crew puts it down or an admin ends the experiment. One taken off the outpost is recovered by
+// Kessler for a fee that becomes the treasury's debt when it cannot pay. Every clock here counts
+// only while a member is home.
 
 /// The experiments core is compiled in. Also defined at the top of outpost_prison_experiments.dm;
 /// defined here too so files included before that one (the changeling's) see it.
@@ -58,10 +59,7 @@
 /// Seconds a dosed subject or host may spend outside the cell block before the experiment fails
 #define OUTPOST_EXPERIMENT_OUTSIDE_LIMIT 60
 
-// ----- Kessler recovery -----
-/// Seconds a creature may live after it appears, and after it leaves the wing, before Kessler recovers it
-#define OUTPOST_EXPERIMENT_KESSLER_TIME (12 * 60)
-#define OUTPOST_EXPERIMENT_KESSLER_LOOSE_TIME (5 * 60)
+// ----- Kessler collection -----
 /// Seconds before Kessler collects a creature that was put down
 #define OUTPOST_EXPERIMENT_PICKUP 10
 /// Seconds the console keeps showing how an experiment ended

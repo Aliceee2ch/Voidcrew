@@ -136,6 +136,8 @@ type PrisonExperiment = {
   researcher_present: BooleanLike;
   fee_paid: number;
   bonus_paid: number;
+  /** up or regenerating while the changeling's horror is out, else null */
+  horror?: string | null;
 };
 
 type PrisonAdminData = {
@@ -1098,6 +1100,7 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
   const [form, setForm] = useState<ExperimentForm>('hulk');
   const experiment = data.experiment || null;
   const changeling = !!experiment && experiment.form === 'changeling';
+  const horror = experiment?.horror || null;
   const open = !!data.intake_open;
   const powered = !!data.powered;
   const conditions = data.conditions || {
@@ -1333,6 +1336,28 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
             {label}
           </Button>
         ))}
+        <Button
+          icon="heart-pulse"
+          disabled={busy || !horror}
+          tooltip={
+            horror === 'regenerating'
+              ? 'Get the horror up now'
+              : 'Drop the horror to regenerate'
+          }
+          onClick={() => act('prison_horror', { what: 'regen' })}
+        >
+          Regen
+        </Button>
+        <Button.Confirm
+          icon="skull"
+          color="bad"
+          confirmContent="Kill?"
+          disabled={busy || !horror}
+          tooltip="Kill the horror for good"
+          onClick={() => act('prison_horror', { what: 'kill' })}
+        >
+          Kill Horror
+        </Button.Confirm>
         <Button.Confirm
           icon="stop"
           color="bad"
@@ -1428,6 +1453,7 @@ const PrisonTools = ({ data, busy, act }: PrisonProps) => {
             {[
               experiment.form || 'unknown',
               experiment.stage || '?',
+              experiment.horror === 'regenerating' ? 'regenerating' : '',
               experiment.subject || '',
               isNum(experiment.time_left)
                 ? `${clock(experiment.time_left)} left`

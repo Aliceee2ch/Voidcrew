@@ -5,7 +5,8 @@
  * instead of randomly picking from the TOML config.
  *
  * When placed on a ship template DMM, this marker will:
- * 1. Find the ship being loaded via SSshuttle.loading_ship
+ * 1. Find the ship being loaded via SSshuttle.loading_ship, or the shipyard order being
+ *    loaded via SSshuttle.loading_order (a hull built in an outpost bay has no ship yet)
  * 2. Check if the player selected an upgrade for this slot (key)
  * 3. Load the selected upgrade module, OR load the default module for this slot
  */
@@ -16,6 +17,8 @@
 	/// Cached reference to the ship - captured in Initialize before async load_map runs
 	/// This is necessary because SSshuttle.loading_ship gets cleared before INVOKE_ASYNC fires
 	var/obj/structure/overmap/ship/cached_ship
+	/// The shipyard order being loaded, captured the same way. Only used without a ship.
+	var/datum/ship_order/cached_order
 	/// Shape of this upgrade room inside the module's bounding box, written by the map editor.
 	/// Rows from the top of the module down, separated by "/"; "#" is part of the room, "." is hull.
 	/// Null means the whole rectangle. The loader ignores it: module maps already use
@@ -32,6 +35,7 @@
 /obj/modular_map_root/ship_upgrade/Initialize(mapload)
 	// Capture the ship reference NOW, before parent's INVOKE_ASYNC schedules load_map
 	cached_ship = SSshuttle.loading_ship
+	cached_order = cached_ship ? null : SSshuttle.loading_order
 	// Markers initialize immediately, while the map reader is still placing the hull. An
 	// uninitialized turf under us means that read is in progress and its template will
 	// initialize everything, us included - it waits for this marker before it does.
@@ -55,16 +59,22 @@
 	// Use the cached ship reference (captured in Initialize before async delay)
 	// Fall back to get_ship_from_atom for runtime spawning
 	var/obj/structure/overmap/ship/ship = cached_ship
-	if(!ship)
+	var/datum/ship_order/order = cached_order
+	if(!ship && !order)
 		ship = get_ship_from_atom(src)
+
+	// A shipyard order carries the same choices a ship record would
+	var/list/selections = order ? order.upgrade_selections : ship?.upgrade_selections
+	var/ship_template_type = order ? order.hull_type : ship?.source_template?.type
+	var/theme_id = order ? order.theme?.id : ship?.theme
+	cached_order = null
 
 	// Determine which module to load
 	var/datum/ship_upgrade_module/module_to_load
-	var/ship_template_type = ship?.source_template?.type
 
-	if(ship?.upgrade_selections?[key])
+	if(selections?[key])
 		// Player selected an upgrade for this slot
-		module_to_load = ship.upgrade_selections[key]
+		module_to_load = selections[key]
 	else if(ship_template_type)
 		// No selection - find and load the default module for this slot and ship
 		module_to_load = get_default_module_for_ship_slot(ship_template_type, key)
@@ -75,7 +85,7 @@
 		return
 
 	// Load the module (pass ship theme for themed file lookup)
-	load_module(spawn_area, module_to_load.map_file, ship?.theme)
+	load_module(spawn_area, module_to_load.map_file, theme_id)
 
 /**
  * Load a module DMM at the spawn area

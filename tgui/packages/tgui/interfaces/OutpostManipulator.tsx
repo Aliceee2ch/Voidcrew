@@ -654,6 +654,14 @@ const CheckpointTools = ({
       >
         Rebuild Docked Ship
       </Button>
+      <Button
+        icon="ship"
+        disabled={busy}
+        tooltip="Build a new ship from the shipyard catalog for you"
+        onClick={() => act('checkpoint_order_free')}
+      >
+        Build Ship (Free)
+      </Button>
     </Stack>
     {data.rebuilds.map((rebuild) => (
       <Box key={rebuild.ref} mb={1}>

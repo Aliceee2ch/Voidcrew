@@ -409,7 +409,8 @@
 	result["load_started_at"] = job.load_started_at
 	result["waited"] = (job.load_started_at || world.time) - started
 	result["loaded"] = world.time - (job.load_started_at || started)
-	result["phases"] = phase_text(job.template?.phase_ms)
+	var/datum/map_template/shuttle/voidcrew/commissioned/checkpoint/loaded = job.template
+	result["phases"] = phase_text(loaded?.phase_ms)
 	if(!prepared)
 		result["error"] = job.error
 		return

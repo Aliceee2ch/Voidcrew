@@ -62,6 +62,9 @@
 		if("checkpoint_rebuild_docked")
 			rebuild_docked_ship(home, user)
 			return
+		if("checkpoint_order_free")
+			admin_free_order(home, user)
+			return
 		if("bay_remove_ship")
 			var/datum/outpost_berth/ship_bay/bay = locate(params["ref"]) in home.bay_berths
 			if(!bay?.is_ship_present())
@@ -91,7 +94,7 @@
 		if("rebuild_rush", "rebuild_hand_over", "rebuild_stop")
 			var/datum/checkpoint_construction/job = locate(params["ref"]) in home.checkpoint_jobs
 			if(!job)
-				error = "That reconstruction is no longer running."
+				error = "That build is no longer running."
 				return
 			switch(action)
 				if("rebuild_rush")
@@ -102,9 +105,9 @@
 					if(job.hand_over_now())
 						record(user, home, "hand over the rebuilt [name] without waiting")
 				if("rebuild_stop")
-					if(!confirm(home, user, "Stop rebuilding [job.ship_name]? Placed pieces are removed. A checkpoint already used by this build is not returned.") || QDELETED(job))
+					if(!confirm(home, user, "Stop building [job.ship_name]? Placed pieces are removed. A checkpoint or payment already used by this build is not returned.") || QDELETED(job))
 						return
-					record(user, home, "stop the reconstruction of [job.ship_name]")
+					record(user, home, "stop the construction of [job.ship_name]")
 					job.abort("Stopped by an administrator.")
 
 /datum/outpost_manipulator/proc/prompt_free_checkpoint(obj/structure/overmap/dynamic/player_outpost/home, mob/user)
@@ -281,3 +284,64 @@
 	if(!snapshot || !remove_docked_ship(home, user, bay, ship))
 		return FALSE
 	return admin_rebuild(home, user, snapshot)
+
+/**
+ * Starts a free shipyard order: pick a hull, and optionally its theme and modules, or take the
+ * defaults. The admin is the buyer and receives the ship. The build is the normal staged one.
+ */
+/datum/outpost_manipulator/proc/admin_free_order(obj/structure/overmap/dynamic/player_outpost/home, mob/user)
+	if(!home.ship_bay_installed)
+		error = "Install the ship bay first."
+		return FALSE
+	if(!home.available_ship_bay())
+		error = "The ship bay is occupied or reserved."
+		return FALSE
+	var/list/hulls = list()
+	for(var/datum/map_template/shuttle/voidcrew/hull as anything in get_ship_order_hulls())
+		hulls[hull.name] = hull
+	var/hull_choice = tgui_input_list(user, "Hull", "Build Ship (Free)", hulls)
+	if(!valid_selection(home, user) || !hull_choice)
+		return FALSE
+	var/datum/ship_order/order = new(hulls[hull_choice])
+	var/list/themes = get_themes_for_ship(order.hull_type)
+	if(length(themes) > 1)
+		var/list/theme_names = list()
+		for(var/theme_id in themes)
+			var/datum/ship_theme/theme = themes[theme_id]
+			theme_names["[theme.name][theme.is_default ? " (default)" : ""]"] = theme
+		var/theme_choice = tgui_input_list(user, "Theme", "Build Ship (Free)", theme_names)
+		if(!valid_selection(home, user) || !theme_choice)
+			qdel(order)
+			return FALSE
+		order.set_theme(theme_names[theme_choice])
+	var/list/slots = order.slot_ids()
+	if(length(slots) && tgui_alert(user, "Modules", "Build Ship (Free)", list("Defaults", "Choose")) == "Choose")
+		for(var/slot_key in slots)
+			var/list/options = list()
+			for(var/datum/ship_upgrade_module/module as anything in get_modules_for_ship_slot(order.hull_type, order.theme?.id, slot_key))
+				options["[module.name][module.is_default ? " (default)" : ""]"] = module
+			if(!length(options))
+				continue
+			var/module_choice = tgui_input_list(user, "Module for [slot_key]", "Build Ship (Free)", options)
+			if(!valid_selection(home, user))
+				qdel(order)
+				return FALSE
+			if(module_choice)
+				order.upgrade_selections[slot_key] = options[module_choice]
+	error = order.denial()
+	if(error)
+		qdel(order)
+		return FALSE
+	var/hull_name = order.hull.name
+	var/theme_name = order.theme?.name
+	var/datum/checkpoint_construction/order/job = new(null, home, order, user, null, null, FALSE, TRUE)
+	if(!job.bay)
+		error = "The ship bay is occupied or reserved."
+		qdel(job)
+		return FALSE
+	if(!job.prepare())
+		if(!QDELETED(src))
+			error = job.error || "The build could not start."
+		return FALSE
+	record(user, home, "start a free build of a [hull_name][theme_name ? " ([theme_name])" : ""]")
+	return TRUE

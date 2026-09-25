@@ -230,7 +230,7 @@
 	prisoner.forceMove(prison_spot(home, 10, 8))
 	warden.forceMove(prison_spot(home, 10, 9))
 	prison.refresh_conditions()
-	var/clean_before = prison.clean_score
+	var/mess_before = prison.mess_load
 	var/obj/item/storage/toolbox/toolbox = allocate(__IMPLIED_TYPE__)
 	warden.put_in_active_hand(toolbox)
 	warden.set_combat_mode(TRUE)
@@ -239,7 +239,8 @@
 	TEST_ASSERT(prisoner.health < 100, "The toolbox did not hurt the prisoner")
 	TEST_ASSERT(locate(/obj/effect/decal/cleanable/blood) in prison_spot(home, 10, 8), "A brute hit left no blood on the floor")
 	prison.refresh_conditions()
-	TEST_ASSERT(prison.clean_score < clean_before, "Blood on the floor did not count as mess")
+	// Counted in the mess load; Clean itself only drops past PRISON_MESS_FREE units per 100 floor tiles.
+	TEST_ASSERT(prison.mess_load > mess_before, "Blood on the floor did not count as mess")
 	// Badly hurt and untreated, they drip; treated, they stop.
 	prisoner.forceMove(prison_spot(home, 11, 8))
 	prisoner.adjustBruteLoss(60 - prisoner.getBruteLoss())

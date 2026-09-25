@@ -511,7 +511,8 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 	for(var/turf/tile as anything in wing_turfs())
 		for(var/obj/machinery/light/fixture in tile)
 			if(fixture.status == LIGHT_OK)
-				fixture.break_light_tube()
+				// No sparks: they are lights too, and would count toward Lit until they fade
+				fixture.break_light_tube(TRUE)
 				broken++
 	refresh_conditions()
 	return broken

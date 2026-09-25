@@ -140,8 +140,11 @@
 	var/clean_before = prison.clean_score
 	panel.manage_outpost(home, operator, "prison_mess", list())
 	TEST_ASSERT(prison.clean_score < clean_before, "Spawning mess did not dirty the wing")
+	// Lit is measured light, so glow from machines and the outer windows keeps it above 0 with
+	// every bulb broken; the wing must still count as dark (PRISON_DARK_BELOW 50).
+	var/lit_before = prison.lit_score
 	panel.manage_outpost(home, operator, "prison_break_lights", list())
-	TEST_ASSERT_EQUAL(prison.lit_score, 0, "Breaking the lights left the wing [prison.lit_score]% lit")
+	TEST_ASSERT(prison.lit_score < lit_before && prison.lit_score < 50, "Breaking the lights left the wing [prison.lit_score]% lit (was [lit_before]%)")
 	// A cut only drops Power once the outage debt passes its grace (PRISON_POWER_GRACE 30) and
 	// ramp (PRISON_POWER_RAMP 90), so the debt is pushed to the end of the ramp.
 	panel.manage_outpost(home, operator, "prison_power", list("on" = 0))

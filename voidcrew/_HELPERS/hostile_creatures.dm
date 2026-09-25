@@ -37,7 +37,9 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
  * pinned to a person's, so it stays honest if that strategy gains more variants.
  */
 /proc/creature_threatens_people(mob/living/creature)
-	var/datum/targeting_strategy/basic/of_size/sizer = GET_TARGETING_STRATEGY(creature.ai_controller?.blackboard[BB_TARGETING_STRATEGY])
+	// A mob with no AI controller (or none set on its blackboard) has no strategy to look up.
+	var/strategy_type = creature.ai_controller?.blackboard?[BB_TARGETING_STRATEGY]
+	var/datum/targeting_strategy/basic/of_size/sizer = strategy_type ? GET_TARGETING_STRATEGY(strategy_type) : null
 	if(!istype(sizer)) // Anything not size-gated will take a swing at whatever it can reach.
 		return TRUE
 	if(sizer.inclusive && creature.mob_size == MOB_SIZE_HUMAN)

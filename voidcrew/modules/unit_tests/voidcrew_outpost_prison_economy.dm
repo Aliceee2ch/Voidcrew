@@ -27,13 +27,15 @@
 	var/target_loss = prisoner.maxHealth * (100 - percent) / 100
 	prisoner.adjustBruteLoss(target_loss - prisoner.getBruteLoss(), forced = TRUE)
 
-/// Every bulb in the wing working (tg breaks a few at load), and the condition scores refreshed
+/// Every bulb in the wing working (tg breaks a few at load) and drawn, and the condition scores refreshed
 /datum/unit_test/voidcrew_outpost_prison_economy_kit/proc/fix_wing(datum/outpost_prison/prison)
 	for(var/turf/tile as anything in prison.wing_turfs())
 		for(var/obj/machinery/light/fixture in tile)
 			if(fixture.status != LIGHT_OK)
 				fixture.fix()
-	prison.conditions_tick(1000)
+	// conditions_tick() only measures light once the fixtures are drawn and scans mess a budget at a time
+	conditions_draw_lights(prison)
+	prison.refresh_conditions()
 
 /datum/unit_test/voidcrew_outpost_prison_economy_kit/proc/console_act(obj/machinery/computer/outpost_prison_warden/console, mob/user, action)
 	var/datum/tgui/ui = allocate(/datum/tgui, user, console, "OutpostPrison")

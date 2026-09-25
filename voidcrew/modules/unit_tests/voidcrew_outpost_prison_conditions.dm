@@ -198,14 +198,16 @@
 	TEST_ASSERT(clean_before < 100, "Eight tiles of vomit left the wing clean")
 
 	// Walling off part of the yard makes the floor smaller but never the mess lighter: the floor's
-	// size stays the placed wing's.
+	// size stays the placed wing's. The new walls leave the floor; the yard behind them was inside
+	// the cell block and stays inside (refresh_cell_block() keeps what was inside).
 	for(var/x in 2 to 16)
 		var/turf/wall_spot = prison_spot(home, x, 10)
 		wall_spot.ChangeTurf(/turf/closed/wall)
 	prison.refresh_cell_block()
 	prison.refresh_conditions()
 	TEST_ASSERT(length(prison.mess_floor) < size, "Walling off the yard left [length(prison.mess_floor)] of [size] floor tiles")
-	TEST_ASSERT(!(prison_spot(home, 8, 8) in prison.mess_floor), "The walled-off yard is still floor")
+	TEST_ASSERT(!(prison_spot(home, 8, 10) in prison.mess_floor), "The new wall is still floor")
+	TEST_ASSERT(prison_spot(home, 8, 8) in prison.mess_floor, "The walled-off yard left the floor")
 	TEST_ASSERT_EQUAL(prison.mess_floor_size, size, "Walling off the yard changed the floor size")
 	TEST_ASSERT_EQUAL(prison.clean_score, clean_before, "Walling off the yard changed Clean from [clean_before] to [prison.clean_score]")
 
@@ -385,7 +387,7 @@
 	// While the wing runs on its battery, the console shows how much is left.
 	if(apc.cell)
 		apc.charging = APC_NOT_CHARGING
-		TEST_ASSERT_EQUAL(prison.conditions_payload()["battery"], round(apc.cell.percent()), "The console does not show the battery running down")
+		TEST_ASSERT_EQUAL(prison.conditions_payload()["battery"], round(apc.cell.percent(), 1), "The console does not show the battery running down")
 	settle_prison_air(home)
 
 // ===== RATS AND AIR =====

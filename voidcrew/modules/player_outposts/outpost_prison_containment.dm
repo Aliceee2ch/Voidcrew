@@ -93,11 +93,17 @@
 	log_game("PLAYER OUTPOST PRISON: [key_name(user)] [on ? "let visitors into" : "closed visitors out of"] the prison wing at '[outpost?.name]'")
 	return TRUE
 
-/// Whether `accessor` may open a staff door or the office side of a hatch: members, or anyone but prisoners while visitors are allowed
+/**
+ * Whether `accessor` may open a staff door or the office side of a hatch: members, or anyone but
+ * prisoners while visitors are allowed. A cleanbot nobody is driving may always go through, or one
+ * built in the office would bump the door forever trying to reach the yard's mess.
+ */
 /proc/may_use_outpost_prison_staff_door(atom/door, mob/accessor)
 	if(is_outpost_prisoner(accessor))
 		return FALSE
 	if(isAdminGhostAI(accessor))
+		return TRUE
+	if(istype(accessor, /mob/living/basic/bot/cleanbot) && isnull(accessor.mind))
 		return TRUE
 	var/datum/outpost_prison/prison = get_outpost_prison(door)
 	return !prison || prison.visitors_allowed || prison.is_member(accessor)

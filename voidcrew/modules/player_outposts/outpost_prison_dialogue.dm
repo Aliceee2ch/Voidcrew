@@ -141,10 +141,10 @@
 	say(fill_line(line, opener))
 	return TRUE
 
-/// Whether a member of staff (anyone awake who isn't a prisoner) is in sight
+/// Whether a member of staff (see is_outpost_prison_staff()) is in sight, borgs included
 /mob/living/basic/outpost_prisoner/proc/staff_in_view()
-	for(var/mob/living/carbon/human/person in view(5, src))
-		if(person.stat == CONSCIOUS)
+	for(var/mob/living/person in view(5, src))
+		if(is_outpost_prison_staff(person))
 			return TRUE
 	return FALSE
 

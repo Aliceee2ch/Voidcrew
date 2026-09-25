@@ -63,7 +63,8 @@
 
 /// Hooks up the prisoner's side of contraband and mail (the letter hand-over); called from setup_extras()
 /mob/living/basic/outpost_prisoner/proc/setup_contraband()
-	return
+	// An element, since the prisoner's own handler for item use already takes the signal (outpost_prison_mail.dm)
+	AddElement(/datum/element/outpost_prison_mail_handover)
 
 /// The sour clocks, the drink wearing off and the drunk's sway
 /mob/living/basic/outpost_prisoner/proc/contraband_counters(seconds)

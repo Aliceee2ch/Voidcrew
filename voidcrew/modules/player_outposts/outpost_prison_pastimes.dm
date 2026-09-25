@@ -1713,11 +1713,10 @@
 	else
 		speaker.say_context(context)
 
-/// Standing beside the court while someone plays, facing the hoop
+/// Standing beside the court while someone plays, facing the hoop. Cheers and heckles come from the shots themselves (crowd_reacts()).
 /datum/prisoner_activity/watch_game
 	name = "watching the game"
 	leisure = TRUE
-	context = "watch_cheer"
 	weight = 8
 	personality_weights = list("cheerful" = 1.4, "chatty" = 1.3, "grumpy" = 0.8, "quiet" = 0.7)
 	min_duration = 30 SECONDS

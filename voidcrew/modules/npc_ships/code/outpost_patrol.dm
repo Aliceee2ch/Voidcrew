@@ -589,6 +589,8 @@ GLOBAL_LIST_EMPTY(outpost_patrol_caches)
 	// Outpost doors can be further apart than a ship's; JPS paths reach this far
 	max_target_distance = AI_MAX_PATH_LENGTH
 	planning_subtrees = list(
+		// Cuffed, a caught runner plans nothing until walked home (outpost_prison_capture.dm)
+		/datum/ai_planning_subtree/outpost_prisoner_cuffed,
 		/datum/ai_planning_subtree/escape_captivity,
 		/datum/ai_planning_subtree/aggressive_find_target,
 		/datum/ai_planning_subtree/attack_obstacle_in_path/trooper/include_mobs/outpost_breakout,

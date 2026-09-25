@@ -44,9 +44,12 @@
 /datum/outpost_prison/proc/care_grade(care)
 	return clamp((care - OUTPOST_PRISON_GRADE_FLOOR) / (OUTPOST_PRISON_GRADE_FULL - OUTPOST_PRISON_GRADE_FLOOR), 0, 1)
 
-/// Whether a prisoner has been shut in their cell long enough to stop paying. Not while it is for their own safety.
+/**
+ * Whether a prisoner has been shut in their cell, or kept in cuffs (outpost_prison_capture.dm),
+ * long enough to stop paying. Not while it is for their own safety or for lockdown they owe.
+ */
 /datum/outpost_prison/proc/confined_unpaid(mob/living/basic/outpost_prisoner/prisoner)
-	return prisoner.locked_in_seconds > OUTPOST_PRISON_CONFINED_PAY_AFTER && !protective_custody()
+	return (prisoner.locked_in_seconds > OUTPOST_PRISON_CONFINED_PAY_AFTER && !protective_custody()) || prisoner.cuffs_souring()
 
 /**
  * The share of full pay a prisoner earns the treasury right now, 0 to 1: G(care) x F(conditions).
@@ -193,12 +196,15 @@
 	incident_open = FALSE
 	incident_fined = 0
 
-/// Whether anyone is still rioting, breaking out or loose, so the incident goes on
+/**
+ * Whether anyone is still rioting, breaking out or loose and not yet caught, so the incident goes
+ * on. A runner left in cuffs keeps no incident, and its fine cap, open.
+ */
 /datum/outpost_prison/proc/incident_ongoing()
 	if(riot_active)
 		return TRUE
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && (prisoner.is_rioting() || prisoner.trouble == PRISONER_TROUBLE_LOOSE))
+		if(prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD && (prisoner.is_rioting() || (prisoner.trouble == PRISONER_TROUBLE_LOOSE && !prisoner.cuffs)))
 			return TRUE
 	return FALSE
 

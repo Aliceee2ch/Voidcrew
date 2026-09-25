@@ -5,14 +5,17 @@
 	},
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
+"b" = (
+/obj/structure/table,
+/obj/item/paper_bin,
+/turf/open/floor/iron/dark,
+/area/voidcrew/player_outpost/prison)
 "c" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "d" = (
-/obj/structure/rack,
-/obj/item/restraints/handcuffs,
-/obj/item/restraints/handcuffs,
+/obj/structure/filingcabinet/chestdrawer,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "e" = (
@@ -20,14 +23,17 @@
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "f" = (
-/obj/machinery/washing_machine,
+/obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "g" = (
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "h" = (
-/obj/structure/filingcabinet/chestdrawer,
+/obj/machinery/computer/outpost_prison_warden{
+	dir = 2
+	},
+/obj/effect/turf_decal/bot_white,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "i" = (
@@ -35,17 +41,30 @@
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost/prison)
 "j" = (
-/obj/structure/table/reinforced/prison_hatch,
-/obj/machinery/door/window/outpost_prison_yard/directional/north,
-/obj/machinery/door/window/brigdoor/outpost_prison_staff/directional/south,
-/turf/open/floor/iron/dark,
+/obj/structure/sink/directional/west,
+/turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "k" = (
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
-"m" = (
-/obj/machinery/power/apc/auto_name/directional/south,
+"l" = (
+/obj/machinery/door/airlock/security/prison_staff{
+	name = "Prison Wing"
+	},
 /obj/structure/cable,
+/turf/open/floor/iron/dark,
+/area/voidcrew/player_outpost/prison)
+"m" = (
+/obj/structure/closet{
+	name = "janitorial supplies";
+	icon_door = "jani_wardrobe"
+	},
+/obj/item/storage/bag/trash,
+/obj/item/storage/bag/trash,
+/obj/item/reagent_containers/spray/cleaner,
+/obj/item/clothing/suit/caution,
+/obj/item/storage/box/lights/tubes,
+/obj/item/melee/flyswatter,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "n" = (
@@ -55,27 +74,29 @@
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "o" = (
-/obj/structure/chair/office{
-	dir = 1
-	},
+/obj/structure/rack,
+/obj/item/melee/baton/security/loaded,
+/obj/item/flashlight,
+/obj/item/flashlight,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "p" = (
-/obj/structure/cable,
+/obj/machinery/washing_machine,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "q" = (
-/obj/machinery/door/airlock/security/prison_staff/glass{
-	name = "Warden's Office"
-	},
+/obj/structure/table/reinforced/prison_hatch,
+/obj/machinery/door/window/outpost_prison_yard/directional/north,
+/obj/machinery/door/window/brigdoor/outpost_prison_staff/directional/south,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "r" = (
-/obj/machinery/light/directional/west,
+/obj/structure/table,
+/obj/machinery/recharger,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "s" = (
-/obj/machinery/light/directional/east,
+/obj/structure/closet/crate/bin,
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "t" = (
@@ -83,19 +104,9 @@
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "u" = (
-/obj/structure/closet,
-/obj/item/clothing/under/rank/prisoner/outpost,
-/obj/item/clothing/under/rank/prisoner/outpost,
-/obj/item/clothing/under/rank/prisoner/outpost,
-/obj/item/clothing/under/rank/prisoner/outpost,
-/obj/item/clothing/under/rank/prisoner/outpost,
-/obj/item/clothing/under/rank/prisoner/outpost,
-/obj/item/clothing/shoes/sneakers/orange,
-/obj/item/clothing/shoes/sneakers/orange,
-/obj/item/clothing/shoes/sneakers/orange,
-/obj/item/clothing/shoes/sneakers/orange,
-/obj/item/clothing/shoes/sneakers/orange,
-/obj/item/clothing/shoes/sneakers/orange,
+/obj/structure/chair/office{
+	dir = 1
+	},
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "v" = (
@@ -115,30 +126,30 @@
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "x" = (
-/obj/structure/sink/directional/west,
+/obj/structure/bookcase/random/outpost_prison,
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "y" = (
-/obj/structure/chair/stool{
-	dir = 1
-	},
-/turf/open/floor/iron/cafeteria,
-/area/voidcrew/player_outpost/prison)
-"z" = (
 /obj/structure/chair/comfy/brown{
 	dir = 4
 	},
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
-"B" = (
+"z" = (
+/obj/machinery/light/directional/east,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/prison)
+"A" = (
 /obj/structure/table,
 /obj/item/storage/medkit/brute/outpost_prison,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
+"B" = (
+/obj/machinery/light_switch/directional/south,
+/turf/open/floor/iron/dark,
+/area/voidcrew/player_outpost/prison)
 "C" = (
-/obj/structure/table,
-/obj/item/folder/red,
-/obj/item/pen,
+/obj/machinery/outpost_ration_dispenser,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "D" = (
@@ -148,9 +159,6 @@
 /turf/open/floor/iron/cafeteria,
 /area/voidcrew/player_outpost/prison)
 "E" = (
-/obj/machinery/door/airlock/security/prison_staff{
-	name = "Prison Wing"
-	},
 /obj/structure/cable,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
@@ -161,10 +169,9 @@
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "G" = (
-/obj/machinery/computer/outpost_prison_warden{
-	dir = 2
-	},
-/obj/effect/turf_decal/bot_white,
+/obj/structure/table,
+/obj/item/folder/red,
+/obj/item/pen,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "H" = (
@@ -172,6 +179,11 @@
 	cell_number = 4
 	},
 /turf/open/floor/iron,
+/area/voidcrew/player_outpost/prison)
+"I" = (
+/obj/machinery/power/apc/auto_name/directional/south,
+/obj/structure/cable,
+/turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "K" = (
 /obj/machinery/door/airlock/security/glass/outpost_prison_cell{
@@ -186,27 +198,45 @@
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "M" = (
-/obj/structure/table,
-/obj/item/paper_bin,
+/obj/structure/mop_bucket,
+/obj/item/mop,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "N" = (
-/obj/machinery/outpost_ration_dispenser,
+/obj/machinery/door/airlock/security/prison_staff/glass{
+	name = "Warden's Office"
+	},
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "O" = (
 /turf/closed/wall,
 /area/voidcrew/player_outpost/prison)
 "P" = (
-/obj/structure/bookcase/random/outpost_prison,
-/turf/open/floor/iron,
+/obj/structure/chair/stool{
+	dir = 1
+	},
+/turf/open/floor/iron/cafeteria,
 /area/voidcrew/player_outpost/prison)
 "Q" = (
 /obj/item/toy/basketball,
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/prison)
 "R" = (
-/obj/machinery/light_switch/directional/south,
+/obj/structure/closet,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/under/rank/prisoner/outpost,
+/obj/item/clothing/shoes/sneakers/orange,
+/obj/item/clothing/shoes/sneakers/orange,
+/obj/item/clothing/shoes/sneakers/orange,
+/obj/item/clothing/shoes/sneakers/orange,
+/obj/item/clothing/shoes/sneakers/orange,
+/obj/item/clothing/shoes/sneakers/orange,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "S" = (
@@ -246,7 +276,7 @@
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "Z" = (
-/obj/machinery/light/directional/east,
+/obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 
@@ -277,13 +307,13 @@ i
 g
 g
 c
-z
-P
+y
+x
 O
 k
-r
+Z
 k
-u
+R
 O
 "}
 (3,1,1) = {"
@@ -296,12 +326,12 @@ g
 g
 g
 g
-P
+x
 O
 k
 k
 k
-f
+p
 O
 "}
 (4,1,1) = {"
@@ -313,13 +343,13 @@ O
 S
 D
 W
-y
+P
 g
 O
-N
+C
 k
 k
-k
+m
 O
 "}
 (5,1,1) = {"
@@ -331,13 +361,13 @@ O
 t
 D
 U
-y
+P
 g
-j
+q
 k
 k
 k
-k
+M
 O
 "}
 (6,1,1) = {"
@@ -349,10 +379,10 @@ i
 g
 D
 W
-y
+P
 g
 O
-C
+G
 k
 k
 k
@@ -370,8 +400,8 @@ g
 g
 g
 i
-G
-o
+h
+u
 k
 k
 O
@@ -391,7 +421,7 @@ i
 k
 k
 k
-R
+B
 O
 "}
 (9,1,1) = {"
@@ -405,12 +435,12 @@ g
 Q
 g
 g
-q
+N
 k
 k
 k
-p
 E
+l
 "}
 (10,1,1) = {"
 O
@@ -427,7 +457,7 @@ i
 k
 k
 k
-m
+I
 O
 "}
 (11,1,1) = {"
@@ -442,7 +472,7 @@ g
 g
 g
 i
-h
+d
 k
 k
 k
@@ -457,7 +487,7 @@ i
 g
 D
 W
-y
+P
 g
 O
 k
@@ -475,9 +505,9 @@ O
 t
 D
 V
-y
+P
 g
-j
+q
 k
 k
 k
@@ -493,7 +523,7 @@ O
 H
 D
 W
-y
+P
 g
 O
 k
@@ -510,14 +540,14 @@ k
 Y
 g
 g
-g
+s
 g
 g
 O
+r
 k
 k
-k
-M
+b
 O
 "}
 (16,1,1) = {"
@@ -528,14 +558,14 @@ k
 i
 X
 g
-s
+z
 g
-x
+j
 O
-d
-Z
+o
+f
 k
-B
+A
 O
 "}
 (17,1,1) = {"

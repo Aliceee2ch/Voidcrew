@@ -345,6 +345,10 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/hotelwood,
 /area/voidcrew/trader_outpost)
+"bj" = (
+/obj/effect/landmark/bounty_kingpin/refuge,
+/turf/open/indestructible/dark,
+/area/voidcrew/trader_outpost)
 "bn" = (
 /obj/effect/turf_decal/bot,
 /turf/open/indestructible/dark,
@@ -1887,7 +1891,7 @@ aj
 aj
 ci
 aj
-aj
+bj
 Jz
 aa
 ak

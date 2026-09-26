@@ -397,7 +397,11 @@
 
 // ===== OUTPOST SECURITY =====
 
-/// During the shootout the turret ignores both sides, and hunters fighting his crew take no property strikes; PvP still counts, and strikes count again after it
+/**
+ * During the shootout a hunter's stray shot, just after firing at his crew, takes no outpost strike:
+ * three of them leave the turret holding fire, where three strikes mark anyone else. Hits away from
+ * the fight still count, PvP still counts, and strikes count again after it (L1, L11).
+ */
 /datum/unit_test/voidcrew_bounty_kingpin/security
 
 /datum/unit_test/voidcrew_bounty_kingpin/security/Run()
@@ -412,36 +416,53 @@
 	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 2)
 	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
-	var/mob/living/basic/bounty_kingpin_goon/goon = crew.goons()[1]
+	var/list/goons = crew.goons()
+	var/mob/living/basic/bounty_kingpin_goon/goon = goons[1]
 	var/mob/living/carbon/human/hunter = kingpin_test_person(kingpin_test_spot(2, 2), null)
+	var/mob/living/carbon/human/idle_hunter = kingpin_test_person(kingpin_test_spot(1, 3), null)
 	var/mob/living/carbon/human/brawler = kingpin_test_person(kingpin_test_spot(1, 2), null)
 	var/mob/living/carbon/human/victim = kingpin_test_person(kingpin_test_spot(3, 2), null)
 	var/mob/living/carbon/human/bystander = kingpin_test_person(kingpin_test_spot(3, 3), null)
 	TEST_ASSERT_EQUAL(get_trader_outpost_for_turf(crew.crew_seat), outpost, "The test lounge isn't at the test outpost")
 
 	crew.start_shootout(hunter, TRUE)
+	crew.add_hunter(idle_hunter)
 	crew.add_hunter(brawler)
 	TEST_ASSERT(crew.is_fighting(), "The shootout didn't start")
+	// The hunter and the brawler have just shot at a goon
+	crew.member_attacked(goon, list(hunter, brawler))
+	TEST_ASSERT(crew.engaged(hunter), "A hunter who just shot a goon isn't counted in the fight")
+	TEST_ASSERT(!crew.engaged(idle_hunter), "A hunter who fired at nobody is counted in the fight")
 
-	// The turret ignores his crew and the hunters
-	TEST_ASSERT(!turret.valid_target(goon), "The turret would shoot a goon")
-	TEST_ASSERT(!turret.valid_target(kingpin), "The turret would shoot the kingpin")
-	TEST_ASSERT(!turret.valid_target(hunter), "The turret would shoot a hunter")
-
-	// A hunter's stray shot into outpost property is no strike, and the turret still leaves them be
-	outpost.register_aggression(hunter)
-	TEST_ASSERT_NULL(outpost.aggressor_strikes[hunter.mind], "A hunter got a property strike during the shootout")
+	// Three stray hits into outpost property: no strike, and the turret holds fire (three would mark them)
+	for(var/i in 1 to 3)
+		outpost.aggressor_strike_times -= hunter.mind
+		outpost.register_aggression(hunter)
+	TEST_ASSERT_NULL(outpost.aggressor_strikes[hunter.mind], "A hunter's stray shot during the shootout got a property strike")
+	TEST_ASSERT(!outpost.is_marked_aggressor(hunter.mind), "A hunter was marked for stray shots during the shootout")
 	TEST_ASSERT(!turret.valid_target(hunter), "The turret turned on a hunter during the shootout")
-	// Someone not fighting his crew still gets their strike
-	outpost.register_aggression(bystander)
-	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[bystander.mind], 1, "A bystander's strike didn't count during the shootout")
+	// The same three hits from someone not in the fight mark them, and the turret fires
+	for(var/i in 1 to 3)
+		outpost.aggressor_strike_times -= bystander.mind
+		outpost.register_aggression(bystander)
+	TEST_ASSERT(outpost.is_marked_aggressor(bystander.mind), "Three strikes didn't mark a bystander during the shootout")
+	TEST_ASSERT(turret.valid_target(bystander), "The turret held fire on a marked bystander")
+	// A hunter who hasn't been shooting at his crew gets their strike
+	outpost.register_aggression(idle_hunter)
+	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[idle_hunter.mind], 1, "A hunter not firing at his crew was excused a strike")
 	// PvP enforcement stays: a hunter who hits a person gets the strike
 	outpost.register_pvp_aggression(victim, brawler)
 	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[brawler.mind], 1, "A hunter's PvP hit didn't count during the shootout")
 
+	// The turret leaves his crew alone: the goons share its faction, P2 exempts the kingpin
+	TEST_ASSERT(turret.in_faction(goon), "The goons don't share the turrets' faction")
+	TEST_ASSERT(!turret.valid_target(goon), "The turret would shoot a goon")
+	TEST_ASSERT(bounty_turret_ignores(kingpin, TRUE), "Trader-outpost turrets don't leave the kingpin alone")
+
 	// After it, a hunter's property hit counts again
 	crew.stand_down()
 	TEST_ASSERT(!crew.is_fighting(), "The crew didn't stand down")
+	outpost.aggressor_strike_times -= hunter.mind
 	outpost.register_aggression(hunter)
 	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[hunter.mind], 1, "A hunter's property strike didn't count outside the shootout")
 
@@ -565,7 +586,12 @@
 
 // ===== THE MAP =====
 
-/// The black market's lounge: the seat on the corp sofa, the 3-tile wood coffee table in front of it, and six goon posts; he and his crew sit down there
+/**
+ * The black market's lounge: the seat on the corp sofa, the 3-tile wood coffee table in front of it,
+ * six goon posts and the refuge. He and his crew sit down there: the lounge's tables can be shot to
+ * pieces while he's in (and are outpost property again after), the barkeep is the bar's own, and the
+ * loiterer goes to the refuge, never the hangar lift (M3, M4, M5).
+ */
 /datum/unit_test/voidcrew_bounty_kingpin/map
 
 /datum/unit_test/voidcrew_bounty_kingpin/map/Run()
@@ -579,10 +605,17 @@
 	TEST_ASSERT_EQUAL(seat_turf.y - bottom_left.y + 1, 8, "The seat isn't at y 8 on the map")
 	var/obj/structure/chair/sofa/corp/sofa = locate() in seat_turf
 	TEST_ASSERT(sofa && sofa.dir == NORTH, "The seat isn't on the corp sofa facing north")
+	var/list/coffee_table = list()
 	for(var/dx in -1 to 1)
 		var/turf/table_turf = locate(seat_turf.x + dx, seat_turf.y + 1, seat_turf.z)
 		var/obj/structure/table/wood/table = locate() in table_turf
 		TEST_ASSERT(table && table.type == /obj/structure/table/wood && table.can_flip, "No wood coffee table at ([table_turf.x - bottom_left.x + 1],[table_turf.y - bottom_left.y + 1])")
+		coffee_table += table
+		TEST_ASSERT(table.resistance_flags & INDESTRUCTIBLE, "The coffee table isn't outpost property before he sits down")
+	var/turf/refuge = bounty_kingpin_find_refuge(seat_turf)
+	TEST_ASSERT_NOTNULL(refuge, "The lounge has no refuge mark")
+	TEST_ASSERT(!(refuge in outpost.lobby_alcove_turfs), "The refuge is on the hangar lift")
+	TEST_ASSERT(!bounty_kingpin_clear_shot(seat_turf, refuge, 20), "The refuge is in sight of the sofa")
 
 	var/list/posts = bounty_kingpin_find_posts(seat)
 	TEST_ASSERT_EQUAL(length(posts), 6, "The lounge has [length(posts)] goon posts, not six") // BOUNTY_KINGPIN_GOONS
@@ -601,21 +634,236 @@
 	TEST_ASSERT(istype(kingpin.buckled, /obj/structure/chair/sofa), "The kingpin isn't on the sofa")
 	TEST_ASSERT_EQUAL(length(crew.goons()), 6, "The kingpin doesn't have six goons")
 	TEST_ASSERT_EQUAL(length(crew.crew_coffee_table), 3, "The crew didn't find the coffee table")
-	TEST_ASSERT_NOTNULL(crew.crew_loiterer_ref?.resolve(), "The crew didn't find the lounge's loiterer")
-	TEST_ASSERT_NOTNULL(crew.crew_barkeep_ref?.resolve(), "The crew didn't find the barkeep")
+	// The coffee table and the poker, bar and corner tables at the goons' posts
+	TEST_ASSERT_EQUAL(length(crew.crew_tables), 6, "The crew minds [length(crew.crew_tables)] lounge tables, not six")
+	for(var/obj/structure/table/table as anything in coffee_table)
+		TEST_ASSERT(!(table.resistance_flags & INDESTRUCTIBLE), "A lounge table can't be shot to pieces while he's in")
+	TEST_ASSERT_EQUAL(crew.crew_refuge, refuge, "The crew doesn't use the refuge")
+	TEST_ASSERT_EQUAL(crew.exit_turf(crew.crew_loiterer_ref?.resolve()), refuge, "The loiterer's way out isn't the refuge")
+	var/mob/living/basic/outpost_trader/barkeep = crew.crew_barkeep_ref?.resolve()
+	TEST_ASSERT(istype(barkeep, /mob/living/basic/outpost_trader/dregs_barkeep), "The barkeep who ducks is [barkeep ? barkeep.type : "nobody"], not the Dregs' barkeep")
+	var/mob/living/basic/outpost_loiterer/loiterer = crew.crew_loiterer_ref?.resolve()
+	TEST_ASSERT_NOTNULL(loiterer, "The crew didn't find the lounge's loiterer")
+	var/turf/loiterer_home = get_turf(loiterer)
+
 	var/obj/machinery/porta_turret/outpost/turret = locate() in range(12, seat_turf)
 	TEST_ASSERT_NOTNULL(turret, "No lounge turret near the sofa")
 	var/mob/living/carbon/human/hunter = kingpin_test_person(crew.talk_spot(), null)
 	crew.start_shootout(hunter, TRUE)
 	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in crew.goons())
-		TEST_ASSERT(!turret.valid_target(goon), "The lounge turret would shoot [goon]")
-	TEST_ASSERT(!turret.valid_target(kingpin), "The lounge turret would shoot the kingpin")
-	TEST_ASSERT(!turret.valid_target(hunter), "The lounge turret would shoot the hunter")
-	var/mob/living/basic/outpost_loiterer/loiterer = crew.crew_loiterer_ref.resolve()
+		TEST_ASSERT(turret.in_faction(goon), "The lounge turret doesn't count [goon] as its own")
+	TEST_ASSERT(bounty_turret_ignores(kingpin, TRUE), "The lounge turret doesn't leave the kingpin alone")
 	TEST_ASSERT(HAS_TRAIT(loiterer, TRAIT_AI_PAUSED), "The loiterer didn't leave at the draw")
 	TEST_ASSERT(crew.crew_barkeep_ducked, "The barkeep didn't duck")
+	// A loiterer carried off somewhere far comes straight home
+	loiterer.forceMove(run_loc_floor_bottom_left)
 	qdel(kingpin)
 	TEST_ASSERT(!HAS_TRAIT(loiterer, TRAIT_AI_PAUSED), "The loiterer never came back")
+	TEST_ASSERT_EQUAL(get_turf(loiterer), loiterer_home, "A loiterer carried off to another level wasn't put back home")
 	TEST_ASSERT(!crew.crew_barkeep_ducked || QDELETED(crew), "The barkeep stayed down")
+	for(var/obj/structure/table/table as anything in coffee_table)
+		TEST_ASSERT(!table.is_flipped, "The coffee table stayed over after he was gone")
+		TEST_ASSERT(table.resistance_flags & INDESTRUCTIBLE, "The coffee table isn't outpost property again after he was gone")
 	qdel(hunter)
 	qdel(outpost)
+
+// ===== H1: SHOTS FROM MECHS, AND ANY DAMAGE =====
+
+/// A mech's gunfire starts the shootout and makes its pilot a hunter, fought through the mech; any damage to a calm crew is an attack by whoever is in sight
+/datum/unit_test/voidcrew_bounty_kingpin/mech
+
+/datum/unit_test/voidcrew_bounty_kingpin/mech/Run()
+	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 2)
+	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
+	var/list/goons = crew.goons()
+	var/mob/living/basic/bounty_kingpin_goon/goon = goons[1]
+	var/mob/living/carbon/human/consistent/pilot = kingpin_test_person(kingpin_test_spot(1, 4), null)
+	var/obj/vehicle/sealed/mecha/ripley/mech = allocate(/obj/vehicle/sealed/mecha/ripley, kingpin_test_spot(1, 4))
+	mech.mob_enter(pilot, silent = TRUE)
+	TEST_ASSERT_EQUAL(pilot.loc, mech, "The pilot did not get into the mech")
+
+	var/obj/projectile/bullet/shot = allocate(/obj/projectile/bullet, kingpin_test_spot(1, 3))
+	shot.firer = mech
+	SEND_SIGNAL(goon, COMSIG_PROJECTILE_PREHIT, shot)
+	TEST_ASSERT_EQUAL(crew.crew_state, "drawing", "A mech's gunfire on a goon didn't start the shootout") // BOUNTY_KINGPIN_DRAWING
+	TEST_ASSERT(crew.is_hunter(pilot), "The mech's pilot isn't a hunter")
+	TEST_ASSERT(crew.valid_target(pilot), "The crew won't shoot a hunter in a mech")
+	TEST_ASSERT_EQUAL(crew.shot_target(pilot), mech, "The crew doesn't shoot at the mech its hunter drives")
+	TEST_ASSERT(crew.engaged(pilot), "The mech's shot at a goon doesn't count as part of the fight")
+	var/list/seen = crew.visible_hunters(goons[2], crew.live_hunters())
+	TEST_ASSERT(pilot in seen, "A goon doesn't see the hunter in the mech")
+	posting.close("admin")
+
+	// Any damage to a calm crew: the nearest person in sight who isn't a guest is taken for the attacker
+	for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
+		qdel(table)
+	for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
+		qdel(sofa)
+	var/datum/criminal_bounty/kingpin/second_posting = kingpin_test_posting()
+	var/mob/living/basic/bounty_criminal/kingpin/second = kingpin_test_lounge(second_posting, 2)
+	var/datum/bounty_kingpin_crew/second_crew = second.kingpin_crew
+	var/list/second_goons = second_crew.goons()
+	var/mob/living/basic/bounty_kingpin_goon/hurt_goon = second_goons[2]
+	var/mob/living/carbon/human/culprit = kingpin_test_person(kingpin_test_spot(3, 2), null)
+	TEST_ASSERT_EQUAL(second_crew.crew_state, "calm", "The second crew isn't calm") // BOUNTY_KINGPIN_CALM
+	hurt_goon.adjustBruteLoss(10)
+	var/deadline = world.time + 2 SECONDS
+	UNTIL(second_crew.crew_state != "calm" || world.time > deadline)
+	TEST_ASSERT_EQUAL(second_crew.crew_state, "drawing", "Damage to a calm goon didn't start the shootout")
+	TEST_ASSERT(second_crew.is_hunter(culprit), "The person next to the hurt goon isn't a hunter")
+
+	// A criminal hitting a goon starts nothing: there's nobody the crew would fight (L6)
+	second_posting.close("admin")
+	for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
+		qdel(table)
+	for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
+		qdel(sofa)
+	var/datum/criminal_bounty/kingpin/third_posting = kingpin_test_posting()
+	var/mob/living/basic/bounty_criminal/kingpin/third = kingpin_test_lounge(third_posting, 1)
+	var/list/third_goons = third.kingpin_crew.goons()
+	var/mob/living/basic/bounty_criminal/normal/rival = allocate(/mob/living/basic/bounty_criminal/normal, kingpin_test_spot(3, 3))
+	SEND_SIGNAL(third_goons[1], COMSIG_ATOM_WAS_ATTACKED, rival, ATTACKER_DAMAGING_ATTACK)
+	TEST_ASSERT_EQUAL(third.kingpin_crew.crew_state, "calm", "Another criminal's punch started a shootout with nobody to shoot")
+
+// ===== H2 AND M3: THE TABLES =====
+
+/// Tables knocked over while he's at ease are set back up; at the draw a wrongly flipped table is turned his way; broken ones come back
+/datum/unit_test/voidcrew_bounty_kingpin/tables
+
+/datum/unit_test/voidcrew_bounty_kingpin/tables/Run()
+	// A table at the goon post (0,2), for him to flip at the draw
+	var/obj/structure/table/wood/post_table = allocate(/obj/structure/table/wood, kingpin_test_spot(0, 3))
+	post_table.AddElement(/datum/element/outpost_property)
+	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 3)
+	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
+	TEST_ASSERT(WEAKREF(post_table) in crew.crew_tables, "The crew doesn't mind the table at a goon's post")
+	TEST_ASSERT(!(post_table.resistance_flags & INDESTRUCTIBLE), "A lounge table can't be shot to pieces while he's in")
+	var/datum/weakref/middle_ref = crew.crew_coffee_table[1]
+	var/obj/structure/table/coffee = middle_ref.resolve()
+
+	// A hunter flips his coffee table toward him, and a post table, while all is calm: the goons set them back up
+	coffee.flip_table(SOUTH)
+	post_table.flip_table(NORTH)
+	crew.right_the_tables()
+	TEST_ASSERT(!coffee.is_flipped, "The goons left the coffee table knocked over")
+	TEST_ASSERT(!post_table.is_flipped, "The goons left a post table knocked over")
+
+	// Knocked over again just before "No deal": at the draw it goes over his way, not theirs
+	coffee.flip_table(SOUTH)
+	var/mob/living/carbon/human/hunter = kingpin_test_person(kingpin_test_spot(2, 2), null)
+	crew.start_shootout(hunter, TRUE)
+	TEST_ASSERT(coffee.is_flipped && coffee.dir == NORTH, "At the draw the coffee table stayed over the hunters' way")
+
+	// A table shot to pieces is replaced when the crew stands down, and every table stands up again
+	var/turf/table_spot = get_turf(post_table)
+	post_table.take_damage(post_table.max_integrity * 2)
+	TEST_ASSERT(QDELETED(post_table), "A lounge table didn't break under fire")
+	TEST_ASSERT(!(locate(/obj/item/stack) in table_spot), "A broken lounge table left something behind")
+	crew.stand_down()
+	var/obj/structure/table/replacement = locate(/obj/structure/table) in table_spot
+	TEST_ASSERT_NOTNULL(replacement, "A broken lounge table wasn't replaced")
+	TEST_ASSERT(!coffee.is_flipped, "The coffee table stayed over after the crew stood down")
+	TEST_ASSERT(HAS_TRAIT(replacement, "outpost_property"), "A replaced table isn't outpost property") // TRAIT_OUTPOST_PROPERTY
+
+	// He's gone: the lounge's tables are outpost property again
+	posting.close("admin")
+	TEST_ASSERT(replacement.resistance_flags & INDESTRUCTIBLE, "A lounge table stayed breakable after he left")
+
+// ===== M1: GOON STAMINA =====
+
+/// Three disabler hits stamcrit a goon: a stun, not just a slowdown
+/datum/unit_test/voidcrew_bounty_kingpin/stamina
+
+/datum/unit_test/voidcrew_bounty_kingpin/stamina/Run()
+	var/mob/living/basic/bounty_kingpin_goon/goon = allocate(/mob/living/basic/bounty_kingpin_goon, kingpin_test_spot(2, 2))
+	TEST_ASSERT_EQUAL(goon.max_stamina, 100, "A goon's stamina pool isn't 100") // BOUNTY_GOON_MAX_STAMINA
+	goon.adjustStaminaLoss(30)
+	goon.adjustStaminaLoss(30)
+	TEST_ASSERT(goon.goon_able(), "Two disabler hits stunned a goon")
+	goon.adjustStaminaLoss(30)
+	TEST_ASSERT(goon.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Three disabler hits didn't stamcrit a goon")
+	TEST_ASSERT(!goon.goon_able(), "A stamcrit goon can still fight")
+
+// ===== M2: A CALM CREW STILL WATCHES =====
+
+/// After a stand-down, a known hunter in sight, cuffing him or dragging him starts the fight again, through the draw
+/datum/unit_test/voidcrew_bounty_kingpin/watch
+
+/datum/unit_test/voidcrew_bounty_kingpin/watch/Run()
+	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 2)
+	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
+	var/mob/living/carbon/human/hunter = kingpin_test_person(kingpin_test_spot(2, 2), null)
+	crew.start_shootout(hunter, TRUE)
+	crew.stand_down()
+	TEST_ASSERT_EQUAL(crew.crew_state, "calm", "The crew didn't stand down") // BOUNTY_KINGPIN_CALM
+
+	// A known hunter walks back into sight
+	crew.calm_tick()
+	TEST_ASSERT_EQUAL(crew.crew_state, "drawing", "A known hunter in sight didn't restart the fight") // BOUNTY_KINGPIN_DRAWING
+
+	// Cuffing him while his crew is at ease is an attack by the cuffer
+	crew.stand_down()
+	var/mob/living/carbon/human/cuffer = kingpin_test_person(kingpin_test_spot(3, 2), null)
+	kingpin.buckled?.unbuckle_mob(kingpin, force = TRUE)
+	kingpin.body_go_down()
+	var/obj/item/restraints/handcuffs/cuffs = allocate(/obj/item/restraints/handcuffs, kingpin_test_spot(3, 2))
+	cuffer.put_in_hands(cuffs)
+	TEST_ASSERT(kingpin.body_apply_cuffs(cuffs, cuffer), "The downed kingpin couldn't be cuffed")
+	TEST_ASSERT_EQUAL(crew.crew_state, "drawing", "Cuffing him while his crew watched didn't start the fight")
+	TEST_ASSERT(crew.is_hunter(cuffer), "The one who cuffed him isn't a hunter")
+	// Cuffed on his sofa, his goons stay with him
+	crew.stand_down()
+	TEST_ASSERT(!crew.dismiss_if_boss_gone(), "His goons walked off while he lay cuffed in front of them")
+
+	// Dragging him (or his body) away is an attack too
+	var/mob/living/carbon/human/dragger = kingpin_test_person(kingpin_test_spot(1, 0), null)
+	crew.crew_hunters.Cut()
+	dragger.start_pulling(kingpin)
+	TEST_ASSERT_EQUAL(kingpin.pulledby, dragger, "The test couldn't drag him")
+	crew.watch_for_trouble()
+	TEST_ASSERT_EQUAL(crew.crew_state, "drawing", "Dragging him off didn't start the fight")
+	TEST_ASSERT(crew.is_hunter(dragger), "The one dragging him isn't a hunter")
+
+// ===== THE LOW ONES =====
+
+/// A hunter in a locker is not shot at (L2); a crewmate of anyone who fought gets no deal (L3); a new character of a bound player is still bound (L4)
+/datum/unit_test/voidcrew_bounty_kingpin/lows
+
+/datum/unit_test/voidcrew_bounty_kingpin/lows/Run()
+	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 1)
+	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
+	var/obj/structure/overmap/ship/fighting_ship = kingpin_test_ship()
+	var/mob/living/carbon/human/fighter = kingpin_test_person(kingpin_test_spot(3, 3), fighting_ship)
+	var/mob/living/carbon/human/crewmate = kingpin_test_person(kingpin_test_spot(2, 2), fighting_ship)
+	crew.add_hunter(fighter)
+
+	// L2: a hunter hiding in a locker holds no fight
+	var/obj/structure/closet/locker = allocate(/obj/structure/closet, kingpin_test_spot(3, 3))
+	TEST_ASSERT(crew.valid_target(fighter), "The crew won't shoot a hunter on the floor")
+	fighter.forceMove(locker)
+	TEST_ASSERT(!crew.valid_target(fighter), "The crew would shoot at a hunter inside a locker")
+	fighter.forceMove(kingpin_test_spot(3, 3))
+
+	// L3: the crewmate who stayed back gets no consolation deal
+	TEST_ASSERT_EQUAL(kingpin.kingpin_offer_refusal(crewmate), "no_offer_hostile", "A crewmate of someone who fought his crew was offered a deal")
+	TEST_ASSERT_NULL(kingpin.kingpin_take_deal(crewmate), "A crewmate of someone who fought his crew took a deal")
+
+	// L4: bound by player as well as by character
+	var/obj/structure/overmap/ship/dealing_ship = kingpin_test_ship()
+	var/mob/living/carbon/human/dealer = kingpin_test_person(kingpin_test_spot(1, 2), dealing_ship)
+	dealer.mind.key = "p9kingpintestdealer"
+	kingpin.kingpin_talk(dealer, "What's the offer?")
+	TEST_ASSERT_NOTNULL(kingpin.kingpin_take_deal(dealer), "The dealer couldn't take the deal")
+	var/obj/structure/overmap/ship/new_ship = kingpin_test_ship()
+	var/mob/living/carbon/human/new_character = kingpin_test_person(kingpin_test_spot(1, 3), new_ship)
+	new_character.mind.key = "p9kingpintestdealer"
+	TEST_ASSERT(posting.kingpin_mind_bound(new_character.mind), "The dealer's new character isn't bound")
+	TEST_ASSERT(istext(posting.kingpin_bound_refusal(new_ship, new_character)), "The dealer's new character could turn him in")
+	TEST_ASSERT(istext(posting.hunt_refusal(new_ship)), "A ship with the dealer's new character aboard could hunt him")
+	// A ship that has nobody bound is not refused for someone else's deal
+	var/obj/structure/overmap/ship/clean_ship = kingpin_test_ship()
+	TEST_ASSERT_NULL(posting.kingpin_bound_refusal(clean_ship, null), "A ship with nobody bound was refused")

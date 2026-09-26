@@ -94,7 +94,7 @@
 	use_power = NO_POWER_USE
 	circuit = null
 	can_atmos_pass = ATMOS_PASS_NO
-	interaction_flags_machine = INTERACT_MACHINE_OPEN | INTERACT_MACHINE_OFFLINE | INTERACT_MACHINE_SET_MACHINE
+	interaction_flags_machine = INTERACT_MACHINE_OPEN | INTERACT_MACHINE_OFFLINE
 	// Set before Initialize: an explosion must never reach the stock
 	flags_1 = PREVENT_CONTENTS_EXPLOSION_1
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
@@ -896,7 +896,8 @@
 	if(!closed && !shop.visitors_allowed && !member)
 		closed = "Closed to visitors."
 	var/taker = !!home?.can_take_shop_stock(user)
-	var/datum/bank_account/account = isliving(user) ? user.get_idcard(TRUE)?.registered_account : null
+	var/mob/living/viewer = isliving(user) ? user : null
+	var/datum/bank_account/account = viewer?.get_idcard(TRUE)?.registered_account
 	var/list/category_rows = list()
 	var/list/listing_rows = list()
 	if(!closed)

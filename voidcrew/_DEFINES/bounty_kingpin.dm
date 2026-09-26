@@ -60,6 +60,14 @@
 #define BOUNTY_KINGPIN_MAX_ON_ONE 2
 /// With no hunter in sight of anyone in his crew for this long, the crew stands down
 #define BOUNTY_KINGPIN_STAND_DOWN (45 SECONDS)
+/// A hunter's stray shot counts as part of the fight (no outpost strike) this long after they last fired at or hit his crew
+#define BOUNTY_KINGPIN_EXCUSE_WINDOW (3 SECONDS)
+/// Dragged further than this from his sofa, or onto another level, he is put back on it rather than walking
+#define BOUNTY_KINGPIN_WALK_HOME_MAX 30
+/// Between two tries at walking home
+#define BOUNTY_KINGPIN_WALK_HOME_GAP (10 SECONDS)
+/// Between two of his warnings about the furniture
+#define BOUNTY_KINGPIN_TABLE_WARN_GAP (30 SECONDS)
 /// How far his crew sees and shoots
 #define BOUNTY_KINGPIN_SIGHT 9
 
@@ -68,7 +76,9 @@
 /// A fixed crew of six (kingpin.md 3.4), one per map post
 #define BOUNTY_KINGPIN_GOONS 6
 #define BOUNTY_GOON_HEALTH 90
-/// Percent of a goon's stamina (his health, 90) that stamcrits him: 3 disabler hits. Just under 100, for float rounding.
+/// A goon's stamina pool, the way P2 sets a criminal's: max_stamina 100, with a coefficient of 100 / BOUNTY_GOON_HEALTH, so 3 disabler hits stamcrit him. tg's basic mobs compare raw points with this percentage when the crit ends, so it must be 100.
+#define BOUNTY_GOON_MAX_STAMINA 100
+/// Percent of it that stamcrits him. Just under 100, for float rounding.
 #define BOUNTY_GOON_STAMCRIT_AT 99.9
 #define BOUNTY_GOON_WEAPON_PISTOL "pistol"
 #define BOUNTY_GOON_WEAPON_SMG "smg"

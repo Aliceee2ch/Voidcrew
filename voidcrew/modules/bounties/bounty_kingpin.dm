@@ -101,6 +101,10 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /obj/effect/landmark/bounty_kingpin/goon/shotgun
 	goon_weapon = BOUNTY_GOON_WEAPON_SHOTGUN
 
+/// Where the lounge's bystanders go when the guns come out, and where leaving goons walk to: out of the lounge, and never the hangar lift
+/obj/effect/landmark/bounty_kingpin/refuge
+	name = "kingpin refuge"
+
 /// The seat mark in `outpost`'s lounge that has a sofa under it, or null
 /proc/bounty_kingpin_find_seat(obj/structure/overmap/trader_outpost/outpost)
 	if(QDELETED(outpost))
@@ -116,6 +120,22 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 			continue
 		return seat
 	return null
+
+/// The refuge mark nearest `seat`, on its outpost, or null
+/proc/bounty_kingpin_find_refuge(turf/seat)
+	if(!seat)
+		return null
+	var/obj/structure/overmap/trader_outpost/outpost = get_trader_outpost_for_turf(seat)
+	var/turf/nearest
+	for(var/obj/effect/landmark/bounty_kingpin/refuge/refuge as anything in GLOB.bounty_kingpin_marks)
+		if(!istype(refuge))
+			continue
+		var/turf/spot = get_turf(refuge)
+		if(!spot || spot.z != seat.z || get_trader_outpost_for_turf(spot) != outpost)
+			continue
+		if(!nearest || get_dist(spot, seat) < get_dist(nearest, seat))
+			nearest = spot
+	return nearest
 
 /// The goon posts around `seat`, on its outpost: list(list(turf, BOUNTY_GOON_WEAPON_*), ...)
 /proc/bounty_kingpin_find_posts(obj/effect/landmark/bounty_kingpin/seat/seat)
@@ -276,6 +296,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	. = ..()
 	if(amount > 0 && !forced)
 		kingpin_consider_surrender(health_before)
+		// Hurt while his crew is at ease, by anything at all: they find out who
+		kingpin_crew?.member_hurt(src)
 
 // An open hand from across the table (or beside him) starts the talk
 /mob/living/basic/bounty_criminal/kingpin/attack_hand(mob/living/carbon/human/user, list/modifiers)
@@ -298,6 +320,32 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	RETURN_TYPE(/datum/criminal_bounty/kingpin)
 	var/datum/criminal_bounty/kingpin/posting = posting()
 	return istype(posting) ? posting : null
+
+/**
+ * Takes him back to his sofa when he's been moved off it and is free again: a step at a time within
+ * his crew's leash, a walk from further off, and put straight back from another level or too far to
+ * walk, when nobody is watching him (L5).
+ */
+/mob/living/basic/bounty_criminal/kingpin/proc/kingpin_go_home()
+	var/turf/seat = kingpin_crew?.crew_seat
+	var/turf/here = get_turf(src)
+	if(!seat || !here || here == seat || buckled || !kingpin_able() || !isturf(loc) || pulledby)
+		return FALSE
+	if(here.z == seat.z && get_dist(here, seat) <= BOUNTY_GOON_LEASH)
+		var/turf/next = get_step_to(src, seat)
+		if(next)
+			Move(next, get_dir(src, next))
+		return TRUE
+	if(here.z == seat.z && get_dist(here, seat) <= BOUNTY_KINGPIN_WALK_HOME_MAX)
+		if(world.time >= kingpin_crew.crew_next_home_walk)
+			kingpin_crew.crew_next_home_walk = world.time + BOUNTY_KINGPIN_WALK_HOME_GAP
+			GLOB.move_manager.jps_move(src, seat, delay = 3, timeout = BOUNTY_KINGPIN_WALK_HOME_GAP, repath_delay = 2 SECONDS, max_path_length = BOUNTY_KINGPIN_WALK_HOME_MAX * 2, simulated_only = TRUE, priority = MOVEMENT_ABOVE_SPACE_PRIORITY)
+		return TRUE
+	for(var/mob/living/watcher in viewers(world.view, src))
+		if(watcher.client && watcher != src)
+			return FALSE
+	forceMove(seat)
+	return kingpin_sit()
 
 /// Sits him on the sofa at his seat, facing the way it faces. TRUE if he is sitting there now.
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_sit()
@@ -397,6 +445,9 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/obj/structure/overmap/ship/ship = bounty_kingpin_user_ship(user)
 	if(!ship)
 		return "no_offer_drifter"
+	// Anyone whose crew shot at his people: no consolation prize for the ones who stayed back
+	if(kingpin_crew?.ship_fought(ship))
+		return "no_offer_hostile"
 	if(posting.kingpin_bound_refusal(ship, user))
 		return "no_offer_dealt"
 	return null
@@ -458,7 +509,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	kingpin_cancel_aim()
 	kingpin_next_aim_at = world.time + BOUNTY_KINGPIN_REVOLVER_COOLDOWN
 	kingpin_aim_target = WEAKREF(target)
-	kingpin_aim_beam = Beam(target, icon_state = "infrared", time = BOUNTY_KINGPIN_REVOLVER_AIM, beam_color = COLOR_RED)
+	var/atom/aim_at = kingpin_crew?.shot_target(target) || target
+	kingpin_aim_beam = Beam(aim_at, icon_state = "infrared", time = BOUNTY_KINGPIN_REVOLVER_AIM, beam_color = COLOR_RED)
 	visible_message(span_danger("[src] thumbs the hammer back and aims at [target]!"), vision_distance = BOUNTY_KINGPIN_SIGHT)
 	playsound(src, 'sound/items/weapons/gun/general/ballistic_click.ogg', 60, TRUE)
 	kingpin_aim_timer = addtimer(CALLBACK(src, PROC_REF(kingpin_fire)), BOUNTY_KINGPIN_REVOLVER_AIM, TIMER_STOPPABLE | TIMER_DELETE_ME)
@@ -479,7 +531,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(!crew.valid_target(target) || !bounty_kingpin_clear_shot(src, target))
 		return FALSE
 	kingpin_rounds--
-	bounty_kingpin_shoot(src, target, BOUNTY_KINGPIN_REVOLVER_DAMAGE, 4, 'sound/items/weapons/gun/revolver/shot.ogg', crew)
+	bounty_kingpin_shoot(src, crew.shot_target(target), BOUNTY_KINGPIN_REVOLVER_DAMAGE, 4, 'sound/items/weapons/gun/revolver/shot.ogg', crew)
 	return TRUE
 
 /// Drops his aim, if he has one
@@ -584,6 +636,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	// The body stays until it fades; nothing drops
 	basic_mob_flags = NONE
 	status_flags = CANPUSH | CANSTUN | CANKNOCKDOWN
+	// P2's pattern: a pool of 100 and a coefficient, or the stamcrit ends the moment it starts (M1)
+	max_stamina = BOUNTY_GOON_MAX_STAMINA
 	stamina_crit_threshold = BOUNTY_GOON_STAMCRIT_AT
 	mobility_flags = MOBILITY_FLAGS_REST_CAPABLE_DEFAULT
 	rotate_on_lying = TRUE
@@ -630,6 +684,9 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 /mob/living/basic/bounty_kingpin_goon/Initialize(mapload)
 	. = ..()
+	// Their own copy: 3 disabler hits (30 each) fill the pool of BOUNTY_GOON_MAX_STAMINA
+	damage_coeff = damage_coeff.Copy()
+	damage_coeff[STAMINA] = BOUNTY_GOON_MAX_STAMINA / BOUNTY_GOON_HEALTH
 	gender = prob(75) ? MALE : FEMALE
 	goon_look_number = random_outpost_npc_look_number()
 	add_traits(list(TRAIT_NO_TELEPORT, TRAIT_NOMOBSWAP), BOUNTY_KINGPIN_TRAIT)
@@ -726,6 +783,12 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	else
 		. += span_notice("[p_They()] keep[p_s()] a hand near [p_their()] jacket.")
 
+// Hurt while their crew is at ease, by anything at all: the crew finds out who (H1)
+/mob/living/basic/bounty_kingpin_goon/adjust_health(amount, updating_health = TRUE, forced = FALSE)
+	. = ..()
+	if(amount > 0 && !forced)
+		goon_crew()?.member_hurt(src)
+
 // Alive, they don't get dragged off anywhere; a body can be.
 /mob/living/basic/bounty_kingpin_goon/can_be_pulled(user, force)
 	if(stat != DEAD)
@@ -780,22 +843,31 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /**
  * # Kingpin crew
  *
- * Everything around the kingpin: his goons, the coffee table and the offer on it, the loiterer and
- * the barkeep, and the shootout. Owned by the kingpin (deleted with him). Holds its mobs by weakref.
- * Processes on SSfastprocess: at ease it keeps the room lively; in a shootout it moves the goons
- * and fires their guns and his.
+ * Everything around the kingpin: his goons, the lounge's tables and the offer on the coffee table,
+ * the loiterer and the barkeep, and the shootout. Owned by the kingpin (deleted with him, or when his
+ * posting lets go of him). Holds its mobs by weakref. Processes on SSfastprocess: at ease it keeps
+ * the room lively and watches for known hunters; in a shootout it moves the goons and fires their
+ * guns and his.
  */
 /datum/bounty_kingpin_crew
 	/// Weakref to the kingpin
 	var/datum/weakref/kingpin_ref
+	/// He was placed for a posting: when the posting lets go of him, the crew winds down
+	var/crew_had_posting = FALSE
 	/// The turf of his seat on the sofa
 	var/turf/crew_seat
 	/// The way the sofa faces: the coffee table is that way
 	var/crew_facing = NORTH
+	/// Where bystanders and leaving goons go: the lounge's refuge mark, out of the room and away from the lift
+	var/turf/crew_refuge
 	/// Weakrefs to the goons (/mob/living/basic/bounty_kingpin_goon)
 	var/list/crew_goons = list()
 	/// Weakrefs to everyone the crew is fighting: whoever said "No deal", attacked any of them, or came with them
 	var/list/crew_hunters = list()
+	/// Weakrefs to the ships those hunters fly with: none of their crew gets a deal
+	var/list/crew_hostile_ships = list()
+	/// Weakref of a hunter -> world.time they last fired at or hit his crew
+	var/list/crew_engaged = list()
 	/// BOUNTY_KINGPIN_CALM, _DRAWING or _FIGHTING
 	var/crew_state = BOUNTY_KINGPIN_CALM
 	/// world.time the draw ends and the first shots may come
@@ -811,6 +883,12 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/crew_armed = FALSE
 	/// Weakrefs to the coffee table's pieces (/obj/structure/table)
 	var/list/crew_coffee_table = list()
+	/// Weakrefs to every lounge table the crew minds: the coffee table and the tables at the goons' posts
+	var/list/crew_tables = list()
+	/// Where each of those stands and what it is, list(turf, type): a table shot to pieces is put back
+	var/list/crew_table_spots = list()
+	/// The turfs where one of them was shot to pieces, waiting for a new one
+	var/list/crew_broken_spots = list()
 	/// Weakrefs to the tables the crew flipped this fight, the coffee table's too
 	var/list/crew_flipped = list()
 	/// Weakref to the loiterer who walks out when the guns come out, and where he was
@@ -826,10 +904,12 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/crew_offer_until = 0
 	/// Weakref of a visitor -> world.time he last greeted them
 	var/list/crew_greeted = list()
-	/// world.time of the next goon idle action, his next idle line, and the next look around
+	/// world.time of the next goon idle action, his next idle line, the next calm second, his next walk home and his next warning about the tables
 	var/crew_next_idle_at = 0
 	var/crew_next_boss_idle_at = 0
 	var/crew_next_calm_at = 0
+	var/crew_next_home_walk = 0
+	var/crew_next_table_warning = 0
 	/// Shots the crew has fired (the unit tests read it)
 	var/crew_shots = 0
 
@@ -842,7 +922,9 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		crew_facing = sofa.dir
 	GLOB.bounty_kingpin_crews += src
 	RegisterSignal(kingpin, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(on_member_attacked))
-	RegisterSignals(kingpin, list(COMSIG_BOUNTY_CRIMINAL_DOWNED, COMSIG_BOUNTY_CRIMINAL_RESTRAINED, COMSIG_LIVING_DEATH, SIGNAL_ADDTRAIT(TRAIT_BOUNTY_SURRENDERED)), PROC_REF(on_boss_fell))
+	RegisterSignal(kingpin, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_member_shot))
+	RegisterSignals(kingpin, list(COMSIG_BOUNTY_CRIMINAL_DOWNED, COMSIG_LIVING_DEATH, SIGNAL_ADDTRAIT(TRAIT_BOUNTY_SURRENDERED)), PROC_REF(on_boss_fell))
+	RegisterSignal(kingpin, COMSIG_BOUNTY_CRIMINAL_RESTRAINED, PROC_REF(on_boss_restrained))
 	crew_next_idle_at = world.time + rand(BOUNTY_GOON_IDLE_MIN, BOUNTY_GOON_IDLE_MAX)
 	crew_next_boss_idle_at = world.time + rand(BOUNTY_KINGPIN_IDLE_MIN, BOUNTY_KINGPIN_IDLE_MAX)
 	START_PROCESSING(SSfastprocess, src)
@@ -851,7 +933,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	STOP_PROCESSING(SSfastprocess, src)
 	GLOB.bounty_kingpin_crews -= src
 	withdraw_offer()
-	restore_room()
+	restore_room(TRUE)
 	// Whoever is still standing leaves; bodies fade on their own
 	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in goons())
 		goon.goon_crew_ref = null
@@ -859,16 +941,28 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 			goon.goon_leave(exit_turf(goon))
 	crew_goons.Cut()
 	crew_hunters.Cut()
+	crew_hostile_ships.Cut()
+	crew_engaged.Cut()
 	crew_greeted.Cut()
 	crew_coffee_table.Cut()
-	crew_flipped.Cut()
+	crew_tables.Cut()
+	crew_table_spots.Cut()
+	crew_broken_spots.Cut()
 	crew_seat = null
+	crew_refuge = null
 	crew_lead = null
 	crew_loiterer_home = null
 	kingpin_ref = null
 	crew_loiterer_ref = null
 	crew_barkeep_ref = null
 	return ..()
+
+/// The crew is done while he lives on elsewhere (his posting let go of him: the depths of a chasm, a relist): it winds down, and he keeps no hold on it
+/datum/bounty_kingpin_crew/proc/wind_down()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
+	if(kingpin?.kingpin_crew == src)
+		kingpin.kingpin_crew = null
+	qdel(src)
 
 // ===== WHO IS WHO =====
 
@@ -918,7 +1012,10 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /datum/bounty_kingpin_crew/proc/is_fighting()
 	return crew_state != BOUNTY_KINGPIN_CALM
 
-/// The crew fights `who` from now on (and the kingpin holds a grudge, for P2). Returns TRUE if they are new.
+/**
+ * The crew fights `who` from now on: the kingpin holds a grudge (P2), their ship gets no deal, and
+ * the crew notes when they fire at it. Returns TRUE if they are new.
+ */
 /datum/bounty_kingpin_crew/proc/add_hunter(mob/living/who)
 	if(!isliving(who) || QDELETED(who) || is_member(who))
 		return FALSE
@@ -928,8 +1025,28 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(ref in crew_hunters)
 		return FALSE
 	crew_hunters += ref
+	var/obj/structure/overmap/ship/ship = bounty_kingpin_user_ship(who)
+	if(ship)
+		crew_hostile_ships |= WEAKREF(ship)
+	RegisterSignal(who, COMSIG_PROJECTILE_FIRER_BEFORE_FIRE, PROC_REF(on_hunter_fired), override = TRUE)
 	kingpin()?.body_add_grudge(who)
 	return TRUE
+
+/// Whether anyone who flies with `ship` has fought his crew
+/datum/bounty_kingpin_crew/proc/ship_fought(obj/structure/overmap/ship/ship)
+	return !isnull(ship?.weak_reference) && (ship.weak_reference in crew_hostile_ships)
+
+/// Whether `hunter` fired at or hit his crew in the last BOUNTY_KINGPIN_EXCUSE_WINDOW
+/datum/bounty_kingpin_crew/proc/engaged(mob/living/hunter)
+	if(isnull(hunter?.weak_reference))
+		return FALSE
+	var/at = crew_engaged[hunter.weak_reference]
+	return !isnull(at) && world.time - at <= BOUNTY_KINGPIN_EXCUSE_WINDOW
+
+/// Whether `thing` is in the lounge: within BOUNTY_KINGPIN_SIGHT of his sofa, on its level
+/datum/bounty_kingpin_crew/proc/in_lounge(atom/thing)
+	var/turf/spot = get_turf(thing)
+	return spot && crew_seat && spot.z == crew_seat.z && get_dist(spot, crew_seat) <= BOUNTY_KINGPIN_SIGHT
 
 /**
  * Whoever came with `instigator`: their shipmates within sight of the sofa join the fight. Anyone
@@ -942,19 +1059,30 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/datum/criminal_bounty/kingpin/posting = kingpin()?.kingpin_posting()
 	for(var/datum/mind/member as anything in ship.ship_team?.members)
 		var/mob/living/body = member?.current
-		if(!isliving(body) || body.stat == DEAD || body.z != crew_seat.z || get_dist(body, crew_seat) > BOUNTY_KINGPIN_SIGHT)
+		var/turf/spot = get_turf(body)
+		if(!isliving(body) || body.stat == DEAD || !spot || spot.z != crew_seat.z || get_dist(spot, crew_seat) > BOUNTY_KINGPIN_SIGHT)
 			continue
 		if(posting?.kingpin_mind_bound(member))
 			continue
 		add_hunter(body)
 
-/// Whether his crew would shoot `target` now: someone they fight, awake (never anyone down), near the lounge
+/**
+ * Whether his crew would shoot `target` now: someone they fight, awake (never anyone down), standing
+ * on the floor or at the controls of a mech (never inside a locker or a crate: L2), near the lounge.
+ */
 /datum/bounty_kingpin_crew/proc/valid_target(mob/living/target)
 	if(!isliving(target) || QDELETED(target) || target.stat != CONSCIOUS || !crew_seat)
 		return FALSE
-	if(target.z != crew_seat.z || get_dist(target, crew_seat) > BOUNTY_KINGPIN_SIGHT + BOUNTY_GOON_LEASH)
+	if(!isturf(target.loc) && !istype(target.loc, /obj/vehicle/sealed))
+		return FALSE
+	var/turf/spot = get_turf(target)
+	if(!spot || spot.z != crew_seat.z || get_dist(spot, crew_seat) > BOUNTY_KINGPIN_SIGHT + BOUNTY_GOON_LEASH)
 		return FALSE
 	return is_hunter(target)
+
+/// What a shot at `hunter` is aimed at: the mech they drive, or them
+/datum/bounty_kingpin_crew/proc/shot_target(mob/living/hunter)
+	return istype(hunter?.loc, /obj/vehicle/sealed) ? hunter.loc : hunter
 
 /// The hunters the crew could shoot now
 /datum/bounty_kingpin_crew/proc/live_hunters()
@@ -963,6 +1091,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		var/mob/living/hunter = ref?.resolve()
 		if(QDELETED(hunter))
 			crew_hunters -= ref
+			crew_engaged -= ref
 			continue
 		if(valid_target(hunter))
 			. += hunter
@@ -970,6 +1099,22 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /// Whether `hunter` is in cover: out of the kingpin's sight from the sofa (the corridor, the doorways)
 /datum/bounty_kingpin_crew/proc/in_cover(mob/living/hunter)
 	return !bounty_kingpin_clear_shot(crew_seat, hunter)
+
+/// The living people behind whatever fired a shot, threw a grenade or drives a mech: the mob, a vehicle's occupants, or whoever last handled the thing (a grenade's shrapnel, a player's turret)
+/proc/bounty_kingpin_people_behind(atom/source)
+	. = list()
+	if(isliving(source))
+		. += source
+		return
+	if(istype(source, /obj/vehicle/sealed))
+		var/obj/vehicle/sealed/vehicle = source
+		for(var/mob/living/occupant in vehicle.occupants)
+			. += occupant
+		return
+	if(isatom(source) && source.fingerprintslast)
+		var/mob/living/owner = get_mob_by_ckey(source.fingerprintslast)
+		if(isliving(owner))
+			. += owner
 
 // ===== THE GOONS =====
 
@@ -1003,6 +1148,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	goon.goon_crew_ref = WEAKREF(src)
 	crew_goons |= WEAKREF(goon)
 	RegisterSignal(goon, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(on_member_attacked))
+	RegisterSignal(goon, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_member_shot))
 
 /// Where hunters stand to talk to him: two tiles out from the sofa, across the table
 /datum/bounty_kingpin_crew/proc/talk_spot()
@@ -1011,45 +1157,121 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/turf/front = get_step(crew_seat, crew_facing)
 	return front ? (get_step(front, crew_facing) || front) : crew_seat
 
-/// Finds the room around the sofa: the coffee table in front of it, the loiterer, the barkeep
+// ===== THE ROOM =====
+
+/**
+ * Finds the room around the sofa: the coffee table in front of it and the tables at the goons' posts
+ * (breakable while he is here, and put back if missing), the loiterer, the barkeep who can see the
+ * sofa, and the refuge.
+ */
 /datum/bounty_kingpin_crew/proc/find_room()
 	if(!crew_seat)
 		return
+	crew_refuge = bounty_kingpin_find_refuge(crew_seat)
+	var/list/coffee_spots = list()
 	var/turf/front = get_step(crew_seat, crew_facing)
 	if(front)
 		for(var/turf/spot as anything in list(front, get_step(front, turn(crew_facing, 90)), get_step(front, turn(crew_facing, -90))))
-			if(!spot)
-				continue
-			var/obj/structure/table/table = locate(/obj/structure/table) in spot
-			if(table?.can_flip)
-				crew_coffee_table |= WEAKREF(table)
-	for(var/mob/living/basic/outpost_loiterer/loiterer in range(BOUNTY_GOON_LEASH, crew_seat))
-		crew_loiterer_ref = WEAKREF(loiterer)
-		crew_loiterer_home = get_turf(loiterer)
-		break
-	for(var/mob/living/basic/outpost_trader/barkeep in range(BOUNTY_KINGPIN_SIGHT, crew_seat))
-		crew_barkeep_ref = WEAKREF(barkeep)
-		break
-
-/// Somewhere out of the lounge for `mover` to walk to: the outpost's hangar lift, or a spot away from the sofa
-/datum/bounty_kingpin_crew/proc/exit_turf(atom/mover)
-	var/turf/from = get_turf(mover)
-	if(!from || !crew_seat)
-		return null
-	var/obj/structure/overmap/trader_outpost/outpost = get_trader_outpost_for_turf(crew_seat)
-	var/turf/nearest
-	var/nearest_dist = INFINITY
-	for(var/turf/alcove as anything in outpost?.lobby_alcove_turfs)
-		if(alcove.z != from.z)
+			if(spot)
+				coffee_spots += spot
+	var/list/table_spots = coffee_spots.Copy()
+	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in goons())
+		for(var/direction in GLOB.cardinals)
+			var/turf/spot = get_step(goon.goon_post, direction)
+			if(spot && !(spot in table_spots))
+				table_spots += spot
+	for(var/turf/spot as anything in table_spots)
+		var/obj/structure/table/table = locate(/obj/structure/table) in spot
+		if(!table?.can_flip)
 			continue
-		var/dist = get_dist(from, alcove)
-		if(dist < nearest_dist)
-			nearest = alcove
-			nearest_dist = dist
-	if(nearest)
-		return nearest
-	var/away = get_dir(crew_seat, from) || turn(crew_facing, 180)
-	return get_ranged_target_turf(from, away, BOUNTY_GOON_LEASH)
+		var/datum/weakref/ref = WEAKREF(table)
+		crew_tables |= ref
+		crew_table_spots += list(list(spot, table.type))
+		if(spot in coffee_spots)
+			crew_coffee_table |= ref
+		make_table_breakable(table)
+	crew_loiterer_ref = null
+	var/nearest_loiterer
+	for(var/mob/living/basic/outpost_loiterer/loiterer in range(BOUNTY_GOON_LEASH, crew_seat))
+		if(!nearest_loiterer || get_dist(loiterer, crew_seat) < get_dist(nearest_loiterer, crew_seat))
+			nearest_loiterer = loiterer
+	if(nearest_loiterer)
+		crew_loiterer_ref = WEAKREF(nearest_loiterer)
+		crew_loiterer_home = get_turf(nearest_loiterer)
+	// The barkeep is the trader in this room: the nearest one with a clear line to the sofa, never one behind a wall or a window (M4)
+	crew_barkeep_ref = null
+	var/mob/living/basic/outpost_trader/nearest_trader
+	for(var/mob/living/basic/outpost_trader/trader in range(BOUNTY_KINGPIN_SIGHT, crew_seat))
+		if(!bounty_kingpin_clear_shot(crew_seat, trader))
+			continue
+		if(!nearest_trader || get_dist(trader, crew_seat) < get_dist(nearest_trader, crew_seat))
+			nearest_trader = trader
+	if(nearest_trader)
+		crew_barkeep_ref = WEAKREF(nearest_trader)
+	// Whatever anyone did to the tables since the last kingpin, he sits down to a tidy room
+	restore_tables()
+
+/// A lounge table that bullets can break while he is here (kingpin.md: three lasers); it leaves nothing behind when it goes (M3)
+/datum/bounty_kingpin_crew/proc/make_table_breakable(obj/structure/table/table)
+	table.resistance_flags &= ~INDESTRUCTIBLE
+	table.obj_flags |= NO_DEBRIS_AFTER_DECONSTRUCTION
+	RegisterSignal(table, COMSIG_ATOM_DESTRUCTION, PROC_REF(on_table_broken), override = TRUE)
+
+/// One of the lounge's tables was shot to pieces: a new one goes there later
+/datum/bounty_kingpin_crew/proc/on_table_broken(obj/structure/table/source)
+	SIGNAL_HANDLER
+	var/turf/spot = get_turf(source)
+	if(spot)
+		crew_broken_spots |= spot
+
+/**
+ * Every lounge table the crew minds stands upright and whole: flipped ones set back, damaged ones
+ * mended, broken ones replaced. `final`, when the crew is done: they are outpost property again.
+ */
+/datum/bounty_kingpin_crew/proc/restore_tables(final = FALSE)
+	var/list/standing = list()
+	for(var/datum/weakref/ref as anything in crew_tables.Copy())
+		var/obj/structure/table/table = ref?.resolve()
+		if(QDELETED(table))
+			crew_tables -= ref
+			crew_coffee_table -= ref
+			continue
+		standing += table
+	for(var/list/spot_info as anything in crew_table_spots)
+		var/turf/spot = spot_info[1]
+		var/obj/structure/table/present = locate(/obj/structure/table) in spot
+		if(present)
+			if(!(present in standing))
+				standing += present
+				crew_tables |= WEAKREF(present)
+			continue
+		// Only a table that was shot to pieces comes back: one taken away on purpose stays gone
+		if(!(spot in crew_broken_spots))
+			continue
+		crew_broken_spots -= spot
+		var/table_type = spot_info[2]
+		var/obj/structure/table/table = new table_type(spot)
+		table.AddElement(/datum/element/outpost_property)
+		standing += table
+		var/datum/weakref/ref = WEAKREF(table)
+		crew_tables |= ref
+		if(crew_seat && get_dist(spot, crew_seat) == 1 && (get_dir(crew_seat, spot) & crew_facing))
+			crew_coffee_table |= ref
+	for(var/obj/structure/table/table as anything in standing)
+		if(table.is_flipped)
+			table.unflip_table()
+		table.repair_damage(table.max_integrity - table.get_integrity())
+		if(final)
+			table.resistance_flags |= INDESTRUCTIBLE
+			table.obj_flags &= ~NO_DEBRIS_AFTER_DECONSTRUCTION
+		else
+			make_table_breakable(table)
+
+/// Somewhere out of the lounge for `mover` to walk to: the refuge mark, never the hangar lift (M5)
+/datum/bounty_kingpin_crew/proc/exit_turf(atom/mover)
+	if(crew_refuge)
+		return crew_refuge
+	return null
 
 // ===== THE OFFER =====
 
@@ -1093,13 +1315,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /// Someone went for the kingpin or a goon: any damaging or stamina attack starts the shootout
 /datum/bounty_kingpin_crew/proc/on_member_attacked(datum/source, atom/attacker, attack_flags)
 	SIGNAL_HANDLER
-	var/list/people = list()
-	if(ismecha(attacker))
-		var/obj/vehicle/sealed/mecha/mech = attacker
-		for(var/mob/living/pilot in mech.occupants)
-			people += pilot
-	else if(isliving(attacker))
-		people += attacker
+	var/list/people = bounty_kingpin_people_behind(attacker)
 	if(!length(people))
 		return
 	if(!(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
@@ -1110,8 +1326,36 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	member_attacked(source, people)
 
 /**
+ * A projectile is about to hit him or a goon. relay_attackers only reports shots fired by a mob, so
+ * a mech's guns, a grenade's shrapnel and a player's turret are caught here, and whoever is behind
+ * them is found (H1).
+ */
+/datum/bounty_kingpin_crew/proc/on_member_shot(datum/source, obj/projectile/shot)
+	SIGNAL_HANDLER
+	if(!shot?.is_hostile_projectile() || ismob(shot.firer))
+		return
+	var/list/people = bounty_kingpin_people_behind(shot.firer)
+	if(length(people))
+		member_attacked(source, people)
+
+/// A hunter fired: at his crew, it's part of the fight (their stray shots take no outpost strike)
+/datum/bounty_kingpin_crew/proc/on_hunter_fired(mob/living/source, obj/projectile/shot, atom/fired_from, atom/original)
+	SIGNAL_HANDLER
+	if(crew_state == BOUNTY_KINGPIN_CALM)
+		return
+	var/aimed_at_crew = is_member(original)
+	if(!aimed_at_crew && isturf(original))
+		for(var/mob/living/thing in original)
+			if(is_member(thing))
+				aimed_at_crew = TRUE
+				break
+	if(aimed_at_crew)
+		crew_engaged[source.weak_reference] = world.time
+
+/**
  * `member` (him or a goon) was attacked by `people`: they are hunters now, a goon drawing or
- * winding up fumbles, and if all was calm the shootout starts. Doesn't sleep.
+ * winding up fumbles, and if all was calm the shootout starts. Someone the crew won't fight (another
+ * criminal) sets nothing off (L6). Doesn't sleep.
  */
 /datum/bounty_kingpin_crew/proc/member_attacked(atom/member, list/people)
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
@@ -1119,8 +1363,10 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	for(var/mob/living/person as anything in people)
 		if(QDELETED(person) || is_member(person))
 			continue
-		add_hunter(person)
+		if(!add_hunter(person) && !is_hunter(person))
+			continue
 		first ||= person
+		crew_engaged[person.weak_reference] = world.time
 		if(member == kingpin)
 			kingpin.kingpin_note_hit(person)
 	if(!first)
@@ -1130,10 +1376,48 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(crew_state == BOUNTY_KINGPIN_CALM)
 		start_shootout(first, FALSE)
 
-/// He fell (downed, cuffed, gave up, died): his aim drops, and half the goons left run (once a fight)
+/**
+ * Him or a goon took damage. While the crew is at ease, any damage is an attack: a moment later
+ * (once the attack itself has been reported), if nobody has been named, the crew picks the nearest
+ * person in sight who isn't a guest (H1).
+ */
+/datum/bounty_kingpin_crew/proc/member_hurt(mob/living/member)
+	if(crew_state != BOUNTY_KINGPIN_CALM || QDELETED(member))
+		return
+	addtimer(CALLBACK(src, PROC_REF(member_hurt_check), WEAKREF(member)), 1, TIMER_DELETE_ME)
+
+/datum/bounty_kingpin_crew/proc/member_hurt_check(datum/weakref/member_ref)
+	var/mob/living/member = member_ref?.resolve()
+	if(crew_state != BOUNTY_KINGPIN_CALM || QDELETED(member))
+		return
+	var/datum/criminal_bounty/kingpin/posting = kingpin()?.kingpin_posting()
+	var/mob/living/suspect
+	for(var/mob/living/person in range(BOUNTY_GOON_LEASH, member))
+		if(person.stat != CONSCIOUS || !(person.mind || person.client) || is_member(person))
+			continue
+		if(istype(person, /mob/living/basic/bounty_criminal) || istype(person, /mob/living/basic/bounty_companion))
+			continue
+		if(posting?.kingpin_mind_bound(person.mind) && !is_hunter(person))
+			continue
+		if(!bounty_kingpin_clear_shot(person, member, BOUNTY_GOON_LEASH))
+			continue
+		if(!suspect || get_dist(person, member) < get_dist(suspect, member))
+			suspect = person
+	if(suspect)
+		member_attacked(member, list(suspect))
+
+/// He fell (downed, gave up, died): his aim drops, and half the goons left run (once a fight)
 /datum/bounty_kingpin_crew/proc/on_boss_fell(datum/source)
 	SIGNAL_HANDLER
 	kingpin()?.kingpin_cancel_aim()
+	boss_fell()
+
+/// He was cuffed. While his crew is at ease, that's an attack on him by whoever did it (M2).
+/datum/bounty_kingpin_crew/proc/on_boss_restrained(datum/source, mob/living/user)
+	SIGNAL_HANDLER
+	kingpin()?.kingpin_cancel_aim()
+	if(crew_state == BOUNTY_KINGPIN_CALM && isliving(user))
+		member_attacked(kingpin(), list(user))
 	boss_fell()
 
 /// Half the goons still in the fight run, the most hurt first. Once a fight; never while calm. Returns the goons who ran.
@@ -1199,12 +1483,13 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
  * The shootout starts, set off by `instigator` ("No deal" when `said_no`, else an attack): the
  * telegraph. For BOUNTY_KINGPIN_TELEGRAPH nobody in the crew fires: the goons reach for their
  * guns, the table goons flip their tables, he kicks the coffee table over, the loiterer walks out
- * and the barkeep ducks. The instigator and their shipmates nearby are hunters now. Doesn't sleep.
- * Returns TRUE if it started.
+ * and the barkeep ducks. The instigator and their shipmates nearby are hunters now. Nothing starts
+ * when the crew won't fight the instigator (L6) or nobody can shoot. Doesn't sleep. Returns TRUE if
+ * it started.
  */
 /datum/bounty_kingpin_crew/proc/start_shootout(mob/living/instigator, said_no = FALSE)
 	add_hunter(instigator)
-	if(crew_state != BOUNTY_KINGPIN_CALM || !can_fight())
+	if(crew_state != BOUNTY_KINGPIN_CALM || !is_hunter(instigator) || !can_fight())
 		return FALSE
 	add_party(instigator)
 	crew_state = BOUNTY_KINGPIN_DRAWING
@@ -1246,14 +1531,28 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(prob(40))
 		INVOKE_ASYNC(goon, TYPE_PROC_REF(/mob/living/basic/bounty_kingpin_goon, goon_say), "draw")
 
+/// Flips `table` toward `direction`: a table someone else knocked over the wrong way is set up first (H2)
+/datum/bounty_kingpin_crew/proc/flip_our_way(obj/structure/table/table, direction)
+	if(QDELETED(table) || !table.can_flip)
+		return FALSE
+	if(table.is_flipped)
+		if(table.dir == direction)
+			return TRUE
+		table.unflip_table()
+	table.flip_table(direction)
+	// A smooth still queued from the table's build or unflip this tick would runtime on a flipped table
+	SSicon_smooth.remove_from_queues(table)
+	return TRUE
+
 /// A goon at a table kicks it over for cover, away from himself. Never the coffee table: that's his.
 /datum/bounty_kingpin_crew/proc/goon_flip_table(mob/living/basic/bounty_kingpin_goon/goon)
 	for(var/direction in GLOB.cardinals)
 		var/turf/spot = get_step(goon, direction)
 		var/obj/structure/table/table = locate(/obj/structure/table) in spot
-		if(!table?.can_flip || table.is_flipped || (WEAKREF(table) in crew_coffee_table))
+		if(!table?.can_flip || (WEAKREF(table) in crew_coffee_table))
 			continue
-		table.flip_table(direction)
+		if(!flip_our_way(table, direction))
+			continue
 		crew_flipped |= WEAKREF(table)
 		return table
 	return null
@@ -1266,16 +1565,16 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/kicked = FALSE
 	for(var/datum/weakref/ref as anything in crew_coffee_table)
 		var/obj/structure/table/table = ref?.resolve()
-		if(QDELETED(table) || table.is_flipped)
+		if(QDELETED(table) || (table.is_flipped && table.dir == crew_facing))
 			continue
-		table.flip_table(crew_facing)
+		flip_our_way(table, crew_facing)
 		crew_flipped |= ref
 		kicked = TRUE
 	if(kicked)
 		kingpin.visible_message(span_danger("[kingpin] kicks the table over!"), vision_distance = BOUNTY_KINGPIN_SIGHT)
 	return kicked
 
-/// The loiterer walks out and the barkeep ducks
+/// The loiterer walks out to the refuge and the barkeep ducks
 /datum/bounty_kingpin_crew/proc/clear_room()
 	var/mob/living/basic/outpost_loiterer/loiterer = crew_loiterer_ref?.resolve()
 	if(!QDELETED(loiterer) && !HAS_TRAIT_FROM(loiterer, TRAIT_AI_PAUSED, BOUNTY_KINGPIN_TRAIT))
@@ -1300,18 +1599,25 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		crouch.Translate(0, -6)
 		animate(barkeep, transform = crouch, time = 0.3 SECONDS)
 
-/// The room goes back to how it was: tables up, the loiterer back in, the barkeep up
-/datum/bounty_kingpin_crew/proc/restore_room()
-	for(var/datum/weakref/ref as anything in crew_flipped)
-		var/obj/structure/table/table = ref?.resolve()
-		if(!QDELETED(table) && table.is_flipped)
-			table.unflip_table()
+/**
+ * The room goes back to how it was: every lounge table upright and whole (restore_tables()), the
+ * loiterer back in (put back outright from another level or too far to walk), the barkeep up.
+ * `final` when the crew is done.
+ */
+/datum/bounty_kingpin_crew/proc/restore_room(final = FALSE)
+	restore_tables(final)
 	crew_flipped.Cut()
 	var/mob/living/basic/outpost_loiterer/loiterer = crew_loiterer_ref?.resolve()
 	if(!QDELETED(loiterer) && HAS_TRAIT_FROM(loiterer, TRAIT_AI_PAUSED, BOUNTY_KINGPIN_TRAIT))
 		REMOVE_TRAIT(loiterer, TRAIT_AI_PAUSED, BOUNTY_KINGPIN_TRAIT)
-		if(crew_loiterer_home && isturf(loiterer.loc))
-			GLOB.move_manager.jps_move(loiterer, crew_loiterer_home, delay = 3, timeout = 30 SECONDS, repath_delay = 2 SECONDS, max_path_length = 80, simulated_only = TRUE, priority = MOVEMENT_ABOVE_SPACE_PRIORITY)
+		var/turf/home = crew_loiterer_home
+		if(home)
+			var/turf/here = get_turf(loiterer)
+			if(!here || here.z != home.z || get_dist(here, home) > BOUNTY_KINGPIN_WALK_HOME_MAX || !isturf(loiterer.loc))
+				GLOB.move_manager.stop_looping(loiterer)
+				loiterer.forceMove(home)
+			else if(here != home)
+				GLOB.move_manager.jps_move(loiterer, home, delay = 3, timeout = 30 SECONDS, repath_delay = 2 SECONDS, max_path_length = 80, simulated_only = TRUE, priority = MOVEMENT_ABOVE_SPACE_PRIORITY)
 	var/mob/living/basic/outpost_trader/barkeep = crew_barkeep_ref?.resolve()
 	if(!QDELETED(barkeep) && crew_barkeep_ducked)
 		crew_barkeep_ducked = FALSE
@@ -1335,6 +1641,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	crew_state = BOUNTY_KINGPIN_CALM
 	crew_lead = null
 	crew_armed = FALSE
+	crew_engaged.Cut()
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
 	if(kingpin)
 		kingpin.kingpin_cancel_aim()
@@ -1347,13 +1654,19 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		goon.goon_arm(FALSE)
 	restore_room()
 	log_game("BOUNTY: [kingpin || "the kingpin's crew"] stood down at [AREACOORD(crew_seat)]")
-	dismiss_if_boss_gone()
 
-/// With him dead, cuffed or carried off, there is nobody left to guard: the goons still standing walk out. Returns TRUE if they did.
+/**
+ * With him gone (padded or deleted) or carried off his leash, there is nobody left to guard: the
+ * goons still standing walk out. Cuffed or dead on his sofa, they stay with him (M2). Returns TRUE if
+ * they left.
+ */
 /datum/bounty_kingpin_crew/proc/dismiss_if_boss_gone()
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
-	if(kingpin && kingpin.stat != DEAD && !kingpin.is_restrained() && crew_seat && get_dist(kingpin, crew_seat) <= BOUNTY_GOON_LEASH && kingpin.z == crew_seat.z)
-		return FALSE
+	if(kingpin)
+		var/turf/here = get_turf(kingpin)
+		var/on_leash = here && crew_seat && here.z == crew_seat.z && get_dist(here, crew_seat) <= BOUNTY_GOON_LEASH
+		if(on_leash || kingpin.kingpin_able())
+			return FALSE
 	var/list/leaving = standing_goons()
 	if(!length(leaving))
 		return FALSE
@@ -1364,8 +1677,15 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 // ===== THE TICK =====
 
 /datum/bounty_kingpin_crew/process(seconds_per_tick)
-	if(!kingpin())
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
+	if(!kingpin)
 		return PROCESS_KILL
+	// His posting let go of him (a chasm's depths, a relist): the crew is done (L10)
+	if(crew_had_posting)
+		var/datum/criminal_bounty/posting = kingpin.posting()
+		if(!posting?.is_open() || posting.criminal() != kingpin)
+			wind_down()
+			return PROCESS_KILL
 	switch(crew_state)
 		if(BOUNTY_KINGPIN_DRAWING)
 			if(world.time >= crew_draw_ends_at)
@@ -1417,7 +1737,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/mob/living/target = goon_choose_target(goon, visible)
 	goon.goon_target_ref = target ? WEAKREF(target) : null
 	if(target)
-		goon.face_atom(target)
+		goon.face_atom(shot_target(target))
 		if(goon.goon_weapon == BOUNTY_GOON_WEAPON_SHOTGUN && get_dist(goon, target) > BOUNTY_GOON_SHOTGUN_RANGE)
 			goon_step_toward(goon, get_turf(target))
 		else
@@ -1551,14 +1871,15 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		return
 	goon_fire(goon, target)
 
-/// One shot from `goon`'s gun at `target`
+/// One shot from `goon`'s gun at `target` (at the mech they drive, if they drive one)
 /datum/bounty_kingpin_crew/proc/goon_fire(mob/living/basic/bounty_kingpin_goon/goon, mob/living/target)
+	var/atom/aim_at = shot_target(target)
 	switch(goon.goon_weapon)
 		if(BOUNTY_GOON_WEAPON_SMG)
-			return bounty_kingpin_shoot(goon, target, rand(BOUNTY_GOON_SMG_DAMAGE_MIN, BOUNTY_GOON_SMG_DAMAGE_MAX), BOUNTY_GOON_SMG_SPREAD, 'sound/items/weapons/gun/smg/shot.ogg', src)
+			return bounty_kingpin_shoot(goon, aim_at, rand(BOUNTY_GOON_SMG_DAMAGE_MIN, BOUNTY_GOON_SMG_DAMAGE_MAX), BOUNTY_GOON_SMG_SPREAD, 'sound/items/weapons/gun/smg/shot.ogg', src)
 		if(BOUNTY_GOON_WEAPON_SHOTGUN)
-			return bounty_kingpin_shoot(goon, target, rand(BOUNTY_GOON_SHOTGUN_DAMAGE_MIN, BOUNTY_GOON_SHOTGUN_DAMAGE_MAX), BOUNTY_GOON_SHOTGUN_SPREAD, 'sound/items/weapons/gun/shotgun/shot.ogg', src, BOUNTY_GOON_SHOTGUN_RANGE + 1)
-	return bounty_kingpin_shoot(goon, target, rand(BOUNTY_GOON_PISTOL_DAMAGE_MIN, BOUNTY_GOON_PISTOL_DAMAGE_MAX), BOUNTY_GOON_PISTOL_SPREAD, 'sound/items/weapons/gun/pistol/shot.ogg', src)
+			return bounty_kingpin_shoot(goon, aim_at, rand(BOUNTY_GOON_SHOTGUN_DAMAGE_MIN, BOUNTY_GOON_SHOTGUN_DAMAGE_MAX), BOUNTY_GOON_SHOTGUN_SPREAD, 'sound/items/weapons/gun/shotgun/shot.ogg', src, BOUNTY_GOON_SHOTGUN_RANGE + 1)
+	return bounty_kingpin_shoot(goon, aim_at, rand(BOUNTY_GOON_PISTOL_DAMAGE_MIN, BOUNTY_GOON_PISTOL_DAMAGE_MAX), BOUNTY_GOON_PISTOL_SPREAD, 'sound/items/weapons/gun/pistol/shot.ogg', src)
 
 /// The kingpin's turn: aim at whoever hurt him most, or reload. Never while drawing. Returns TRUE if he sees a hunter.
 /datum/bounty_kingpin_crew/proc/boss_tick(mob/living/basic/bounty_criminal/kingpin/kingpin, list/hunters)
@@ -1582,21 +1903,22 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 // ===== AT EASE =====
 
 /**
- * A calm second: he gets back on the sofa, goons drift back to their posts, he greets whoever comes
- * up to the table, an unclaimed offer goes back in his pocket, and now and then someone does
- * something: a smoke, a drink, a word, a hand of cards.
+ * A calm second: he gets back on his sofa, goons drift back to their posts and set knocked-over
+ * tables back up, he greets whoever comes up to the table, an unclaimed offer goes back in his
+ * pocket, and now and then someone does something: a smoke, a drink, a word, a hand of cards. The
+ * crew still watches: a known hunter in sight, or anyone dragging him off, starts it all again (M2).
  */
 /datum/bounty_kingpin_crew/proc/calm_tick()
 	if(dismiss_if_boss_gone())
 		return
+	if(watch_for_trouble())
+		return
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
-	if(kingpin && !kingpin.buckled && kingpin.kingpin_able())
-		if(!kingpin.kingpin_sit() && crew_seat && get_turf(kingpin) != crew_seat && isturf(kingpin.loc))
-			var/turf/next = get_step_to(kingpin, crew_seat)
-			if(next && get_dist(next, crew_seat) <= BOUNTY_GOON_LEASH)
-				kingpin.Move(next, get_dir(kingpin, next))
+	if(kingpin && !kingpin.buckled && kingpin.kingpin_able() && !kingpin.kingpin_sit())
+		kingpin.kingpin_go_home()
 	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in standing_goons())
 		goon_calm_tick(goon)
+	right_the_tables()
 	if(crew_offer && world.time >= crew_offer_until)
 		withdraw_offer()
 		if(kingpin?.kingpin_able())
@@ -1608,6 +1930,59 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(world.time >= crew_next_boss_idle_at)
 		crew_next_boss_idle_at = world.time + rand(BOUNTY_KINGPIN_IDLE_MIN, BOUNTY_KINGPIN_IDLE_MAX)
 		boss_idle()
+
+/**
+ * At ease, the crew still watches (M2): someone dragging the kingpin (or his body) is an attack, and
+ * a known hunter any of them can see starts the fight again, through the draw. Returns TRUE if it
+ * started.
+ */
+/datum/bounty_kingpin_crew/proc/watch_for_trouble()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
+	var/mob/living/puller = kingpin?.pulledby
+	if(isliving(puller) && !is_member(puller))
+		member_attacked(kingpin, list(puller))
+		if(crew_state != BOUNTY_KINGPIN_CALM)
+			return TRUE
+	var/list/hunters = live_hunters()
+	if(!length(hunters))
+		return FALSE
+	var/list/lookers = standing_goons()
+	if(kingpin && kingpin.stat == CONSCIOUS)
+		lookers += kingpin
+	for(var/mob/living/looker as anything in lookers)
+		if(looker.stat != CONSCIOUS)
+			continue
+		for(var/mob/living/hunter as anything in hunters)
+			if(bounty_kingpin_clear_shot(looker, hunter) && start_shootout(hunter, FALSE))
+				return TRUE
+	return FALSE
+
+/**
+ * The lounge's tables stay on their legs while he's at ease: a goon sets a knocked-over one back
+ * up, and a broken one is replaced, with a word from him now and then (H2).
+ */
+/datum/bounty_kingpin_crew/proc/right_the_tables()
+	var/list/goons = standing_goons()
+	if(!length(goons))
+		return
+	var/righted = FALSE
+	for(var/datum/weakref/ref as anything in crew_tables.Copy())
+		var/obj/structure/table/table = ref?.resolve()
+		if(QDELETED(table) || !table.is_flipped)
+			continue
+		var/mob/living/basic/bounty_kingpin_goon/nearest
+		for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in goons)
+			if(goon.goon_able() && (!nearest || get_dist(goon, table) < get_dist(nearest, table)))
+				nearest = goon
+		if(!nearest)
+			return
+		table.unflip_table()
+		nearest.visible_message(span_notice("[nearest] sets [table] back on its legs."), vision_distance = COMBAT_MESSAGE_RANGE)
+		righted = TRUE
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin()
+	if(righted && world.time >= crew_next_table_warning && kingpin?.kingpin_can_talk())
+		crew_next_table_warning = world.time + BOUNTY_KINGPIN_TABLE_WARN_GAP
+		INVOKE_ASYNC(kingpin, TYPE_PROC_REF(/mob/living, bounty_say), "furniture", null, TRUE)
 
 /// A goon at ease: back to his post and into his chair, and watching whoever is closest
 /datum/bounty_kingpin_crew/proc/goon_calm_tick(mob/living/basic/bounty_kingpin_goon/goon)
@@ -1915,77 +2290,134 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
  * # The kingpin's posting
  *
  * P5's posting with his rules: "wanted dead or alive" (alive 100% however he got there, dead 80%),
- * a clock that stops during a shootout, no relisting (he is only ever on his sofa), and the deal.
- * A deal binds the dealing ship and everyone aboard or on its crew: none of them can hunt him or
- * turn him in, at any pad, while this posting is up.
+ * a clock that stops during a shootout (and until he is seated), no relisting (he is only ever on
+ * his sofa), no place under the board's live-criminal cap, and the deal.
+ *
+ * A deal binds the dealing ship, the dealer and its crew roster (by mind and by player, so a new
+ * character is still bound): none of them can hunt him or turn him in, at any pad, while this
+ * posting is up, and no ship with any of them on its roster can. Anyone else aboard the dealing
+ * ship at the time is bound too, but only for themselves: they can't press the button or be aboard
+ * the ship that turns him in, while their own ship's crew stays free (L4).
  */
 /datum/criminal_bounty/kingpin
 	/// Deals he has made
 	var/kingpin_deals = 0
 	/// Weakrefs to the ships that took his deal
 	var/list/kingpin_dealt_ships = list()
-	/// Weakrefs to the minds bound by a deal
+	/// Weakrefs to the minds bound with their crew (the dealer and the dealing ship's roster)
 	var/list/kingpin_bound_minds = list()
+	/// The ckeys of those players
+	var/list/kingpin_bound_keys = list()
+	/// Weakrefs to the minds of others aboard the dealing ship, and their ckeys: bound for themselves only
+	var/list/kingpin_aboard_minds = list()
+	var/list/kingpin_aboard_keys = list()
+	/// Every crew has been told he is here: once he was seated (L7)
+	var/kingpin_announced = FALSE
 
 /datum/criminal_bounty/kingpin/Destroy()
 	. = ..()
 	kingpin_dealt_ships.Cut()
 	kingpin_bound_minds.Cut()
+	kingpin_bound_keys.Cut()
+	kingpin_aboard_minds.Cut()
+	kingpin_aboard_keys.Cut()
 
 /// Whether `ship` took his deal
 /datum/criminal_bounty/kingpin/proc/kingpin_ship_dealt(obj/structure/overmap/ship/ship)
 	return !isnull(ship?.weak_reference) && (ship.weak_reference in kingpin_dealt_ships)
 
-/// Whether `mind` is bound by his deal
+/// The ckey of `mind`'s player, or null
+/proc/bounty_kingpin_mind_key(datum/mind/mind)
+	return mind?.key ? ckey(mind.key) : null
+
+/// Whether `mind` (or its player, as any character) is bound with its crew
+/datum/criminal_bounty/kingpin/proc/kingpin_crew_bound(datum/mind/mind)
+	if(!mind)
+		return FALSE
+	if(!isnull(mind.weak_reference) && (mind.weak_reference in kingpin_bound_minds))
+		return TRUE
+	var/key = bounty_kingpin_mind_key(mind)
+	return !isnull(key) && (key in kingpin_bound_keys)
+
+/// Whether `mind` (or its player) is bound by his deal in any way: with its crew, or for themselves
 /datum/criminal_bounty/kingpin/proc/kingpin_mind_bound(datum/mind/mind)
-	return !isnull(mind?.weak_reference) && (mind.weak_reference in kingpin_bound_minds)
+	if(!mind)
+		return FALSE
+	if(kingpin_crew_bound(mind))
+		return TRUE
+	if(!isnull(mind.weak_reference) && (mind.weak_reference in kingpin_aboard_minds))
+		return TRUE
+	var/key = bounty_kingpin_mind_key(mind)
+	return !isnull(key) && (key in kingpin_aboard_keys)
+
+/// Whether `person` is bound in any way, by their mind or by their ckey
+/datum/criminal_bounty/kingpin/proc/kingpin_person_bound(mob/person)
+	if(!person)
+		return FALSE
+	if(kingpin_mind_bound(person.mind))
+		return TRUE
+	return !isnull(person.ckey) && ((person.ckey in kingpin_bound_keys) || (person.ckey in kingpin_aboard_keys))
 
 /**
  * Why `ship` (and `user`, pressing the button) can't hunt or turn him in, or null: the ship took his
- * deal, someone on its crew or aboard it is bound by a deal, or `user` is.
+ * deal, `user` is bound, someone on its roster is bound with their crew, or someone bound is aboard.
  */
 /datum/criminal_bounty/kingpin/proc/kingpin_bound_refusal(obj/structure/overmap/ship/ship, mob/user)
 	if(kingpin_ship_dealt(ship))
 		return "your crew took his deal"
-	if(user?.mind && kingpin_mind_bound(user.mind))
+	if(kingpin_person_bound(user))
 		return "you took his deal"
-	if(!ship || !length(kingpin_bound_minds))
+	if(!ship || (!length(kingpin_bound_minds) && !length(kingpin_aboard_minds) && !length(kingpin_bound_keys) && !length(kingpin_aboard_keys)))
 		return null
 	for(var/datum/mind/member as anything in ship.ship_team?.members)
-		if(kingpin_mind_bound(member))
+		if(kingpin_crew_bound(member))
 			return "someone on your crew took his deal"
-	for(var/datum/weakref/ref as anything in kingpin_bound_minds)
+	for(var/datum/weakref/ref as anything in kingpin_bound_minds | kingpin_aboard_minds)
 		var/datum/mind/bound = ref?.resolve()
 		var/mob/living/body = bound?.current
 		if(isliving(body) && body.stat != DEAD && get_ship_from_atom(body) == ship)
 			return "someone aboard took his deal"
+	for(var/mob/living/aboard as anything in GLOB.alive_player_list)
+		if(aboard.ckey && get_ship_from_atom(aboard) == ship && kingpin_person_bound(aboard))
+			return "someone aboard took his deal"
 	return null
 
 /**
- * `dealer` of `ship` took his deal: the ship, the dealer, its crew and everyone aboard it now are
- * bound; its hunt on him ends; it is told.
+ * `dealer` of `ship` took his deal: the ship, the dealer and its roster are bound with their crew;
+ * anyone else aboard now is bound for themselves; its hunt on him ends; it is told.
  */
 /datum/criminal_bounty/kingpin/proc/kingpin_bind(obj/structure/overmap/ship/ship, mob/living/dealer)
 	kingpin_deals++
-	var/list/minds = list()
+	var/list/crew_minds = list()
+	var/list/aboard_minds = list()
 	if(dealer?.mind)
-		minds |= dealer.mind
+		crew_minds |= dealer.mind
+	if(dealer?.ckey)
+		kingpin_bound_keys |= dealer.ckey
 	if(ship)
 		kingpin_dealt_ships |= WEAKREF(ship)
 		for(var/datum/mind/member as anything in ship.ship_team?.members)
 			if(member)
-				minds |= member
+				crew_minds |= member
 		for(var/mob/living/aboard as anything in GLOB.alive_player_list)
-			if(aboard.mind && get_ship_from_atom(aboard) == ship)
-				minds |= aboard.mind
+			if(aboard.mind && get_ship_from_atom(aboard) == ship && !(aboard.mind in crew_minds))
+				aboard_minds |= aboard.mind
 		var/datum/weakref/ship_ref = WEAKREF(ship)
 		if(ship_ref in claimants)
 			claimants -= ship_ref
 			board_hunt_started -= ship_ref
 			ship.remove_waypoint(board_waypoint_key())
 		ship.ship_notify("WANTED: your crew took [record?.name || "the kingpin"]'s deal. None of you can collect on him now.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
-	for(var/datum/mind/mind as anything in minds)
+	for(var/datum/mind/mind as anything in crew_minds)
 		kingpin_bound_minds |= WEAKREF(mind)
+		var/key = bounty_kingpin_mind_key(mind)
+		if(key)
+			kingpin_bound_keys |= key
+	for(var/datum/mind/mind as anything in aboard_minds)
+		kingpin_aboard_minds |= WEAKREF(mind)
+		var/key = bounty_kingpin_mind_key(mind)
+		if(key)
+			kingpin_aboard_keys |= key
 	SScriminal_bounties.board_changed()
 
 // Wanted dead or alive: restrained, stunned or downed is alive and pays in full; dead pays 80%
@@ -2012,10 +2444,38 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		return ..()
 	return "In the lounge at [board_site_name || "the black market"]"
 
-// The clock stops while his crew is fighting, and only then
+// The clock stops while his crew is fighting, and until he is seated (L7); a hunt doesn't stop it
 /datum/criminal_bounty/kingpin/board_clock_held(now = world.time)
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = criminal()
+	if(!kingpin)
+		return !board_proof() && !board_relisting
 	return istype(kingpin) && !!kingpin.kingpin_crew?.is_fighting()
+
+// He is an event, not one of the board's criminals: the live-criminal cap never holds him back (L7)
+/datum/criminal_bounty/kingpin/board_arm()
+	if(!is_open() || board_relisting || board_spawning || criminal() || board_proof())
+		return FALSE
+	var/obj/structure/overmap/where = site()
+	if(!where)
+		return FALSE
+	if(!board_site_loaded(where))
+		board_wait_for_load(where)
+		return FALSE
+	board_spawning = TRUE
+	INVOKE_ASYNC(src, PROC_REF(board_spawn_criminal), where)
+	return TRUE
+
+/// Tells every crew he's in, once, when he has sat down (L7)
+/datum/criminal_bounty/kingpin/proc/kingpin_announce()
+	if(kingpin_announced || !is_open())
+		return
+	kingpin_announced = TRUE
+	var/list/amounts = board_share_amounts()
+	var/who = record?.alias ? "[record.name], \"[record.alias]\"" : record?.name
+	for(var/obj/structure/overmap/ship/ship as anything in SSovermap.simulated_ships)
+		if(QDELETED(ship) || ship.abandoned || istype(ship, /obj/structure/overmap/ship/npc))
+			continue
+		ship.ship_notify("WANTED DEAD OR ALIVE: [who], in the lounge at [board_site_name || "the black market"]. [amounts[1]] cr alive, [amounts[3]] cr dead.", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 
 /datum/criminal_bounty/kingpin/hunt_refusal(obj/structure/overmap/ship/ship)
 	var/refusal = kingpin_bound_refusal(ship)
@@ -2062,6 +2522,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		qdel(kingpin)
 		return null
 	board_adopt_criminal(kingpin, where, null, null)
+	kingpin_announce()
 	return kingpin
 
 // =========================================================================
@@ -2090,6 +2551,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		return null
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = new(seat)
 	kingpin.kingpin_crew = new /datum/bounty_kingpin_crew(kingpin, seat)
+	kingpin.kingpin_crew.crew_had_posting = !isnull(posting)
 	kingpin.body_setup(record, posting)
 	kingpin.kingpin_sit()
 	for(var/list/post as anything in posts)
@@ -2147,15 +2609,13 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /proc/post_kingpin_bounty(obj/structure/overmap/trader_outpost/outpost)
 	if(QDELETED(outpost) || bounty_kingpin_open_posting())
 		return null
+	// A loaded black market with no sofa for him gets no posting at all (L7)
+	if(outpost.loaded && !bounty_kingpin_find_seat(outpost))
+		return null
 	var/datum/criminal_bounty/kingpin/posting = bounty_kingpin_new_posting(outpost)
 	if(!posting)
 		return null
-	var/list/amounts = posting.board_share_amounts()
-	var/who = posting.record.alias ? "[posting.record.name], \"[posting.record.alias]\"" : posting.record.name
-	for(var/obj/structure/overmap/ship/ship as anything in SSovermap.simulated_ships)
-		if(QDELETED(ship) || ship.abandoned || istype(ship, /obj/structure/overmap/ship/npc))
-			continue
-		ship.ship_notify("WANTED DEAD OR ALIVE: [who], in the lounge at [outpost.name]. [amounts[1]] cr alive, [amounts[3]] cr dead.", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+	// The crews are told once he has sat down (kingpin_announce())
 	posting.board_arm()
 	return posting
 
@@ -2243,10 +2703,12 @@ SUBSYSTEM_DEF(bounty_kingpin)
 /**
  * Called from the trader outpost's register_aggression() (one marked line in
  * voidcrew/modules/trade/outpost.dm): TRUE excuses `offender` a strike at `outpost`, because a
- * kingpin shootout is on there and the crew is fighting them (spec 13: hunters fighting his crew get
- * no property strikes). PvP enforcement stays: a hit on a person reaches register_aggression()
- * through register_pvp_aggression(), which has just opened the victim's self-defence window this
- * tick, and that is never excused.
+ * kingpin shootout is on there and it is a stray from that fight (spec 13: hunters fighting his crew
+ * get no property strikes). Only a hunter standing in the lounge who fired at or hit his crew in the
+ * last BOUNTY_KINGPIN_EXCUSE_WINDOW is excused, so a crew can't keep a fight going as cover for
+ * hitting traders or patrons (L1). PvP enforcement stays: a hit on a person reaches
+ * register_aggression() through register_pvp_aggression(), which has just opened the victim's
+ * self-defence window this tick, and that is never excused.
  */
 /proc/bounty_kingpin_excuses_aggression(obj/structure/overmap/trader_outpost/outpost, mob/living/offender)
 	if(!outpost || !offender?.mind || !length(GLOB.bounty_kingpin_crews))
@@ -2255,6 +2717,9 @@ SUBSYSTEM_DEF(bounty_kingpin)
 		if(!crew.is_fighting() || !crew.is_hunter(offender))
 			continue
 		if(get_trader_outpost_for_turf(crew.crew_seat) != outpost)
+			continue
+		// Only a stray from the fight itself (L1): in the lounge, just after firing at or hitting his crew
+		if(!crew.in_lounge(offender) || !crew.engaged(offender))
 			continue
 		if(bounty_kingpin_pvp_strike_now(outpost, offender))
 			return FALSE

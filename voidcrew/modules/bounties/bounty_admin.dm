@@ -857,6 +857,7 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	var/wanted_name = posting.record?.name || "nobody"
 	if(istype(posting, /datum/criminal_bounty/kill_only)) // BOUNTY P10: a kill-only bounty is tied to its lair or event
 		return refuse(user, "The bounty on [wanted_name] is kill-only and tied to its lair: it can't be relisted. Close it instead.")
+	if(istype(posting, /datum/criminal_bounty/kingpin)) return refuse(user, "The kingpin, [wanted_name], is only ever on his sofa at the black market: he can't be relisted. Close it instead.") // BOUNTY P9 (L8)
 	if(!posting.relist(BOUNTY_ADMIN_RELIST_REASON))
 		return refuse(user, "The bounty on [wanted_name] did not relist: it is already relisting.")
 	log_action(user, "relist the bounty on [wanted_name]")

@@ -67,6 +67,11 @@
 			"Somebody get the tables back up.",
 			"Back to it. And get me a drink."
 		],
+		"furniture": [
+			"Leave the furniture alone.",
+			"That table stays on its legs.",
+			"Touch my tables again and we'll have a problem."
+		],
 		"greet": [
 			"Evening. Pull up a chair if you're buying.",
 			"You look like you want something.",

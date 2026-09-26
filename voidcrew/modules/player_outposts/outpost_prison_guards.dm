@@ -755,7 +755,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	var/personality = "by_the_book"
 	/// Which face they have (set_outpost_npc_look())
 	var/look_number = 1
-	/// An admin's guard: no fee, no wage, not counted against OUTPOST_GUARD_MAX
+	/// An admin's guard: no fee, no wage, not counted against guard_max()
 	var/free = FALSE
 	var/dismissed = FALSE
 	/// Seconds until they are sent back while away (down, recalled); they come only while a member is home
@@ -842,7 +842,11 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	var/guard_riot_announced = FALSE
 	var/guard_shelter_called = FALSE
 
-/// Guards on the payroll who are not an admin's: the ones OUTPOST_GUARD_MAX counts
+/// Guards the wing may hire: OUTPOST_GUARD_MAX, and one more for each cell block extension
+/datum/outpost_prison/proc/guard_max()
+	return OUTPOST_GUARD_MAX + extension_count()
+
+/// Guards on the payroll who are not an admin's: the ones guard_max() counts
 /datum/outpost_prison/proc/hired_guard_count()
 	var/count = 0
 	for(var/datum/outpost_guard_record/record as anything in guard_records)
@@ -874,7 +878,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 /datum/outpost_prison/proc/hire_guard(mob/user)
 	if(QDELETED(outpost) || !outpost.can_manage(user))
 		return "managers only"
-	if(hired_guard_count() >= OUTPOST_GUARD_MAX)
+	if(hired_guard_count() >= guard_max())
 		return "no free post"
 	// Nowhere in the office to beam into: refused before anything is charged.
 	if(!guard_office_spot())
@@ -1482,11 +1486,11 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		))
 	var/balance = outpost?.treasury?.account_balance || 0
 	return list(
-		"max" = OUTPOST_GUARD_MAX,
+		"max" = guard_max(),
 		"hire_cost" = OUTPOST_GUARD_HIRE_COST,
 		"wage" = OUTPOST_GUARD_WAGE,
 		"can_manage" = can_manage,
-		"can_hire" = can_manage && hired_guard_count() < OUTPOST_GUARD_MAX && balance >= OUTPOST_GUARD_HIRE_COST,
+		"can_hire" = can_manage && hired_guard_count() < guard_max() && balance >= OUTPOST_GUARD_HIRE_COST,
 		"unpaid" = guard_unpaid,
 		"list" = rows,
 	)

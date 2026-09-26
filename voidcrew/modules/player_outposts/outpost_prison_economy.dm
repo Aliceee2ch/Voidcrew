@@ -12,6 +12,10 @@
  * account_debt, which takes 75% of every later deposit), and no prisoner arrives while it is owed,
  * so the wing's own stipends work it off. Each cell keeps the world.time from which it takes a new
  * arrival, and opening or closing intake never brings that forward.
+ *
+ * Arrivals come in lanes: one for the wing and one more for each cell block extension
+ * (outpost_prison_extension.dm). Each lane brings one prisoner at a time and then waits its own
+ * gap, so a ten-cell wing fills three cells in parallel rather than one after another.
  */
 
 /datum/outpost_prison
@@ -24,8 +28,10 @@
 	var/list/lost_log = list()
 	/// Seconds until the next prisoner is due, or null while none is; see next_arrival_in()
 	var/arrival_countdown
-	/// Seconds before another prisoner may beam in after the last one. Counts down while intake is shut too.
+	/// Seconds before the first arrival lane may bring another prisoner after its last one. Counts down while intake is shut too.
 	var/arrival_gap = 0
+	/// The same for each further lane, one per extension (arrival_lanes()), in lane order from the second
+	var/list/lane_gaps = list()
 	/// Seconds into the current deposit interval
 	var/pay_clock = 0
 	/// Credits earned and not yet deposited; deposits are whole credits, every OUTPOST_PRISON_DEPOSIT_INTERVAL
@@ -257,6 +263,9 @@
 			suspended_after = 0
 			lost_log.Cut()
 		arrival_gap = max(arrival_gap, OUTPOST_PRISON_FIRST_ARRIVAL)
+		// The other lanes start on a gap of their own, so a wing with extensions does not fill several cells at once.
+		for(var/lane in 1 to length(lane_gaps))
+			lane_gaps[lane] = max(lane_gaps[lane], rand(OUTPOST_PRISON_ARRIVAL_GAP_MIN, OUTPOST_PRISON_ARRIVAL_GAP_MAX))
 	arrival_countdown = next_arrival_in()
 	if(user)
 		log_game("PLAYER OUTPOST: [key_name(user)] [intake_open ? "opened" : "closed"] prison intake at '[outpost?.name]'")
@@ -294,7 +303,7 @@
 	var/obj/machinery/door/airlock/door = cell.door()
 	return !door || (!door.locked && !door.welded)
 
-/// Seconds until the next prisoner is due: the gap since the last arrival or the wait for a cell, whichever is longer. Null while none is due.
+/// Seconds until the next prisoner is due: the soonest lane's gap or the wait for a cell, whichever is longer. Null while none is due.
 /datum/outpost_prison/proc/next_arrival_in()
 	if(!arrivals_allowed() || !free_slots())
 		return null
@@ -307,30 +316,66 @@
 			soonest = wait
 	if(isnull(soonest))
 		return null
-	return max(arrival_gap, soonest)
+	return max(lane_gap(soonest_lane()), soonest)
+
+// ===== ARRIVAL LANES =====
+
+/// Lanes prisoners arrive in at once: one, and one more for each extension
+/datum/outpost_prison/proc/arrival_lanes()
+	return 1 + length(lane_gaps)
+
+/// Gives the prison one arrival lane per extension. A new lane starts on a gap of its own.
+/datum/outpost_prison/proc/sync_arrival_lanes()
+	var/wanted = extension_count()
+	while(length(lane_gaps) < wanted)
+		lane_gaps += rand(OUTPOST_PRISON_ARRIVAL_GAP_MIN, OUTPOST_PRISON_ARRIVAL_GAP_MAX)
+	if(length(lane_gaps) > wanted)
+		lane_gaps.Cut(wanted + 1)
+
+/// Seconds before lane `lane` (1 is the wing's own) may bring another prisoner
+/datum/outpost_prison/proc/lane_gap(lane)
+	if(lane <= 1)
+		return arrival_gap
+	return lane - 1 <= length(lane_gaps) ? lane_gaps[lane - 1] : 0
+
+/// The lane due soonest, the first on a tie
+/datum/outpost_prison/proc/soonest_lane()
+	var/soonest = 1
+	for(var/lane in 2 to arrival_lanes())
+		if(lane_gap(lane) < lane_gap(soonest))
+			soonest = lane
+	return soonest
 
 /**
- * Advances arrivals by `seconds`: while arrivals are allowed, the next prisoner beams into a ready
- * cell once the gap since the last is up. One at a time, however long the step: several ready cells
- * never fill back to back.
+ * Advances arrivals by `seconds`: while arrivals are allowed, each lane whose gap is up beams the
+ * next prisoner into a ready cell. One per lane, however long the step: several ready cells never
+ * fill back to back through one lane.
  */
 /datum/outpost_prison/proc/intake_tick(seconds)
 	arrival_gap = max(arrival_gap - seconds, 0)
-	if(arrivals_allowed() && arrival_gap <= 0 && free_slots())
-		admit_next()
+	for(var/lane in 1 to length(lane_gaps))
+		lane_gaps[lane] = max(lane_gaps[lane] - seconds, 0)
+	if(arrivals_allowed())
+		for(var/lane in 1 to arrival_lanes())
+			if(lane_gap(lane) <= 0 && free_slots())
+				admit_next(lane = lane)
 	arrival_countdown = next_arrival_in()
 
-/// After any arrival the next waits OUTPOST_PRISON_ARRIVAL_GAP_MIN to _MAX seconds, wing-wide, never less than it already had to
-/datum/outpost_prison/proc/start_arrival_gap()
-	arrival_gap = max(arrival_gap, rand(OUTPOST_PRISON_ARRIVAL_GAP_MIN, OUTPOST_PRISON_ARRIVAL_GAP_MAX))
+/// After a lane's arrival its next waits OUTPOST_PRISON_ARRIVAL_GAP_MIN to _MAX seconds, never less than it already had to
+/datum/outpost_prison/proc/start_arrival_gap(lane = 1)
+	var/gap = rand(OUTPOST_PRISON_ARRIVAL_GAP_MIN, OUTPOST_PRISON_ARRIVAL_GAP_MAX)
+	if(lane <= 1)
+		arrival_gap = max(arrival_gap, gap)
+	else if(lane - 1 <= length(lane_gaps))
+		lane_gaps[lane - 1] = max(lane_gaps[lane - 1], gap)
 
 /**
  * Beams a new prisoner into the lowest-numbered cell that can take one: empty, ready and its door
- * not bolted or welded, and starts the gap before the next (start_arrival_gap()). `forced` (for
- * the admin panel) skips the wait, the door and the gap, though it still starts a new gap. Returns
- * the prisoner, or null.
+ * not bolted or welded, and starts the gap before `lane`'s next (start_arrival_gap()). `forced`
+ * (for the admin panel) skips the wait, the door and the gap, though it still starts a new gap in
+ * the lane due soonest. Returns the prisoner, or null.
  */
-/datum/outpost_prison/proc/admit_next(forced = FALSE)
+/datum/outpost_prison/proc/admit_next(forced = FALSE, lane)
 	if(!free_slots())
 		return null
 	for(var/datum/outpost_prison_cell/cell as anything in cells)
@@ -344,7 +389,7 @@
 		var/mob/living/basic/outpost_prisoner/prisoner = new(spot)
 		admit(prisoner, cell)
 		prisoner.beam_in()
-		start_arrival_gap()
+		start_arrival_gap(lane || soonest_lane())
 		arrival_countdown = next_arrival_in()
 		return prisoner
 	return null

@@ -310,7 +310,7 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 		return null
 	var/list/outside = list()
 	for(var/turf/tile in range(2, front))
-		if(!upgrade.contains_turf(tile) && mail_pod_can_land(tile))
+		if(!in_wing_bounds(tile) && mail_pod_can_land(tile))
 			outside += tile
 	return mail_nearest_turf(outside, front)
 
@@ -334,16 +334,19 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 			return FALSE
 	return TRUE
 
-/// The tile just outside the wing's door out, on its entrance side, or null
+/**
+ * The tile just outside the wing's door out, on its entrance side, or null. Only the wing's own
+ * doors count: an extension's cell doors face the same way and open onto its yard.
+ */
 /datum/outpost_prison/proc/mail_entrance_front()
 	if(!upgrade?.footprint_bounds)
 		return null
 	var/entrance_dir = upgrade.rotated_entrance(upgrade.rotation)
 	for(var/turf/tile as anything in wing_turfs())
-		if(!(locate(/obj/machinery/door/airlock) in tile))
+		if(!upgrade.contains_turf(tile) || !(locate(/obj/machinery/door/airlock) in tile))
 			continue
 		var/turf/beyond = get_step(tile, entrance_dir)
-		if(beyond && !upgrade.contains_turf(beyond))
+		if(beyond && !in_wing_bounds(beyond))
 			return beyond
 	return null
 

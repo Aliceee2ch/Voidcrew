@@ -31,10 +31,35 @@
 	entrance_side = SOUTH
 	/// The running prison, created once the wing is placed
 	var/datum/outpost_prison/prison
+	/// list(min_x, min_y, max_x, max_y, z) of each cell block extension joined to the wing, in the
+	/// order they were built (outpost_prison_extension.dm). Kept here, not on the prison, so a prison
+	/// an admin starts again still covers them.
+	var/list/extension_bounds = list()
 
 /datum/outpost_upgrade/prison/Destroy()
 	QDEL_NULL(prison)
 	return ..()
+
+/// The footprint of the wing and of each extension joined to it, the wing's own first
+/datum/outpost_upgrade/prison/proc/wing_bounds()
+	var/list/all = list()
+	if(footprint_bounds)
+		all += list(footprint_bounds)
+	for(var/list/bounds as anything in extension_bounds)
+		all += list(bounds)
+	return all
+
+/// Every tile in wing_bounds(), each once (an extension's seam column is in two footprints), the wing's own first
+/datum/outpost_upgrade/prison/proc/wing_blocks()
+	var/list/seen = list()
+	var/list/tiles = list()
+	for(var/list/bounds as anything in wing_bounds())
+		for(var/turf/tile as anything in block(bounds[1], bounds[2], bounds[5], bounds[3], bounds[4], bounds[5]))
+			if(seen[tile])
+				continue
+			seen[tile] = TRUE
+			tiles += tile
+	return tiles
 
 /datum/outpost_upgrade/prison/on_installed(mob/user)
 	// A prison an admin deleted can be started again.

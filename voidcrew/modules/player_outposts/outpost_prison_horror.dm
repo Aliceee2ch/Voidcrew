@@ -920,14 +920,9 @@
 		return FALSE
 	return TRUE
 
-/// Whether a tile is on the prison wing's outer ring
+/// Whether a tile is on the prison wing's outer ring, its extensions' included (/datum/outpost_prison/proc/on_outer_ring())
 /mob/living/basic/outpost_experiment/horror/proc/on_wing_ring(turf/tile)
-	var/list/bounds = event?.prison?.upgrade?.footprint_bounds
-	if(length(bounds) < 5 || tile.z != bounds[5])
-		return FALSE
-	if(tile.x < bounds[1] || tile.x > bounds[3] || tile.y < bounds[2] || tile.y > bounds[4])
-		return FALSE
-	return tile.x == bounds[1] || tile.x == bounds[3] || tile.y == bounds[2] || tile.y == bounds[4]
+	return !!event?.prison?.on_outer_ring(tile)
 
 /// Walked into a door that did not open: once it has had a moment to open, it pries it
 /mob/living/basic/outpost_experiment/horror/proc/on_bump(datum/source, atom/bumped)

@@ -665,6 +665,21 @@
 			TEST_FAIL("The [upgrade.name] preview was rendered from a different version of [map_path] than the one on disk, so the Upgrades \
 				tab shows a room that no longer exists. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py and commit \
 				the new PNG and .preview.json with the map change.")
+		// A snap upgrade's left-hand room has its own map, and its own preview beside the right-hand one's.
+		var/datum/map_template/left_type = upgrade.left_template_type
+		if(left_type)
+			var/left_path = initial(left_type.mappath)
+			var/left_json = "voidcrew/modules/player_outposts/previews/[upgrade.preview_name]_left.preview.json"
+			TEST_ASSERT(fexists(left_json), "[left_json] is missing. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py")
+			var/list/left_meta = json_decode(file2text(left_json))
+			TEST_ASSERT(islist(left_meta), "[left_json] is not valid JSON")
+			TEST_ASSERT(fexists("voidcrew/modules/player_outposts/previews/[left_meta["png"]]"), "The [upgrade.name] left-hand preview image is missing")
+			var/datum/map_template/left_template = upgrade.get_template("left")
+			TEST_ASSERT_NOTNULL(left_template, "The [upgrade.name] left-hand template did not load its map")
+			TEST_ASSERT(left_meta["width"] == left_template.width && left_meta["height"] == left_template.height, "The [upgrade.name] left-hand preview has the wrong size")
+			if(left_meta["src_md5"] != rustg_hash_file(RUSTG_HASH_MD5, left_path))
+				TEST_FAIL("The [upgrade.name] left-hand preview was rendered from a different version of [left_path] than the one on disk. \
+					Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py and commit the new PNG and .preview.json.")
 		checked++
 	TEST_ASSERT(checked, "The upgrade catalog is empty")
 

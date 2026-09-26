@@ -45,7 +45,7 @@
 #define BOUNTY_ADMIN_MAX_STEPS 200
 /// Who the pool's test records say brought them in
 #define BOUNTY_ADMIN_TEST_CAPTOR "Admin test"
-/// The reason hunters are told when an admin relists a bounty: "WANTED: <name>: moved on."
+/// The reason hunters are told when an admin relists a bounty: "WANTED: <name> has moved on."
 #define BOUNTY_ADMIN_RELIST_REASON "has moved on"
 
 // The main menu, in the order it shows

@@ -1081,6 +1081,15 @@
 	TEST_ASSERT(ship.board_test_heard("WANTED: now hunting [posting.record.name]. [posting.board_place_text()]."), "The hunt notice doesn't name them and where they were seen")
 	for(var/tip in list("GPS", "warrant", "board it", "trophy", "mission pad"))
 		TEST_ASSERT(!ship.board_test_heard(tip), "The hunt notice still tells the crew what to do (\"[tip]\")")
+	// The kinds that used to carry their own tip get the same plain notice
+	for(var/kind in list("npc_ship", "trader_outpost")) // BOUNTY_PLACEMENT_*
+		var/obj/structure/overmap/ship/board_test_listener/other = board_test_listener()
+		var/datum/criminal_bounty/each = board_test_posting()
+		each.placement_kind = kind
+		TEST_ASSERT_EQUAL(each.hunt(other), TRUE, "The ship could not hunt a [kind] bounty")
+		TEST_ASSERT(other.board_test_heard("WANTED: now hunting [each.record.name]. [each.board_place_text()]."), "A [kind] hunt notice doesn't name them and where they were seen")
+		for(var/tip in list("GPS", "warrant", "board it", "traders", "mission pad"))
+			TEST_ASSERT(!other.board_test_heard(tip), "A [kind] hunt notice still tells the crew what to do (\"[tip]\")")
 
 	// GPS at a trader outpost: none by design, and the board says so (BUG-15)
 	posting.placement_kind = "trader_outpost" // BOUNTY_PLACEMENT_TRADER_OUTPOST
@@ -1190,7 +1199,8 @@
 	TEST_ASSERT_EQUAL(preview[3], "the pad must be aboard your ship", "The card doesn't say the pad isn't aboard")
 	line = pad.bounty_pad_line(criminal)
 	TEST_ASSERT(findtext(line, "restrained") && findtext(line, "The pad must be aboard your ship"), "The pad's line for a cuffed criminal: [line]")
-	TEST_ASSERT(!findtext(line, " cr") && !findtext(line, "pays"), "The pad says what the catch pays: [line]")
+	// Case-sensitive, and on the amount itself: a random name like "Craig" holds "cr" (findtext ignores case)
+	TEST_ASSERT(!findtext(line, "1320") && !findtextEx(line, " cr") && !findtextEx(line, "pays"), "The pad says what the catch pays: [line]")
 	var/list/entry = posting.board_ui_entry(ship, pad)
 	TEST_ASSERT_EQUAL(entry["turn_in_refusal"], "the pad must be aboard your ship", "The card entry doesn't carry the refusal")
 	// The pay itself is unchanged: downed earlier, the downed share (60% of 1000 + 1200)

@@ -73,7 +73,7 @@
 	entrance_side = EAST
 	snap_group = "prison_cells"
 	snap_refusal = "Must join the prison wing's side wall."
-	seam_refusal = "Prison wing wall damaged."
+	seam_refusal = "Prison wing wall blocked."
 	/// Whether it has joined the wing: its tiles are the wing's, its cells the prison's and the seam is open
 	var/joined = FALSE
 

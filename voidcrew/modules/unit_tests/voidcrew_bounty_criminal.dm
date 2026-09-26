@@ -894,13 +894,12 @@
 	qdel(posting)
 	qdel(outpost_posting)
 
-// ===== MOMENT LINES AND PAY BALLOONS =====
+// ===== MOMENT LINES =====
 
 /**
  * The capture's moment lines always land (BUG-1): going down and being cuffed are said past the bark
- * cooldown, and once each, never a second time by the AI. The pay balloon: going down and dying show
- * the share the pay just dropped to, once a drop, by the posting's own shares; nothing with no
- * posting, at a trader outpost, or when the share holds.
+ * cooldown, and once each, never a second time by the AI. No balloon says what the pay dropped to
+ * (2026-09-26: the world doesn't explain the rules).
  */
 /datum/unit_test/voidcrew_bounty_criminal_moments
 	parent_type = /datum/unit_test/voidcrew_bounty_criminal

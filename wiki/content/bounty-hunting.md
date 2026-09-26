@@ -19,7 +19,7 @@ The **Wanted** section is at the top of the **Bounties** tab on your ship's miss
 
 Each card is a wanted poster:
 
-- **WANTED** or **MOST WANTED**, and **Private contract** on an offer made to your ship alone;
+- **WANTED** or **MOST WANTED**, and **Private offer** on one made to your ship alone;
 - the mugshot, name, species, sex and alias. "Old photo" under the mugshot means it shows how they used to look (a trader-outpost fugitive);
 - how they're wanted and what for: **Wanted alive**, **Wanted dead or alive** (the kingpin) or **Wanted dead** (lairs and the lich);
 - where they were last seen, and the zone;
@@ -49,10 +49,10 @@ The reward is fixed when the bounty is posted. It depends on the tier and the zo
 
 ## Taking a bounty
 
-Press **Hunt** on a public bounty, or **Accept Contract** on a private offer. This puts a waypoint on your helm chart (for a pirate ship, the waypoint follows the ship), lets you link GPS units to the criminal's last sighting, and sends your ship notices when anything changes. It doesn't use a mission slot.
+Press **Hunt** on a public bounty, or **Accept Offer** on a private offer. This puts a waypoint on your helm chart (for a pirate ship, the waypoint follows the ship), lets you link GPS units to the criminal's last sighting, and sends your ship notices when anything changes. It doesn't use a mission slot.
 
 - Your ship can hunt **one** public bounty at a time. The kingpin and kill-only bounties count as that one. Private offers don't.
-- **Abandon** frees your hunt, but your ship can never hunt that bounty again. **Drop Contract** closes a private offer.
+- **Abandon** frees your hunt, but your ship can never hunt that bounty again. **Drop Offer** closes a private offer.
 - Any crew that gets a public bounty's criminal onto its own pad gets paid, whether it was hunting or not. A private offer only pays the ship it was offered to.
 - **Warrant** prints a warrant on your mission pad: the mugshot, the listing, the reward, and all but one of their distinguishing features. The printer needs 30 seconds between warrants, and each ship gets three per bounty.
 

@@ -953,7 +953,7 @@ const WantedCard = (props: WantedCardProps) => {
             {wantedHeading(entry.tier)}
             {isOffer ? (
               <Box as="span" color="teal" ml={1}>
-                Private contract
+                Private offer
               </Box>
             ) : null}
           </Box>
@@ -989,7 +989,7 @@ const WantedCard = (props: WantedCardProps) => {
               color="bad"
               onClick={() => act('abandon_wanted', { ref: entry.ref })}
             >
-              {isOffer ? 'Drop Contract' : 'Abandon'}
+              {isOffer ? 'Drop Offer' : 'Abandon'}
             </Button>
           ) : (
             <Button
@@ -1000,7 +1000,7 @@ const WantedCard = (props: WantedCardProps) => {
               tooltip={huntRefusal}
               onClick={() => act('hunt_wanted', { ref: entry.ref })}
             >
-              {isOffer ? 'Accept Contract' : 'Hunt'}
+              {isOffer ? 'Accept Offer' : 'Hunt'}
             </Button>
           )}
         </Stack.Item>

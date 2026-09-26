@@ -419,10 +419,14 @@ function upgradePrice(price: number) {
   return price > 0 ? `${formatMoney(price)} cr` : 'Free';
 }
 
-type UpgradesProps = Props & { onPlace: (id: string) => void };
+type UpgradesProps = Props & {
+  onPlace: (id: string) => void;
+  // Kept by the panel, so Back from the map returns to the same upgrade
+  index: number;
+  setIndex: (index: number) => void;
+};
 
-function Upgrades({ data, act, onPlace }: UpgradesProps) {
-  const [index, setIndex] = useState(0);
+function Upgrades({ data, act, onPlace, index, setIndex }: UpgradesProps) {
   const catalog = data.upgrade_catalog || [];
   if (catalog.length === 0) {
     return <Empty icon="cubes">No upgrades</Empty>;
@@ -1076,7 +1080,9 @@ type PlacementProps = Props & {
 
 function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
   const survey = data.upgrade_survey || null;
-  const surveying = !!data.upgrade_surveying || !survey;
+  // No survey and none coming: the map was refused (the reason went to chat), so Rescan stays on
+  const scanning = !!data.upgrade_surveying;
+  const surveying = scanning || !survey;
   // A snap upgrade goes only on the joints the server offers, each at its own rotation.
   const snaps = upgrade.snap ? data.upgrade_snaps || [] : null;
   const [rotation, setRotation] = useState(0);
@@ -1397,7 +1403,9 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
           }}
         />
         {surveying ? (
-          <div className="Outpost__map-status">Surveying</div>
+          <div className="Outpost__map-status">
+            {scanning ? 'Surveying' : 'No survey'}
+          </div>
         ) : snaps && snaps.length === 0 ? (
           <div className="Outpost__map-status">No free wall</div>
         ) : null}
@@ -1459,7 +1467,7 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
           )}
           <Button
             icon="arrows-rotate"
-            disabled={surveying}
+            disabled={scanning}
             onClick={() => act('refresh_upgrade_map', { id: upgrade.id })}
           >
             Rescan
@@ -1898,6 +1906,7 @@ function Ownership({ data, act }: Props) {
 export function OutpostManagementPanel({ data, act }: Props) {
   const [tab, setTab] = useState('docking');
   const [placingId, setPlacingId] = useState<string | null>(null);
+  const [upgradeIndex, setUpgradeIndex] = useState(0);
   const placingUpgrade = (data.upgrade_catalog || []).find(
     (entry) => entry.id === placingId,
   );
@@ -1992,6 +2001,8 @@ export function OutpostManagementPanel({ data, act }: Props) {
                 <Upgrades
                   data={data}
                   act={act}
+                  index={upgradeIndex}
+                  setIndex={setUpgradeIndex}
                   onPlace={(id) => {
                     act('open_upgrade_map', { id });
                     setPlacingId(id);

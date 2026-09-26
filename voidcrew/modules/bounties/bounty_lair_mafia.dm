@@ -777,6 +777,8 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	mafia_took_cover = TRUE
 	cover.visible_message(span_warning("[src] kicks [cover] over for cover!"))
 	INVOKE_ASYNC(cover, TYPE_PROC_REF(/obj/structure/table, flip_table), get_dir(here, get_turf(cover)))
+	// A smooth still queued from the table's build this tick would runtime on a flipped table (as the kingpin's crew does)
+	SSicon_smooth.remove_from_queues(cover)
 	return cover
 
 /// Raises its room's alarm over `hunter`, or just its own with no room. TRUE if this raised it.

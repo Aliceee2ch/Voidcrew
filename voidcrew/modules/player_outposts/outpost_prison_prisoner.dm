@@ -277,6 +277,9 @@
 	phase = PRISONER_PRESENT
 	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PRISONER_BEAM_TRAIT)
 	update_bubble()
+	// A bounty prisoner names the crew that caught them (outpost_prison_bounty.dm)
+	if(bounty_arrival_speech())
+		return
 	// How they came in, if it shows; otherwise hello.
 	if(arrived_hurt && say_context("arrival_hurt"))
 		return

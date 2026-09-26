@@ -35,6 +35,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_dialogue, list(
 	"outpost_prison_contraband.json",
 	"outpost_prison_leads.json",
 	"outpost_prison_guards.json",
+	"outpost_prison_bounty.json", // outpost_prison_bounty.dm: a bounty prisoner's lines about who caught them
 ))
 
 /// Placeholders beyond {name}, {other}, {crime} and {time_left}; a line naming one is said only with a value for it
@@ -142,7 +143,11 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 
 /// Something a package wants a prisoner to say now: list(context, other[, values]), or null
 /datum/outpost_prison/proc/extra_speech(mob/living/basic/outpost_prisoner/prisoner)
-	var/list/choice = social_extra_speech(prisoner)
+	// A bounty prisoner who sees someone off the ship that caught them (outpost_prison_bounty.dm): rare and gated
+	var/list/choice = bounty_extra_speech(prisoner)
+	if(choice)
+		return choice
+	choice = social_extra_speech(prisoner)
 	if(choice)
 		return choice
 	choice = contraband_extra_speech(prisoner)

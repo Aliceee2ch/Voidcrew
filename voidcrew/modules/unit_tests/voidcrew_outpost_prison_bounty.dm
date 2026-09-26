@@ -746,13 +746,6 @@
 	parent_type = /datum/unit_test/voidcrew_outpost_prison_bounty_kit
 	/// Lines said aloud by the prisoners
 	var/list/heard = list()
-	/// The test put the bounty dialogue file on the extras' list itself, and takes it off when it ends
-	var/listed_file = FALSE
-
-/datum/unit_test/voidcrew_outpost_prison_bounty_captor/Destroy()
-	if(listed_file)
-		GLOB.outpost_prisoner_extra_dialogue -= "outpost_prison_bounty.json"
-	return ..()
 
 /datum/unit_test/voidcrew_outpost_prison_bounty_captor/proc/on_say(datum/source, list/speech_args)
 	SIGNAL_HANDLER
@@ -768,11 +761,8 @@
 		for(var/pool in entry)
 			for(var/line in entry[pool])
 				TEST_ASSERT(findtext(line, "{place}"), "The [context]/[pool] line \"[line]\" doesn't name the ship")
-	// The prisoners find a context's lines through the extras' list; until outpost_prison_extras.dm
-	// names this file there, the test lists it for its own run.
-	if(!("outpost_prison_bounty.json" in GLOB.outpost_prisoner_extra_dialogue))
-		GLOB.outpost_prisoner_extra_dialogue += "outpost_prison_bounty.json"
-		listed_file = TRUE
+	// The prisoners find a context's lines through the extras' list (outpost_prison_extras.dm)
+	TEST_ASSERT("outpost_prison_bounty.json" in GLOB.outpost_prisoner_extra_dialogue, "outpost_prison_bounty.json is not on the prisoners' dialogue list")
 
 	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("bountycaptorowner")
 	TEST_ASSERT_NOTNULL(home, "The captor test prison did not load")

@@ -360,7 +360,8 @@
 		ai_controller.ai_movement?.stop_moving_towards(ai_controller)
 		ai_controller.CancelActions()
 	visible_message(span_notice("[src] raises [p_their()] hands and gives up."))
-	ai_bark("surrender")
+	// Forced: it usually comes right after a "hurt" line, inside that line's cooldown (BUG-1)
+	ai_bark("surrender", TRUE)
 	ai_companions_lose_heart()
 
 /// Only its look is used: the hands-up mark over a surrendered criminal's head

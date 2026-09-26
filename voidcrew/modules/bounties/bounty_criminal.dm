@@ -109,6 +109,8 @@
 	var/body_slip_timer
 	/// Weakref to the container holding it (a locker, a crate, a body bag), kept from being teleported while it is inside
 	var/datum/weakref/body_holder_ref
+	/// The last balloon floated over it for hunters (body_alert_hunters()): "worn out", "downed: pays 60%"
+	var/body_last_alert
 
 /mob/living/basic/bounty_criminal/meek
 	maxHealth = BOUNTY_MEEK_HEALTH
@@ -684,8 +686,9 @@
 		return
 	body_go_down()
 
-/// Down: floored, harmless, draggable, its AI paused, and its recovery clock running
+/// Down: floored, harmless, draggable, its AI paused, and its recovery clock running. The line is forced: it is the moment the fight ends (BUG-1).
 /mob/living/basic/bounty_criminal/proc/body_go_down()
+	var/worst_before = worst_state
 	downed = TRUE
 	body_recovery_due = FALSE
 	body_rally_until = 0
@@ -699,8 +702,47 @@
 	body_start_recovery()
 	body_state_changed()
 	visible_message(span_danger("[src] collapses."))
+	body_pay_drop_alert(worst_before)
 	SEND_SIGNAL(src, COMSIG_BOUNTY_CRIMINAL_DOWNED)
-	INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), "downed")
+	INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), "downed", null, TRUE)
+
+/**
+ * Floats `text` over it for every hunter who can see it (bounty_ai_is_hunter()), and nobody else.
+ * Kept in body_last_alert. Returns how many hunters saw it.
+ */
+/mob/living/basic/bounty_criminal/proc/body_alert_hunters(text)
+	. = 0
+	body_last_alert = text
+	for(var/mob/living/viewer in get_hearers_in_view(DEFAULT_MESSAGE_RANGE, src, RECURSIVE_CONTENTS_CLIENT_MOBS))
+		if(viewer.is_blind() || !bounty_ai_is_hunter(viewer))
+			continue
+		balloon_alert(viewer, text)
+		.++
+
+/**
+ * What the pay drops to now that its worst state got worse than `worst_before`: "downed: pays 60%" or
+ * "dead: pays 25%", from its posting, so the kingpin and a kill-only bounty go by their own shares. Null
+ * when the worst state is no worse, when the share didn't drop (the kingpin taken alive, a kill-only
+ * bounty dead), with no posting, and for a fugitive wanted at a trader outpost, who must not look
+ * different from its decoys, which have no posting (AR-C6).
+ */
+/mob/living/basic/bounty_criminal/proc/body_pay_drop_text(worst_before)
+	if(bounty_state_rank(worst_state) >= bounty_state_rank(worst_before))
+		return null
+	var/datum/criminal_bounty/wanted_on = posting()
+	if(!wanted_on || wanted_on.placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST)
+		return null
+	var/share = wanted_on.board_share_for(worst_state, worst_state)
+	if(!share || share >= 100)
+		return null
+	return "[worst_state == BOUNTY_STATE_DEAD ? "dead" : "downed"]: pays [share]%"
+
+/// Shows the hunters what the pay just dropped to (body_pay_drop_text()), if it did. Returns the text, or null.
+/mob/living/basic/bounty_criminal/proc/body_pay_drop_alert(worst_before)
+	var/text = body_pay_drop_text(worst_before)
+	if(text)
+		body_alert_hunters(text)
+	return text
 
 /// Restrained or down, its AI plans nothing: TRAIT_BOUNTY_HELD for P3's controller, and TRAIT_AI_PAUSED
 /mob/living/basic/bounty_criminal/proc/body_update_held()
@@ -808,14 +850,16 @@
 
 // ===== DEATH =====
 
-// The body stays as proof; the cuffs come off it.
+// The body stays as proof; the cuffs come off it. Hunters nearby see the pay drop to the dead share.
 /mob/living/basic/bounty_criminal/death(gibbed)
+	var/worst_before = worst_state
 	body_cancel_recovery()
 	. = ..()
 	if(QDELETED(src))
 		return
 	body_remove_cuffs()
 	body_state_changed()
+	body_pay_drop_alert(worst_before)
 	// Fallen into a chasm: the body is in the chasm's depths for good. P5 puts the proof on safe ground
 	// beside the chasm (get_turf() here is the chasm itself).
 	if(istype(loc, /obj/effect/abstract/chasm_storage) && body_leaves_proof())

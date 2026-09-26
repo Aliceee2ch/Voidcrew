@@ -41,7 +41,7 @@
 			"stealing a ship and leaving its crew stranded"
 		],
 		"most_wanted": [
-			"the Halcyon massacre",
+			"the Corvina Station massacre",
 			"blowing up a refinery with the crew still aboard",
 			"murdering a customs inspector and two guards",
 			"venting the cabins of a passenger liner",
@@ -423,6 +423,21 @@
 				"This isn't over!",
 				"At least tell me where I'm going!",
 				"Tell my crew I'm not talking!"
+			],
+			"meek": [
+				"Please, not a cell!",
+				"I'll pay you back, I swear!",
+				"Can't we talk about this?"
+			],
+			"normal": [
+				"Enjoy the money while it lasts.",
+				"I'll be out before you've spent it.",
+				"You got lucky, that's all."
+			],
+			"boss": [
+				"You'll see me again.",
+				"Remember my face.",
+				"No cell holds me for long."
 			]
 		},
 		"accused_wrongly": {
@@ -494,6 +509,16 @@
 				"Ugh. My ribs."
 			]
 		},
+		"juggernaut_posse": {
+			"any": [
+				"More of you? Good. More to flatten.",
+				"Line up. I'll take you all at once.",
+				"Bring the whole crew. Won't matter.",
+				"Oh, you brought friends.",
+				"All of you? Fine by me.",
+				"I've flattened bigger crews than this."
+			]
+		},
 		"pyromaniac_intro": {
 			"any": [
 				"Hope you brought an extinguisher.",
@@ -522,6 +547,16 @@
 				"Nozzle's clogged. Great.",
 				"Not now, not now.",
 				"Out of fuel. Just my luck."
+			]
+		},
+		"pyromaniac_posse": {
+			"any": [
+				"More of you? I've got fuel for everyone.",
+				"Go on, bunch up.",
+				"Oh good, a group.",
+				"Stand a bit closer together, would you?",
+				"Plenty of fuel to go around.",
+				"Brought friends? Hope they're not flammable."
 			]
 		},
 		"demolitionist_intro": {
@@ -554,6 +589,16 @@
 				"Should've brought more."
 			]
 		},
+		"demolitionist_posse": {
+			"any": [
+				"More of you? I've got enough charges.",
+				"One grenade, lots of you. Works for me.",
+				"Brought friends? Hope they like loud noises.",
+				"Great. More targets.",
+				"Everyone stay nice and close.",
+				"Bunch up. Go on."
+			]
+		},
 		"ghost_intro": {
 			"any": [
 				"You won't even see me coming.",
@@ -584,6 +629,16 @@
 				"Need to get out of here."
 			]
 		},
+		"ghost_posse": {
+			"any": [
+				"More of you, and you still can't see me.",
+				"Brought friends? They'll miss too.",
+				"All of you, and nobody can hit me.",
+				"You'll just get in each other's way.",
+				"More people to walk past.",
+				"Keep counting. Where am I now?"
+			]
+		},
 		"heavy_intro": {
 			"any": [
 				"Find some cover while you still can.",
@@ -612,6 +667,16 @@
 				"Jammed! Come on!",
 				"Running dry.",
 				"My arms are shaking."
+			]
+		},
+		"heavy_posse": {
+			"any": [
+				"More of you? I've got the ammo.",
+				"Good. I hate wasting a belt on one.",
+				"Bring everyone. This thing doesn't stop.",
+				"Get in line.",
+				"More targets. Fine.",
+				"Hope you all brought armor."
 			]
 		}
 	}

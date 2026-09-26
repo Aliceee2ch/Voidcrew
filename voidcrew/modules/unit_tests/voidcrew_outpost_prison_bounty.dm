@@ -395,7 +395,8 @@
 	wanted_record.gender = MALE
 	wanted_record.crime = "wanted for arson"
 	wanted_record.hurt_fraction = 0.3
-	wanted_record.captor_name = "the Meridian"
+	// The ship's own name, as the board records it (ship.name)
+	wanted_record.captor_name = "Meridian"
 	var/mob/living/basic/outpost_prisoner/wanted = new(prison_spot(home, 3, 8), wanted_record)
 	TEST_ASSERT_EQUAL(wanted.real_name, "Vesna Kade", "A bounty prisoner is called [wanted.real_name]")
 	TEST_ASSERT_EQUAL(wanted.name, "Vesna Kade", "A bounty prisoner shows as [wanted.name]")
@@ -420,6 +421,16 @@
 	TEST_ASSERT_EQUAL(boss.personality, "grumpy", "A mini-boss came in [boss.personality]")
 	TEST_ASSERT_EQUAL(boss.maxHealth, 150, "A Most Wanted prisoner has [boss.maxHealth] health") // BOUNTY_PRISONER_HEALTH_MOST_WANTED
 	TEST_ASSERT_EQUAL(boss.gender, FEMALE, "A bounty prisoner's gender did not carry over")
+	// A Most Wanted's crime is no line to toss off in the yard (BUG-12); the console and examine keep it
+	TEST_ASSERT_EQUAL(boss.crime, "a lot of things", "A Most Wanted prisoner tells the yard they're in for [boss.crime]") // BOUNTY_PRISON_MOST_WANTED_YARD_CRIME
+	TEST_ASSERT_EQUAL(prison.bounty_roster_badge(boss)?["wanted_for"], "wanted for smuggling", "A Most Wanted prisoner's badge reads [prison.bounty_roster_badge(boss)?["wanted_for"]]")
+	// The kingpin: a calm, quiet or grumpy prisoner, in the plain jumpsuit like everyone else
+	var/datum/bounty_record/kingpin_record = make_record(3, "kingpin", "Aurelio Stann") // BOUNTY_ARCHETYPE_KINGPIN
+	var/mob/living/basic/outpost_prisoner/kingpin = new(prison_spot(home, 7, 11), kingpin_record)
+	TEST_ASSERT(kingpin.personality in list("quiet", "grumpy"), "The kingpin came in [kingpin.personality]")
+	TEST_ASSERT_EQUAL(kingpin.outfit_path, /datum/outfit/outpost_prisoner, "The kingpin is not in the plain jumpsuit")
+	TEST_ASSERT_EQUAL(kingpin.crime, "a lot of things", "The kingpin tells the yard he's in for [kingpin.crime]")
+	qdel(kingpin)
 	var/datum/bounty_record/meek_record = make_record(1, "meek", "Pim Sallow")
 	var/mob/living/basic/outpost_prisoner/meek = bounty_prisoner(prison, prison_spot(home, 3, 11), meek_record)
 	TEST_ASSERT(meek.personality in list("nervous", "quiet"), "A meek criminal came in [meek.personality]")
@@ -442,8 +453,8 @@
 		else if(row["name"] == ordinary.real_name)
 			TEST_ASSERT_NULL(badge, "An ordinary prisoner has a bounty badge")
 	TEST_ASSERT_EQUAL(badges, 1, "The roster showed the Wanted prisoner's badge [badges] times")
-	TEST_ASSERT_EQUAL(prison.bounty_examine(wanted, null), "Wanted: Wanted. Brought in by the Meridian.", "The examine line reads [prison.bounty_examine(wanted, null)]")
-	TEST_ASSERT_EQUAL(prison.bounty_examine(boss, null), "Wanted: Most Wanted.", "The examine line with no captor reads [prison.bounty_examine(boss, null)]")
+	TEST_ASSERT_EQUAL(prison.bounty_examine(wanted, null), "A Wanted bounty. The crew of the Meridian brought him in.", "The examine line reads [prison.bounty_examine(wanted, null)]")
+	TEST_ASSERT_EQUAL(prison.bounty_examine(boss, null), "A Most Wanted bounty, wanted for smuggling.", "The examine line with no captor reads [prison.bounty_examine(boss, null)]")
 	TEST_ASSERT_NULL(prison.bounty_examine(ordinary, null), "An ordinary prisoner has a bounty examine line")
 
 	// Bounty transfers from the warden console (extras_act() -> bounty_warden_act()): managers only.
@@ -721,3 +732,102 @@
 	meek.prison.refresh_prisoner_reach(meek)
 	watch.arrive()
 	return watch
+
+// ===== WHO CAUGHT THEM =====
+
+/**
+ * A bounty prisoner remembers the crew who caught them: their first words on the beam name that
+ * ship, and now and then, with someone off it in sight, they call them out in the yard, facing them.
+ * Neither for an ordinary prisoner or a record with no captor, and not with nobody off that ship in
+ * view; the yard line then waits BOUNTY_PRISON_CAPTOR_LINE_GAP. Their lines are in
+ * outpost_prison_bounty.json, one of the extras' dialogue files, and every one names the ship.
+ */
+/datum/unit_test/voidcrew_outpost_prison_bounty_captor
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_bounty_kit
+	/// Lines said aloud by the prisoners
+	var/list/heard = list()
+	/// The test put the bounty dialogue file on the extras' list itself, and takes it off when it ends
+	var/listed_file = FALSE
+
+/datum/unit_test/voidcrew_outpost_prison_bounty_captor/Destroy()
+	if(listed_file)
+		GLOB.outpost_prisoner_extra_dialogue -= "outpost_prison_bounty.json"
+	return ..()
+
+/datum/unit_test/voidcrew_outpost_prison_bounty_captor/proc/on_say(datum/source, list/speech_args)
+	SIGNAL_HANDLER
+	heard += speech_args[SPEECH_MESSAGE]
+
+/datum/unit_test/voidcrew_outpost_prison_bounty_captor/Run()
+	clean_pool()
+	// The lines: both contexts, with plenty of shared lines, each naming the ship.
+	var/list/lines = outpost_prisoner_extra_dialogue("outpost_prison_bounty.json", "lines")
+	for(var/context in list("bounty_arrival", "bounty_captor_seen"))
+		var/list/entry = lines[context]
+		TEST_ASSERT(islist(entry) && length(entry["any"]) >= 8, "outpost_prison_bounty.json has too few [context] lines")
+		for(var/pool in entry)
+			for(var/line in entry[pool])
+				TEST_ASSERT(findtext(line, "{place}"), "The [context]/[pool] line \"[line]\" doesn't name the ship")
+	// The prisoners find a context's lines through the extras' list; until outpost_prison_extras.dm
+	// names this file there, the test lists it for its own run.
+	if(!("outpost_prison_bounty.json" in GLOB.outpost_prisoner_extra_dialogue))
+		GLOB.outpost_prisoner_extra_dialogue += "outpost_prison_bounty.json"
+		listed_file = TRUE
+
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("bountycaptorowner")
+	TEST_ASSERT_NOTNULL(home, "The captor test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	fix_wing(prison)
+	var/obj/structure/overmap/ship/ship = board_test_ship()
+	ship.name = "Meridian"
+	var/datum/bounty_record/record = make_record(2, "normal", "Dario Venn")
+	record.captor_name = ship.name
+	record.captor_ship = WEAKREF(ship)
+	var/mob/living/basic/outpost_prisoner/caught = bounty_prisoner(prison, prison_spot(home, 8, 8), record)
+	RegisterSignal(caught, COMSIG_MOB_SAY, PROC_REF(on_say))
+	TEST_ASSERT_EQUAL(caught.bounty_captor_values()?["{place}"], "Meridian", "The prisoner doesn't know the ship that caught them")
+
+	// Their first words name the crew.
+	TEST_ASSERT(caught.bounty_arrival_speech(), "A bounty prisoner's arrival didn't name the crew that caught them")
+	TEST_ASSERT(length(heard) == 1 && findtext(heard[1], "Meridian") && !findtext(heard[1], "{"), "The arrival line was [length(heard) ? heard[1] : "nothing"]")
+	TEST_ASSERT_NULL(caught.extra_line_values, "The ship's name stayed in the prisoner's line values")
+
+	// In the yard: nobody off the Meridian in sight, no call-out.
+	TEST_ASSERT_NULL(prison.bounty_extra_speech(caught, 100), "With nobody off the ship in sight, they called someone out")
+	var/mob/living/carbon/human/consistent/crewman = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 10, 8))
+	crewman.mind_initialize()
+	allocated += crewman.mind
+	var/datum/team/voidcrew/team = allocate(/datum/team/voidcrew)
+	team.ship = ship
+	crewman.mind.ship_teams = list(team)
+	var/list/choice = prison.bounty_extra_speech(caught, 100)
+	TEST_ASSERT(islist(choice) && length(choice) == 3, "With the Meridian's crewman in sight, they said nothing about it ([json_encode(choice)])")
+	TEST_ASSERT_EQUAL(choice[1], "bounty_captor_seen", "The call-out's context is [choice[1]]")
+	TEST_ASSERT_NULL(choice[2], "The call-out talks to another prisoner")
+	TEST_ASSERT_EQUAL(choice[3]?["{place}"], "Meridian", "The call-out doesn't name the ship")
+	// Said the way speech_tick() says an extra's pick
+	heard.Cut()
+	caught.extra_line_values = choice[3]
+	TEST_ASSERT(caught.say_context(choice[1], choice[2]), "The call-out found no line")
+	caught.extra_line_values = null
+	TEST_ASSERT(length(heard) == 1 && findtext(heard[1], "Meridian") && !findtext(heard[1], "{"), "The call-out was [length(heard) ? heard[1] : "nothing"]")
+	// Not again for a while
+	TEST_ASSERT_NULL(prison.bounty_extra_speech(caught, 100), "They called the same crew out again at once")
+	COOLDOWN_RESET(caught, prison_captor_line_cooldown)
+	TEST_ASSERT(islist(prison.bounty_extra_speech(caught, 100)), "Once the gap was over, they never called the crew out again")
+	// Someone off another ship is nobody to them.
+	COOLDOWN_RESET(caught, prison_captor_line_cooldown)
+	team.ship = board_test_ship()
+	TEST_ASSERT_NULL(prison.bounty_extra_speech(caught, 100), "They called out someone off another ship")
+	team.ship = ship
+
+	// An ordinary prisoner, or a record with no captor: no such line on arrival or in the yard.
+	var/mob/living/basic/outpost_prisoner/ordinary = kept_prisoner(prison, prison_spot(home, 8, 11))
+	TEST_ASSERT(!ordinary.bounty_arrival_speech(), "An ordinary prisoner named a ship on arrival")
+	TEST_ASSERT_NULL(prison.bounty_extra_speech(ordinary, 100), "An ordinary prisoner called out a crew")
+	var/mob/living/basic/outpost_prisoner/unknown = bounty_prisoner(prison, prison_spot(home, 3, 8), make_record(1, "meek"))
+	TEST_ASSERT(!unknown.bounty_arrival_speech(), "A prisoner with no captor on record named a ship on arrival")
+	TEST_ASSERT_NULL(prison.bounty_extra_speech(unknown, 100), "A prisoner with no captor on record called out a crew")
+	team.ship = null
+	crewman.mind.ship_teams = null
+	settle_prison_air(home)

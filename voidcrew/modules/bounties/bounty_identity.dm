@@ -717,7 +717,7 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 	return record?.archetype
 
 /mob/living/basic/bounty_criminal/identity_line_values()
-	// A Most Wanted crime is no line to toss off ("All this over the Halcyon massacre?").
+	// A Most Wanted crime is no line to toss off ("All this over the Corvina Station massacre?").
 	if(!record?.crime || record.tier == BOUNTY_TIER_MOST_WANTED)
 		return null
 	return list("{crime}" = record.crime)

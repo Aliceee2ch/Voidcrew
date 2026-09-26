@@ -190,11 +190,14 @@
 	TEST_ASSERT(!heavy.boss_tired, "A fresh boss is tired")
 	TEST_ASSERT(!(heavy.status_flags & (CANSTUN | CANKNOCKDOWN)), "A fresh boss can be stunned or knocked down")
 	TEST_ASSERT_EQUAL(heavy.damage_coeff[STAMINA], 0, "A fresh boss takes stamina damage") // BOUNTY_HEAVY_STAMINA_FRESH
+	TEST_ASSERT_NULL(heavy.body_last_alert, "A fresh boss showed [heavy.body_last_alert]")
 	var/fresh_speed = heavy.speed
 
 	// Down to 38%, under BOUNTY_BOSS_TIRED_BELOW (40)
 	heavy.adjustBruteLoss(heavy.maxHealth * 0.62, forced = TRUE)
 	TEST_ASSERT(heavy.boss_tired, "A boss at [heavy.health]/[heavy.maxHealth] isn't tired")
+	// The stun window opening shows over it, not only in chat (P4 polish)
+	TEST_ASSERT_EQUAL(heavy.body_last_alert, "worn out", "Tiring showed [heavy.body_last_alert || "nothing"] over the boss")
 	TEST_ASSERT(heavy.status_flags & CANSTUN, "A tired boss can't be stunned")
 	TEST_ASSERT(heavy.status_flags & CANKNOCKDOWN, "A tired boss can't be knocked down")
 	// BOUNTY_BOSS_STAMINA_TIRED 1 against BOUNTY_HEAVY_STAMINA 180, as max_stamina is 100
@@ -542,8 +545,13 @@
 	TEST_ASSERT(posse_member(boss, first), "The first hunter didn't join the posse")
 	TEST_ASSERT_EQUAL(boss.maxHealth, 300, "One hunter raised the health")
 	TEST_ASSERT(!boss.boss_engage(first), "The same hunter joined twice")
+	// It sizes up the bigger posse in its kit's own words (BUG-2: "_posse" had no lines)
+	var/datum/component/bounty_identity_voice/voice = boss.LoadComponent(/datum/component/bounty_identity_voice)
+	voice.line_cooldown = 0
+	voice.last_line = null
 	TEST_ASSERT(posse_member(boss, second), "The second hunter didn't join")
 	TEST_ASSERT_EQUAL(boss.maxHealth, 950, "Two hunters didn't raise the health")
+	TEST_ASSERT(voice.last_line in bounty_identity_strings("lines")["juggernaut_posse"]["any"], "Sizing up two hunters, the Juggernaut said [voice.last_line || "nothing"]")
 	TEST_ASSERT_EQUAL(boss.health, 950, "A fresh boss's raise didn't lift current health")
 
 	// Someone with no mind isn't a hunter.

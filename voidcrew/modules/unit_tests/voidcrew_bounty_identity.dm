@@ -401,13 +401,22 @@
 		"accused_wrongly", "accused_rightly", "companion_reply",
 	)
 	for(var/kit in list("juggernaut", "pyromaniac", "demolitionist", "ghost", "heavy")) // BOUNTY_KIT_*
-		contexts += list("[kit]_intro", "[kit]_ability", "[kit]_exhausted")
+		// "_posse" is boss_bark("posse", "intro") as the posse grows (BUG-2)
+		contexts += list("[kit]_intro", "[kit]_ability", "[kit]_exhausted", "[kit]_posse")
 	for(var/context in contexts)
 		var/list/by_voice = lines[context]
 		TEST_ASSERT(length(by_voice?["any"]) >= 6, "The context [context] has fewer than 6 lines")
 	for(var/voice in list("meek", "normal", "boss")) // BOUNTY_ARCHETYPE_*
 		TEST_ASSERT(length(lines["idle_chat"][voice]) >= 3, "Too few [voice] small-talk lines")
 		TEST_ASSERT(length(lines["bar"][voice]) >= 3, "Too few [voice] bar lines")
+		// Last words on the pad (the board's beam-out) in every voice
+		TEST_ASSERT(length(lines["beamed_out"][voice]) >= 3, "Too few [voice] beamed-out lines")
+	// No crime names a real outpost: a massacre at Waystation Halcyon, the safe hub, would contradict the setting (BUG-8)
+	var/list/crimes = bounty_identity_strings("crimes")
+	for(var/tier in crimes)
+		for(var/crime in crimes[tier])
+			for(var/outpost_name in list("Halcyon", "Quartermain", "Undertow", "Longwatch"))
+				TEST_ASSERT(!findtext(crime, outpost_name), "The [tier] crime \"[crime]\" names the [outpost_name] outpost")
 	// The shared pools are what decoys and blended fugitives say: no taunts, no crime.
 	for(var/context in list("hurt", "recover", "cuffed"))
 		for(var/line in lines[context]["any"])

@@ -99,6 +99,8 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	bay_berths.Cut()
 	QDEL_NULL(freight)
 	QDEL_LIST(cargo_cart)
+	// Escrowed docking fees are the visiting ship's money, not the outpost's
+	refund_all_dock_fee_holds()
 	QDEL_NULL(treasury)
 	revoke_research_links()
 	deltimer(home_service_timer)
@@ -612,6 +614,11 @@ GLOBAL_LIST_EMPTY(player_outposts)
 			pending_dock_variants[acting] = dock_variant
 		to_chat(user, span_warning(denial))
 		return
+	// The ship bay's docking fee: quoted to the helm until the captain approves it (outpost_dock_fees.dm)
+	var/fee_denial = dock_fee_denial(acting, dock_variant)
+	if(fee_denial)
+		to_chat(user, span_warning(fee_denial))
+		return
 
 	concerned = TRUE
 	var/prev_state = acting.state
@@ -673,10 +680,21 @@ GLOBAL_LIST_EMPTY(player_outposts)
 		to_chat(user, span_warning("Ship is too large to dock at this location."))
 		return
 
+	// Escrow the approved docking fee. No yield between this and dock().
+	var/fee_refusal = take_dock_fee(acting, dock_variant)
+	if(fee_refusal)
+		berth?.release(force = TRUE)
+		acting.release_berth_flags(src)
+		acting.state = prev_state
+		concerned = FALSE
+		to_chat(user, span_warning(fee_refusal))
+		return
+
 	// dock() only returns a string when it refuses; a successful start is announced
 	// to the whole crew by ship_notify()
 	var/dock_result = acting.dock(src, dock_to_use)
 	if(dock_result)
+		refund_dock_fee_hold(acting, "dock refused")
 		berth?.release(force = TRUE)
 		acting.release_berth_flags(src)
 		acting.state = prev_state

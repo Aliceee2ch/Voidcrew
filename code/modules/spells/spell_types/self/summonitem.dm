@@ -142,6 +142,11 @@
 
 			else if(isobj(item_to_retrieve.loc))
 				var/obj/retrieved_item = item_to_retrieve.loc
+				// VOIDCREW EDIT ADDITION START - outpost shop stock and rented lockers hold their items (outpost_market.dm)
+				if(blocks_magic_recall(retrieved_item))
+					to_chat(caster, span_warning("Something holds [item_to_retrieve] in place."))
+					return
+				// VOIDCREW EDIT ADDITION END
 				// Can't bring anchored things
 				if(retrieved_item.anchored)
 					break

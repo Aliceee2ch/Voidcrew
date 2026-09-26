@@ -1,0 +1,232 @@
+// MARKET-OWNER: P1
+/**
+ * # Outpost marketplace: prices, roles and payments
+ *
+ * The shared layer under the outpost's paid services (cloning bay, shop, medical lab, storage,
+ * the ship bay's docking fee and the teleporter network). One price table, one membership test,
+ * one charge proc and one income ledger.
+ *
+ * Members (the owner, residents and the owner's crews) use every service free. Visitors pay from
+ * the account of the ID they present, into the outpost treasury. An ownerless outpost charges
+ * nothing. The owner, treasurers and pricers set prices on the management console.
+ *
+ * No payout anywhere may be derived from service income: members could pad it.
+ */
+
+/obj/structure/overmap/dynamic/player_outpost
+	/// Residents the owner lets set service prices (the Pricing tab)
+	var/list/datum/mind/pricers = list()
+	/// Price key -> whole credits. A missing key means the table default.
+	var/list/outpost_prices = list()
+	/// Income and price changes, newest last: list("time", "service", "label", "payer", "account", "amount")
+	var/list/service_ledger = list()
+	/// Service key -> list("total", "count") of what it has earned
+	var/list/service_totals = list()
+	/// Ckey -> world.time of their last price change
+	var/list/price_set_times = list()
+	/// Admin testing aid: this ckey is billed as a visitor, never a member. Set only by the manipulator.
+	var/playtest_visitor_ckey
+
+/// Every service price an outpost can set: key -> label, default, max and the service that sells it
+GLOBAL_LIST_INIT(outpost_price_table, list(
+	OUTPOST_PRICE_DOCK_BAY = list("label" = "Ship bay docking", "default" = OUTPOST_DOCK_FEE_DEFAULT, "max" = OUTPOST_DOCK_FEE_MAX, "service" = "ship_bay"),
+	OUTPOST_PRICE_CLONE_IMPRINT = list("label" = "Cloning imprint", "default" = OUTPOST_CLONE_IMPRINT_DEFAULT, "max" = OUTPOST_CLONE_IMPRINT_MAX, "service" = "cloning_bay"),
+	OUTPOST_PRICE_MEDLAB_PASS = list("label" = "Medical lab pass (30 min)", "default" = OUTPOST_MEDLAB_PASS_DEFAULT, "max" = OUTPOST_MEDLAB_PASS_MAX, "service" = "medical_lab"),
+	OUTPOST_PRICE_STORAGE_RENT = list("label" = "Locker rental", "default" = OUTPOST_STORAGE_RENT_DEFAULT, "max" = OUTPOST_STORAGE_RENT_MAX, "service" = "storage"),
+	OUTPOST_PRICE_TELEPORT_ARRIVAL = list("label" = "Teleporter arrival fare", "default" = OUTPOST_TELEPORT_ARRIVAL_DEFAULT, "max" = OUTPOST_TELEPORT_ARRIVAL_MAX, "service" = "teleporter"),
+))
+
+// ===== PRICES =====
+
+/// The price set for `key`, or the table default. 0 for an unknown key.
+/obj/structure/overmap/dynamic/player_outpost/proc/get_price(key)
+	if(!istext(key))
+		return 0
+	var/list/row = GLOB.outpost_price_table[key]
+	if(!row)
+		return 0
+	var/stored = outpost_prices[key]
+	return isnum(stored) ? stored : row["default"]
+
+/// Whether the service that charges `key` is installed here
+/obj/structure/overmap/dynamic/player_outpost/proc/price_available(key)
+	if(!istext(key))
+		return FALSE
+	var/list/row = GLOB.outpost_price_table[key]
+	if(!row)
+		return FALSE
+	if(row["service"] == "ship_bay")
+		return !!ship_bay_installed
+	// Any installed upgrade with the service's id: the teleporter need not be a service room
+	var/datum/outpost_upgrade/room = outpost_upgrades[row["service"]]
+	return !!room?.installed
+
+/**
+ * Sets a service price. Returns null when it was set (or unchanged), else a short refusal.
+ * UI params are decoded JSON, so the key and value are checked for type first.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/set_price(mob/living/user, key, value)
+	if(!istext(key) || !GLOB.outpost_price_table[key])
+		return "Unknown price."
+	if(!is_current_pricing_user(user))
+		return "Pricing access required."
+	// isnum() accepts NaN, which is the one number unequal to itself
+	if(!isnum(value) || value != value)
+		return "Invalid price."
+	var/list/row = GLOB.outpost_price_table[key]
+	value = clamp(round(value, 1), 0, row["max"])
+	var/setter = user.ckey || REF(user)
+	var/last_set = price_set_times[setter]
+	if(last_set && world.time < last_set + OUTPOST_PRICE_SET_COOLDOWN)
+		return "Too many price changes."
+	var/old_value = get_price(key)
+	if(value == old_value)
+		return null
+	outpost_prices[key] = value
+	price_set_times[setter] = world.time
+	log_game("PLAYER OUTPOST: [key_name(user)] set the [row["label"]] price at '[name]' from [old_value] to [value] cr")
+	add_service_ledger(key, "Price: [row["label"]] [old_value] -> [value] by [user.real_name]", user.real_name, null, 0)
+	return null
+
+/// Every price back to its default (abandonment)
+/obj/structure/overmap/dynamic/player_outpost/proc/reset_prices()
+	outpost_prices.Cut()
+	price_set_times.Cut()
+
+// ===== ROLES =====
+
+/obj/structure/overmap/dynamic/player_outpost/proc/can_set_prices(mob/user)
+	return founder_ckey && (is_owner(user) || (user?.mind && ((user.mind in treasurers) || (user.mind in pricers))))
+
+/// Pricing needs the role's current body; a retired owner body keeps its ckey but not the controls.
+/obj/structure/overmap/dynamic/player_outpost/proc/is_current_pricing_user(mob/living/user)
+	return istype(user) && user.mind?.current == user && can_set_prices(user) && (!is_owner(user) || is_current_management_user(user))
+
+/**
+ * Whether `user` uses this outpost's services free and passes its staff doors: the owner, a
+ * resident, or anyone on one of the owner's ship crews. The playtest visitor never is.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/is_outpost_member(mob/user)
+	if(!user)
+		return FALSE
+	if(playtest_visitor_ckey && user.ckey == playtest_visitor_ckey)
+		return FALSE
+	if(is_resident(user))
+		return TRUE
+	var/datum/mind/owner_mind = founder_mind?.resolve()
+	if(!owner_mind || !user.mind || !LAZYLEN(owner_mind.ship_teams))
+		return FALSE
+	for(var/datum/team/voidcrew/team as anything in user.mind.ship_teams)
+		if(team in owner_mind.ship_teams)
+			return TRUE
+	return FALSE
+
+/**
+ * Whether `user` may take stock from the owner shop without paying: the owner, stewards,
+ * treasurers and pricers, in their current bodies. Other members pay like visitors.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/can_take_shop_stock(mob/user)
+	if(!isliving(user))
+		return FALSE
+	if(playtest_visitor_ckey && user.ckey == playtest_visitor_ckey)
+		return FALSE
+	return is_current_management_user(user) || is_current_pricing_user(user)
+
+/// The installed service room with this id, or null
+/obj/structure/overmap/dynamic/player_outpost/proc/service_upgrade(id)
+	// UI params are decoded JSON: a number here would index the list by position
+	if(!istext(id))
+		return null
+	var/datum/outpost_upgrade/service/room = outpost_upgrades[id]
+	if(!istype(room) || !room.installed)
+		return null
+	return room
+
+// ===== PAYMENTS =====
+
+/// What `user` owes for a service priced `current_price` here: 0 when free, a member, ownerless or price <= 0.
+/obj/structure/overmap/dynamic/player_outpost/proc/service_price_for(mob/user, current_price)
+	if(!founder_ckey || !isnum(current_price) || current_price <= 0)
+		return 0
+	if(is_outpost_member(user))
+		return 0
+	return current_price
+
+/**
+ * Charges a customer from the account of the ID they present, into the treasury.
+ * Never sleeps, and never asks where the payer stands: a teleporter traveller pays the
+ * destination's fare from the pad they leave. `shown_price` is the price the customer saw
+ * (a client param, or the value captured before a prompt); a mismatch with `current_price`
+ * refuses. Returns null when paid or free, else a short refusal for the customer.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/charge_service(mob/living/payer, service_key, current_price, shown_price, label)
+	if(QDELETED(src) || !isliving(payer))
+		return "Service unavailable."
+	if(!isnum(shown_price) || shown_price != current_price)
+		return "Price changed to [current_price] cr."
+	var/amount = service_price_for(payer, current_price)
+	if(amount <= 0)
+		return null
+	var/datum/bank_account/account = payer.get_idcard(TRUE)?.registered_account
+	if(!account)
+		return "No bank account on your ID."
+	ensure_home_services()
+	if(account == treasury)
+		return "Payment declined."
+	if(!account.has_money(amount) || !account.adjust_money(-amount, "[label] at [name]"))
+		return "Insufficient credits."
+	receive_payment(amount, service_key, label, payer.real_name, account.account_holder)
+	return null
+
+/// Credits the treasury and writes the ledger, the treasury history line and the economy log. Shared with the dock fee capture.
+/obj/structure/overmap/dynamic/player_outpost/proc/receive_payment(amount, service_key, label, payer_name, account_holder)
+	if(!isnum(amount) || amount <= 0)
+		return FALSE
+	ensure_home_services()
+	treasury.adjust_money(amount, "[label]: [payer_name] ([account_holder])")
+	add_service_ledger(service_key, label, payer_name, account_holder, amount)
+	var/list/totals = service_totals[service_key]
+	if(!totals)
+		totals = list("total" = 0, "count" = 0)
+		service_totals[service_key] = totals
+	totals["total"] += amount
+	totals["count"] += 1
+	log_econ("[amount] cr paid to [name] ([treasury.account_holder]) for [label] by [payer_name] ([account_holder])")
+	return TRUE
+
+/// Treasury -> `account`, exactly `amount`. FALSE, with nothing moved, when the treasury is short.
+/obj/structure/overmap/dynamic/player_outpost/proc/refund_payment(datum/bank_account/account, amount, service_key, label)
+	if(QDELETED(account) || !treasury || account == treasury || !isnum(amount) || amount <= 0)
+		return FALSE
+	if(!treasury.has_money(amount) || !treasury.adjust_money(-amount, "Refund: [label] to [account.account_holder]"))
+		return FALSE
+	account.adjust_money(amount, "Refund: [label] from [name]")
+	add_service_ledger(service_key, "Refund: [label]", null, account.account_holder, -amount)
+	var/list/totals = service_totals[service_key]
+	if(totals)
+		totals["total"] -= amount
+	log_econ("[amount] cr refunded by [name] ([treasury.account_holder]) for [label] to [account.account_holder]")
+	return TRUE
+
+/// Appends a line to the income ledger, dropping the oldest past OUTPOST_SERVICE_LEDGER_MAX
+/obj/structure/overmap/dynamic/player_outpost/proc/add_service_ledger(service_key, label, payer_name, account_holder, amount)
+	service_ledger += list(list(
+		"time" = station_time_timestamp("hh:mm"),
+		"service" = service_key,
+		"label" = label,
+		"payer" = payer_name,
+		"account" = account_holder,
+		"amount" = amount,
+	))
+	if(length(service_ledger) > OUTPOST_SERVICE_LEDGER_MAX)
+		service_ledger.Cut(1, length(service_ledger) - OUTPOST_SERVICE_LEDGER_MAX + 1)
+
+// ===== MAGIC RECALL =====
+
+/**
+ * Whether the summon item spell must leave an item inside `holder` (the shop's stock machine,
+ * rented storage lockers). Called from the spell's container walk (summonitem.dm), which is
+ * upstream code and cannot see Voidcrew defines.
+ */
+/proc/blocks_magic_recall(atom/movable/holder)
+	return HAS_TRAIT(holder, TRAIT_BLOCKS_RECALL)

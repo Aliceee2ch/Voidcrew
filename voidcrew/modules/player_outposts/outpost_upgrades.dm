@@ -95,6 +95,14 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 /datum/outpost_upgrade/proc/on_installed(mob/user)
 	return
 
+/// Called on the cleared footprint just before the room loads (service rooms join the outpost area here)
+/datum/outpost_upgrade/proc/prepare_ground(list/footprint_turfs)
+	return
+
+/// Undoes prepare_ground() when the load built nothing
+/datum/outpost_upgrade/proc/release_ground(list/footprint_turfs)
+	return
+
 /**
  * A placement that crashed mid-load never comes back to release its blueprint, which would then
  * stay "placing" for good: it could not be placed again or refunded. So each placement arms this.
@@ -374,7 +382,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		owned += outpost_area.get_turfs_by_zlevel(z)
 	for(var/upgrade_id in outpost_upgrades)
 		var/datum/outpost_upgrade/upgrade = outpost_upgrades[upgrade_id]
-		if(upgrade?.installed && upgrade.installed_area)
+		// Service rooms join the outpost's own area, already counted above
+		if(upgrade?.installed && upgrade.installed_area && upgrade.installed_area != outpost_area)
 			owned += upgrade.installed_area.get_turfs_by_zlevel(z)
 	if(length(owned))
 		return owned
@@ -430,6 +439,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		for(var/obj/structure/lattice/lattice in tile) // catwalks included
 			qdel(lattice)
 	sweep_upgrade_footprint(footprint)
+	blueprint.prepare_ground(footprint_turfs)
 	var/list/loaded_bounds = template.load_rotated(bottom_left, rotation)
 	// Gone, or the watchdog gave up on this load and released the blueprint meanwhile
 	if(QDELETED(blueprint) || blueprint.placement_serial != serial)
@@ -437,6 +447,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	blueprint.placing = FALSE
 	if(!loaded_bounds || QDELETED(src))
 		// Nothing was built: the blueprint goes back on the shelf.
+		blueprint.release_ground(footprint_turfs)
 		blueprint.footprint_bounds = null
 		blueprint.rotation = 0
 		return "The upgrade could not be built."

@@ -93,6 +93,9 @@ SMOOTH_TURFS = {
     "/turf/closed/wall/mineral/titanium/dollhouse": ("voidcrew/icons/turf/walls/dollhouse_wall.dmi", "shuttle_wall", "shuttle_wall"),
     "/turf/closed/wall/mineral/plastitanium": ("icons/turf/walls/plastitanium_wall.dmi", "plastitanium_wall", "shuttle_wall"),
     "/turf/closed/wall/mineral/cult": ("icons/turf/walls/cult_wall.dmi", "cult_wall", "wall"),
+    "/turf/closed/indestructible/reinforced": ("icons/turf/walls/reinforced_wall.dmi", "reinforced_wall", "wall"),
+    # Keeps the titanium lookalike from matching the reinforced prefix above
+    "/turf/closed/indestructible/reinforced/titanium": ("icons/turf/walls/shuttle_wall.dmi", "shuttle_wall", "shuttle_wall"),
     "/turf/open/floor/carpet": ("icons/turf/floors/carpet.dmi", "carpet", "carpet"),
 }
 

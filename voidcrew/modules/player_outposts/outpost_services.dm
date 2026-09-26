@@ -132,6 +132,7 @@
 
 /obj/structure/overmap/dynamic/player_outpost/on_ship_undock_complete(obj/structure/overmap/ship/ship)
 	approved_ships -= ship
+	release_dock_fee_state(ship)
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
 		if(bay?.ship == ship)
 			bay.console?.disconnect_materials()

@@ -189,6 +189,9 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 		QDEL_NULL(reservation)
 		template_bottom_left = null
 	loaded = load_success
+	// Outside the try: a runtime there unwinds the whole load (outpost_network.dm)
+	if(loaded)
+		spawn_network_pad()
 	loading = FALSE
 	SEND_SIGNAL(src, COMSIG_VOIDCREW_SITE_LOAD_FINISHED, loaded)
 	return loaded

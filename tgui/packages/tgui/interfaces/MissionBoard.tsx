@@ -870,8 +870,9 @@ const WantedSection = (props: WantedSectionProps) => {
     <Section title={`Wanted (${wanted.length})`}>
       <NoticeBox info mb={1}>
         Bring a wanted criminal onto your mission pad and press Turn In. Once
-        downed they pay 60%, dead 25%. Any crew can turn in a public bounty;
-        offers are for your ship only.
+        downed they pay 60%, dead 25%; a WANTED: DEAD bounty pays in full on
+        its trophy. Any crew can turn in a public bounty; offers are for your
+        ship only.
       </NoticeBox>
       {sorted.length === 0 ? (
         <NoticeBox>No one is wanted right now.</NoticeBox>
@@ -1038,7 +1039,7 @@ const WantedCard = (props: WantedCardProps) => {
           {formatWantedTime(entry.time_left ?? 0)}
           {entry.clock_held ? (
             <Box as="span" color="label" ml={1}>
-              (held while hunted)
+              {killOnly ? '(clock held)' : '(held while hunted)'}
             </Box>
           ) : null}
         </LabeledList.Item>

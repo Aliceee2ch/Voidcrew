@@ -177,7 +177,13 @@
 	var/obj/item/bounty_proof/existing = board_proof()
 	if(existing)
 		return existing
-	var/turf/spot = bounty_lair_trophy_spot(get_turf(where))
+	var/turf/origin = get_turf(where)
+	// A boss that fell inside its site leaves its trophy inside it
+	var/obj/structure/overmap/site = site()
+	var/datum/map_footprint/inside = site?.get_interior_footprint()
+	if(!inside?.contains_turf(origin))
+		inside = null
+	var/turf/spot = bounty_lair_trophy_spot(origin, inside)
 	if(!spot)
 		return null
 	if(!ispath(trophy_type, /obj/item/bounty_proof/trophy))
@@ -252,22 +258,32 @@
 	var/encoded = icon2base64(portrait)
 	return (istext(encoded) && length(encoded)) ? encoded : "?"
 
-/// Where a trophy dropped at `spot` lands: there, or the nearest floor within 3 tiles when `spot` would swallow it
-/proc/bounty_lair_trophy_spot(turf/spot)
+/**
+ * Where a trophy dropped at `spot` lands: there, or the nearest safe floor reached from it without going through a
+ * wall (a short flood fill). With `inside` (a footprint) it stays inside it and off any docked ship. Null when no
+ * safe floor is near: never space or a chasm.
+ */
+/proc/bounty_lair_trophy_spot(turf/spot, datum/map_footprint/inside)
 	if(!spot)
 		return null
-	if(bounty_lair_trophy_turf_ok(spot))
-		return spot
-	var/turf/best
-	var/best_distance = INFINITY
-	for(var/turf/around as anything in RANGE_TURFS(3, spot))
-		if(!bounty_lair_trophy_turf_ok(around))
-			continue
-		var/distance = get_dist(around, spot)
-		if(distance < best_distance)
-			best = around
-			best_distance = distance
-	return best || spot
+	var/list/queue = list(spot)
+	var/list/seen = list()
+	seen[spot] = TRUE
+	var/index = 1
+	while(index <= length(queue) && index <= BOUNTY_LAIR_TROPHY_SEARCH)
+		var/turf/here = queue[index]
+		index++
+		if(bounty_lair_trophy_turf_ok(here) && !(inside && istype(here.loc, /area/shuttle)))
+			return here
+		for(var/direction in GLOB.cardinals)
+			var/turf/next = get_step(here, direction)
+			if(!next || seen[next] || isclosedturf(next))
+				continue
+			if(inside && !inside.contains_turf(next))
+				continue
+			seen[next] = TRUE
+			queue += next
+	return null
 
 /// Whether a trophy can lie on `spot`: a floor, not space, a chasm, lava, water or an open drop
 /proc/bounty_lair_trophy_turf_ok(turf/spot)
@@ -314,9 +330,7 @@
 	if(..())
 		return TRUE
 	var/obj/structure/overmap/space_ruin/bounty_lair/lair = site()
-	if(!istype(lair) || !lair.footprint)
-		return FALSE
-	return lair.footprint.has_living_players()
+	return istype(lair) && lair.lair_has_crew_inside()
 
 // ===== THE LAIR SITE (spec 14.2) =====
 
@@ -337,6 +351,8 @@
 	var/lair_link_done = FALSE
 	/// Where the last boss fell, for the trophy
 	var/turf/lair_last_death_spot
+	/// Whether the last boss to go died (FALSE: it was deleted alive, and nobody earned a trophy)
+	var/lair_last_boss_died = FALSE
 	/// Timer: after a boss falls, whether anything takes over from it, or the trophy drops
 	var/lair_trophy_timer
 	/// Timer: the second pass that keeps late goons in their rooms
@@ -400,7 +416,11 @@
 		return
 	mission_locked = FALSE
 	log_game("BOUNTY: [name] was released to cleanup")
-	lair_finish_release()
+	// Next tick: close() is still running and drops the posting's claim on us after this signal, and a claimed
+	// ruin holds its position instead of going
+	if(lair_release_timer)
+		deltimer(lair_release_timer)
+	lair_release_timer = addtimer(CALLBACK(src, PROC_REF(lair_finish_release)), 1, TIMER_STOPPABLE)
 
 /obj/structure/overmap/space_ruin/bounty_lair/proc/lair_finish_release()
 	lair_release_timer = null
@@ -429,9 +449,55 @@
 	for(var/datum/weakref/ref as anything in lair_bosses + lair_gatekeepers)
 		var/mob/living/lair_mob = ref?.resolve()
 		if(lair_mob)
-			UnregisterSignal(lair_mob, list(COMSIG_LIVING_DEATH, COMSIG_QDELETING))
+			lair_unwatch(lair_mob)
 	lair_bosses = list()
 	lair_gatekeepers = list()
+
+/**
+ * Watches `lair_mob` (a boss or a gatekeeper) with `gone_proc`: its death, or its deletion (an admin, or a DEL_ON_DEATH
+ * body). Also refuses polymorph and type changes on it while the lair watches: those delete it without a death, and
+ * would open the gate or end the fight for free.
+ */
+/obj/structure/overmap/space_ruin/bounty_lair/proc/lair_watch(mob/living/lair_mob, gone_proc)
+	RegisterSignals(lair_mob, list(COMSIG_LIVING_DEATH, COMSIG_QDELETING), gone_proc, override = TRUE)
+	RegisterSignal(lair_mob, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(lair_refuse_polymorph), override = TRUE)
+	RegisterSignal(lair_mob, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(lair_refuse_type_change), override = TRUE)
+	// The don climbing out of his mech (P12) is the fight's next phase: taken on the moment he appears
+	RegisterSignal(lair_mob, COMSIG_BOUNTY_MAFIA_DON_EJECTED, PROC_REF(lair_on_next_phase), override = TRUE)
+
+/obj/structure/overmap/space_ruin/bounty_lair/proc/lair_unwatch(mob/living/lair_mob)
+	UnregisterSignal(lair_mob, list(COMSIG_LIVING_DEATH, COMSIG_QDELETING, COMSIG_LIVING_PRE_WABBAJACKED, COMSIG_PRE_MOB_CHANGED_TYPE, COMSIG_BOUNTY_MAFIA_DON_EJECTED))
+
+/obj/structure/overmap/space_ruin/bounty_lair/proc/lair_on_next_phase(datum/source, mob/living/next_boss)
+	SIGNAL_HANDLER
+	if(lair_posting() && !QDELETED(next_boss))
+		lair_adopt_boss(next_boss)
+
+/obj/structure/overmap/space_ruin/bounty_lair/proc/lair_refuse_polymorph(datum/source, what_to_randomize)
+	SIGNAL_HANDLER
+	return STOP_WABBAJACK
+
+/obj/structure/overmap/space_ruin/bounty_lair/proc/lair_refuse_type_change(datum/source)
+	SIGNAL_HANDLER
+	return COMPONENT_BLOCK_MOB_CHANGE
+
+/// Whether a living player is inside the lair itself: its footprint, but not aboard a ship docked there
+/obj/structure/overmap/space_ruin/bounty_lair/proc/lair_has_crew_inside()
+	if(!footprint)
+		return FALSE
+	for(var/mob/living/player in GLOB.player_list)
+		if(player.stat == DEAD)
+			continue
+		var/turf/spot = get_turf(player)
+		if(spot && footprint.contains_turf(spot) && !istype(spot.loc, /area/shuttle))
+			return TRUE
+	return FALSE
+
+/// The middle of its template, where it landed (the slot is bigger than the club), or null when it isn't loaded
+/obj/structure/overmap/space_ruin/bounty_lair/proc/lair_interior_center()
+	if(ruin_bottom_left && ruin_template?.width && ruin_template?.height)
+		return locate(ruin_bottom_left.x + round(ruin_template.width / 2), ruin_bottom_left.y + round(ruin_template.height / 2), ruin_bottom_left.z)
+	return footprint?.get_center_turf()
 
 // ----- Loading -----
 
@@ -543,19 +609,21 @@
 		var/mob/living/basic/bounty_lair_boss/lair_boss = boss
 		lair_boss.posting_ref = posting_ref
 	lair_bosses |= WEAKREF(boss)
-	RegisterSignals(boss, list(COMSIG_LIVING_DEATH, COMSIG_QDELETING), PROC_REF(lair_on_boss_gone), override = TRUE)
+	lair_watch(boss, PROC_REF(lair_on_boss_gone))
 	lair_leash(boss)
 	return TRUE
 
 /obj/structure/overmap/space_ruin/bounty_lair/proc/lair_on_boss_gone(mob/living/source)
 	SIGNAL_HANDLER
-	UnregisterSignal(source, list(COMSIG_LIVING_DEATH, COMSIG_QDELETING))
+	lair_unwatch(source)
 	if(!(source.weak_reference in lair_bosses))
 		return
 	lair_bosses -= source.weak_reference
 	var/turf/spot = get_turf(source)
 	if(spot)
 		lair_last_death_spot = spot
+	// Death sets DEAD before its signal; a deletion of a living boss (an admin) comes here alive
+	lair_last_boss_died = source.stat == DEAD
 	if(lair_boss_killed || !lair_posting())
 		return
 	// Give its next phase (the don out of his wrecked mech) a moment to appear before calling it done
@@ -566,7 +634,8 @@
 /**
  * A boss fell a moment ago. A lair boss still standing in the footprint (one we spawned, or the next phase of it,
  * which we take on now) means the fight goes on. Otherwise the boss is dead: its trophy, if its death dropped one,
- * becomes the bounty's proof, and if it didn't, one drops where it fell.
+ * becomes the bounty's proof, and if it didn't, one drops where it fell. A boss deleted alive (an admin) earned
+ * nobody a trophy and can't come back, so the bounty closes.
  */
 /obj/structure/overmap/space_ruin/bounty_lair/proc/lair_check_trophy()
 	lair_trophy_timer = null
@@ -596,9 +665,19 @@
 	if(loose)
 		posting.kill_bind_trophy(loose)
 		return
-	var/obj/item/bounty_proof/trophy/trophy = posting.kill_drop_trophy(lair_last_death_spot || footprint?.get_center_turf())
+	if(!lair_last_boss_died)
+		log_game("BOUNTY: [name]'s boss was deleted without dying; closing its bounty")
+		posting.close(BOUNTY_CLOSE_LAIR_GONE)
+		return
+	var/obj/item/bounty_proof/trophy/trophy = posting.kill_drop_trophy(lair_last_death_spot || lair_interior_center())
+	if(!trophy)
+		trophy = posting.kill_drop_trophy(lair_interior_center())
 	if(trophy)
 		log_game("BOUNTY: [name]'s boss is dead; its trophy dropped at [AREACOORD(trophy)]")
+		return
+	// Nowhere safe to put it: better a closed bounty than one nobody can ever finish
+	log_game("BOUNTY: [name]'s boss is dead but there was no safe floor for its trophy; closing its bounty")
+	posting.close(BOUNTY_CLOSE_LAIR_GONE)
 
 /// Every lair boss standing in its footprint
 /obj/structure/overmap/space_ruin/bounty_lair/proc/lair_bosses_inside()
@@ -626,14 +705,15 @@
 	if(QDELETED(keeper))
 		return FALSE
 	lair_gatekeepers |= WEAKREF(keeper)
-	// Troopers delete themselves on death and leave a corpse spawner: either signal counts, whichever comes first
-	RegisterSignals(keeper, list(COMSIG_LIVING_DEATH, COMSIG_QDELETING), PROC_REF(lair_on_gatekeeper_gone), override = TRUE)
+	// Troopers delete themselves on death and leave a corpse spawner: either signal counts, whichever comes first.
+	// An admin deleting one counts as gone too: a gate that never opens is worse.
+	lair_watch(keeper, PROC_REF(lair_on_gatekeeper_gone))
 	lair_leash(keeper)
 	return TRUE
 
 /obj/structure/overmap/space_ruin/bounty_lair/proc/lair_on_gatekeeper_gone(mob/living/source)
 	SIGNAL_HANDLER
-	UnregisterSignal(source, list(COMSIG_LIVING_DEATH, COMSIG_QDELETING))
+	lair_unwatch(source)
 	if(!(source.weak_reference in lair_gatekeepers))
 		return
 	lair_gatekeepers -= source.weak_reference
@@ -673,12 +753,12 @@
 
 // ----- Keeping them in their rooms -----
 
-/// Keeps `lair_mob` in the room it stands in now (balance/lairs.md 9.2: rooms never merge)
+/// Keeps `lair_mob` in the room it stands in now (balance/lairs.md 9.2: rooms never merge). Never a room of a docked ship.
 /obj/structure/overmap/space_ruin/bounty_lair/proc/lair_leash(mob/living/lair_mob)
 	if(QDELETED(lair_mob) || !footprint?.contains_turf(get_turf(lair_mob)))
 		return FALSE
 	var/area/home = get_area(lair_mob)
-	if(!home)
+	if(!home || istype(home, /area/shuttle))
 		return FALSE
 	lair_mob.AddElement(/datum/element/bounty_lair_room_leash, home.type)
 	return TRUE
@@ -872,16 +952,7 @@
 		log_game("BOUNTY: no free square in yellow or red space for a [kind.name] lair")
 		return null
 
-	var/obj/structure/overmap/space_ruin/bounty_lair/lair = new(spawn_turf)
-	if(QDELETED(lair))
-		return null
-	lair.lair_kind = kind
-	lair.set_ruin_template(template)
-	// Rare: never replaced when it is cleaned up. Surveyed: the bounty is public, and so is where it is.
-	lair.mark_rare()
-	lair.on_surveyed()
-	lair.mission_locked = TRUE
-
+	// The posting first (the icon work can't fail halfway through a locked lair)
 	var/datum/criminal_bounty/kill_only/lair/posting = new
 	posting.lair_kind = kind
 	posting.kill_trophy_type = kind.trophy_type
@@ -889,11 +960,23 @@
 	posting.kill_hint = kind.hint
 	posting.kill_crew_note = kind.crew_note
 	posting.record = bounty_kill_record(kind.boss_name, kind.crime, kind.gender, rand(kind.pay_min, kind.pay_max), kind.mugshot())
+
+	var/obj/structure/overmap/space_ruin/bounty_lair/lair = new(spawn_turf)
+	if(QDELETED(lair))
+		qdel(posting)
+		return null
+	lair.lair_kind = kind
+	lair.set_ruin_template(template)
+	// Rare: never replaced when it is cleaned up. Surveyed: the bounty is public, and so is where it is.
+	lair.mark_rare()
+	lair.on_surveyed()
 	var/zone = SScriminal_bounties.board_site_zone(lair)
 	var/vouchers = kind.vouchers + (zone == ZONE_RED ? BOUNTY_RED_VOUCHER_BONUS : 0)
 	posting.kill_publish(lair, zone, vouchers, BOUNTY_LAIR_EXPIRY)
 	lair.lair_bind_posting(posting)
 	kind.lair_track(posting)
+	// Locked last: a lair is never held for the round without the bounty that lets it go
+	lair.mission_locked = TRUE
 	posting.kill_announce()
 	return posting
 
@@ -991,6 +1074,19 @@ ADMIN_VERB(post_bounty_lair, R_ADMIN, "Post Bounty Lair", "Post a kill-only lair
 /datum/criminal_bounty/kill_only/lich/board_clock_held(now = world.time)
 	if(!lich_slain && site())
 		return TRUE
+	return ..()
+
+/**
+ * Once his lair has linked, he has to still be there: removed without dying (a polymorph, an admin), nothing can ever
+ * drop his shard and the lair never unloads, so the bounty closes. Checked on the board's tick, never from the card.
+ */
+/datum/criminal_bounty/kill_only/lich/board_process(elapsed)
+	if(is_open() && !lich_slain)
+		var/obj/structure/overmap/space_ruin/lich_lair/site = site()
+		if(istype(site) && site.linked && !site.spent && !site.lich_ref?.resolve())
+			log_game("BOUNTY: Ilthuun is gone from [site.name] without dying; closing his bounty")
+			close(BOUNTY_CLOSE_LAIR_GONE)
+			return
 	return ..()
 
 /// He died: the shard of his crown drops at the corpse, and the bounty's clock starts

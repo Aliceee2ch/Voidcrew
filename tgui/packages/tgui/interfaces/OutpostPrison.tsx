@@ -45,6 +45,39 @@ type Prisoner = {
   status: PrisonerStatus;
   /** their birthday is today, until the yard has had the cake */
   birthday?: boolean;
+  /** brought in on a bounty (outpost_prison_bounty.dm); null for an ordinary prisoner */
+  bounty?: BountyBadge | null;
+};
+
+/** A bounty prisoner's roster badge */
+type BountyBadge = {
+  /** "Petty", "Wanted" or "Most Wanted" */
+  tier?: string;
+  /** 1 Petty, 2 Wanted, 3 Most Wanted */
+  level?: number;
+  /** what they earn the treasury against an ordinary prisoner: 1.5, 2 or 2.5 */
+  mult?: number;
+  /** "wanted for smuggling" */
+  wanted_for?: string | null;
+};
+
+type BountyIntakeSetting = 'all' | 'no_most_wanted' | 'none';
+
+/** Bounty transfers into the wing (outpost_prison_bounty.dm); null on an older payload */
+type BountyIntake = {
+  setting?: BountyIntakeSetting;
+  can_manage?: BooleanLike;
+  /** bounty prisoners in the wing now, and at most */
+  count?: number;
+  max?: number;
+  /** the next bounty arrival once it is named, at least a minute ahead */
+  next?: {
+    name?: string;
+    tier?: string;
+    level?: number;
+    /** seconds until it can beam in, null while no arrival is due */
+    in?: number | null;
+  } | null;
 };
 
 type Conditions = {
@@ -186,6 +219,8 @@ export type OutpostPrisonData = {
   extras?: Extras | null;
   /** null with no experiment */
   experiment?: Experiment | null;
+  /** bounty transfers: the warden's setting and the next bounty arrival */
+  bounty?: BountyIntake | null;
 };
 
 type Act = (action: string, params?: Record<string, unknown>) => unknown;
@@ -292,6 +327,24 @@ const EXPERIMENT_STAGES: Record<
 
 /** Only a changeling has these; a serum still unknown reads Dosed instead. */
 const CHANGELING_STAGES: string[] = ['incubating', 'vents', 'horror'];
+
+/** The warden's bounty transfer settings, in button order */
+const BOUNTY_SETTINGS: [BountyIntakeSetting, string][] = [
+  ['all', 'All'],
+  ['no_most_wanted', 'No Most Wanted'],
+  ['none', 'None'],
+];
+
+/** Bounty tiers by level: Wanted amber, Most Wanted red */
+const BOUNTY_TONES: Record<number, Tone> = {
+  2: 'average',
+  3: 'bad',
+};
+
+/** "x2.5" */
+function multiplier(value: number | null | undefined) {
+  return `x${Math.round((isNumber(value) ? value : 1) * 10) / 10}`;
+}
 
 /** m:ss */
 function clock(seconds: number) {
@@ -898,8 +951,24 @@ function Status({ status }: { status: PrisonerStatus }) {
   );
 }
 
+/** A bounty prisoner's badge after the crime: their tier and what they earn against an ordinary prisoner */
+function BountyTag({ badge }: { badge: BountyBadge }) {
+  const tone = isNumber(badge.level) ? BOUNTY_TONES[badge.level] : undefined;
+  return (
+    <span
+      className={tone ? `OutpostPrison__tone--${tone}` : undefined}
+      title="Brought in on a bounty; earns the treasury more"
+    >
+      {' · '}
+      <Icon name="star" />{' '}
+      {`${badge.tier || 'Bounty'} ${multiplier(badge.mult)}`}
+    </span>
+  );
+}
+
 function RosterRow({ prisoner, cell }: { prisoner: Prisoner; cell: string }) {
   const dead = prisoner.status === 'dead';
+  const bounty = block(prisoner.bounty);
   return (
     <div
       className={`OutpostPrison__roster-row ${
@@ -910,7 +979,8 @@ function RosterRow({ prisoner, cell }: { prisoner: Prisoner; cell: string }) {
       <div className="Outpost__person">
         <strong>{prisoner.name}</strong>
         <small>
-          {prisoner.crime}
+          {bounty?.wanted_for || prisoner.crime}
+          {bounty ? <BountyTag badge={bounty} /> : null}
           {prisoner.birthday ? (
             <span className="OutpostPrison__tone--good">
               {' · '}
@@ -974,6 +1044,56 @@ function Roster({ data }: Props) {
   );
 }
 
+/** Which bounty prisoners the wing takes, how many it holds, and the next one named on the way */
+function BountyTransfers({ data, act }: Props) {
+  const bounty = block(data.bounty);
+  if (!bounty) {
+    return null;
+  }
+  const setting = bounty.setting || 'all';
+  const canManage = !!bounty.can_manage;
+  const next = block(bounty.next);
+  const count = isNumber(bounty.count) ? bounty.count : 0;
+  const max = isNumber(bounty.max) ? bounty.max : 0;
+  const nextTone =
+    next && isNumber(next.level) ? BOUNTY_TONES[next.level] : undefined;
+  return (
+    <>
+      <div className="Outpost__section-label">Bounty transfers</div>
+      <div className="OutpostPrison__flags OutpostPrison__flags--bounty">
+        {BOUNTY_SETTINGS.map(([value, label]) => (
+          <Button
+            key={value}
+            compact
+            selected={setting === value}
+            disabled={!canManage}
+            tooltip={canManage ? undefined : 'Managers only'}
+            onClick={() => act('set_bounty_intake', { setting: value })}
+          >
+            {label}
+          </Button>
+        ))}
+        <span>
+          <Icon name="star" />
+          {`${count}/${max} held`}
+        </span>
+        {next ? (
+          <span
+            className={
+              nextTone ? `OutpostPrison__tone--${nextTone}` : undefined
+            }
+          >
+            <Icon name="right-to-bracket" />
+            {`Next: ${next.name || 'unknown'} (${next.tier || 'Bounty'})${
+              isNumber(next.in) ? `, ${clock(next.in)}` : ''
+            }`}
+          </span>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
 function Log({ data }: Props) {
   const log = data.log || [];
   return (
@@ -1014,6 +1134,7 @@ export function OutpostPrisonPanel({ data, act }: Props) {
           <Stats data={data} act={act} />
           <Note data={data} act={act} />
           <MoneyLine data={data} act={act} />
+          <BountyTransfers data={data} act={act} />
           <ExperimentPanel data={data} act={act} />
           <Tension data={data} act={act} />
           <Conditions data={data} act={act} />

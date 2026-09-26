@@ -279,6 +279,38 @@ type AdminLeads = {
   }[];
 };
 
+/** One record waiting in the bounty prisoner pool (outpost_prison_bounty.dm) */
+type AdminBountyRecord = {
+  id: string;
+  name: string;
+  /** "Petty", "Wanted" or "Most Wanted" */
+  tier: string;
+  level: number;
+  archetype: string | null;
+  /** seconds in the pool, and until it leaves it */
+  age: number;
+  left: number;
+  /** the outpost whose wing it is still reserved for, if any */
+  reserved_for: string | null;
+  /** reserved for this wing */
+  ours: BooleanLike;
+  /** the outpost whose wing it is named to as the next bounty arrival, if any */
+  named_to: string | null;
+  /** this wing would take it now */
+  accepts: BooleanLike;
+};
+
+type AdminBounty = {
+  /** the warden's bounty transfer setting */
+  setting: string;
+  count: number;
+  max: number;
+  most_wanted: number;
+  lanes: number;
+  next: { id: string; name: string; tier: string } | null;
+  pool: AdminBountyRecord[];
+};
+
 /**
  * The extras packages' blocks (outpost_prison_extras.dm). Each is an empty list until its
  * package lands; the object-shaped ones render nothing until then.
@@ -290,6 +322,7 @@ type PrisonAdminExtras = {
   contraband?: AdminContraband | [];
   mail?: AdminMail | [];
   leads?: AdminLeads | [];
+  bounty?: AdminBounty | [];
 };
 
 type SelectedOutpost = {
@@ -2092,6 +2125,7 @@ const PrisonExtrasTools = ({
   const cells = extrasRows(contraband?.cells);
   const letters = extrasRows(mail?.letters);
   const openLeads = extrasRows(leads?.open);
+  const bounty = extrasBlock<AdminBounty>(extras.bounty);
   return (
     <Box
       className="OutpostPrisonAdmin__extras"
@@ -2364,8 +2398,129 @@ const PrisonExtrasTools = ({
             ))}
           </LabeledList.Item>
         ) : null}
+        {bounty ? (
+          <PrisonBountyTools bounty={bounty} busy={busy} act={act} />
+        ) : null}
       </LabeledList>
     </Box>
+  );
+};
+
+/** prison_bounty_intake settings */
+const BOUNTY_INTAKE_SETTINGS: [string, string][] = [
+  ['all', 'All'],
+  ['no_most_wanted', 'No Most Wanted'],
+  ['none', 'None'],
+];
+
+/** prison_bounty_make tiers */
+const BOUNTY_TIERS: [number, string][] = [
+  [1, 'Petty'],
+  [2, 'Wanted'],
+  [3, 'Most Wanted'],
+];
+
+type BountyToolsProps = {
+  bounty: AdminBounty;
+  busy: boolean;
+  act: DetailsProps['act'];
+};
+
+/** Bounty prisoners (outpost_prison_bounty.dm): the wing's transfers, test records, and the pool with a forced admission per record */
+const PrisonBountyTools = ({ bounty, busy, act }: BountyToolsProps) => {
+  const pool = extrasRows(bounty.pool);
+  return (
+    <>
+      <LabeledList.Item label="Bounty intake">
+        {BOUNTY_INTAKE_SETTINGS.map(([setting, label]) => (
+          <Button
+            key={setting}
+            compact
+            selected={bounty.setting === setting}
+            disabled={busy}
+            onClick={() => act('prison_bounty_intake', { setting })}
+          >
+            {label}
+          </Button>
+        ))}
+        <Box inline color="label" ml={1}>
+          {`${bounty.count || 0}/${bounty.max || 0} held, ${
+            bounty.most_wanted || 0
+          }/${bounty.lanes || 1} Most Wanted`}
+        </Box>
+        {bounty.next ? (
+          <Box color="average" mt={0.5}>
+            {`Next: ${bounty.next.name || '?'} (${bounty.next.tier || '?'})`}
+          </Box>
+        ) : null}
+      </LabeledList.Item>
+      <LabeledList.Item label="Bounty pool">
+        {BOUNTY_TIERS.map(([tier, label]) => (
+          <Button
+            key={tier}
+            compact
+            icon="plus"
+            disabled={busy}
+            tooltip="A test record, reserved for this wing"
+            onClick={() => act('prison_bounty_make', { tier })}
+          >
+            {label}
+          </Button>
+        ))}
+        <Button.Confirm
+          compact
+          icon="trash"
+          color="bad"
+          confirmContent="Clear?"
+          disabled={busy || pool.length === 0}
+          onClick={() => act('prison_bounty_clear', {})}
+        >
+          Clear
+        </Button.Confirm>
+        {pool.length === 0 ? (
+          <Box color="label" mt={0.5}>
+            Empty
+          </Box>
+        ) : null}
+        {pool.map((record) => (
+          <Box
+            key={record.id}
+            className="OutpostPrisonAdmin__bounty-record"
+            mt={0.5}
+          >
+            <Box inline bold mr={1}>
+              {record.name || '?'}
+            </Box>
+            <Box inline color="label" mr={1}>
+              {[
+                record.tier,
+                record.archetype,
+                `${clock(record.age || 0)} in pool`,
+                `leaves in ${clock(record.left || 0)}`,
+                record.ours
+                  ? 'reserved here'
+                  : record.reserved_for
+                    ? `reserved for ${record.reserved_for}`
+                    : 'open',
+                record.named_to ? `named to ${record.named_to}` : null,
+                record.accepts ? null : 'refused here',
+              ]
+                .filter(Boolean)
+                .join(' / ')}
+            </Box>
+            <Button
+              compact
+              icon="right-to-bracket"
+              disabled={busy}
+              tooltip="Beam them in now, into the first free cell"
+              onClick={() => act('prison_bounty_admit', { id: record.id })}
+            >
+              Admit
+            </Button>
+          </Box>
+        ))}
+      </LabeledList.Item>
+    </>
   );
 };
 

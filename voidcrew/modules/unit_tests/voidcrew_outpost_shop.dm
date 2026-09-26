@@ -90,9 +90,7 @@
 				TEST_ASSERT(fixture.anchored, "[fixture] in the shop is not anchored at [rotation] degrees")
 
 		// Management console plumbing
-		var/list/summary = shop.pricing_summary()
-		TEST_ASSERT(summary["installed"] && summary["open"], "The pricing summary misreports the shop at [rotation] degrees")
-		TEST_ASSERT_EQUAL(summary["capacity"], 500, "The pricing summary misreports the capacity at [rotation] degrees")
+		TEST_ASSERT(shop.installed && shop.is_open, "The shop is not installed and open at [rotation] degrees")
 
 		// One shop per claim: forget this one so the next rotation can be placed
 		home.outpost_upgrades -= "shop"

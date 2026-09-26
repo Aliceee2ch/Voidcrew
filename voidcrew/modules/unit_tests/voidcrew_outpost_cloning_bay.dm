@@ -339,12 +339,11 @@
 	var/list/detail = room.service_ui_data(owner)
 	TEST_ASSERT_EQUAL(detail["kind"], "cloning", "The Services detail has the wrong kind")
 	TEST_ASSERT(detail["can_evict"], "The owner cannot evict")
-	TEST_ASSERT_EQUAL(detail["price"], 600, "The Services detail shows the wrong price")
 	var/list/vat_rows = detail["vats"]
 	var/list/vat_row = vat_rows[1]
-	for(var/key in list("ref", "state", "holder", "percent", "paid", "evict_denial"))
+	for(var/key in list("ref", "state", "holder", "evict_denial"))
 		TEST_ASSERT(key in vat_row, "A Services vat row has no [key]")
-	TEST_ASSERT_EQUAL(vat_row["paid"], 600, "The Services row shows the wrong payment")
+	TEST_ASSERT_EQUAL(vat.paid_amount, 600, "The vat recorded the wrong payment")
 	TEST_ASSERT_NULL(vat_row["evict_denial"], "The Services row refuses a valid eviction")
 	TEST_ASSERT(room.service_ui_act(owner, "evict", list("ref" = REF(vat))), "The evict action was not handled")
 	TEST_ASSERT_NULL(vat.imprint_mind_ref, "Eviction left the imprint")
@@ -380,7 +379,6 @@
 	qdel(lost_card.registered_account)
 	treasury_before = treasury.account_balance
 	TEST_ASSERT_NULL(vat.eviction_denial(owner), "An imprint whose payer account is gone could not be evicted")
-	TEST_ASSERT_EQUAL(vat.eviction_refund(), 0, "A refund is offered to a deleted account")
 	TEST_ASSERT_NULL(vat.evict(owner), "An imprint whose payer account is gone could not be evicted")
 	TEST_ASSERT_NULL(vat.imprint_mind_ref, "The eviction left the imprint")
 	TEST_ASSERT_EQUAL(treasury.account_balance, treasury_before, "An eviction with no account to refund moved money")

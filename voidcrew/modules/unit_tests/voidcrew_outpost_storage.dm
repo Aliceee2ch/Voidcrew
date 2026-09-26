@@ -229,14 +229,16 @@
 	TEST_ASSERT(first.close(new_body), "The vacant locker would not close")
 	TEST_ASSERT(!first.locked, "A vacant locker locked itself on closing")
 
-	// The management console sees counts only.
+	// The management console sees the room kind only: never contents, never who rents what.
 	var/list/detail = room.service_ui_data(owner)
-	for(var/key in list("kind", "price", "lockers", "rented"))
-		TEST_ASSERT(key in detail, "The storage detail has no [key]")
 	TEST_ASSERT_EQUAL(detail["kind"], "storage", "The storage detail has the wrong kind")
-	TEST_ASSERT_EQUAL(detail["price"], 200, "The storage detail has the wrong price")
-	TEST_ASSERT_EQUAL(detail["lockers"], 13, "The storage detail has the wrong locker count")
-	TEST_ASSERT_EQUAL(detail["rented"], 1, "The storage detail has the wrong rented count")
+	TEST_ASSERT_EQUAL(length(detail), 1, "The storage detail sends more than its kind")
+	TEST_ASSERT_EQUAL(length(room.live_lockers()), 13, "The room has the wrong locker count")
+	var/rented = 0
+	for(var/obj/structure/closet/secure_closet/outpost_storage/locker as anything in room.live_lockers())
+		if(locker.renter_ckey)
+			rented++
+	TEST_ASSERT_EQUAL(rented, 1, "The room has the wrong rented count")
 
 	// Admin release through the manipulator rows.
 	var/list/rows = room.admin_ui_data()

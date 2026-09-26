@@ -217,9 +217,6 @@
 		))
 	return list(
 		"kind" = "medical",
-		"price" = outpost.get_price(OUTPOST_PRICE_MEDLAB_PASS),
-		"pass_minutes" = OUTPOST_MEDLAB_PASS_TIME / (1 MINUTES),
-		"active_passes" = active_pass_count(),
 		"can_edit" = outpost.is_current_management_user(user),
 		"procedures" = procedures,
 	)

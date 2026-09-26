@@ -87,13 +87,6 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 			return locker
 	return null
 
-/// How many of the room's lockers are rented
-/datum/outpost_upgrade/service/storage/proc/rented_count()
-	. = 0
-	for(var/obj/structure/closet/secure_closet/outpost_storage/locker as anything in live_lockers())
-		if(locker.renter_ckey)
-			.++
-
 // A renter always reaches a paid locker, even while the room is closed to visitors
 /datum/outpost_upgrade/service/storage/admits_visitor_extra(mob/user)
 	if(!user?.ckey)
@@ -101,14 +94,9 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	var/obj/structure/closet/secure_closet/outpost_storage/locker = rental_of(user.ckey)
 	return !!locker?.is_renter(user)
 
-// Counts only: never contents, never who rents what
+// The card is the room's name and visitor switch; never contents, never who rents what
 /datum/outpost_upgrade/service/storage/service_ui_data(mob/user)
-	return list(
-		"kind" = "storage",
-		"price" = outpost ? outpost.get_price(OUTPOST_PRICE_STORAGE_RENT) : 0,
-		"lockers" = length(live_lockers()),
-		"rented" = rented_count(),
-	)
+	return list("kind" = "storage")
 
 /// One manipulator row per locker. Admins see who rents it; a rented row can be released.
 /datum/outpost_upgrade/service/storage/admin_ui_data()

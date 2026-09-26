@@ -56,14 +56,10 @@
 			"ref" = REF(vat),
 			"state" = vat.bay_state(),
 			"holder" = vat.imprint_mind_ref ? vat.imprint_name : null,
-			"percent" = vat.imprint_mind_ref ? vat.get_growth_percent() : 0,
-			"paid" = vat.paid_amount,
-			"refund" = vat.eviction_refund(),
 			"evict_denial" = vat.imprint_mind_ref ? vat.eviction_denial(user) : null,
 		))
 	return list(
 		"kind" = "cloning",
-		"price" = outpost.get_price(OUTPOST_PRICE_CLONE_IMPRINT),
 		"can_evict" = outpost.is_current_treasury_user(user) || outpost.is_current_management_user(user),
 		"vats" = rows,
 	)
@@ -320,13 +316,6 @@
 /// Whether the dead holder is connected: as a ghost, or still in their corpse
 /obj/machinery/cloning_vat/outpost/proc/dead_holder_online(datum/mind/mind)
 	return !!(holder_ghost(mind) || mind.current?.client)
-
-/// What an eviction would refund now: what was paid, or 0 when it was free or the paying account is gone
-/obj/machinery/cloning_vat/outpost/proc/eviction_refund()
-	if(paid_amount <= 0)
-		return 0
-	var/datum/bank_account/account = payer_account_ref?.resolve()
-	return QDELETED(account) ? 0 : paid_amount
 
 /// Erases the imprint and refunds exactly what was paid, if anything and to anyone. Null on success, else a refusal.
 /obj/machinery/cloning_vat/outpost/proc/evict(mob/living/user)

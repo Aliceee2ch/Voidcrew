@@ -217,10 +217,7 @@
 	// The management detail matches the P7 contract
 	var/list/detail = lab.service_ui_data(owner)
 	TEST_ASSERT_EQUAL(detail["kind"], "medical", "Wrong detail kind")
-	TEST_ASSERT_EQUAL(detail["price"], 300, "Wrong detail price")
-	TEST_ASSERT_EQUAL(detail["pass_minutes"], 30, "Wrong pass length")
 	TEST_ASSERT_EQUAL(length(detail["procedures"]), 7, "Wrong procedure rows")
-	TEST_ASSERT(!isnull(detail["active_passes"]), "No active pass count")
 	TEST_ASSERT(!isnull(detail["can_edit"]), "No can_edit flag")
 
 // ===== AUTO-SURGEON =====

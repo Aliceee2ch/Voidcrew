@@ -71,52 +71,29 @@
 
 /// A pad row for the management card
 /datum/outpost_upgrade/service/teleporter/proc/pad_row(obj/machinery/outpost_network_pad/pad)
-	var/obj/structure/overmap/dynamic/player_outpost/home = pad.player_host()
 	return list(
 		"id" = pad.network_id,
 		"name" = pad.site_name(),
-		"kind" = pad.is_trader ? "market" : "colony",
-		"zone" = pad.get_zone(),
-		"raidLockLeft" = home ? home.outpost_raid_lock_left() : 0,
-		"fee" = home ? home.get_price(OUTPOST_PRICE_TELEPORT_ARRIVAL) : 0,
 	)
 
 /datum/outpost_upgrade/service/teleporter/service_ui_data(mob/user)
 	var/obj/machinery/outpost_network_pad/own_pad = pad_ref?.resolve()
 	var/list/allow = list()
 	var/list/candidates = list()
-	var/destinations = 0
 	for(var/obj/machinery/outpost_network_pad/pad as anything in GLOB.outpost_network_pads)
 		if(pad == own_pad || !pad.network_host())
 			continue
-		destinations++
 		if(pad.network_id in allowed_pads)
 			allow += list(pad_row(pad))
 		else
 			candidates += list(pad_row(pad))
-	var/policy_note
-	if(outpost.dock_mode == OUTPOST_DOCK_MODE_LOCKDOWN)
-		policy_note = "Lockdown: only members arrive."
-	else if(outpost.outpost_raid_locked())
-		policy_note = "Under attack: only members arrive."
-	else if(arrival_policy == OUTPOST_NETWORK_ARRIVALS_OPEN && outpost.dock_mode == OUTPOST_DOCK_MODE_REQUEST)
-		policy_note = "Docking requests are on: only members and approved crews arrive."
 	return list(
 		"kind" = "teleporter",
-		"installed" = installed,
 		"padName" = own_pad ? own_pad.site_name() : name,
-		"online" = !!own_pad?.network_host(),
-		"zone" = own_pad?.get_zone(),
 		"arrivals" = arrival_policy,
-		"policyNote" = policy_note,
-		"price" = outpost.get_price(OUTPOST_PRICE_TELEPORT_ARRIVAL),
 		"allowlist" = allow,
 		"candidates" = candidates,
-		"destinations" = destinations,
-		"raidLockLeft" = outpost.outpost_raid_lock_left(),
 		"can_edit" = !!outpost.is_current_management_user(user),
-		"tripsIn" = trips_in,
-		"tripsOut" = trips_out,
 	)
 
 /datum/outpost_upgrade/service/teleporter/service_ui_act(mob/user, action, list/params)

@@ -309,7 +309,7 @@
 	room_b.service_ui_act(owner_b, "teleporter_allow", list("target" = pad_a.network_id))
 	TEST_ASSERT(pad_a.network_id in room_b.allowed_pads, "The owner could not allow a source pad")
 	var/list/detail = room_b.service_ui_data(owner_b)
-	for(var/key in list("kind", "installed", "padName", "arrivals", "allowlist", "candidates", "can_edit", "tripsIn", "tripsOut"))
+	for(var/key in list("kind", "padName", "arrivals", "allowlist", "candidates", "can_edit"))
 		TEST_ASSERT(key in detail, "The management card is missing [key]")
 	TEST_ASSERT(!("visitors_allowed" in detail), "The management card sends visitors_allowed")
 	room_b.service_ui_act(owner_b, "teleporter_disallow", list("target" = pad_a.network_id))

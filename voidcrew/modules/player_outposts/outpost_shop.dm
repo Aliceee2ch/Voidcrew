@@ -75,22 +75,12 @@
 	. = ..()
 	get_stock()?.mark_dirty()
 
-/datum/outpost_upgrade/service/shop/proc/counts()
-	var/obj/machinery/outpost_shop_stock/stock = get_stock()
-	return stock ? stock.summary_counts() : list("listings" = 0, "priced" = 0, "unpriced" = 0, "items" = 0, "capacity" = OUTPOST_SHOP_MAX_ITEMS)
-
-/datum/outpost_upgrade/service/shop/pricing_summary()
-	var/list/summary = counts()
-	summary["installed"] = installed
-	summary["open"] = is_open
-	return summary
-
 /datum/outpost_upgrade/service/shop/service_ui_data(mob/user)
-	var/list/detail = counts()
-	detail["kind"] = "shop"
-	detail["open"] = is_open
-	detail["can_toggle"] = !QDELETED(outpost) && (outpost.is_current_management_user(user) || outpost.is_current_pricing_user(user))
-	return detail
+	return list(
+		"kind" = "shop",
+		"open" = is_open,
+		"can_toggle" = !QDELETED(outpost) && (outpost.is_current_management_user(user) || outpost.is_current_pricing_user(user)),
+	)
 
 /datum/outpost_upgrade/service/shop/service_ui_act(mob/user, action, list/params)
 	if(action != "toggle_open")

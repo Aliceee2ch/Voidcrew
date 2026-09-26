@@ -670,21 +670,6 @@
 	if(register)
 		SStgui.update_uis(register)
 
-/// Counts for the management console: list("listings", "priced", "unpriced", "items", "capacity")
-/obj/machinery/outpost_shop_stock/proc/summary_counts()
-	var/priced = 0
-	for(var/id in listings_by_id)
-		var/datum/outpost_shop_listing/listing = listings_by_id[id]
-		if(listing.price > 0)
-			priced++
-	return list(
-		"listings" = length(listings_by_id),
-		"priced" = priced,
-		"unpriced" = length(listings_by_id) - priced,
-		"items" = length(listing_of),
-		"capacity" = OUTPOST_SHOP_MAX_ITEMS,
-	)
-
 /obj/machinery/outpost_shop_stock/proc/shop_title()
 	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost()
 	return home ? "[home.name] shop" : "Shop"

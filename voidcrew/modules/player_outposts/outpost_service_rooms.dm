@@ -283,10 +283,6 @@
 /datum/outpost_upgrade/service/proc/admin_ui_act(mob/user, action, list/params)
 	return FALSE
 
-/// A summary for the Pricing tab (the shop's listing counts), or null
-/datum/outpost_upgrade/service/proc/pricing_summary()
-	return null
-
 /// TRUE lets this visitor through the room's public door while the room is closed to visitors
 /datum/outpost_upgrade/service/proc/admits_visitor_extra(mob/user)
 	return FALSE

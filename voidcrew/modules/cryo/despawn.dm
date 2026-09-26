@@ -215,7 +215,7 @@ GLOBAL_LIST_INIT(cryo_undeletable_items, typecacheof(list(
 	owner?.ship_notify("[despawn_name] has entered cryogenic storage.", "CREW UPDATE", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 40)
 	release_ship_seat(owner, leaving_mind)
 	for(var/obj/structure/overmap/dynamic/player_outpost/home as anything in GLOB.player_outposts)
-		if(leaving_mind in home.residents || home == linked_outpost)
+		if((leaving_mind in home.residents) || home == linked_outpost)
 			GLOB.cryo_rejoin_cooldowns["[player_ckey]@[REF(home)]"] = world.time + CRYO_REJOIN_COOLDOWN
 			home.strip_resident(leaving_mind) // roster and every delegated role, pricers included
 	detach_from_crews(leaving_mind, despawn_name)

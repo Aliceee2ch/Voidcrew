@@ -2296,11 +2296,8 @@ SUBSYSTEM_DEF(bounty_kingpin)
 // THE BOUNTY PANEL
 // =========================================================================
 
-// INTEGRATION (P9 -> P8): "Post a bounty now" in P8's Bounty Panel gets a kingpin entry through P8's
-// extension point, /datum/bounty_admin_post_action (bounty_admin.dm on main, 5ead9f828d1). That type
-// is not in this branch's base (a74f0ab3c6f), so the block below is switched off here: delete the
-// #ifdef and #endif lines at merge.
-#ifdef BOUNTY_KINGPIN_ADMIN_POST_ACTION
+// "Post a bounty now" in P8's Bounty Panel gets a kingpin entry through its extension point,
+// /datum/bounty_admin_post_action (bounty_admin.dm).
 /// The admin's "Post a bounty now" entry for the kingpin: now, whatever the cadence says, but still one at a time
 /datum/bounty_admin_post_action/kingpin
 	name = "Kingpin (black market)"
@@ -2316,4 +2313,3 @@ SUBSYSTEM_DEF(bounty_kingpin)
 	if(!posting)
 		return panel.refuse(user, "The kingpin couldn't be posted.")
 	return "post the kingpin bounty on [posting.record?.name || "nobody"] at [outpost.name]"
-#endif

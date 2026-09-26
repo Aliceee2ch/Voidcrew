@@ -21,6 +21,8 @@ An extension joins the wing's east or west wall, or the far wall of an extension
 
 Once it is built, the wall opens into the office and the yard, and the new cells take the next numbers. Each extension lets one more prisoner arrive at a time and adds one more guard post. It runs off the wing's APC and has no door of its own; staff get to it through the wing's office.
 
+The extension cells need staff around to take new prisoners. If nobody from the outpost has been home for 15 minutes, they take no new arrivals, and the warden's log says so. The wing's own four cells keep taking prisoners as usual. Once someone is back, the extension cells fill again. When the wing's cleanliness is judged, an extension's floor only counts as far as its cells are occupied, so empty cells don't make a dirty wing look clean.
+
 ## The warden's console
 
 The console in the office lists each cell, who is in it, what for and how long they have left. It also shows the pay rate, the wing's conditions, what is on the hatches, any trouble brewing, and a log. Managers open and close **intake** (nobody arrives while it is closed) and choose whether visitors may use the staff doors.

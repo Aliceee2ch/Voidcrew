@@ -108,6 +108,9 @@
 /// Advances presence by `seconds`: works out whether a member of the wing is home
 /datum/outpost_prison/proc/presence_tick(seconds)
 	crew_present = find_crew_home()
+	// For the extensions' intake, which waits for staff (extension_staffed())
+	if(crew_home())
+		last_crew_home_at = world.time
 
 /// The z-level the wing is on, or 0
 /datum/outpost_prison/proc/wing_z()

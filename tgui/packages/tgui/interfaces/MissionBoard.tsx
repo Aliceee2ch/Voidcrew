@@ -154,6 +154,8 @@ type WantedEntry = {
   pay_note?: string | null;
   can_turn_in?: BooleanLike;
   turn_in_state?: string | null;
+  // Kill-only (bounty_lair.dm): WANTED: DEAD, paid in full on the boss's trophy
+  kill_only?: BooleanLike;
 };
 
 type OutpostAdvert = {
@@ -838,6 +840,7 @@ const WANTED_PAD_STATES: Record<string, string> = {
   dead: 'On the pad, dead',
   free: 'On the pad, but standing free',
   proof: 'Evidence tag on the pad',
+  trophy: 'Trophy on the pad',
 };
 
 const formatWantedTime = (seconds: number) => {
@@ -912,6 +915,7 @@ const WantedCard = (props: WantedCardProps) => {
   const hunting = !!entry.hunting_by_us;
   const isOffer = !!entry.private;
   const relisting = entry.status === 'relisting';
+  const killOnly = !!entry.kill_only;
   const abandoned = !!entry.was_abandoned;
   const huntRefusal = entry.hunt_refusal ?? null;
   const padState = entry.turn_in_state
@@ -974,7 +978,7 @@ const WantedCard = (props: WantedCardProps) => {
         <Flex.Item grow>
           <Box>
             <Box as="span" bold color={tierColor}>
-              {entry.tier_name || 'Wanted'}
+              {killOnly ? 'WANTED: DEAD' : entry.tier_name || 'Wanted'}
             </Box>
             {entry.alias && entry.alias !== entry.name ? (
               <Box as="span" color="label" ml={1}>
@@ -1005,21 +1009,31 @@ const WantedCard = (props: WantedCardProps) => {
       </Flex>
 
       <LabeledList>
-        <LabeledList.Item label="Never downed">
-          <Box as="span" color="good" bold>
-            {full} cr{voucherText}
-          </Box>
-        </LabeledList.Item>
-        <LabeledList.Item label="Downed">
-          <Box as="span" color="average">
-            {downed} cr
-          </Box>
-        </LabeledList.Item>
-        <LabeledList.Item label="Dead">
-          <Box as="span" color="bad">
-            {dead} cr
-          </Box>
-        </LabeledList.Item>
+        {killOnly ? (
+          <LabeledList.Item label="On the trophy">
+            <Box as="span" color="good" bold>
+              {full} cr{voucherText}
+            </Box>
+          </LabeledList.Item>
+        ) : (
+          <>
+            <LabeledList.Item label="Never downed">
+              <Box as="span" color="good" bold>
+                {full} cr{voucherText}
+              </Box>
+            </LabeledList.Item>
+            <LabeledList.Item label="Downed">
+              <Box as="span" color="average">
+                {downed} cr
+              </Box>
+            </LabeledList.Item>
+            <LabeledList.Item label="Dead">
+              <Box as="span" color="bad">
+                {dead} cr
+              </Box>
+            </LabeledList.Item>
+          </>
+        )}
         <LabeledList.Item label="Time left">
           {formatWantedTime(entry.time_left ?? 0)}
           {entry.clock_held ? (
@@ -1101,7 +1115,9 @@ const WantedCard = (props: WantedCardProps) => {
                 ? 'Requires a mission pad'
                 : entry.can_turn_in
                   ? 'Beam them off the pad and collect'
-                  : 'Put them on your mission pad first'
+                  : killOnly
+                    ? 'Put the trophy on your mission pad first'
+                    : 'Put them on your mission pad first'
             }
             onClick={() => act('turn_in_wanted', { ref: entry.ref })}
           >

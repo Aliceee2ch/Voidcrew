@@ -98,7 +98,7 @@
 	return ..()
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/charge/worth_using(atom/target)
-	if(!isliving(target))
+	if(!aimable(target))
 		return FALSE
 	var/distance = get_dist(owner, target)
 	return distance >= 2 && distance <= BOUNTY_JUGGERNAUT_CHARGE_RANGE && can_see(owner, target, BOUNTY_JUGGERNAUT_CHARGE_RANGE)
@@ -137,7 +137,7 @@
 		return
 	caught = FALSE
 	step_index = 0
-	charge_target = isliving(target) ? WEAKREF(target) : null
+	charge_target = aimable(target) ? WEAKREF(target) : null
 	var/serial = boss.boss_set_busy("charge", effect_time + 1 SECONDS, immobile = FALSE)
 	boss.set_glide_size(DELAY_TO_GLIDE_SIZE(BOUNTY_JUGGERNAUT_CHARGE_STEP))
 	playsound(boss, 'sound/effects/meteorimpact.ogg', 50, TRUE)
@@ -158,13 +158,14 @@
 	if(!boss.leash_ok(next) || isspaceturf(next) || isgroundlessturf(next) || islava(next) || ischasm(next))
 		end_charge(serial)
 		return
-	for(var/mob/living/victim in next)
-		if(!victim.density || !boss.boss_can_hurt(victim))
+	// Someone in the way: a hunter, or a mech with one in it, is slammed rather than bounced off (H2).
+	for(var/atom/movable/thing as anything in next)
+		if(!thing.density || !(isliving(thing) || ismecha(thing)) || !boss.boss_can_hurt(thing))
 			continue
-		if(victim == charge_target?.resolve() || prob(BOUNTY_JUGGERNAUT_CHARGE_BYSTANDER))
-			slam_into(victim)
+		if(thing == charge_target?.resolve() || prob(BOUNTY_JUGGERNAUT_CHARGE_BYSTANDER))
+			slam_into(thing)
 		else
-			boss.visible_message(span_warning("[boss] pulls up short of [victim]."))
+			boss.visible_message(span_warning("[boss] pulls up short of [thing]."))
 		caught = TRUE
 		end_charge(serial)
 		return
@@ -183,15 +184,11 @@
 	for(var/obj/thing as anything in blockers)
 		if(QDELETED(thing) || !thing.density)
 			continue
-		var/is_window = istype(thing, /obj/structure/window)
-		if(smashes(thing) && break_thing(thing))
-			boss.do_attack_animation(next, ATTACK_EFFECT_SMASH)
-			playsound(next, is_window ? 'sound/effects/glass/glassbr1.ogg' : 'sound/effects/woodhit.ogg', 70, TRUE)
+		if(smash(thing))
 			continue
-		if(!QDELETED(thing) && thing.density)
-			bounce(thing, serial)
-			return
-	if(!boss.Move(next, get_dir(boss, next)))
+		bounce(thing, serial)
+		return
+	if(!try_step(boss, next))
 		bounce(next, serial)
 		return
 	var/list/chairs = list()
@@ -208,14 +205,40 @@
 		return !window.reinf && !istype(window, /obj/structure/window/plasma)
 	return istype(thing, /obj/structure/table) || istype(thing, /obj/structure/chair) || istype(thing, /obj/structure/grille)
 
-/// Slams into `victim`: brute through armour, knocked down
-/datum/action/cooldown/mob_cooldown/bounty_boss/charge/proc/slam_into(mob/living/victim)
+/// Smashes `thing` out of its path if it is something it goes through and may break here (it breaks outright, M1). Returns TRUE if it is gone.
+/datum/action/cooldown/mob_cooldown/bounty_boss/charge/proc/smash(obj/thing)
+	if(!smashes(thing))
+		return FALSE
+	var/turf/spot = get_turf(thing)
+	var/is_window = istype(thing, /obj/structure/window)
+	if(!break_thing(thing))
+		return FALSE
+	owner.do_attack_animation(spot, ATTACK_EFFECT_SMASH)
+	playsound(spot, is_window ? 'sound/effects/glass/glassbr1.ogg' : 'sound/effects/woodhit.ogg', 70, TRUE)
+	return QDELETED(thing) || !thing.density
+
+/// Steps onto `next`; a plain directional window on its own tile facing that way is smashed first. Returns TRUE if it moved.
+/datum/action/cooldown/mob_cooldown/bounty_boss/charge/proc/try_step(mob/living/basic/bounty_criminal/boss/boss, turf/next)
+	var/direction = get_dir(boss, next)
+	if(boss.Move(next, direction))
+		return TRUE
+	var/list/in_the_way = list()
+	for(var/obj/structure/window/window in get_turf(boss))
+		if(window.density && !window.fulltile && (window.dir & direction))
+			in_the_way += window
+	if(!length(in_the_way))
+		return FALSE
+	for(var/obj/structure/window/window as anything in in_the_way)
+		if(!smash(window))
+			return FALSE
+	return boss.Move(next, direction)
+
+/// Slams into `victim`, a hunter or a mech: brute through armour, and a hunter is knocked down
+/datum/action/cooldown/mob_cooldown/bounty_boss/charge/proc/slam_into(atom/victim)
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
 	victim.visible_message(span_danger("[boss] slams into [victim]!"), span_userdanger("[boss] slams into you!"))
 	playsound(victim, 'sound/effects/meteorimpact.ogg', 70, TRUE)
-	victim.apply_damage(BOUNTY_JUGGERNAUT_CHARGE_DAMAGE, BRUTE, BODY_ZONE_CHEST, victim.run_armor_check(BODY_ZONE_CHEST, MELEE, armour_penetration = BOUNTY_JUGGERNAUT_MELEE_AP, silent = TRUE))
-	victim.Knockdown(BOUNTY_JUGGERNAUT_CHARGE_KNOCKDOWN)
-	shake_camera(victim, 4, 3)
+	boss.boss_hit(victim, BOUNTY_JUGGERNAUT_CHARGE_DAMAGE, BRUTE, MELEE, BOUNTY_JUGGERNAUT_CHARGE_KNOCKDOWN, BOUNTY_JUGGERNAUT_MELEE_AP)
 
 /// Ran into something it can't break: stopped dead, reeling
 /datum/action/cooldown/mob_cooldown/bounty_boss/charge/proc/bounce(atom/obstacle, serial)
@@ -235,8 +258,9 @@
 		boss.boss_clear_busy(serial)
 
 /**
- * Slam: both fists up and a red ring on the floor around it, then down. Everyone it may hurt in
- * the ring takes brute through armour and is knocked down. Only when someone is next to it.
+ * Slam: both fists up and a red ring on the floor around it, then down. Every hunter it may hurt in
+ * the ring takes brute through armour and is knocked down; a mech takes it on its hull. Only when
+ * someone is next to it.
  */
 /datum/action/cooldown/mob_cooldown/bounty_boss/slam
 	name = "Ground Slam"
@@ -245,7 +269,7 @@
 	windup = BOUNTY_JUGGERNAUT_SLAM_WINDUP
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/slam/worth_using(atom/target)
-	return isliving(target) && get_dist(owner, target) <= 1
+	return aimable(target) && get_dist(owner, target) <= 1
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/slam/telegraph(atom/target)
 	owner.visible_message(span_boldwarning("[owner] raises both fists high over [owner.p_their()] head!"))
@@ -261,11 +285,10 @@
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
 	boss.visible_message(span_danger("[boss] brings both fists down on the floor!"))
 	playsound(boss, 'sound/effects/meteorimpact.ogg', 80, TRUE)
-	for(var/mob/living/victim as anything in boss.boss_victims_on(RANGE_TURFS(1, boss)))
-		victim.apply_damage(BOUNTY_JUGGERNAUT_SLAM_DAMAGE, BRUTE, BODY_ZONE_CHEST, victim.run_armor_check(BODY_ZONE_CHEST, MELEE, silent = TRUE))
-		victim.Knockdown(BOUNTY_JUGGERNAUT_SLAM_KNOCKDOWN)
-		shake_camera(victim, 3, 2)
-		to_chat(victim, span_userdanger("The floor jumps under you and throws you down!"))
+	for(var/atom/victim as anything in boss.boss_victims_on(RANGE_TURFS(1, boss)))
+		boss.boss_hit(victim, BOUNTY_JUGGERNAUT_SLAM_DAMAGE, BRUTE, MELEE, BOUNTY_JUGGERNAUT_SLAM_KNOCKDOWN)
+		if(isliving(victim))
+			to_chat(victim, span_userdanger("The floor jumps under you and throws you down!"))
 
 // ===== PYROMANIAC =====
 
@@ -332,10 +355,15 @@
 	return ..()
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/flamer/worth_using(atom/target)
-	return isliving(target) && get_dist(owner, target) <= BOUNTY_PYROMANIAC_FLAMER_RANGE && can_see(owner, target, BOUNTY_PYROMANIAC_FLAMER_RANGE)
+	return aimable(target) && get_dist(owner, target) <= BOUNTY_PYROMANIAC_FLAMER_RANGE && can_see(owner, target, BOUNTY_PYROMANIAC_FLAMER_RANGE) && landing_ok(target)
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/flamer/telegraph(atom/target)
-	cone = cone_turfs(target, BOUNTY_PYROMANIAC_FLAMER_RANGE, BOUNTY_PYROMANIAC_FLAMER_ARC)
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
+	cone = list()
+	// Only where its fire may reach: never off its site or into a ship (M2).
+	for(var/turf/spot as anything in cone_turfs(target, BOUNTY_PYROMANIAC_FLAMER_RANGE, BOUNTY_PYROMANIAC_FLAMER_ARC))
+		if(boss.boss_reach_ok(spot))
+			cone += spot
 	owner.visible_message(span_boldwarning("[owner] opens the valve on [owner.p_their()] flamer. The pilot light hisses."))
 	playsound(owner, 'sound/effects/spray.ogg', 50, TRUE)
 	mark_turfs(cone, "#ff8a1f")
@@ -367,24 +395,26 @@
 	return ..()
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/molotov/worth_using(atom/target)
-	if(!isliving(target))
+	if(!aimable(target))
 		return FALSE
 	var/distance = get_dist(owner, target)
-	return distance >= 2 && distance <= BOUNTY_PYROMANIAC_MOLOTOV_RANGE && can_see(owner, target, BOUNTY_PYROMANIAC_MOLOTOV_RANGE)
+	return distance >= 2 && distance <= BOUNTY_PYROMANIAC_MOLOTOV_RANGE && can_see(owner, target, BOUNTY_PYROMANIAC_MOLOTOV_RANGE) && landing_ok(target)
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/molotov/telegraph(atom/target)
 	landing = get_turf(target)
 	owner.visible_message(span_boldwarning("[owner] lights the rag on a bottle and takes aim!"))
 	playsound(owner, 'sound/items/match_strike.ogg', 60, TRUE)
-	mark_turfs(splash_turfs(landing), "#ff5a1f", "target_circle")
+	// The ring stays until the bottle lands (L3).
+	mark_turfs(splash_turfs(landing), "#ff5a1f", "target_circle", /obj/effect/temp_visual/bounty_boss_thrown::duration)
 
-/// The 3x3 around `center` that a bottle bursting there reaches: open floor, not through walls
+/// The 3x3 around `center` that a bottle bursting there reaches: open floor, not through walls, and only where its fire may reach (M2)
 /datum/action/cooldown/mob_cooldown/bounty_boss/molotov/proc/splash_turfs(turf/center)
 	. = list()
-	if(!center)
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
+	if(!center || !istype(boss))
 		return
 	for(var/turf/spot as anything in RANGE_TURFS(1, center))
-		if(!isclosedturf(spot) && bounty_boss_clear_line(center, spot))
+		if(!isclosedturf(spot) && bounty_boss_clear_line(center, spot) && boss.boss_reach_ok(spot))
 			. += spot
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/molotov/effect(atom/target)
@@ -459,7 +489,7 @@
  * out the grenade), rather than standing idle.
  */
 /mob/living/basic/bounty_criminal/boss/demolitionist/boss_engage_plan(datum/ai_controller/controller, atom/target)
-	if(!isliving(target))
+	if(!isliving(target) && !ismecha(target))
 		return FALSE
 	var/distance = get_dist(src, target)
 	if(distance <= 1 || !boss_has_next_throw(target))
@@ -520,16 +550,17 @@
 	return ..()
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/grenade/worth_using(atom/target)
-	if(!isliving(target))
+	if(!aimable(target))
 		return FALSE
 	var/distance = get_dist(owner, target)
-	return distance >= 2 && distance <= BOUNTY_DEMOLITIONIST_GRENADE_RANGE && can_see(owner, target, BOUNTY_DEMOLITIONIST_GRENADE_RANGE)
+	return distance >= 2 && distance <= BOUNTY_DEMOLITIONIST_GRENADE_RANGE && can_see(owner, target, BOUNTY_DEMOLITIONIST_GRENADE_RANGE) && landing_ok(target)
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/grenade/telegraph(atom/target)
 	landing = get_turf(target)
 	owner.visible_message(span_boldwarning("[owner] pulls the pin on a grenade!"))
 	playsound(owner, 'sound/items/weapons/armbomb.ogg', 60, TRUE)
-	mark_turfs(list(landing), COLOR_RED, "target_circle")
+	// The mark stays until the grenade lands and shows its own ring (L3).
+	mark_turfs(list(landing), COLOR_RED, "target_circle", /obj/effect/temp_visual/bounty_boss_thrown::duration)
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/grenade/effect(atom/target)
 	var/turf/spot = landing
@@ -539,9 +570,10 @@
 	throw_grenade(spot)
 	if(!prob(BOUNTY_DEMOLITIONIST_SECOND_GRENADE))
 		return
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
 	var/list/near = list()
 	for(var/turf/other as anything in RANGE_TURFS(2, spot))
-		if(other != spot && !isclosedturf(other) && bounty_boss_clear_line(get_turf(owner), other))
+		if(other != spot && !isclosedturf(other) && boss.boss_reach_ok(other) && bounty_boss_clear_line(get_turf(owner), other))
 			near += other
 	if(length(near))
 		addtimer(CALLBACK(src, PROC_REF(throw_grenade), pick(near)), 0.5 SECONDS, TIMER_DELETE_ME)
@@ -554,6 +586,7 @@
 		return
 	boss.visible_message(span_danger("[boss] throws a grenade!"))
 	new /obj/effect/temp_visual/bounty_boss_thrown(get_turf(boss), spot)
+	new /obj/effect/temp_visual/bounty_boss_mark(spot, /obj/effect/temp_visual/bounty_boss_thrown::duration, COLOR_RED, "target_circle")
 	addtimer(CALLBACK(src, PROC_REF(land), spot), /obj/effect/temp_visual/bounty_boss_thrown::duration, TIMER_DELETE_ME)
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/grenade/proc/land(turf/spot)
@@ -581,7 +614,7 @@
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/breach/worth_using(atom/target)
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
-	if(!isliving(target) || !istype(boss) || boss.boss_walls_left <= 0)
+	if(!aimable(target) || !istype(boss) || boss.boss_walls_left <= 0)
 		return FALSE
 	if(get_dist(boss, target) > BOUNTY_DEMOLITIONIST_BREACH_RANGE)
 		return FALSE
@@ -678,11 +711,11 @@
 /obj/effect/bounty_boss_explosive/proc/beep()
 	playsound(src, 'sound/machines/beep/beep.ogg', 30, TRUE)
 
-/// Whether the blast may hurt `victim`: its boss's rules, or with the boss gone, anyone awake who isn't a criminal
-/obj/effect/bounty_boss_explosive/proc/may_hit(mob/living/victim, mob/living/basic/bounty_criminal/boss/boss)
+/// Whether the blast may hurt `victim`: its boss's rules, or with the boss gone, awake hunters and their mechs
+/obj/effect/bounty_boss_explosive/proc/may_hit(atom/victim, mob/living/basic/bounty_criminal/boss/boss)
 	if(!QDELETED(boss))
 		return boss.boss_can_hurt(victim)
-	return isliving(victim) && victim.stat == CONSCIOUS && !istype(victim, /mob/living/basic/bounty_criminal) && !istype(victim, /mob/living/basic/bounty_companion)
+	return bounty_boss_orphan_victim(victim)
 
 /obj/effect/bounty_boss_explosive/proc/detonate()
 	var/turf/here = get_turf(src)
@@ -695,13 +728,18 @@
 	blast_structures(boss, here)
 	new /obj/effect/temp_visual/explosion/fast(here)
 	playsound(here, 'sound/effects/explosion/explosion1.ogg', 70, TRUE)
-	for(var/mob/living/victim in range(radius, here))
-		if(!may_hit(victim, boss) || !bounty_boss_clear_line(here, get_turf(victim)))
+	for(var/atom/movable/victim in range(radius, here))
+		if(!(isliving(victim) || ismecha(victim)) || !may_hit(victim, boss) || !bounty_boss_clear_line(here, get_turf(victim)))
 			continue
-		victim.apply_damage(damage, BRUTE, BODY_ZONE_CHEST, victim.run_armor_check(BODY_ZONE_CHEST, BOMB, silent = TRUE), spread_damage = TRUE)
-		if(knockdown)
-			victim.Knockdown(knockdown)
-		shake_camera(victim, 3, 2)
+		if(boss)
+			boss.boss_hit(victim, damage, BRUTE, BOMB, knockdown)
+		else if(ismecha(victim))
+			victim.take_damage(damage, BRUTE, BOMB, FALSE)
+		else
+			var/mob/living/person = victim
+			person.apply_damage(damage, BRUTE, BODY_ZONE_CHEST, person.run_armor_check(BODY_ZONE_CHEST, BOMB, silent = TRUE))
+			if(knockdown)
+				person.Knockdown(knockdown)
 	qdel(src)
 
 /// Structures in reach take the blast, through the boss's rules
@@ -775,6 +813,8 @@
 	/// Cuts since it last broke off, and when it may close in again
 	var/boss_cuts = 0
 	var/boss_breakoff_until = 0
+	/// Its dodge and miss messages show at most every BOUNTY_BOSS_MESSAGE_COOLDOWN (L5)
+	COOLDOWN_DECLARE(boss_message_cooldown)
 
 /mob/living/basic/bounty_criminal/boss/ghost/Destroy()
 	deltimer(boss_cloak_timer)
@@ -818,7 +858,7 @@
 
 /// Breaking off: it backs away from its target for a while
 /mob/living/basic/bounty_criminal/boss/ghost/boss_engage_plan(datum/ai_controller/controller, atom/target)
-	if(world.time >= boss_breakoff_until || !isliving(target) || get_dist(src, target) > 4)
+	if(world.time >= boss_breakoff_until || !(isliving(target) || ismecha(target)) || get_dist(src, target) > 4)
 		return FALSE
 	controller.queue_behavior(/datum/ai_behavior/step_away, BB_BASIC_MOB_CURRENT_TARGET)
 	return TRUE
@@ -841,14 +881,21 @@
 		hit_chance *= (100 - BOUNTY_GHOST_CLOAK_MISS) / 100
 	if(prob(hit_chance))
 		return NONE
-	visible_message(span_warning("[src] slips aside from [shot]!"))
+	boss_miss_message(span_warning("[src] slips aside from [shot]!"))
 	return PROJECTILE_INTERRUPT_HIT_PHASE
+
+/// A dodge or miss message, at most every BOUNTY_BOSS_MESSAGE_COOLDOWN so automatic fire doesn't flood chat (L5)
+/mob/living/basic/bounty_criminal/boss/ghost/proc/boss_miss_message(message)
+	if(!COOLDOWN_FINISHED(src, boss_message_cooldown))
+		return
+	COOLDOWN_START(src, boss_message_cooldown, BOUNTY_BOSS_MESSAGE_COOLDOWN)
+	visible_message(message)
 
 /// Cloaked, half the blows find nothing
 /mob/living/basic/bounty_criminal/boss/ghost/boss_check_block(atom/hit_by, attack_text, attack_type)
 	if(!boss_cloaked || stat != CONSCIOUS || !prob(BOUNTY_GHOST_CLOAK_MISS))
 		return NONE
-	visible_message(span_warning("[attack_text] swings through the shimmer where [src] was!"))
+	boss_miss_message(span_warning("[attack_text] swings through the shimmer where [src] was!"))
 	return SUCCESSFUL_BLOCK
 
 /mob/living/basic/bounty_criminal/boss/ghost/boss_took_damage(damage, damagetype)
@@ -909,7 +956,7 @@
 	return ..()
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/dash/worth_using(atom/target)
-	if(!isliving(target))
+	if(!aimable(target))
 		return FALSE
 	var/distance = get_dist(owner, target)
 	return distance >= 2 && distance <= BOUNTY_GHOST_DASH_RANGE + 1 && bounty_boss_clear_line(get_turf(owner), get_turf(target))
@@ -933,7 +980,7 @@
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
 	if(!istype(boss))
 		return
-	dash_target = isliving(target) ? WEAKREF(target) : null
+	dash_target = aimable(target) ? WEAKREF(target) : null
 	step_index = 0
 	if(!length(path))
 		cut_at_end(target)
@@ -965,23 +1012,27 @@
 /datum/action/cooldown/mob_cooldown/bounty_boss/dash/proc/end_dash(serial, cut)
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
 	path = null
-	var/mob/living/victim = dash_target?.resolve()
+	var/atom/victim = dash_target?.resolve()
 	dash_target = null
 	if(istype(boss) && boss.boss_busy == "dash" && boss.boss_busy_serial == serial)
 		boss.boss_clear_busy(serial)
 	if(cut)
 		cut_at_end(victim)
 
-/// The cut at the end of the dash, if its target is within reach
-/datum/action/cooldown/mob_cooldown/bounty_boss/dash/proc/cut_at_end(mob/living/victim)
+/// The cut at the end of the dash, if its target (a hunter, or a mech) is within reach
+/datum/action/cooldown/mob_cooldown/bounty_boss/dash/proc/cut_at_end(atom/victim)
 	var/mob/living/basic/bounty_criminal/boss/ghost/boss = owner
-	if(!istype(boss) || !boss.boss_can_act() || !isliving(victim) || !boss.Adjacent(victim) || !boss.boss_can_hurt(victim))
+	if(!istype(boss) || !boss.boss_can_act() || !aimable(victim) || !boss.Adjacent(victim) || !boss.boss_can_hurt(victim))
 		return
 	boss.do_attack_animation(victim, ATTACK_EFFECT_SLASH)
 	playsound(victim, 'sound/items/weapons/bladeslice.ogg', 70, TRUE)
 	victim.visible_message(span_danger("[boss] darts in and slashes [victim]!"), span_userdanger("[boss] darts in and slashes you!"))
-	victim.apply_damage(BOUNTY_GHOST_DASH_DAMAGE, BRUTE, BODY_ZONE_CHEST, victim.run_armor_check(BODY_ZONE_CHEST, MELEE, armour_penetration = BOUNTY_GHOST_MELEE_AP, silent = TRUE), sharpness = SHARP_EDGED)
-	boss.boss_cut(victim)
+	if(ismecha(victim))
+		boss.boss_hit(victim, BOUNTY_GHOST_DASH_DAMAGE, BRUTE, MELEE, 0, BOUNTY_GHOST_MELEE_AP)
+		return
+	var/mob/living/person = victim
+	person.apply_damage(BOUNTY_GHOST_DASH_DAMAGE, BRUTE, BODY_ZONE_CHEST, person.run_armor_check(BODY_ZONE_CHEST, MELEE, armour_penetration = BOUNTY_GHOST_MELEE_AP, silent = TRUE), sharpness = SHARP_EDGED)
+	boss.boss_cut(person)
 
 /// Cloak: the air around it shimmers, then it fades to a faint distortion that half of all hits miss
 /datum/action/cooldown/mob_cooldown/bounty_boss/cloak
@@ -992,7 +1043,7 @@
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/cloak/worth_using(atom/target)
 	var/mob/living/basic/bounty_criminal/boss/ghost/boss = owner
-	return isliving(target) && istype(boss) && !boss.boss_cloaked
+	return aimable(target) && istype(boss) && !boss.boss_cloaked
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/cloak/telegraph(atom/target)
 	owner.visible_message(span_boldwarning("The air around [owner] starts to shimmer."))
@@ -1008,6 +1059,7 @@
 /**
  * The Ghost's cuts: BOUNTY_GHOST_BLEED_PER_CUT brute a second for each cut, up to
  * BOUNTY_GHOST_BLEED_CAP, for BOUNTY_GHOST_BLEED_TIME after the last one, with the blood to show it.
+ * It stops once they are down (C4, M3).
  */
 /datum/status_effect/bounty_boss_bleed
 	id = "bounty_boss_bleed"
@@ -1019,14 +1071,14 @@
 	var/cuts = 1
 
 /datum/status_effect/bounty_boss_bleed/on_apply()
-	return owner.stat != DEAD
+	return owner.stat == CONSCIOUS
 
 /datum/status_effect/bounty_boss_bleed/refresh(effect, ...)
 	. = ..()
 	cuts++
 
 /datum/status_effect/bounty_boss_bleed/tick(seconds_between_ticks)
-	if(owner.stat == DEAD)
+	if(owner.stat != CONSCIOUS)
 		qdel(src)
 		return
 	var/rate = min(cuts * BOUNTY_GHOST_BLEED_PER_CUT, BOUNTY_GHOST_BLEED_CAP)
@@ -1078,9 +1130,11 @@
 
 /**
  * Suppressive burst: the gun spins up with a whirr, a red laser sight settles on the target's tile
- * and a red cone shows on the floor. Then BOUNTY_HEAVY_BURST_SHOTS rounds go into that cone over
- * BOUNTY_HEAVY_BURST_TIME, where it aimed, not where the target went. The rounds hit structures at
- * BOUNTY_HEAVY_BURST_DEMOLITION of their damage, and not at all off its site.
+ * and a red cone shows on the floor, staying there until the last round (L3). Then
+ * BOUNTY_HEAVY_BURST_SHOTS rounds go into that cone over BOUNTY_HEAVY_BURST_TIME, where it aimed, not
+ * where the target went, and no further than the cone is marked. The rounds damage only windows,
+ * grilles, tables and barricades the boss may break (interior, on its site), at
+ * BOUNTY_HEAVY_BURST_DEMOLITION of their damage (M5).
  */
 /datum/action/cooldown/mob_cooldown/bounty_boss/burst
 	name = "Suppressive Burst"
@@ -1099,10 +1153,10 @@
 	return ..()
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/burst/worth_using(atom/target)
-	if(!isliving(target))
+	if(!aimable(target))
 		return FALSE
 	var/distance = get_dist(owner, target)
-	return distance >= 2 && distance <= BOUNTY_HEAVY_BURST_RANGE && can_see(owner, target, BOUNTY_HEAVY_BURST_RANGE)
+	return distance >= 2 && distance <= BOUNTY_HEAVY_BURST_RANGE && can_see(owner, target, BOUNTY_HEAVY_BURST_RANGE) && landing_ok(target)
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/burst/telegraph(atom/target)
 	aim_turf = get_turf(target)
@@ -1114,7 +1168,7 @@
 	playsound(owner, 'sound/items/weapons/gun/l6/l6_rack.ogg', 70, TRUE)
 	playsound(owner, 'sound/items/weapons/scope.ogg', 50, TRUE)
 	add_telegraph(owner.Beam(aim_turf, icon_state = "r_beam", time = windup, maxdistance = BOUNTY_HEAVY_BURST_RANGE + 1))
-	mark_turfs(cone_turfs(target, BOUNTY_HEAVY_BURST_RANGE, BOUNTY_HEAVY_BURST_ARC), "#ff2020")
+	mark_turfs(cone_turfs(target, BOUNTY_HEAVY_BURST_RANGE, BOUNTY_HEAVY_BURST_ARC + BOUNTY_HEAVY_BURST_MARK_MARGIN), "#ff2020", linger = BOUNTY_HEAVY_BURST_TIME)
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/burst/effect(atom/target)
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
@@ -1136,7 +1190,6 @@
 	var/obj/projectile/bullet/bounty_boss_heavy/bullet = new(origin)
 	bullet.firer = boss
 	bullet.fired_from = boss
-	bullet.demolition_mod = boss.boss_environment_allowed(origin) ? BOUNTY_HEAVY_BURST_DEMOLITION : 0
 	bullet.ignored_factions = boss.faction.Copy()
 	bullet.aim_projectile(aim_turf, boss)
 	if(!QDELETED(bullet))
@@ -1154,11 +1207,22 @@
 	if(istype(boss) && boss.boss_busy == "burst" && boss.boss_busy_serial == serial)
 		boss.boss_clear_busy(serial)
 
-/// The Heavy's rounds
+/// The Heavy's rounds: no further than the marked cone, and hard on structures only where the boss may break them
 /obj/projectile/bullet/bounty_boss_heavy
 	name = "heavy round"
 	damage = BOUNTY_HEAVY_BURST_DAMAGE
-	range = BOUNTY_HEAVY_BURST_RANGE + 2
+	range = BOUNTY_HEAVY_BURST_RANGE
+	demolition_mod = 0
+
+// Judged at what it hits, not where it was fired from (M5): never a window onto space, never off the site.
+// A mech is a target, not a structure: it takes the round in full.
+/obj/projectile/bullet/bounty_boss_heavy/get_demolition_modifier(obj/target)
+	if(ismecha(target))
+		return 1
+	var/mob/living/basic/bounty_criminal/boss/boss = firer
+	if(!istype(boss) || QDELETED(boss) || !istype(target) || istype(target, /obj/machinery/door))
+		return 0
+	return boss.boss_may_break(target) ? BOUNTY_HEAVY_BURST_DEMOLITION : 0
 
 /**
  * Barricade: it unslings a folding barrier and drops it on the tile in front of it, toward its
@@ -1181,7 +1245,7 @@
 	return ..()
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/barricade/worth_using(atom/target)
-	if(!isliving(target) || length(GLOB.bounty_boss_barricades) >= BOUNTY_BOSS_BARRICADE_CAP)
+	if(!aimable(target) || length(GLOB.bounty_boss_barricades) >= BOUNTY_BOSS_BARRICADE_CAP)
 		return FALSE
 	var/distance = get_dist(owner, target)
 	return distance >= 3 && distance <= 9 && !isnull(find_spot(target))

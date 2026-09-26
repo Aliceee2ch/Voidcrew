@@ -11,11 +11,19 @@
 	abstract_type = /datum/unit_test/voidcrew_bounty_boss
 	/// Turfs a test changed, put back to plain floor when it ends
 	var/list/turf/changed_turfs = list()
+	/// Turf -> the area it had before a test moved it into a ship's area
+	var/list/original_areas = list()
+	/// Areas a test made
+	var/list/test_areas = list()
 
 /datum/unit_test/voidcrew_bounty_boss/Destroy()
 	for(var/turf/changed as anything in changed_turfs)
 		changed.ChangeTurf(/turf/open/floor/iron)
 	changed_turfs = null
+	for(var/turf/moved as anything in original_areas)
+		moved.change_area(get_area(moved), original_areas[moved])
+	original_areas = null
+	QDEL_LIST(test_areas)
 	return ..()
 
 /// The floor `dx`, `dy` tiles from the test room's bottom-left corner (the room is 5x5)
@@ -27,11 +35,31 @@
 	changed_turfs |= where
 	return where.ChangeTurf(new_type)
 
+/// Makes `where` part of a ship that isn't the boss's (a player's), to be put back when the test ends
+/datum/unit_test/voidcrew_bounty_boss/proc/make_ship_tile(turf/where)
+	var/area/shuttle/ship_area = new()
+	test_areas += ship_area
+	original_areas[where] = get_area(where)
+	where.change_area(get_area(where), ship_area)
+	return where
+
 /// A hunter at `where`: a human with a mind, as a player would be
 /datum/unit_test/voidcrew_bounty_boss/proc/hunter_at(turf/where)
 	var/mob/living/carbon/human/consistent/hunter = allocate(/mob/living/carbon/human/consistent, where)
 	hunter.mind_initialize()
 	return hunter
+
+/// A Ripley at `where` with `pilot` in it
+/datum/unit_test/voidcrew_bounty_boss/proc/mech_with(turf/where, mob/living/pilot)
+	var/obj/vehicle/sealed/mecha/ripley/mech = allocate(/obj/vehicle/sealed/mecha/ripley, where)
+	pilot.forceMove(mech)
+	mech.add_occupant(pilot, VEHICLE_CONTROL_DRIVE)
+	return mech
+
+/// `hunter` hits `boss`, as far as its posse is concerned: onto its grudge list, then into the posse
+/datum/unit_test/voidcrew_bounty_boss/proc/posse_member(mob/living/basic/bounty_criminal/boss/boss, mob/living/hunter)
+	boss.body_add_grudge(hunter)
+	return boss.boss_engage(hunter)
 
 /// The ability of `ability_type` that `boss` has
 /datum/unit_test/voidcrew_bounty_boss/proc/ability_of(mob/living/basic/bounty_criminal/boss/boss, ability_type)
@@ -49,6 +77,13 @@
 	for(var/turf/spot as anything in RANGE_TURFS(radius, center))
 		for(var/obj/effect/temp_visual/bounty_boss_mark/mark in spot)
 			.++
+
+/// Whether anything dense but mobs stands on `where`
+/datum/unit_test/voidcrew_bounty_boss/proc/blocked(turf/where)
+	for(var/obj/thing in where)
+		if(thing.density)
+			return TRUE
+	return FALSE
 
 // ===== EACH KIT SPAWNS AND GOES CLEANLY =====
 
@@ -146,7 +181,7 @@
 	TEST_ASSERT_EQUAL(second.getBruteLoss(), 0, "A downed boss's slam hurt someone")
 	boss.downed = FALSE
 
-// ===== TIRED BELOW 40% =====
+// ===== TIRED BELOW 40%; STAMINA ONLY THEN (H3) =====
 
 /datum/unit_test/voidcrew_bounty_boss/tired
 
@@ -154,8 +189,7 @@
 	var/mob/living/basic/bounty_criminal/boss/heavy/heavy = allocate(/mob/living/basic/bounty_criminal/boss/heavy, spot(0, 0))
 	TEST_ASSERT(!heavy.boss_tired, "A fresh boss is tired")
 	TEST_ASSERT(!(heavy.status_flags & (CANSTUN | CANKNOCKDOWN)), "A fresh boss can be stunned or knocked down")
-	// BOUNTY_HEAVY_STAMINA_FRESH 0.15 against BOUNTY_HEAVY_STAMINA 180, as max_stamina is 100
-	TEST_ASSERT(abs(heavy.damage_coeff[STAMINA] - 0.15 * 100 / 180) < 0.001, "A fresh Heavy's stamina coefficient is [heavy.damage_coeff[STAMINA]]")
+	TEST_ASSERT_EQUAL(heavy.damage_coeff[STAMINA], 0, "A fresh boss takes stamina damage") // BOUNTY_HEAVY_STAMINA_FRESH
 	var/fresh_speed = heavy.speed
 
 	// Down to 38%, under BOUNTY_BOSS_TIRED_BELOW (40)
@@ -163,18 +197,13 @@
 	TEST_ASSERT(heavy.boss_tired, "A boss at [heavy.health]/[heavy.maxHealth] isn't tired")
 	TEST_ASSERT(heavy.status_flags & CANSTUN, "A tired boss can't be stunned")
 	TEST_ASSERT(heavy.status_flags & CANKNOCKDOWN, "A tired boss can't be knocked down")
-	// BOUNTY_BOSS_STAMINA_TIRED 1 against BOUNTY_HEAVY_STAMINA 180
+	// BOUNTY_BOSS_STAMINA_TIRED 1 against BOUNTY_HEAVY_STAMINA 180, as max_stamina is 100
 	TEST_ASSERT(abs(heavy.damage_coeff[STAMINA] - 100 / 180) < 0.001, "A tired Heavy's stamina coefficient is [heavy.damage_coeff[STAMINA]]")
 	TEST_ASSERT(abs(heavy.speed - (fresh_speed + 0.3)) < 0.001, "A tired boss isn't slower") // BOUNTY_BOSS_TIRED_SLOWDOWN
 	TEST_ASSERT_EQUAL(heavy.boss_cooldown_mult(), 1.5, "A tired boss's cooldowns don't stretch") // BOUNTY_BOSS_TIRED_COOLDOWN_MULT
 	heavy.adjustStaminaLoss(200)
 	TEST_ASSERT(heavy.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Stamina weapons don't put a tired boss down")
 	TEST_ASSERT(!heavy.boss_can_act(), "A stamina-crit boss can still act")
-
-	// Fresh, stamina weapons can't put it down.
-	var/mob/living/basic/bounty_criminal/boss/juggernaut/fresh = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(2, 0))
-	fresh.adjustStaminaLoss(1000)
-	TEST_ASSERT(!fresh.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Stamina weapons put a fresh boss down")
 
 	// Healed back over the line, it is fresh again.
 	var/mob/living/basic/bounty_criminal/boss/juggernaut/healed = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(4, 0))
@@ -184,7 +213,32 @@
 	TEST_ASSERT(!healed.boss_tired, "A healed boss is still tired")
 	TEST_ASSERT(!(healed.status_flags & CANSTUN), "A healed boss can still be stunned")
 
-// ===== WHAT IT MAY BREAK =====
+/// Steady disabler fire on a fresh boss neither slows it nor builds up; once tired, it takes the whole pool (review H3)
+/datum/unit_test/voidcrew_bounty_boss/stamina
+
+/datum/unit_test/voidcrew_bounty_boss/stamina/Run()
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/boss = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 0))
+	var/fresh_speed = boss.speed
+	for(var/i in 1 to 25)
+		boss.adjustStaminaLoss(30) // a disabler shot
+	TEST_ASSERT_EQUAL(boss.staminaloss, 0, "Disabler fire built up on a fresh boss")
+	TEST_ASSERT_EQUAL(boss.speed, fresh_speed, "Disabler fire slowed a fresh boss")
+	TEST_ASSERT(!boss.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Disabler fire put a fresh boss down")
+
+	// Whatever it had built up is wiped when it tires.
+	boss.adjustStaminaLoss(80, forced = TRUE)
+	boss.adjustBruteLoss(boss.maxHealth * 0.65, forced = TRUE)
+	TEST_ASSERT(boss.boss_tired, "The boss didn't tire")
+	TEST_ASSERT_EQUAL(boss.staminaloss, 0, "The boss tired with stamina already built up")
+
+	// Tired: four disabler shots don't do it (BOUNTY_BOSS_STAMINA 150), the fifth does.
+	for(var/i in 1 to 4)
+		boss.adjustStaminaLoss(30)
+	TEST_ASSERT(!boss.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Four disabler shots put a tired boss down")
+	boss.adjustStaminaLoss(30)
+	TEST_ASSERT(boss.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Five disabler shots didn't put a tired boss down")
+
+// ===== WHAT IT MAY BREAK, AND HOW (H1, M1, L2) =====
 
 /datum/unit_test/voidcrew_bounty_boss/structures
 
@@ -209,17 +263,21 @@
 	var/turf/beside = spot(3, 2)
 	change_turf(beside, /turf/open/space/basic)
 	TEST_ASSERT(!boss.boss_may_break(middle), "The boss may break a wall with space beside it")
+
+	// An airless room on its far side: never (L2).
+	change_turf(beside, /turf/open/floor/iron/airless)
+	TEST_ASSERT(!boss.boss_may_break(middle), "The boss may break a wall into an airless room")
 	change_turf(beside, /turf/open/floor/iron)
 
 	// Reinforced: no.
 	change_turf(middle, /turf/closed/wall/r_wall)
 	TEST_ASSERT(!boss.boss_may_break(middle), "The boss may break a reinforced wall")
 
-	// It breaks a plain one to a girder and spends the budget.
+	// Broken outright, a plain one comes right down, and the budget is spent (M1).
 	change_turf(middle, /turf/closed/wall)
 	TEST_ASSERT(boss.boss_damage_structure(middle, null, list(4)), "The boss didn't break the wall") // BOUNTY_BOSS_ABILITY_STRUCTURE_CAP
 	TEST_ASSERT(!isclosedturf(middle), "The wall is still standing")
-	TEST_ASSERT_NOTNULL(locate(/obj/structure/girder) in middle, "The broken wall left no girder")
+	TEST_ASSERT(!blocked(middle), "The broken wall left something in the way")
 	TEST_ASSERT_EQUAL(boss.boss_walls_left, 1, "Breaking a wall didn't spend the budget")
 
 	// No budget left, and the wall stands.
@@ -227,6 +285,7 @@
 	boss.boss_walls_left = 0
 	TEST_ASSERT(!boss.boss_damage_structure(middle, null, list(4)), "The boss broke a wall past its budget")
 	TEST_ASSERT(isclosedturf(middle), "A wall past the budget fell")
+	boss.boss_walls_left = 2
 
 	// One use of an ability breaks no more than its cap.
 	var/obj/structure/table/table = allocate(/obj/structure/table, spot(0, 3))
@@ -235,21 +294,56 @@
 	TEST_ASSERT(boss.boss_damage_structure(table, null, list(1)), "The boss didn't break the table")
 	TEST_ASSERT(QDELETED(table), "The table survived being broken outright")
 
+	// Broken outright means broken, whatever the armour: a window and a grille go (M1).
+	var/obj/structure/window/fulltile/pane = allocate(/obj/structure/window/fulltile, spot(1, 3))
+	var/obj/structure/grille/grille = allocate(/obj/structure/grille, spot(1, 3))
+	TEST_ASSERT(boss.boss_damage_structure(pane, null, list(4)), "The boss didn't break a plain window")
+	TEST_ASSERT(boss.boss_damage_structure(grille, null, list(4)), "The boss didn't break a grille")
+	TEST_ASSERT(QDELETED(pane) && QDELETED(grille), "A window or grille survived being broken outright")
+	TEST_ASSERT(!blocked(spot(1, 3)), "Something dense is left where the window stood")
+
+	// A door broken outright goes with its frame, so the way really opens (M1).
+	var/obj/machinery/door/airlock/door = allocate(/obj/machinery/door/airlock, spot(4, 2))
+	boss.boss_walls_left = 0
+	TEST_ASSERT(!boss.boss_may_break(door), "The boss may break a door with no budget left")
+	boss.boss_walls_left = 1
+	TEST_ASSERT(boss.boss_damage_structure(door, null, list(4)), "The boss didn't break an interior door")
+	TEST_ASSERT(QDELETED(door), "The door survived being broken outright")
+	TEST_ASSERT(!blocked(spot(4, 2)), "The broken door left its frame in the way")
+	TEST_ASSERT_EQUAL(boss.boss_walls_left, 0, "Breaking a door didn't spend the budget")
+
 	// Never anything indestructible, and never machines that aren't doors.
-	var/obj/structure/table/tough = allocate(/obj/structure/table, spot(1, 3))
+	var/obj/structure/table/tough = allocate(/obj/structure/table, spot(3, 3))
 	tough.resistance_flags |= INDESTRUCTIBLE
 	TEST_ASSERT(!boss.boss_may_break(tough), "The boss may break an indestructible table")
 	var/obj/machinery/light/lamp = allocate(/obj/machinery/light, spot(4, 4))
 	TEST_ASSERT(!boss.boss_may_break(lamp), "The boss may break a light fixture")
 
-	// Doors spend the same budget as walls.
-	var/obj/machinery/door/airlock/door = allocate(/obj/machinery/door/airlock, spot(4, 2))
-	boss.boss_walls_left = 0
-	TEST_ASSERT(!boss.boss_may_break(door), "The boss may break a door with no budget left")
-	boss.boss_walls_left = 1
-	TEST_ASSERT(boss.boss_may_break(door), "The boss may not break an interior door")
+/// A player's ship within 7 tiles shuts down its environment damage there, and it never reaches inside (H1, M2)
+/datum/unit_test/voidcrew_bounty_boss/near_ships
 
-// ===== NEVER THE SAME ABILITY TWICE IN A ROW =====
+/datum/unit_test/voidcrew_bounty_boss/near_ships/Run()
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/boss = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 0))
+	var/turf/middle = spot(2, 2)
+	change_turf(middle, /turf/closed/wall)
+	var/mob/living/carbon/human/consistent/hunter = hunter_at(spot(4, 4))
+	TEST_ASSERT(boss.boss_may_break(middle), "The boss may not break an interior wall before any ship is near")
+	TEST_ASSERT(boss.boss_landing_ok(get_turf(hunter)), "The boss may not aim at a hunter before any ship is near")
+	TEST_ASSERT(boss.boss_can_hurt(hunter), "The boss may not hurt a hunter before any ship is near")
+
+	// A ship's tile in the room, within BOUNTY_ENV_SAFE_RANGE (7) of everything here.
+	var/turf/ship_floor = make_ship_tile(spot(4, 0))
+	TEST_ASSERT(!boss.boss_environment_allowed(middle), "Environment damage is allowed within 7 tiles of a player ship")
+	TEST_ASSERT(!boss.boss_may_break(middle), "The boss may break a wall within 7 tiles of a player ship")
+	TEST_ASSERT(!boss.boss_landing_ok(get_turf(hunter)), "The boss may aim abilities within 7 tiles of a player ship")
+	TEST_ASSERT(!boss.boss_indoor_turf(ship_floor), "A player ship's floor counts as the boss's interior")
+
+	// Standing inside the ship, a hunter is out of its reach altogether.
+	hunter.forceMove(ship_floor)
+	TEST_ASSERT(!boss.boss_can_hurt(hunter), "The boss may hurt a hunter inside their ship")
+	TEST_ASSERT(!boss.boss_reach_ok(ship_floor), "The boss's fire and blasts may reach inside a ship")
+
+// ===== NEVER THE SAME ABILITY TWICE IN A ROW WHILE ANOTHER IS READY =====
 
 /datum/unit_test/voidcrew_bounty_boss/rotation
 
@@ -297,7 +391,7 @@
 	boss.boss_strict_rotation = TRUE
 	TEST_ASSERT_NULL(boss.boss_choose_ability(far), "The strict rotation chose the same ability twice in a row")
 
-// ===== SUMMONED THINGS CLEAN UP =====
+// ===== SUMMONED THINGS CLEAN UP; CAPS HOLD =====
 
 /datum/unit_test/voidcrew_bounty_boss/cleanup
 
@@ -365,6 +459,16 @@
 	walker.remove_status_effect(/datum/status_effect/bounty_boss_burning)
 	TEST_ASSERT(!walker.has_status_effect(/datum/status_effect/bounty_boss_burning), "The burning didn't end")
 
+	// The fire cap.
+	var/list/pools = list()
+	for(var/i in 1 to 17)
+		pools += new /obj/effect/bounty_boss_fire_pool(spot(i % 5, 1), list(spot(i % 5, 1)), 4 SECONDS)
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_boss_fire_pools), 16, "The fire pool cap didn't hold") // BOUNTY_BOSS_FIRE_POOL_CAP
+	for(var/obj/effect/bounty_boss_fire_pool/extra_pool as anything in pools)
+		if(!QDELETED(extra_pool))
+			qdel(extra_pool)
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_boss_fire_pools), 0, "Deleted fire pools are still counted")
+
 	// A grenade: nothing until its fuse runs out, never its thrower, then gone.
 	var/mob/living/basic/bounty_criminal/boss/demolitionist/demo = allocate(/mob/living/basic/bounty_criminal/boss/demolitionist, spot(2, 4))
 	var/mob/living/carbon/human/consistent/caught = hunter_at(spot(4, 4))
@@ -377,7 +481,49 @@
 	TEST_ASSERT(QDELETED(grenade), "The grenade is still there after going off")
 	TEST_ASSERT_EQUAL(length(GLOB.bounty_boss_explosives), 0, "A spent grenade is still counted")
 
-// ===== HEALTH GROWS WITH THE POSSE =====
+	// The explosive cap.
+	var/list/bombs = list()
+	for(var/i in 1 to 17)
+		bombs += new /obj/effect/bounty_boss_explosive(spot(i % 5, 0))
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_boss_explosives), 16, "The explosive cap didn't hold") // BOUNTY_BOSS_EXPLOSIVE_CAP
+	for(var/obj/effect/bounty_boss_explosive/extra_bomb as anything in bombs)
+		if(!QDELETED(extra_bomb))
+			qdel(extra_bomb)
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_boss_explosives), 0, "Deleted explosives are still counted")
+
+	// A breaching charge opens an airlock for good (M1).
+	demo.boss_walls_left = 2 // BOUNTY_BOSS_WALL_BUDGET
+	var/obj/machinery/door/airlock/door = allocate(/obj/machinery/door/airlock, spot(2, 3))
+	var/obj/effect/bounty_boss_explosive/breach/charge = new(spot(2, 3), demo, door)
+	charge.detonate()
+	TEST_ASSERT(QDELETED(door), "The breaching charge left the airlock standing")
+	TEST_ASSERT(!blocked(spot(2, 3)), "The breached airlock left something in the way")
+	TEST_ASSERT_EQUAL(demo.boss_walls_left, 1, "Breaching the airlock didn't spend the budget")
+
+// ===== DOWNED HUNTERS ARE LEFT ALONE (C4, M3) =====
+
+/datum/unit_test/voidcrew_bounty_boss/downed_hunters
+
+/datum/unit_test/voidcrew_bounty_boss/downed_hunters/Run()
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/boss = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 0))
+	var/mob/living/carbon/human/consistent/victim = hunter_at(spot(1, 0))
+	victim.apply_status_effect(/datum/status_effect/bounty_boss_burning)
+	victim.apply_status_effect(/datum/status_effect/bounty_boss_bleed)
+	TEST_ASSERT(victim.has_status_effect(/datum/status_effect/bounty_boss_burning), "The hunter didn't catch fire")
+	TEST_ASSERT(victim.has_status_effect(/datum/status_effect/bounty_boss_bleed), "The hunter didn't bleed")
+	victim.adjustBruteLoss(120)
+	TEST_ASSERT(victim.stat != CONSCIOUS && victim.stat != DEAD, "The hunter isn't down")
+	TEST_ASSERT(!boss.boss_can_hurt(victim), "The boss may hurt a downed hunter")
+	TEST_ASSERT(!(victim in boss.boss_victims_on(list(get_turf(victim)))), "Area abilities catch a downed hunter")
+	var/datum/status_effect/burning = victim.has_status_effect(/datum/status_effect/bounty_boss_burning)
+	burning?.tick(1)
+	var/datum/status_effect/bleeding = victim.has_status_effect(/datum/status_effect/bounty_boss_bleed)
+	bleeding?.tick(1)
+	TEST_ASSERT(!victim.has_status_effect(/datum/status_effect/bounty_boss_burning), "A downed hunter keeps burning")
+	TEST_ASSERT(!victim.has_status_effect(/datum/status_effect/bounty_boss_bleed), "A downed hunter keeps bleeding from the cuts")
+	TEST_ASSERT(!victim.apply_status_effect(/datum/status_effect/bounty_boss_burning), "A downed hunter can be set alight")
+
+// ===== HEALTH GROWS WITH THE POSSE (M4) =====
 
 /datum/unit_test/voidcrew_bounty_boss/posse
 
@@ -386,41 +532,122 @@
 	var/mob/living/carbon/human/consistent/first = hunter_at(spot(4, 4))
 	var/mob/living/carbon/human/consistent/second = hunter_at(spot(3, 4))
 	var/mob/living/carbon/human/consistent/third = hunter_at(spot(2, 4))
-	// BOUNTY_JUGGERNAUT_HEALTH_1 to _3: 300, 950, 1600
+	var/mob/living/carbon/human/consistent/fourth = hunter_at(spot(1, 4))
+	var/mob/living/carbon/human/consistent/fifth = hunter_at(spot(0, 4))
+	// BOUNTY_JUGGERNAUT_HEALTH_1 to _4: 300, 950, 1600, 2300
 	TEST_ASSERT_EQUAL(boss.maxHealth, 300, "The Juggernaut doesn't start at its one-hunter health")
-	TEST_ASSERT(boss.boss_engage(first), "The first hunter didn't join the posse")
+
+	// Only hunters on its grudge list (or hunting its bounty) count.
+	TEST_ASSERT(!boss.boss_engage(first), "A hunter who never touched it joined the posse")
+	TEST_ASSERT(posse_member(boss, first), "The first hunter didn't join the posse")
 	TEST_ASSERT_EQUAL(boss.maxHealth, 300, "One hunter raised the health")
 	TEST_ASSERT(!boss.boss_engage(first), "The same hunter joined twice")
-	TEST_ASSERT(boss.boss_engage(second), "The second hunter didn't join")
+	TEST_ASSERT(posse_member(boss, second), "The second hunter didn't join")
 	TEST_ASSERT_EQUAL(boss.maxHealth, 950, "Two hunters didn't raise the health")
-	TEST_ASSERT_EQUAL(boss.health, 950, "The raise didn't lift current health")
-	boss.adjustBruteLoss(100, forced = TRUE)
-	TEST_ASSERT(boss.boss_engage(third), "The third hunter didn't join")
-	TEST_ASSERT_EQUAL(boss.maxHealth, 1600, "Three hunters didn't raise the health")
-	TEST_ASSERT_EQUAL(boss.health, 1500, "The raise didn't keep the damage already done")
+	TEST_ASSERT_EQUAL(boss.health, 950, "A fresh boss's raise didn't lift current health")
 
 	// Someone with no mind isn't a hunter.
-	var/mob/living/carbon/human/consistent/bystander = allocate(/mob/living/carbon/human/consistent, spot(1, 4))
+	var/mob/living/carbon/human/consistent/bystander = allocate(/mob/living/carbon/human/consistent, spot(4, 3))
+	boss.body_add_grudge(bystander)
 	TEST_ASSERT(!boss.boss_engage(bystander), "A mindless bystander joined the posse")
+
+	// Tired, a raise keeps its share of health: it is never healed out of its capture window.
+	boss.adjustBruteLoss(boss.maxHealth * 0.7, forced = TRUE)
+	TEST_ASSERT(boss.boss_tired, "The boss didn't tire")
+	var/share = boss.health / boss.maxHealth
+	TEST_ASSERT(posse_member(boss, third), "The third hunter didn't join")
+	TEST_ASSERT_EQUAL(boss.maxHealth, 1600, "Three hunters didn't raise max health")
+	TEST_ASSERT(abs(boss.health / boss.maxHealth - share) < 0.01, "A tired boss's raise healed it from [share] to [boss.health / boss.maxHealth]")
+	TEST_ASSERT(boss.boss_tired, "A raise healed the boss out of being tired")
+
+	// Downed, a newcomer waits; they count when it gets up, capped at the 4+ value.
+	boss.downed = TRUE
+	TEST_ASSERT(posse_member(boss, fourth), "The fourth hunter wasn't noted while it was down")
+	TEST_ASSERT(posse_member(boss, fifth), "The fifth hunter wasn't noted while it was down")
+	TEST_ASSERT_EQUAL(boss.maxHealth, 1600, "A downed boss's health rose")
+	boss.downed = FALSE
+	share = boss.health / boss.maxHealth
+	SEND_SIGNAL(boss, "bounty_criminal_recovered") // COMSIG_BOUNTY_CRIMINAL_RECOVERED
+	TEST_ASSERT_EQUAL(boss.maxHealth, 2300, "Hunters who joined while it was down didn't count when it got up")
+	TEST_ASSERT(abs(boss.health / boss.maxHealth - share) < 0.01, "Getting up with a bigger posse healed it")
 
 	// Never lowered.
 	boss.boss_engaged.Cut()
 	boss.boss_engage(first)
-	TEST_ASSERT_EQUAL(boss.maxHealth, 1600, "A smaller posse lowered the health")
+	TEST_ASSERT_EQUAL(boss.maxHealth, 2300, "A smaller posse lowered the health")
 
-	// Confronted: it turns on whoever confronted it, and everyone in sight joins.
+	// Confronted: it turns on whoever confronted it.
 	var/mob/living/basic/bounty_criminal/boss/juggernaut/other = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 2))
 	other.on_confronted(first)
 	TEST_ASSERT(other.boss_hostile, "A confronted boss didn't turn hostile")
-	TEST_ASSERT(WEAKREF(first) in other.grudge, "A confronted boss has no grudge against who confronted it")
+	TEST_ASSERT(other.body_has_grudge(first), "A confronted boss has no grudge against who confronted it")
 	TEST_ASSERT_EQUAL(other.ai_controller?.blackboard[BB_BASIC_MOB_CURRENT_TARGET], first, "A confronted boss isn't going after who confronted it")
-	TEST_ASSERT(other.maxHealth >= 950, "The hunters in sight didn't join the confronted boss's posse")
 
-// ===== THE JUGGERNAUT'S CHARGE =====
+// ===== MECHS (H2) =====
+
+/datum/unit_test/voidcrew_bounty_boss/mechs
+
+/datum/unit_test/voidcrew_bounty_boss/mechs/Run()
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/boss = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 0))
+	var/mob/living/carbon/human/consistent/pilot = hunter_at(spot(1, 0))
+	var/obj/vehicle/sealed/mecha/ripley/mech = mech_with(spot(1, 0), pilot)
+
+	// A mech with a hunter in it is a target; the pilot is reached through it.
+	TEST_ASSERT(boss.boss_valid_target(mech), "A hunter's mech isn't a target")
+	TEST_ASSERT(!boss.boss_valid_target(pilot), "The boss goes for a pilot through the mech's hull")
+	TEST_ASSERT_EQUAL(boss.boss_target_for(pilot), mech, "The boss doesn't go for the pilot's mech")
+	var/datum/targeting_strategy/strategy = GET_TARGETING_STRATEGY(/datum/targeting_strategy/basic/bounty_boss)
+	TEST_ASSERT(strategy.can_attack(boss, mech, 9), "The boss's targeting ignores a hunter's mech")
+
+	// The mech's blows count as the pilot's: the pilot joins the posse, and the boss turns on the mech.
+	TEST_ASSERT(boss.boss_note_attacker(mech), "The mech's attack wasn't noted")
+	TEST_ASSERT(boss.body_has_grudge(pilot), "The pilot of a mech that hit it isn't on its grudge list")
+	TEST_ASSERT(boss.boss_engaged[REF(pilot)], "The pilot of a mech that hit it didn't join its posse")
+	TEST_ASSERT_EQUAL(boss.boss_revenge_target(), mech, "The boss doesn't turn on the mech that hit it")
+
+	// Mech gunfire counts too.
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/shot_at = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 3))
+	var/obj/projectile/bullet/gunfire = new(get_turf(mech))
+	gunfire.firer = mech
+	SEND_SIGNAL(shot_at, COMSIG_PROJECTILE_PREHIT, gunfire)
+	qdel(gunfire)
+	TEST_ASSERT(shot_at.boss_engaged[REF(pilot)], "Mech gunfire didn't put the pilot in the posse")
+
+	// Its fists land on the hull.
+	var/integrity = mech.get_integrity()
+	TEST_ASSERT(boss.melee_attack(mech, ignore_cooldown = TRUE), "The boss didn't swing at a mech")
+	TEST_ASSERT(mech.get_integrity() < integrity, "The boss's fists did nothing to a mech")
+
+	// The slam hits a mech next to it.
+	integrity = mech.get_integrity()
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/slam/slam = ability_of(boss, /datum/action/cooldown/mob_cooldown/bounty_boss/slam)
+	TEST_ASSERT(slam.worth_using(mech), "The slam isn't worth using on a mech beside it")
+	TEST_ASSERT(slam.Trigger(target = mech), "The slam didn't start on a mech")
+	TEST_ASSERT(slam.finish_windup(slam.pending_serial), "The slam on a mech didn't land")
+	TEST_ASSERT(mech.get_integrity() < integrity, "The slam didn't hurt the mech")
+
+	// The charge slams into a mech instead of bouncing off it.
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/charger = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 2))
+	mech.forceMove(spot(3, 2))
+	integrity = mech.get_integrity()
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/charge/charge = ability_of(charger, /datum/action/cooldown/mob_cooldown/bounty_boss/charge)
+	TEST_ASSERT(charge.worth_using(mech), "The Juggernaut won't charge a mech")
+	TEST_ASSERT(charge.Trigger(target = mech), "The charge at a mech didn't start")
+	TEST_ASSERT(charge.finish_windup(charge.pending_serial), "The charge at a mech didn't go")
+	var/serial = charger.boss_busy_serial
+	for(var/i in 1 to 8)
+		if(charger.boss_busy != "charge")
+			break
+		charge.charge_step(serial)
+	TEST_ASSERT(mech.get_integrity() < integrity, "The charge didn't hurt the mech")
+	TEST_ASSERT(charger.boss_busy != "stagger", "The charge bounced off a mech")
+
+// ===== THE JUGGERNAUT'S CHARGE (M1) =====
 
 /datum/unit_test/voidcrew_bounty_boss/charge
 
 /datum/unit_test/voidcrew_bounty_boss/charge/Run()
+	// Through a table.
 	var/mob/living/basic/bounty_criminal/boss/juggernaut/boss = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 0))
 	var/obj/structure/table/table = allocate(/obj/structure/table, spot(1, 0))
 	var/mob/living/carbon/human/consistent/victim = hunter_at(spot(3, 0))
@@ -440,6 +667,44 @@
 	TEST_ASSERT(victim.getBruteLoss() > 0, "The charge didn't hit its target")
 	TEST_ASSERT_NULL(boss.boss_busy, "The boss is still charging")
 	TEST_ASSERT_EQUAL(get_dist(boss, victim), 1, "The charge didn't end at its target")
+
+	// Through a plain window and its grille, without bouncing.
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/second = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 3))
+	var/obj/structure/grille/grille = allocate(/obj/structure/grille, spot(1, 3))
+	var/obj/structure/window/fulltile/pane = allocate(/obj/structure/window/fulltile, spot(1, 3))
+	var/mob/living/carbon/human/consistent/behind = hunter_at(spot(3, 3))
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/charge/window_charge = ability_of(second, /datum/action/cooldown/mob_cooldown/bounty_boss/charge)
+	TEST_ASSERT(window_charge.Trigger(target = behind), "The charge through a window didn't start")
+	TEST_ASSERT(window_charge.finish_windup(window_charge.pending_serial), "The charge through a window didn't go")
+	serial = second.boss_busy_serial
+	for(var/i in 1 to 8)
+		if(second.boss_busy != "charge")
+			break
+		window_charge.charge_step(serial)
+	TEST_ASSERT(QDELETED(pane), "The charge didn't smash the plain window")
+	TEST_ASSERT(QDELETED(grille), "The charge didn't smash the grille under the window")
+	TEST_ASSERT(second.boss_busy != "stagger", "The charge bounced off a plain window")
+	TEST_ASSERT(behind.getBruteLoss() > 0, "The charge through a window didn't reach its target")
+
+// ===== THE HEAVY'S ROUNDS (M5) =====
+
+/datum/unit_test/voidcrew_bounty_boss/heavy_rounds
+
+/datum/unit_test/voidcrew_bounty_boss/heavy_rounds/Run()
+	var/mob/living/basic/bounty_criminal/boss/heavy/heavy = allocate(/mob/living/basic/bounty_criminal/boss/heavy, spot(0, 0))
+	var/obj/projectile/bullet/bounty_boss_heavy/heavy_round = new(spot(0, 0))
+	heavy_round.firer = heavy
+	var/obj/structure/window/fulltile/inside = allocate(/obj/structure/window/fulltile, spot(2, 2))
+	TEST_ASSERT_EQUAL(heavy_round.get_demolition_modifier(inside), 0.25, "The Heavy's rounds don't chip an interior window") // BOUNTY_HEAVY_BURST_DEMOLITION
+	var/obj/structure/window/fulltile/outside = allocate(/obj/structure/window/fulltile, spot(4, 2))
+	change_turf(spot(4, 3), /turf/open/space/basic)
+	TEST_ASSERT_EQUAL(heavy_round.get_demolition_modifier(outside), 0, "The Heavy's rounds damage a window onto space")
+	var/obj/machinery/door/airlock/door = allocate(/obj/machinery/door/airlock, spot(2, 4))
+	TEST_ASSERT_EQUAL(heavy_round.get_demolition_modifier(door), 0, "The Heavy's rounds break doors")
+	var/mob/living/carbon/human/consistent/pilot = hunter_at(spot(1, 1))
+	var/obj/vehicle/sealed/mecha/ripley/mech = mech_with(spot(1, 1), pilot)
+	TEST_ASSERT_EQUAL(heavy_round.get_demolition_modifier(mech), 1, "The Heavy's rounds go easy on mechs")
+	qdel(heavy_round)
 
 // ===== THE GHOST =====
 

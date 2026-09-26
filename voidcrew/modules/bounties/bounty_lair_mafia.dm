@@ -595,6 +595,8 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	QDEL_NULL(mafia_gun)
 	mafia_home_ref = null
 	mafia_home_turf = null
+	// The shout's "!" (do_alert_animation) forgets itself on a timer that dies with us: let it go now, or it hard-deletes
+	update_on_z = null
 	return ..()
 
 /mob/living/basic/trooper/russian/mafia/Life(seconds_per_tick = SSMOBS_DT, times_fired)

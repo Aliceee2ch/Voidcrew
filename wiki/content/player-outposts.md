@@ -56,6 +56,72 @@ Press **Place** to open the placement map, a plan of the ground around the outpo
 
 Placement is permanent. A built room cannot be moved or refunded.
 
+## Service rooms
+
+Service rooms sell things to visiting crews. Members use them free: the owner, residents, and the crews of the owner's ships. Everyone else pays the outpost's price from the ID they present, and the money goes to the outpost bank. An outpost with no owner charges nobody.
+
+| Room | Cost | What it sells | Default price | Highest price |
+|---|---|---|---|---|
+| Cloning Bay | 3,000 cr | A clone in one of four vats | 600 cr | 5,000 cr |
+| Medical Lab | 2,000 cr | A 30 minute lab pass | 300 cr | 2,000 cr |
+| Shop | 2,000 cr | Whatever the staff stock | set per item | 1,000,000 cr |
+| Safe Storage | 1,000 cr | One of thirteen lockers for the round | 200 cr | 5,000 cr |
+| Teleporter | 6,000 cr | Arrival by network pad | 200 cr | 2,000 cr |
+
+Set prices on the **Pricing** tab of the management console. The **Services** tab opens or closes each room to visitors and holds its settings. The teleporter has no visitor switch; its arrival policy does that job.
+
+### Who runs the market
+
+Three roles from the **Residents** tab share the work:
+
+- **Stewards** manage the outpost, open and close rooms, choose which lab procedures are offered and evict ships from the ship bay.
+- **Treasurers** withdraw from the bank, set prices and evict clones.
+- **Pricers** set prices and nothing else.
+
+The owner, stewards, treasurers and pricers stock the shop and take items out of it free. Other residents pay at the register like anyone else.
+
+### Cloning bay
+
+Imprint yourself at a vat while you are alive. Each player can hold one clone per outpost, and a clone is used once: waking in it spends it. When the clone is grown you get a **Clone Ready** alert, and after you die you pick where to wake with the **Wake in a Clone** button on your ghost.
+
+While the outpost has an owner, a visitor cannot wake there during a lockdown, for 10 minutes after the outpost is attacked, or while their crew is banned. The clone is kept, so they can wake once the block lifts.
+
+The owner or a treasurer can erase a paid clone and refund exactly what was paid. They cannot while its owner is dead and could still wake in it, until 10 minutes after it was ready. A payer whose account is gone gets nothing back.
+
+### Medical lab
+
+A lab pass lasts **30 minutes** and covers the auto-surgeon, the sleepers and the cryo cells. You can renew it once it has less than 5 minutes left. The terminal only sells a pass when the lab can actually treat the patient, either with a procedure it offers or because they are hurt. A visitor can pay for other people's passes; members cannot buy passes for visitors. A pass keeps the procedures that were on offer when it was bought.
+
+### Safe storage
+
+A locker rents for the rest of the round. You can rent one locker per outpost. It opens for you and nobody else, not even the owner, and it still knows you after death, cloning or a rejoin. There are no refunds: giving the locker up, which you can only do while it is open, returns nothing.
+
+Lockers refuse people and animals, bombs, grenades and anything that can set one off, ship keys and contract goods.
+
+### Shop
+
+Staff fill the stock cabinet in the back room and price each listing. Customers buy at the register out front, up to 10 items or a full stack at a time. Unpriced stock is not for sale.
+
+### Teleporter
+
+Network pads send one person at a time from outpost to outpost. The network covers every player outpost with a Teleporter room and a public pad at each trading outpost, and trips can cross zones. Trading outpost pads only reach player outposts, never each other.
+
+- **The destination sets the fare.** It is taken from your ID account when the pad fires, never for leaving. Members of the destination and anyone arriving at a trading outpost travel free. A cancelled trip costs nothing.
+- **Charge time:** stand on the pad for 5 seconds, or 10 across zones. Stepping off, taking damage or passing out cancels the trip.
+- **Cooldowns:** 2 minutes between trips, and no trips for 60 seconds after you hurt, or are hurt by, another player.
+- **Raids:** for 10 minutes after a missile or assault pod hits an outpost, only its members can arrive, and the attacking crew cannot leave by its pad.
+- **What stays behind:** other people, carried or pulled; animals; freight pods; contract goods and ship keys.
+
+The owner chooses who may arrive: **Open**, **Members**, **Allow list** (chosen outposts' pads) or **Closed**. Lockdown admits members only. With docking set to **By request**, an open pad admits members and approved crews only.
+
+### Docking fee
+
+The ship bay can charge a docking fee, set on the Pricing tab (up to 5,000 cr; the default is nothing). The owner's own ships and any ship docking at an ownerless outpost pay nothing.
+
+The ship holds position and its helm shows the fee. The captain approves it there, or any crew member when there is no captain. An approval lasts 2 minutes. The fee leaves the ship account and is held until the ship arrives in the bay, then paid to the outpost. If the dock falls through, the fee goes back to the ship.
+
+The owner or a steward can evict a ship from the bay. It gets three minutes to undock, and its fee back if it arrived in the last 30 minutes. A hull with nobody aboard while its crew is at the outpost is moved to a hangar berth instead.
+
 ## Research and manufacturing
 
 Build an **R&D server** and install its source-code disk. Copy its link with a multitool, then link R&D consoles, experiment equipment, and fabricators. Link fabricators to the local silo too, and supply materials. See [Research](research.md) for experiments and technologies.

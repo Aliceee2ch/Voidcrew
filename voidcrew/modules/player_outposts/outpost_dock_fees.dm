@@ -529,14 +529,17 @@
 			ship.ship_notify("[name] changed hands. Your bay clearance was restored.", "DOCKING", SHIP_NOTIFY_NOTICE)
 	management_console?.on_dock_requests_changed()
 
-/// Tries again later, or gives up and tells the admins once the retries are spent
-/obj/structure/overmap/dynamic/player_outpost/proc/retry_bay_eviction(datum/weakref/ship_ref, reason)
+/**
+ * Tries again later, or gives up and tells the admins once the retries are spent. `endless` retries
+ * never give up: an empty hull whose crew is alive waits in the bay until a hangar berth frees.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/retry_bay_eviction(datum/weakref/ship_ref, reason, endless = FALSE)
 	var/list/eviction = bay_evictions[ship_ref]
 	if(!eviction)
 		return
 	var/obj/structure/overmap/ship/ship = ship_ref.resolve()
 	eviction["retries"] += 1
-	if(eviction["retries"] > OUTPOST_BAY_EVICTION_RETRIES)
+	if(!endless && eviction["retries"] > OUTPOST_BAY_EVICTION_RETRIES)
 		log_game("BAY EVICTION: [ship?.name || "a ship"] could not be removed from the ship bay at [name] ([reason]). Eviction by [eviction["by"]] given up.")
 		message_admins("BAY EVICTION: [ship?.name || "a ship"] could not be removed from the ship bay at [name] ([reason]).")
 		notify_owner("[ship?.name || "The evicted ship"] could not be moved out of the ship bay: [reason]. Evict it again to retry.", "DOCKING")
@@ -546,26 +549,23 @@
 	eviction["timer"] = addtimer(CALLBACK(src, PROC_REF(enforce_bay_eviction), ship_ref), OUTPOST_BAY_EVICTION_RETRY, TIMER_STOPPABLE | TIMER_DELETE_ME)
 
 /**
- * TRUE when forcing `ship` out would launch an empty hull whose crew is ashore here. An undocked
- * hull with nobody aboard goes derelict, and the owner could then claim it.
+ * TRUE when forcing `ship` out would launch a hull nobody is flying while its crew is still alive.
+ * Only a connected, living crew member aboard counts as flying it. Crew alive anywhere else (ashore
+ * here, off by pad, logged out aboard) count as ashore: an undocked hull with nobody at the helm goes
+ * derelict, and the owner could then claim it.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/evicted_crew_ashore(obj/structure/overmap/ship/ship)
 	var/list/hull_areas = ship.shuttle?.shuttle_areas
-	var/crew_ashore = FALSE
+	var/crew_alive = FALSE
 	for(var/datum/mind/member as anything in ship.ship_team?.members)
 		var/mob/living/body = member?.current
 		if(!isliving(body) || body.stat == DEAD)
 			continue
+		crew_alive = TRUE
 		var/turf/location = get_turf(body)
-		if(!location)
-			continue
-		if(hull_areas && hull_areas[get_area(location)])
-			if(body.client)
-				return FALSE // someone is aboard to fly it
-			continue
-		if(contains_site_turf(location))
-			crew_ashore = TRUE
-	return crew_ashore
+		if(location && hull_areas && hull_areas[get_area(location)] && GET_CLIENT(body))
+			return FALSE // someone is aboard to fly it
+	return crew_alive
 
 /// The grace (or a retry) ran out: undock the ship, or move it to a hangar berth while its crew is ashore
 /obj/structure/overmap/dynamic/player_outpost/proc/enforce_bay_eviction(datum/weakref/ship_ref)
@@ -637,9 +637,12 @@
 	if(failure)
 		if(bay_evictions[ship_ref] == eviction)
 			eviction["relocating"] = FALSE
-			ship.ship_notify("[name] is clearing its ship bay, but your hull cannot be moved: [failure]. Return to your ship and undock.", "DOCKING", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 40)
-			notify_owner("[ship.name] is empty while its crew is ashore, so it cannot be undocked, and [failure]. The ship bay will try again.", "DOCKING")
-			retry_bay_eviction(ship_ref, failure)
+			// Tell both sides once; the retries go on quietly until a berth frees or the crew undocks
+			if(!eviction["waiting_notified"])
+				eviction["waiting_notified"] = TRUE
+				ship.ship_notify("[name] is clearing its ship bay, but your hull cannot be moved: [failure]. Return to your ship and undock.", "DOCKING", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 40)
+				notify_owner("[ship.name] has nobody aboard to fly it while its crew is alive, so it cannot be undocked, and [failure]. The ship bay will keep trying.", "DOCKING")
+			retry_bay_eviction(ship_ref, failure, endless = TRUE)
 		return
 	// The hull now sits in the berth: hand the bay back and let the berth take the ship
 	bay.release()

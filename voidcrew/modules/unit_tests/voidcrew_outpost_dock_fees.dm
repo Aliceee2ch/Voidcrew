@@ -424,7 +424,13 @@
 	TEST_ASSERT(home.transfer_ownership(owner, stranger), "The outpost could not be handed back")
 	TEST_ASSERT_NULL(home.request_bay_eviction(owner, bay), "The owner could not evict after the handover")
 
-	// Item 16: with nobody ashore, the timer proc undocks the ship
+	// Item 16: with a connected crewman aboard to fly it, the timer proc undocks the ship
+	var/mob/living/carbon/human/helmsman = make_player(shore, "evicthelm")
+	helmsman.mock_client = new()
+	ship.ship_team.add_member(helmsman.mind)
+	var/area/hull_area = get_area(shore)
+	ship.shuttle.shuttle_areas[hull_area] = TRUE
+	TEST_ASSERT(!home.evicted_crew_ashore(ship), "A connected crewman aboard did not count as flying the hull")
 	home.enforce_bay_eviction(WEAKREF(ship))
 	TEST_ASSERT_EQUAL(ship.state, "undocking", "The eviction timer did not undock the ship")
 	TEST_ASSERT_NOTNULL(home.bay_evictions[WEAKREF(ship)], "The eviction stopped watching an undock that has not completed")
@@ -433,9 +439,15 @@
 	ship.state = "idle"
 	home.cancel_bay_eviction(owner, bay)
 
-	// F-14: an empty hull whose crew is ashore is never launched; with no berth free it waits
-	var/mob/living/carbon/human/crew_ashore = make_player(shore, "evictcrew")
-	ship.ship_team.add_member(crew_ashore.mind)
+	// B-01: a crewman aboard with no client is not flying it
+	helmsman.mock_client = null
+	TEST_ASSERT(home.evicted_crew_ashore(ship), "A logged-out crewman aboard counted as flying the hull")
+	// F-14, B-01: an empty hull whose crew is alive anywhere (here, another z-level) is never launched;
+	// with no berth free it waits, and keeps waiting past the usual retry limit
+	ship.shuttle.shuttle_areas -= hull_area
+	helmsman.mock_client = new()
+	helmsman.forceMove(run_loc_floor_bottom_left)
+	TEST_ASSERT(!home.contains_site_turf(get_turf(helmsman)), "The away crewman is still on the claim")
 	var/list/placeholders = new /list(6)
 	for(var/i in 1 to 6)
 		placeholders[i] = allocate(/datum/outpost_berth, home, i, null)
@@ -448,6 +460,13 @@
 	var/list/eviction = home.bay_evictions[WEAKREF(ship)]
 	TEST_ASSERT_NOTNULL(eviction, "The eviction gave up at once with no berth free")
 	TEST_ASSERT(!eviction["relocating"] && eviction["retries"] == 1 && eviction["timer"], "The eviction is not retrying with no berth free")
+	deltimer(eviction["timer"])
+	eviction["retries"] = 99
+	home.enforce_bay_eviction(WEAKREF(ship))
+	TEST_ASSERT_EQUAL(ship.docked, home, "An empty hull was launched once the retries ran out")
+	TEST_ASSERT_NOTEQUAL(ship.state, "undocking", "An empty hull was undocked once the retries ran out")
+	eviction = home.bay_evictions[WEAKREF(ship)]
+	TEST_ASSERT(eviction && eviction["timer"], "The eviction gave up on an empty hull whose crew is alive")
 
 	// F-16: undock completion forgets every record of the ship
 	home.record_bay_visit_fee(ship, 500)

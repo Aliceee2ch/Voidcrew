@@ -6,9 +6,11 @@
  *
  * The panel runs without an admin client: /datum/bounty_admin_panel/unit_test answers its prompts
  * from a list and notes what it logged and said. The tests call the action procs straight, and the
- * menu once each through its prompts. Where the other packages' procs are still P0 stubs (P2's
- * spawn makes the base criminal), a test says so in a notice and checks what does not depend on
- * them; after the merge the same test checks the real thing.
+ * menu once each through its prompts. They run against the real packages: capture states are read
+ * back through P2's capture_state(), the pool through P7's procs, the clock through P5's.
+ *
+ * Every test that touches a global list (the postings, the pool) sets it aside first and puts it back
+ * after, from a Run() that calls a separate checks proc, so a failed check can't skip the restore.
  */
 
 /// The Bounty Panel with no admin client: canned answers for its prompts, and a note of what it logged and said
@@ -60,6 +62,16 @@
 			return TRUE
 	return FALSE
 
+/// An extra "Post a bounty now" entry, as the kingpin and the lairs add theirs (the extension point)
+/datum/bounty_admin_post_action/unit_test
+	name = "Test posting"
+
+/datum/bounty_admin_post_action/unit_test/post(datum/bounty_admin_panel/panel, mob/user)
+	var/datum/bounty_admin_panel/unit_test/test_panel = panel
+	if(istype(test_panel))
+		test_panel.told += "the test post action ran"
+	return "post the test posting"
+
 /// The Bounty Panel's tests: a stand-in admin and a panel for them
 /datum/unit_test/voidcrew_bounty_admin
 	abstract_type = /datum/unit_test/voidcrew_bounty_admin
@@ -76,7 +88,7 @@
 
 // ===== SPAWNING =====
 
-/// The spawn makes the subtype for its archetype and kit, with the record it was asked for and no posting; decoys stand beside their criminal
+/// The spawn makes P2's subtype for its archetype and kit, with the record it was asked for and no posting; a decoy is P6's, beside its criminal and on no posting
 /datum/unit_test/voidcrew_bounty_admin/spawning
 
 /datum/unit_test/voidcrew_bounty_admin/spawning/Run()
@@ -103,13 +115,13 @@
 		list("boss", "ghost", /mob/living/basic/bounty_criminal/boss/ghost),
 		list("boss", "heavy", /mob/living/basic/bounty_criminal/boss/heavy),
 	)
-	var/stubbed = 0
 	for(var/list/spawn_case as anything in cases)
 		var/archetype = spawn_case[1]
 		var/variant = spawn_case[2]
 		var/expected = spawn_case[3]
 		var/mob/living/basic/bounty_criminal/criminal = spawn_criminal(panel, operator, 2, archetype, variant, spot) // BOUNTY_TIER_WANTED
 		TEST_ASSERT_NOTNULL(criminal, "No [archetype] [variant] criminal spawned: [panel.error]")
+		TEST_ASSERT_EQUAL(criminal.type, expected, "The [archetype] [variant] criminal is a [criminal.type]")
 		TEST_ASSERT_EQUAL(get_turf(criminal), spot, "The [archetype] [variant] criminal spawned away from the spot")
 		TEST_ASSERT_NOTNULL(criminal.record, "The [archetype] [variant] criminal has no record")
 		TEST_ASSERT_EQUAL(criminal.record.tier, 2, "The [archetype] [variant] criminal's record is the wrong tier")
@@ -122,13 +134,7 @@
 			if(variant)
 				TEST_ASSERT_EQUAL(criminal.record.style, variant, "The [archetype] criminal's record has the style [criminal.record.style]")
 		TEST_ASSERT_NULL(criminal.posting(), "An admin spawn is wanted on a posting")
-		if(criminal.type == /mob/living/basic/bounty_criminal)
-			// P2's spawn_bounty_criminal() is still the P0 stub, which always makes the base type.
-			stubbed++
-		else
-			TEST_ASSERT(istype(criminal, expected), "The [archetype] [variant] criminal is a [criminal.type], not a [expected]")
-	if(stubbed)
-		TEST_NOTICE(src, "spawn_bounty_criminal() made the base type for [stubbed] of [length(cases)] spawns: the P0 stub. The subtype is checked after the merge.")
+		TEST_ASSERT_EQUAL(criminal.capture_state(), "free", "A new [archetype] [variant] criminal reads as [criminal.capture_state()]") // BOUNTY_STATE_FREE
 	TEST_ASSERT_EQUAL(length(panel.operations), length(cases), "The panel logged [length(panel.operations)] spawns for [length(cases)]")
 
 	// A random kit is still a kit.
@@ -157,7 +163,7 @@
 	TEST_ASSERT_EQUAL(from_menu.record?.style, "shotgun", "The spawn menu's criminal has the style [from_menu.record?.style]") // BOUNTY_STYLE_SHOTGUN
 	TEST_ASSERT_EQUAL(from_menu.record?.tier, 1, "The spawn menu's criminal is not petty") // BOUNTY_TIER_PETTY
 
-	// A decoy: its own record, beside the criminal, on the criminal's posting.
+	// A decoy, through P6's builder: its own record, beside the criminal, blending in, on no posting.
 	var/mob/living/basic/bounty_criminal/wanted = spawn_criminal(panel, operator, 1, "meek", null, spot)
 	var/mob/living/basic/bounty_criminal/decoy/decoy = panel.admin_spawn_decoy(operator, wanted, 2)
 	TEST_ASSERT_NOTNULL(decoy, "No decoy spawned: [panel.error]")
@@ -165,102 +171,134 @@
 	TEST_ASSERT(istype(decoy, /mob/living/basic/bounty_criminal/decoy), "The decoy is a [decoy.type]")
 	TEST_ASSERT(decoy.record && decoy.record != wanted.record, "The decoy has no record of its own")
 	TEST_ASSERT(get_dist(decoy, wanted) <= 1, "The decoy spawned [get_dist(decoy, wanted)] tiles from its criminal")
+	TEST_ASSERT_NULL(decoy.posting_ref, "The decoy is linked to a posting through posting_ref")
+	TEST_ASSERT(decoy.blended, "The decoy is not blending in: it skipped P6's builder")
+	TEST_ASSERT_EQUAL(decoy.maxHealth, wanted.maxHealth, "The decoy's health does not match its criminal's")
 	TEST_ASSERT_NULL(panel.admin_spawn_decoy(operator, decoy, 1), "A decoy of a decoy was spawned")
 	TEST_ASSERT(!(decoy in panel.live_criminals()), "Decoys are offered as wanted criminals")
 	TEST_ASSERT(decoy in panel.live_criminals(include_decoys = TRUE), "Decoys are missing when asked for")
 
 // ===== CAPTURE STATES =====
 
-/// Each forced capture state uses the game's own means: damage to the downed line, a stun, real cuffs, death, and a heal that undoes them
+/**
+ * Each forced state reads back through P2's capture_state(), each on a fresh criminal; restraints go on
+ * through P2's own proc with nobody on the grudge list; and "Free" takes off everything P2 puts on,
+ * including cuffs a player put on a downed criminal.
+ */
 /datum/unit_test/voidcrew_bounty_admin/force_state
 
+/datum/unit_test/voidcrew_bounty_admin/force_state/proc/fresh(datum/bounty_admin_panel/unit_test/panel, mob/operator)
+	return spawn_criminal(panel, operator, 1, "normal", "brawler", run_loc_floor_bottom_left) // BOUNTY_TIER_PETTY
+
 /datum/unit_test/voidcrew_bounty_admin/force_state/Run()
-	var/turf/spot = run_loc_floor_bottom_left
 	var/mob/living/carbon/human/operator = make_operator(run_loc_floor_top_right)
 	var/datum/bounty_admin_panel/unit_test/panel = allocate(__IMPLIED_TYPE__, operator)
-	var/mob/living/basic/bounty_criminal/criminal = spawn_criminal(panel, operator, 1, "normal", "brawler", spot)
-	TEST_ASSERT_NOTNULL(criminal, "No criminal spawned: [panel.error]")
-	// Held still, so nothing the AI does moves the numbers between steps
-	ADD_TRAIT(criminal, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
-	var/logged = length(panel.operations)
 
-	// Only an admin.
+	// Only an admin, and only known states; refusals log nothing.
+	var/mob/living/basic/bounty_criminal/criminal = fresh(panel, operator)
+	TEST_ASSERT_NOTNULL(criminal, "No criminal spawned: [panel.error]")
+	var/logged = length(panel.operations)
 	panel.allow_actions = FALSE
 	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "dead"), "A panel without R_ADMIN forced a state") // BOUNTY_STATE_DEAD
 	TEST_ASSERT(criminal.stat != DEAD, "A panel without R_ADMIN killed the criminal")
 	panel.allow_actions = TRUE
+	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "fine") && panel.error, "An unknown state was accepted")
+	TEST_ASSERT_EQUAL(length(panel.operations), logged, "A refused forced state was logged")
 
-	// Downed: health at or under the downed line, alive.
+	// Downed: down, alive, at or under P2's line.
+	criminal = fresh(panel, operator)
 	TEST_ASSERT(panel.admin_force_state(operator, criminal, "downed"), "Forcing downed was refused: [panel.error]") // BOUNTY_STATE_DOWNED
-	TEST_ASSERT(criminal.health <= panel.downed_line(criminal), "Forcing downed left them at [criminal.health] health, over the line [panel.downed_line(criminal)]")
-	TEST_ASSERT(criminal.stat != DEAD, "Forcing downed killed them")
-
-	// Free: healed and the worst state back to free.
-	TEST_ASSERT(panel.admin_force_state(operator, criminal, "free"), "Freeing was refused: [panel.error]") // BOUNTY_STATE_FREE
-	TEST_ASSERT_EQUAL(criminal.health, criminal.maxHealth, "Freeing left them hurt")
-	TEST_ASSERT_EQUAL(criminal.worst_state, "free", "Freeing left the worst state at [criminal.worst_state]") // BOUNTY_STATE_FREE
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "downed", "A forced downed criminal reads as [criminal.capture_state()]")
+	TEST_ASSERT(criminal.is_downed(), "A forced downed criminal is not down")
+	TEST_ASSERT(criminal.health <= criminal.body_downed_line(), "Forcing downed left them at [criminal.health] health, over the line")
+	TEST_ASSERT_EQUAL(criminal.worst_state, "downed", "A forced downed criminal's worst state is [criminal.worst_state]")
+	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "downed"), "A downed criminal was downed again")
 
 	// Stunned: paralysed.
+	criminal = fresh(panel, operator)
 	TEST_ASSERT(panel.admin_force_state(operator, criminal, "stunned"), "Forcing a stun was refused: [panel.error]") // BOUNTY_STATE_STUNNED
-	TEST_ASSERT(criminal.IsParalyzed(), "Forcing a stun left them standing")
-	TEST_ASSERT(panel.admin_force_state(operator, criminal, "free"), "Freeing a stunned criminal was refused: [panel.error]")
-	TEST_ASSERT(!criminal.IsParalyzed(), "Freeing left the stun on")
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "stunned", "A forced stunned criminal reads as [criminal.capture_state()]")
+	TEST_ASSERT(criminal.IsParalyzed(), "A forced stunned criminal is not paralysed")
 
-	// Restrained: a real pair of handcuffs on them, held as their restraints; once only.
+	// Restrained: P2's cuffs and everything that comes with them, and nobody on the grudge list.
+	criminal = fresh(panel, operator)
 	TEST_ASSERT(panel.admin_force_state(operator, criminal, "restrained"), "Forcing restraints was refused: [panel.error]") // BOUNTY_STATE_RESTRAINED
-	var/obj/item/restraints/handcuffs/cuffs = criminal.restraints
-	TEST_ASSERT(istype(cuffs), "Forcing restraints put no handcuffs on them")
-	TEST_ASSERT_EQUAL(cuffs.loc, criminal, "The forced handcuffs are not on them")
-	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "restrained"), "Cuffing a cuffed criminal was accepted")
-	TEST_ASSERT(panel.error, "Cuffing a cuffed criminal left no reason")
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "restrained", "A forced restrained criminal reads as [criminal.capture_state()]")
+	TEST_ASSERT(criminal.is_restrained(), "A forced restrained criminal has no restraints on")
+	TEST_ASSERT(istype(criminal.restraints, /obj/item/restraints/handcuffs), "Forcing restraints put no handcuffs on them")
+	TEST_ASSERT(HAS_TRAIT_FROM(criminal, TRAIT_IMMOBILIZED, "bounty_body_cuffs"), "The forced cuffs don't hold them still") // BOUNTY_BODY_CUFFS_TRAIT
+	TEST_ASSERT(HAS_TRAIT_FROM(criminal, TRAIT_AI_PAUSED, "bounty_body_held"), "The forced cuffs don't pause their AI") // BOUNTY_BODY_HELD_TRAIT
+	TEST_ASSERT_EQUAL(length(criminal.grudge), 0, "Forcing restraints put someone on their grudge list")
+	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "restrained") && panel.error, "Cuffing a cuffed criminal was accepted")
+	// Free takes them off through P2: the cuffs drop at their feet and the hold is gone.
+	var/obj/item/restraints/handcuffs/forced_cuffs = criminal.restraints
+	TEST_ASSERT(panel.admin_force_state(operator, criminal, "free"), "Freeing a cuffed criminal was refused: [panel.error]") // BOUNTY_STATE_FREE
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "free", "A freed criminal reads as [criminal.capture_state()]")
+	TEST_ASSERT(!HAS_TRAIT_FROM(criminal, TRAIT_IMMOBILIZED, "bounty_body_cuffs"), "Freeing left them held still by the cuffs")
+	TEST_ASSERT(!HAS_TRAIT_FROM(criminal, TRAIT_AI_PAUSED, "bounty_body_held"), "Freeing left their AI paused")
+	TEST_ASSERT_EQUAL(forced_cuffs.loc, get_turf(criminal), "Freeing did not drop the cuffs at their feet")
+	allocated += forced_cuffs
 
-	// Free takes the cuffs and a surrender off.
+	// Surrendered reads as stunned, and free ends it.
+	criminal = fresh(panel, operator)
 	ADD_TRAIT(criminal, "bounty_surrendered", "bounty") // TRAIT_BOUNTY_SURRENDERED, BOUNTY_TRAIT
-	TEST_ASSERT(panel.admin_force_state(operator, criminal, "free"), "Freeing a cuffed criminal was refused: [panel.error]")
-	TEST_ASSERT_NULL(criminal.restraints, "Freeing left the restraints on")
-	TEST_ASSERT(cuffs.loc != criminal, "Freeing left the handcuffs in their contents")
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "stunned", "A surrendered criminal reads as [criminal.capture_state()]")
+	TEST_ASSERT(panel.admin_force_state(operator, criminal, "free"), "Freeing a surrendered criminal was refused: [panel.error]")
 	TEST_ASSERT(!HAS_TRAIT(criminal, "bounty_surrendered"), "Freeing left the surrender on")
-	if(!QDELETED(cuffs))
-		allocated += cuffs
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "free", "A freed surrendered criminal reads as [criminal.capture_state()]")
 
-	// Dead: dead, and the pad would read it so.
+	// A player cuffs a downed criminal through P2; the admin frees it: up, healed, uncuffed, nothing of P2's left on it.
+	criminal = fresh(panel, operator)
+	TEST_ASSERT(panel.admin_force_state(operator, criminal, "downed"), "Forcing downed was refused: [panel.error]")
+	var/mob/living/carbon/human/hunter = make_operator(run_loc_floor_bottom_left)
+	var/obj/item/restraints/handcuffs/player_cuffs = allocate(/obj/item/restraints/handcuffs, run_loc_floor_bottom_left)
+	hunter.put_in_hands(player_cuffs)
+	TEST_ASSERT(criminal.body_apply_cuffs(player_cuffs, hunter), "The hunter's cuffs did not go on the downed criminal")
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "downed", "A cuffed downed criminal reads as [criminal.capture_state()]")
+	TEST_ASSERT(panel.admin_force_state(operator, criminal, "free"), "Freeing a cuffed downed criminal was refused: [panel.error]")
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "free", "The freed criminal reads as [criminal.capture_state()]")
+	TEST_ASSERT(!criminal.is_downed(), "Freeing left them down")
+	TEST_ASSERT(!criminal.is_restrained(), "Freeing left the hunter's cuffs on")
+	TEST_ASSERT_EQUAL(criminal.health, criminal.maxHealth, "Freeing left them hurt")
+	TEST_ASSERT_EQUAL(criminal.worst_state, "free", "Freeing left the worst state at [criminal.worst_state]")
+	for(var/source in list("bounty_body_cuffs", "bounty_body_downed")) // BOUNTY_BODY_CUFFS_TRAIT, BOUNTY_BODY_DOWNED_TRAIT
+		TEST_ASSERT(!HAS_TRAIT_FROM(criminal, TRAIT_IMMOBILIZED, source), "Freeing left them held still ([source])")
+	TEST_ASSERT(!HAS_TRAIT_FROM(criminal, TRAIT_FLOORED, "bounty_body_downed"), "Freeing left them on the floor")
+	TEST_ASSERT(!HAS_TRAIT_FROM(criminal, TRAIT_AI_PAUSED, "bounty_body_held"), "Freeing left their AI paused")
+	TEST_ASSERT(!HAS_TRAIT_FROM(criminal, "bounty_held", "bounty_body_held"), "Freeing left them held") // TRAIT_BOUNTY_HELD
+
+	// Dead: dead, and the pad would read it so. The dead stay dead and take no other state.
+	criminal = fresh(panel, operator)
 	TEST_ASSERT(panel.admin_force_state(operator, criminal, "dead"), "Forcing death was refused: [panel.error]")
 	TEST_ASSERT_EQUAL(criminal.stat, DEAD, "Forcing death left them alive")
 	TEST_ASSERT_EQUAL(criminal.capture_state(), "dead", "A dead criminal reads as [criminal.capture_state()]")
-
-	// The dead stay dead, and a dead criminal takes no other state.
 	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "free"), "A dead criminal was freed")
 	TEST_ASSERT_EQUAL(criminal.stat, DEAD, "Freeing a dead criminal revived them")
 	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "downed"), "A dead criminal was downed")
 	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "restrained"), "A dead criminal was cuffed")
-	TEST_ASSERT(!panel.admin_force_state(operator, criminal, "fine"), "An unknown state was accepted")
-
-	// Seven forced states, each logged once; the refusals logged nothing.
-	TEST_ASSERT_EQUAL(length(panel.operations) - logged, 7, "The panel logged [length(panel.operations) - logged] forced states: [jointext(panel.operations, "; ")]")
 
 	// Through the menu: pick the criminal, then the state.
-	var/mob/living/basic/bounty_criminal/second = spawn_criminal(panel, operator, 1, "meek", null, spot)
-	ADD_TRAIT(second, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
-	var/label = panel.unique_label(list(), panel.criminal_label(second))
+	criminal = fresh(panel, operator)
+	var/label = panel.unique_label(list(), panel.criminal_label(criminal))
 	panel.answers = list("Force a capture state", label, "Stunned")
 	panel.run_menu(operator)
 	TEST_ASSERT_EQUAL(length(panel.missed), 0, "The force menu did not offer: [jointext(panel.missed, "; ")]")
-	TEST_ASSERT(second.IsParalyzed(), "The force menu did not stun the criminal it was asked to")
+	TEST_ASSERT_EQUAL(criminal.capture_state(), "stunned", "The force menu left the criminal [criminal.capture_state()]")
 
 // ===== THE PRISONER POOL =====
 
-/// A test record goes into the pool, lists with its tier, status, prison and age, and drops out closed
+/// A test record goes into the pool through P7, lists with its tier, status, prison and age, and leaves closed through P7
 /datum/unit_test/voidcrew_bounty_admin/pool
 
 /datum/unit_test/voidcrew_bounty_admin/pool/Run()
 	var/mob/living/carbon/human/operator = make_operator(run_loc_floor_top_right)
 	var/datum/bounty_admin_panel/unit_test/panel = allocate(__IMPLIED_TYPE__, operator)
-	// The pool is global: set it aside for the test, and put it back after.
 	var/list/pool_before = GLOB.bounty_prisoner_pool.Copy()
 	GLOB.bounty_prisoner_pool.Cut()
 	run_checks(panel, operator)
-	GLOB.bounty_prisoner_pool.Cut()
+	bounty_pool_clear("the admin panel's test is over")
 	GLOB.bounty_prisoner_pool += pool_before
+	bounty_pool_start_tick()
 
 /datum/unit_test/voidcrew_bounty_admin/pool/proc/run_checks(datum/bounty_admin_panel/unit_test/panel, mob/operator)
 	// Only an admin.
@@ -269,7 +307,7 @@
 	TEST_ASSERT_EQUAL(length(GLOB.bounty_prisoner_pool), 0, "A refused add reached the pool")
 	panel.allow_actions = TRUE
 
-	// Add: in the pool, pooled, brought in by the admin test, unhurt.
+	// Add: in the pool, pooled by P7, brought in by the admin test, unhurt.
 	var/datum/bounty_record/record = panel.admin_pool_add(operator, 2, "normal", null) // BOUNTY_TIER_WANTED
 	TEST_ASSERT_NOTNULL(record, "No test record was added: [panel.error]")
 	TEST_ASSERT(record in GLOB.bounty_prisoner_pool, "The test record is not in the pool")
@@ -283,7 +321,7 @@
 	var/list/rows = panel.pool_rows()
 	TEST_ASSERT_EQUAL(length(rows), 1, "The pool lists [length(rows)] rows for one record")
 	var/list/row = rows[1]
-	for(var/key in list("id", "name", "tier", "archetype", "status", "prison", "age"))
+	for(var/key in list("id", "name", "tier", "archetype", "status", "prison", "reserved", "age"))
 		TEST_ASSERT(key in row, "A pool row sends no [key]")
 	TEST_ASSERT_EQUAL(row["id"], record.id, "The pool row is not the record's")
 	TEST_ASSERT_EQUAL(row["name"], record.name, "The pool row names [row["name"]]")
@@ -297,13 +335,11 @@
 	TEST_ASSERT((boss_record?.kit in list("juggernaut", "pyromaniac", "demolitionist", "ghost", "heavy")), "A boss test record has the kit [boss_record?.kit]")
 	TEST_ASSERT_EQUAL(length(panel.pool_rows()), 2, "The pool does not list both records")
 
-	// Through the menu: the list names the records.
+	// Through the menu: the list names the records, and a record added there joins.
 	panel.answers = list("Prisoner pool", "List the records")
 	panel.run_menu(operator)
 	TEST_ASSERT_EQUAL(length(panel.missed), 0, "The pool menu did not offer: [jointext(panel.missed, "; ")]")
 	TEST_ASSERT(panel.said(record.name), "The pool list does not name [record.name]")
-
-	// Through the menu: a test record added there.
 	panel.answers = list("Prisoner pool", "Add a test record", "Meek", "Petty", "Any prison")
 	panel.run_menu(operator)
 	TEST_ASSERT_EQUAL(length(panel.missed), 0, "The add menu did not offer: [jointext(panel.missed, "; ")]")
@@ -313,45 +349,59 @@
 	TEST_ASSERT(panel.admin_pool_drop(operator, record), "Dropping the record was refused: [panel.error]")
 	TEST_ASSERT(!(record in GLOB.bounty_prisoner_pool), "The dropped record is still in the pool")
 	TEST_ASSERT_EQUAL(record.status, "closed", "The dropped record is [record.status], not closed") // BOUNTY_RECORD_CLOSED
-	TEST_ASSERT(!panel.admin_pool_drop(operator, record), "A record out of the pool was dropped again")
-	TEST_ASSERT(panel.error, "Dropping a record twice left no reason")
+	TEST_ASSERT(!panel.admin_pool_drop(operator, record) && panel.error, "A record out of the pool was dropped again")
 
-	// Admitting with no prison, or a record out of the pool, is refused.
+	// Admitting with no prison, or a record out of the pool, is refused and changes nothing.
 	TEST_ASSERT_NULL(panel.admin_pool_admit(operator, boss_record, null), "A record was admitted into no prison")
 	TEST_ASSERT(boss_record in GLOB.bounty_prisoner_pool, "A refused admission took the record out of the pool")
 	TEST_ASSERT_NULL(panel.admin_pool_admit(operator, record, null), "A dropped record was admitted")
 
-// ===== POSTINGS AND THE BOARD =====
+	// Clear: every record closed and the pool empty.
+	TEST_ASSERT_EQUAL(panel.admin_pool_clear(operator), 2, "Clearing the pool closed the wrong number of records")
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_prisoner_pool), 0, "Clearing left records in the pool")
+	TEST_ASSERT_EQUAL(boss_record.status, "closed", "A cleared record is [boss_record.status]")
 
-/// A live posting lists every field with a jump link, can be jumped to, fetched, run down and closed once; the board's tick counts are bounded
+// ===== POSTINGS, THE BOARD AND EXTRA POST ACTIONS =====
+
+/**
+ * A posting lists every field with a jump link; the admin can fetch its criminal and jump to it;
+ * P5's clock runs forward on that posting alone; relist reports P5's answer; close works once;
+ * posting requests the board would refuse are refused; and an extra post action runs from the menu.
+ */
 /datum/unit_test/voidcrew_bounty_admin/postings
 
 /datum/unit_test/voidcrew_bounty_admin/postings/Run()
 	var/mob/living/carbon/human/operator = make_operator(run_loc_floor_top_right)
 	var/datum/bounty_admin_panel/unit_test/panel = allocate(__IMPLIED_TYPE__, operator)
+	var/list/postings_before = GLOB.criminal_bounties.Copy()
+	GLOB.criminal_bounties.Cut()
 	var/datum/bounty_record/record = generate_bounty_record(1, "meek", "planet") // BOUNTY_TIER_PETTY, BOUNTY_ARCHETYPE_MEEK, BOUNTY_PLACEMENT_PLANET
 	var/datum/criminal_bounty/posting = new
 	posting.record = record
 	posting.placement_kind = "planet" // BOUNTY_PLACEMENT_PLANET
 	posting.value = 1234
 	posting.expires_at = world.time + 20 MINUTES
-	GLOB.criminal_bounties |= posting
+	GLOB.criminal_bounties += posting
 	var/mob/living/basic/bounty_criminal/criminal = spawn_bounty_criminal(record, run_loc_floor_bottom_left, posting)
-	TEST_ASSERT_NOTNULL(criminal, "No criminal spawned for the posting")
-	allocated += criminal
-	ADD_TRAIT(criminal, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
-	posting.criminal_ref = WEAKREF(criminal)
+	if(criminal)
+		allocated += criminal
+		posting.criminal_ref = WEAKREF(criminal)
 	run_checks(panel, operator, posting, criminal)
-	GLOB.criminal_bounties -= posting
+	if(!QDELETED(posting))
+		posting.close("admin") // BOUNTY_CLOSE_ADMIN
+	GLOB.criminal_bounties.Cut()
+	GLOB.criminal_bounties += postings_before
 
 /datum/unit_test/voidcrew_bounty_admin/postings/proc/run_checks(datum/bounty_admin_panel/unit_test/panel, mob/operator, datum/criminal_bounty/posting, mob/living/basic/bounty_criminal/criminal)
+	TEST_ASSERT_NOTNULL(criminal, "No criminal spawned for the posting")
+
 	// The row: every field, a jump link to the criminal, the time left.
 	var/list/row = panel.posting_row(posting)
 	for(var/key in list("tier", "name", "kind", "place", "status", "for", "hunters", "location", "time_left", "value"))
 		TEST_ASSERT(key in row, "A posting row sends no [key]")
 	TEST_ASSERT_EQUAL(row["tier"], "Petty", "The posting row's tier is [row["tier"]]")
 	TEST_ASSERT_EQUAL(row["name"], posting.record.name, "The posting row names [row["name"]]")
-	TEST_ASSERT_EQUAL(row["status"], "open", "The posting row's status is [row["status"]]") // BOUNTY_POSTING_OPEN
+	TEST_ASSERT_EQUAL(row["status"], "open", "The posting row's status is [row["status"]]") // BOUNTY_BOARD_OPEN
 	TEST_ASSERT_EQUAL(row["for"], "public", "A public posting reads [row["for"]]")
 	TEST_ASSERT_EQUAL(row["hunters"], 0, "Nobody hunts it, but the row says [row["hunters"]]")
 	TEST_ASSERT_EQUAL(row["value"], 1234, "The posting row's value is [row["value"]]")
@@ -372,33 +422,44 @@
 	TEST_ASSERT_EQUAL(get_turf(operator), run_loc_floor_bottom_left, "Jumping left the admin away from the criminal")
 	TEST_ASSERT(!panel.admin_jump(operator, null), "Jumping to nobody was accepted")
 
-	// The clock: minutes off every open posting, within bounds.
+	// The clock runs forward through P5, on the posting's expiry; out-of-range runs are refused.
 	var/expires_before = posting.expires_at
-	TEST_ASSERT_EQUAL(panel.admin_skip_clocks(operator, 5), 1, "Skipping the clock changed the wrong number of postings")
-	TEST_ASSERT_EQUAL(posting.expires_at, expires_before - 5 MINUTES, "Skipping 5 minutes moved the clock by [(expires_before - posting.expires_at) / 10] s")
-	TEST_ASSERT(!panel.admin_skip_clocks(operator, 0) && panel.error, "Skipping no minutes was accepted")
-	TEST_ASSERT(!panel.admin_skip_clocks(operator, 121) && panel.error, "Skipping more than two hours was accepted")
+	TEST_ASSERT(panel.admin_fast_forward(operator, 300), "Running the board 5 minutes forward was refused: [panel.error]")
+	TEST_ASSERT_EQUAL(posting.expires_at, expires_before - 5 MINUTES, "Five minutes forward moved the clock by [(expires_before - posting.expires_at) / 10] s")
+	TEST_ASSERT_EQUAL(posting.status, "open", "Five minutes forward closed a posting with fifteen left") // BOUNTY_POSTING_OPEN
+	TEST_ASSERT(!panel.admin_fast_forward(operator, 0) && panel.error, "Running the board no time forward was accepted")
+	TEST_ASSERT(!panel.admin_fast_forward(operator, 7201) && panel.error, "Running the board more than two hours forward was accepted")
+	TEST_ASSERT(!panel.admin_fast_forward(operator, 1.5) && panel.error, "Running the board a fraction of a second forward was accepted")
 
-	// The board's tick: bounded. A real tick can post and load sites, so none runs here.
-	TEST_ASSERT(!panel.admin_board_ticks(operator, 0) && panel.error, "Running no ticks was accepted")
-	TEST_ASSERT(!panel.admin_board_ticks(operator, 61) && panel.error, "Running more than 60 ticks was accepted")
-	TEST_ASSERT(!panel.admin_board_ticks(operator, 1.5) && panel.error, "Running half a tick was accepted")
-
-	// Posting: bad requests are refused before the board is asked.
+	// Posting: what the board would refuse is refused before it is asked.
 	TEST_ASSERT_NULL(panel.admin_post_bounty(operator, 0, "planet", null, null), "A tier of 0 was posted")
 	TEST_ASSERT_NULL(panel.admin_post_bounty(operator, 1, "moon", null, null), "An unknown placement was posted")
+	TEST_ASSERT_NULL(panel.admin_post_bounty(operator, 1, "npc_ship", null, null), "A Petty bounty was posted to a pirate ship") // BOUNTY_PLACEMENT_NPC_SHIP
+	TEST_ASSERT_NULL(panel.admin_post_bounty(operator, 3, "trader_outpost", null, null), "A Most Wanted bounty was posted to a trader outpost") // BOUNTY_PLACEMENT_TRADER_OUTPOST
+
+	// Relist: P5 takes it off its site; a second relist while it is relisting is refused.
+	var/logged = length(panel.operations)
+	TEST_ASSERT(panel.admin_relist_posting(operator, posting), "Relisting the posting was refused: [panel.error]")
+	TEST_ASSERT(posting.board_relisting, "The posting is not relisting")
+	TEST_ASSERT(!panel.admin_relist_posting(operator, posting) && panel.error, "A relisting posting was relisted again")
 
 	// Close: an admin close, once only; a closed posting can't be relisted.
-	var/logged = length(panel.operations)
 	TEST_ASSERT(panel.admin_close_posting(operator, posting), "Closing the posting was refused: [panel.error]")
 	TEST_ASSERT_EQUAL(posting.status, "closed", "The closed posting is [posting.status]") // BOUNTY_POSTING_CLOSED
 	TEST_ASSERT(!panel.admin_close_posting(operator, posting) && panel.error, "A closed posting was closed again")
 	TEST_ASSERT(!panel.admin_relist_posting(operator, posting) && panel.error, "A closed posting was relisted")
-	TEST_ASSERT_EQUAL(length(panel.operations) - logged, 1, "Closing once logged [length(panel.operations) - logged] lines")
+	TEST_ASSERT_EQUAL(length(panel.operations) - logged, 2, "One relist and one close logged [length(panel.operations) - logged] lines")
+
+	// The extension point: an extra post action is offered first and runs from the menu.
+	panel.answers = list("Post a bounty now", "Test posting")
+	panel.run_menu(operator)
+	TEST_ASSERT_EQUAL(length(panel.missed), 0, "The post menu did not offer: [jointext(panel.missed, "; ")]")
+	TEST_ASSERT(panel.said("the test post action ran"), "The extra post action did not run")
+	TEST_ASSERT(("post the test posting" in panel.operations), "The extra post action was not logged")
 
 // ===== ADMITTING INTO A PRISON =====
 
-/// A pool record admitted into a chosen running prison now: out of the pool, into a free cell, rebuilt from its record
+/// A pool record admitted into a chosen running prison now, through P7: out of the pool, into a free cell, rebuilt from its record
 /datum/unit_test/voidcrew_bounty_admin_admit
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -411,12 +472,13 @@
 	var/list/pool_before = GLOB.bounty_prisoner_pool.Copy()
 	GLOB.bounty_prisoner_pool.Cut()
 	run_checks(home, prison, panel, operator)
-	GLOB.bounty_prisoner_pool.Cut()
+	bounty_pool_clear("the admin panel's test is over")
 	GLOB.bounty_prisoner_pool += pool_before
+	bounty_pool_start_tick()
 	settle_prison_air(home)
 
 /datum/unit_test/voidcrew_bounty_admin_admit/proc/run_checks(obj/structure/overmap/dynamic/player_outpost/home, datum/outpost_prison/prison, datum/bounty_admin_panel/unit_test/panel, mob/operator)
-	// Reserved for this prison: the pool row names it.
+	// Reserved for this prison: P7 keeps it, and the pool row names it.
 	var/datum/bounty_record/record = panel.admin_pool_add(operator, 2, "normal", prison) // BOUNTY_TIER_WANTED
 	TEST_ASSERT_NOTNULL(record, "No test record was added: [panel.error]")
 	TEST_ASSERT_EQUAL(record.preferred_prison?.resolve(), prison, "The test record is not reserved for the chosen prison")
@@ -437,9 +499,7 @@
 
 	// Through the menu: the next record into the next cell.
 	var/datum/bounty_record/second = panel.admin_pool_add(operator, 1, "meek", null) // BOUNTY_TIER_PETTY
-	var/record_label = panel.unique_label(list(), "[second.name] ([panel.record_kind(second)])")
-	var/prison_label = panel.unique_label(list(), "[panel.prison_name(prison)]: [prison.free_slots()] free cell\s")
-	panel.answers = list("Prisoner pool", "Admit a record into a prison now", record_label, prison_label)
+	panel.answers = list("Prisoner pool", "Admit a record into a prison now", panel.record_label(second), panel.prison_label(prison))
 	panel.run_menu(operator)
 	TEST_ASSERT_EQUAL(length(panel.missed), 0, "The admit menu did not offer: [jointext(panel.missed, "; ")]")
 	TEST_ASSERT(!(second in GLOB.bounty_prisoner_pool), "The admit menu left the record in the pool")

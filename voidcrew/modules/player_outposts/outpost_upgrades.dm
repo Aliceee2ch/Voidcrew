@@ -103,6 +103,10 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 /datum/outpost_upgrade/proc/release_ground(list/footprint_turfs)
 	return
 
+/// A reason this upgrade may not go at `footprint` (footprint_at()) turned `rotation`, beyond the ground checks, or null
+/datum/outpost_upgrade/proc/placement_denial(list/footprint, rotation)
+	return null
+
 /**
  * A placement that crashed mid-load never comes back to release its blueprint, which would then
  * stay "placing" for good: it could not be placed again or refunded. So each placement arms this.
@@ -428,6 +432,9 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/turf/top_right = footprint["top_right"]
 	if(!upgrade_footprint_near_outpost(bottom_left, top_right))
 		return "Too far from the outpost."
+	var/room_denial = blueprint.placement_denial(footprint, rotation)
+	if(room_denial)
+		return room_denial
 	// Claim the blueprint and its ground before the load can yield, so a second Build or an
 	// elevator placement finds nothing to work with.
 	blueprint.placing = TRUE

@@ -19,6 +19,8 @@
 	opacity = FALSE
 	glass = TRUE
 	opens_with_door_remote = FALSE
+	// Never set: a door button with a matching id opens, bolts and shocks it. adopt_doors() clears map edits.
+	id_tag = null
 	/// OUTPOST_DOOR_PUBLIC or OUTPOST_DOOR_STAFF
 	var/door_policy = OUTPOST_DOOR_PUBLIC
 
@@ -105,6 +107,13 @@
 
 /obj/machinery/door/airlock/outpost/service/on_magic_unlock(datum/source, datum/action/cooldown/spell/aoe/knock/spell, mob/living/caster)
 	SIGNAL_HANDLER
+	return
+
+// A singularity or reality tear deletes any obj whatever its resistance flags (obj_defense.dm)
+/obj/machinery/door/airlock/outpost/service/singularity_act()
+	return 0
+
+/obj/machinery/door/airlock/outpost/service/singularity_pull(atom/singularity, current_size)
 	return
 
 /obj/machinery/door/airlock/outpost/service/examine(mob/user)

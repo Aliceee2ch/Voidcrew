@@ -22,3 +22,10 @@
 
 /// Magic recall (the summon item spell) cannot pull an item out of a holder with this trait
 #define TRAIT_BLOCKS_RECALL "blocks_recall"
+
+/// A singularity or reality tear neither eats nor pulls this (outpost service room fixtures; see singularity_spares())
+#define TRAIT_SINGULARITY_IMMUNE "singularity_immune"
+/// Sold by an outpost shop: summon marks made before the sale no longer recall it (sever_magic_recall())
+#define TRAIT_RECALL_SEVERED "recall_severed"
+/// Trait source for outpost service rooms
+#define OUTPOST_SERVICE_TRAIT "outpost_service"

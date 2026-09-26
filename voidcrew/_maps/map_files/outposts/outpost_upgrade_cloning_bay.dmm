@@ -1,0 +1,193 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"c" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"d" = (
+/turf/open/indestructible/white,
+/area/template_noop)
+"e" = (
+/obj/structure/chair/sofa/bench/right{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"k" = (
+/obj/effect/spawner/structure/window/reinforced,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"m" = (
+/turf/closed/indestructible/reinforced,
+/area/template_noop)
+"s" = (
+/obj/machinery/light/cold/directional/west,
+/turf/open/indestructible/white,
+/area/template_noop)
+"v" = (
+/obj/item/kirbyplants/random,
+/turf/open/indestructible/white,
+/area/template_noop)
+"B" = (
+/obj/machinery/light/cold/directional/north,
+/turf/open/indestructible/white,
+/area/template_noop)
+"C" = (
+/obj/structure/sign/departments/genetics/directional/north,
+/turf/open/indestructible/white,
+/area/template_noop)
+"H" = (
+/obj/structure/closet/wardrobe/grey{
+	anchored = 1
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"M" = (
+/obj/machinery/door/airlock/outpost/service/medical,
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"Q" = (
+/obj/structure/chair/sofa/bench/left{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"S" = (
+/obj/machinery/cloning_vat/outpost,
+/turf/open/indestructible/white,
+/area/template_noop)
+"U" = (
+/obj/machinery/light/cold/directional/south,
+/turf/open/indestructible/white,
+/area/template_noop)
+"Z" = (
+/obj/machinery/light/cold/directional/east,
+/turf/open/indestructible/white,
+/area/template_noop)
+
+(1,1,1) = {"
+m
+m
+m
+m
+m
+m
+m
+m
+m
+"}
+(2,1,1) = {"
+m
+S
+c
+s
+d
+H
+Q
+d
+m
+"}
+(3,1,1) = {"
+m
+S
+c
+d
+d
+d
+e
+d
+m
+"}
+(4,1,1) = {"
+m
+d
+d
+d
+d
+d
+d
+d
+k
+"}
+(5,1,1) = {"
+m
+B
+d
+d
+d
+d
+d
+U
+m
+"}
+(6,1,1) = {"
+m
+C
+d
+d
+d
+d
+d
+d
+M
+"}
+(7,1,1) = {"
+m
+B
+d
+d
+d
+d
+d
+U
+m
+"}
+(8,1,1) = {"
+m
+d
+d
+d
+d
+d
+d
+d
+k
+"}
+(9,1,1) = {"
+m
+S
+c
+d
+d
+d
+d
+d
+m
+"}
+(10,1,1) = {"
+m
+S
+c
+Z
+d
+v
+d
+d
+m
+"}
+(11,1,1) = {"
+m
+m
+m
+m
+m
+m
+m
+m
+m
+"}

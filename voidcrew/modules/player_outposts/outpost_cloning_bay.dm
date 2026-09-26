@@ -222,8 +222,6 @@
 	var/datum/bank_account/account
 	if(owed > 0)
 		account = user.get_idcard(TRUE)?.registered_account
-		// For a visitor the fee they saw is the listed price, which charge_service() accepts
-		// whether it compares the listed or the effective price
 		var/refusal = home.charge_service(user, OUTPOST_PRICE_CLONE_IMPRINT, listed, owed, "Cloning imprint")
 		if(refusal)
 			return refusal
@@ -338,10 +336,3 @@
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/clone_wake_raid_locked()
 	return FALSE
-
-/**
- * P0.1 STUB (abuse review F-03). P0.1 declares this on the service room base: text when the
- * room's way out is blocked or opens onto vacuum, else null. Delete this stub when P0.1 merges.
- */
-/datum/outpost_upgrade/service/proc/exit_denial()
-	return null

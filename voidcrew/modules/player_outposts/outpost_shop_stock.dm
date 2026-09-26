@@ -120,6 +120,7 @@
 	. = ..()
 	ADD_TRAIT(src, TRAIT_BLOCKS_RECALL, INNATE_TRAIT)
 	RegisterSignal(src, COMSIG_STORAGE_DUMP_CONTENT, PROC_REF(on_storage_dump))
+	RegisterSignal(src, COMSIG_ATOM_INTERNAL_EXPLOSION, PROC_REF(contain_explosion))
 	update_appearance()
 
 /obj/machinery/outpost_shop_stock/Destroy()
@@ -155,6 +156,14 @@
 
 /obj/machinery/outpost_shop_stock/singularity_pull(atom/singularity, current_size)
 	return
+
+/// An explosion that starts inside the stock unit never leaves it
+/obj/machinery/outpost_shop_stock/proc/contain_explosion(datum/source, list/arguments)
+	SIGNAL_HANDLER
+	var/atom/origin = arguments?[EXARG_KEY_ORIGIN]
+	log_bomber(null, "An explosion from [origin || "something"] was contained by", src)
+	visible_message(span_warning("[src] shudders with a muffled thump."))
+	return COMSIG_CANCEL_EXPLOSION
 
 // ===== WHERE IT STANDS =====
 
@@ -225,6 +234,19 @@
 			var/obj/item/grenade/grenade = inner
 			if(grenade.active)
 				return "It's armed."
+		// Anything a remote signal could set off after the sale, or while it sits in stock
+		if(istype(inner, /obj/item/bombcore))
+			return "That can't be sold here."
+		if(istype(inner, /obj/item/tank))
+			var/obj/item/tank/tank = inner
+			if(tank.tank_assembly)
+				return "Take the assembly off first."
+		if(inner == item)
+			continue
+		if(istype(inner, /obj/item/assembly_holder))
+			return "Take the assembly off first."
+		if(istype(inner, /obj/item/assembly) && !istype(inner, /obj/item/assembly/flash) && !istype(inner.loc, /obj/item/assembly_holder))
+			return "Take the assembly off first."
 	if(item.get_temperature() > 0)
 		return "Put it out first."
 	if(istype(item, /obj/item/transfer_valve) || istype(item, /obj/item/disk/nuclear))
@@ -256,6 +278,15 @@
 		state += "a:[length(box.stored_ammo)]"
 	if(item.uses_integrity && item.atom_integrity < item.max_integrity)
 		state += "dmg"
+	// What is inside: a hypospray's vial, a grenade's beakers, a gun's magazine
+	var/list/inner_parts = list()
+	for(var/obj/item/inner as anything in item.get_all_contents_type(/obj/item) - item)
+		var/list/inner_mix = list()
+		for(var/datum/reagent/reagent as anything in inner.reagents?.reagent_list)
+			inner_mix += "[reagent.type]=[round(reagent.volume, 0.1)]"
+		inner_parts += "[inner.type]([jointext(sort_list(inner_mix), ",")])"
+	if(length(inner_parts))
+		state += "i:[jointext(sort_list(inner_parts), ",")]"
 	return jointext(state, ";")
 
 /// Items with the same key are interchangeable and share a listing
@@ -520,8 +551,10 @@
 	for(var/obj/item/good as anything in goods)
 		if(QDELETED(good))
 			continue
-		// A marked item must not be recalled out of the buyer's hands and sold again
-		sever_magic_recall(good)
+		// A marked item must not be recalled out of the buyer's hands and sold again. A mark on a
+		// part (a cell, a magazine, a vial) would recall the whole item with it.
+		for(var/obj/item/part as anything in good.get_all_contents_type(/obj/item))
+			sever_magic_recall(part)
 		if(!buyer.put_in_hands(good))
 			good.forceMove(buyer.drop_location())
 	record_sale(buyer, listing.name, quantity, total, taker)

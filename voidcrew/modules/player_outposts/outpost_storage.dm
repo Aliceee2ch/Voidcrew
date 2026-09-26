@@ -279,7 +279,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 		: "Rent: free for the rest of the shift."
 	var/terms = "[cost_line]\n\n\
 		The lock is keyed to you, not to your ID card. The outpost owner cannot open it.\n\
-		No living creatures, bodies, explosives or trigger devices.\n\
+		No living creatures, bodies, explosives, trigger devices, ship keys or contract goods.\n\
 		The owner still controls who may dock here and who may arrive by teleporter. A lockdown keeps renters out too.\n\
 		If the outpost is deleted, the locker and everything in it are lost."
 	if(tgui_alert(user, terms, "Rent [name]", list("Rent", "Cancel")) != "Rent")
@@ -408,6 +408,9 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	for(var/atom/movable/inner as anything in thing.get_all_contents())
 		if(ismob(inner))
 			return inner
+		// Cryo keeps these in the round for the same reason: a locked locker would bury them
+		if(is_type_in_typecache(inner, GLOB.cryo_undeletable_items))
+			return inner
 		// Anomaly cores are signalers in name only
 		if(is_type_in_typecache(inner, GLOB.outpost_storage_refused) && !istype(inner, /obj/item/assembly/signaler/anomaly))
 			return inner
@@ -431,7 +434,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	refused_example = null
 	. = ..()
 	if(. && user && refused_on_close)
-		to_chat(user, span_warning("[src] will not take [refused_example][refused_on_close > 1 ? " or [refused_on_close - 1] other thing\s" : ""]. No living creatures, bodies, explosives or trigger devices."))
+		to_chat(user, span_warning("[src] will not take [refused_example][refused_on_close > 1 ? " or [refused_on_close - 1] other thing\s" : ""]. No living creatures, bodies, explosives, trigger devices, ship keys or contract goods."))
 	refused_on_close = 0
 	refused_example = null
 

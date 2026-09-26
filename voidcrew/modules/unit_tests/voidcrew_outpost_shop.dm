@@ -470,3 +470,83 @@
 	TEST_ASSERT(owner_size < 40000, "The owner window sends [owner_size] bytes for 150 listings")
 	TEST_ASSERT(buyer_size < 40000, "The buyer window sends [buyer_size] bytes for 150 listings")
 	settle_room_air(shop.room_turfs())
+
+// ===== WHAT IS INSIDE A UNIT (abuse review B-04, B-07, B-09) =====
+
+/datum/unit_test/voidcrew_outpost_shop_contents
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_shop_contents/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = market_test_claim("shopinnerowner")
+	TEST_ASSERT_NOTNULL(home, "The shop contents outpost did not load")
+	var/result = place_test_shop(home, 0)
+	TEST_ASSERT(istype(result, /datum/outpost_upgrade/service/shop), "The shop was not placed: [result]")
+	var/datum/outpost_upgrade/service/shop/shop = result
+	var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()
+	var/obj/machinery/computer/outpost_shop_register/register = shop.register_ref.resolve()
+	var/turf/staff_spot = shop_turf(shop, 3, 9)
+	var/turf/queue = shop_turf(shop, 6, 5)
+	var/mob/living/carbon/human/owner = make_market_visitor(staff_spot, "shopinnerowner", 0)
+	home.founder_mind = WEAKREF(owner.mind)
+	var/mob/living/carbon/human/buyer = make_market_visitor(queue, "shopinnerbuyer", 1000)
+
+	// B-04: a mark on the cell inside a sold gun does not recall the gun
+	var/obj/item/gun/energy/laser/gun = allocate(__IMPLIED_TYPE__, staff_spot)
+	var/obj/item/cell = gun.cell
+	TEST_ASSERT_NOTNULL(cell, "The test gun has no cell")
+	var/datum/action/cooldown/spell/summonitem/summons = allocate(__IMPLIED_TYPE__, owner)
+	summons.mark_item(cell)
+	TEST_ASSERT_NULL(stock.stock_item(gun, owner), "The gun could not be stocked")
+	var/datum/outpost_shop_listing/gun_listing = stock.listing_of[gun]
+	stock.owner_action(owner, "set_price", list("ids" = list(gun_listing.id), "price" = 1))
+	TEST_ASSERT_NULL(stock.sell(gun_listing, 1, 1, buyer, register), "The gun did not sell")
+	var/turf/sold_at = get_turf(gun)
+	summons.try_recall_item(owner)
+	TEST_ASSERT_NULL(summons.marked_item, "A mark on a sold gun's cell survived the sale")
+	TEST_ASSERT(gun.loc == buyer || get_turf(gun) == sold_at, "A mark on a part recalled the whole sold gun")
+	TEST_ASSERT_EQUAL(cell.loc, gun, "A mark on a part pulled the part out of the sold gun")
+
+	// B-07: units that differ inside never share a listing
+	var/list/grenades = list()
+	for(var/reagent_type in list(/datum/reagent/water, /datum/reagent/toxin, null, null))
+		var/obj/item/grenade/chem_grenade/grenade = allocate(__IMPLIED_TYPE__, staff_spot)
+		var/obj/item/reagent_containers/cup/beaker/beaker = allocate(__IMPLIED_TYPE__, staff_spot)
+		if(reagent_type)
+			beaker.reagents.add_reagent(reagent_type, 10)
+		beaker.forceMove(grenade)
+		grenades += grenade
+	TEST_ASSERT_NOTEQUAL(stock.listing_key(grenades[1]), stock.listing_key(grenades[2]), "Grenades with different beakers share a listing")
+	TEST_ASSERT_EQUAL(stock.listing_key(grenades[3]), stock.listing_key(grenades[4]), "Grenades with the same empty beakers were split")
+	var/obj/item/grenade/chem_grenade/bare = allocate(__IMPLIED_TYPE__, staff_spot)
+	TEST_ASSERT_NOTEQUAL(stock.listing_key(bare), stock.listing_key(grenades[3]), "A grenade with a beaker shares a listing with an empty one")
+
+	// B-09: nothing a signal can set off goes into stock
+	var/obj/item/tank/internals/plasma/tank = allocate(__IMPLIED_TYPE__, staff_spot)
+	var/obj/item/assembly_holder/holder = allocate(__IMPLIED_TYPE__, staff_spot)
+	holder.forceMove(tank)
+	tank.tank_assembly = holder
+	TEST_ASSERT_NOTNULL(stock.refusal_reason(tank), "A tank bomb could be stocked")
+	var/obj/item/assembly/signaler/signaler = allocate(__IMPLIED_TYPE__, staff_spot)
+	TEST_ASSERT_NULL(stock.refusal_reason(signaler), "A bare signaler was refused: [stock.refusal_reason(signaler)]")
+	var/obj/item/toy/plush/stuffed = allocate(__IMPLIED_TYPE__, staff_spot)
+	var/obj/item/assembly/signaler/hidden = allocate(__IMPLIED_TYPE__, staff_spot)
+	hidden.forceMove(stuffed)
+	TEST_ASSERT_NOTNULL(stock.refusal_reason(stuffed), "An item hiding a signaler could be stocked")
+	TEST_ASSERT(SEND_SIGNAL(stock, COMSIG_ATOM_INTERNAL_EXPLOSION, list()) & COMSIG_CANCEL_EXPLOSION, "An explosion inside the stock unit is not contained")
+
+	// B-13: nobody is placed onto the counter, past its window, into the back room
+	var/obj/structure/table/counter
+	for(var/turf/tile as anything in shop.room_turfs())
+		for(var/obj/structure/table/table in tile)
+			TEST_ASSERT_NULL(table.GetComponent(/datum/component/table_smash), "[table] at [table.x],[table.y] still takes people placed on it")
+			if(!counter && (locate(/obj/structure/window) in tile))
+				counter = table
+	TEST_ASSERT_NOTNULL(counter, "The shop has no counter")
+	var/turf/counter_front = get_step(counter, SOUTH)
+	var/mob/living/carbon/human/accomplice = make_market_visitor(counter_front, "shopinneraccomplice", 0)
+	buyer.forceMove(counter_front)
+	buyer.start_pulling(accomplice)
+	counter.attack_hand(buyer)
+	TEST_ASSERT(get_turf(accomplice) != get_turf(counter), "A visitor was placed onto the counter")
+	buyer.stop_pulling()
+	settle_room_air(shop.room_turfs())

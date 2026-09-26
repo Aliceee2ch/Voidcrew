@@ -339,6 +339,16 @@
 	TEST_ASSERT_EQUAL(left_out.loc, locker_turf, "Closing took a grenade")
 	TEST_ASSERT_EQUAL(taken.loc, locker, "Closing left an ordinary item out")
 
+	// B-08: ship keys and contract goods stay out, as they do at cryo
+	TEST_ASSERT(locker.open(user), "The locker would not open for the key test")
+	var/obj/item/storage/backpack/key_bag = allocate(/obj/item/storage/backpack, locker_turf)
+	var/obj/item/ship_key/stolen_key = allocate(/obj/item/ship_key, key_bag)
+	var/obj/item/mission_recovery/payload = allocate(/obj/item/mission_recovery, locker_turf)
+	TEST_ASSERT(locker.close(user), "The locker would not close on the key test")
+	TEST_ASSERT_EQUAL(key_bag.loc, locker_turf, "Closing took a bag holding a ship key")
+	TEST_ASSERT_EQUAL(payload.loc, locker_turf, "Closing took contract goods")
+	TEST_ASSERT(!(stolen_key in locker.get_all_contents()), "A ship key ended up in a locker")
+
 	// Store by click: an item used on an open locker goes in, and does not hit it.
 	TEST_ASSERT(locker.open(user), "The locker would not reopen")
 	var/obj/item/wrench/clicked = allocate(/obj/item/wrench)

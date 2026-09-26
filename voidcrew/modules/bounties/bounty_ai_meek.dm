@@ -29,6 +29,8 @@
 	var/datum/weakref/ai_hide_ref
 	/// Weakref to where they last hid, so someone found picks somewhere new
 	var/datum/weakref/ai_last_hide_ref
+	/// The tile on their side of the closet picked for this flight, to climb in from (H1)
+	var/turf/ai_hide_stand
 	/// world.time they hid
 	var/ai_hidden_since = 0
 	/// world.time of the next restless tell
@@ -78,6 +80,8 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		/datum/ai_planning_subtree/bounty_meek_volley,
 		/datum/ai_planning_subtree/bounty_notice,
 		/datum/ai_planning_subtree/bounty_meek_flee,
+		// For a decoy on this tree (P6 gives decoys their fugitive's controller): run, then calm down (M3, L6)
+		/datum/ai_planning_subtree/bounty_flee_and_calm,
 		/datum/ai_planning_subtree/bounty_activity,
 	)
 
@@ -103,9 +107,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 /// Hit while running: they run from whoever is closer
 /mob/living/basic/bounty_criminal/meek/ai_attacked_again(mob/living/attacker)
 	var/mob/living/threat = ai_threat()
-	if(!threat || get_dist(src, attacker) < get_dist(src, threat))
+	if(!threat || bounty_ai_dist(src, attacker) < bounty_ai_dist(src, threat))
 		ai_set_threat(attacker)
-		ai_controller?.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, attacker)
+		ai_controller?.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, bounty_ai_target_for(attacker))
 	ai_bark("hurt")
 
 /// Anything that hurts a hider finds them
@@ -163,7 +167,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		ai_controller.clear_blackboard_key(BB_BOUNTY_DESTINATION)
 		var/mob/living/current = ai_threat()
 		if(current)
-			ai_controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, current)
+			ai_controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, bounty_ai_target_for(current))
 	if(bark)
 		ai_bark(bark)
 	else if(fresh && !quiet)
@@ -221,6 +225,10 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 
 /datum/ai_planning_subtree/bounty_meek_flee/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
+	// A decoy given this tree (P6 gives decoys their fugitive's controller) never sprints, hides or
+	// draws: bounty_flee_and_calm, next in the tree, runs it (L6).
+	if(!criminal.ai_sprints())
+		return
 	var/seen = criminal.ai_mode == BOUNTY_AI_FLEEING && criminal.ai_sees_threat(BOUNTY_MEEK_HIDE_RADIUS)
 	criminal.ai_update_sprint()
 	if(criminal.ai_mode != BOUNTY_AI_FLEEING)
@@ -240,12 +248,14 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		if(criminal.ai_at_hide_spot(spot))
 			controller.queue_behavior(/datum/ai_behavior/bounty_hide, BB_BOUNTY_HIDE_SPOT)
 			return SUBTREE_RETURN_FINISH_PLANNING
-		controller.set_blackboard_key(BB_BOUNTY_DESTINATION, get_turf(spot))
-		var/walk_type = istype(spot, /obj/structure/closet) ? /datum/ai_behavior/travel_towards/bounty/adjacent : /datum/ai_behavior/travel_towards/bounty
-		controller.queue_behavior(walk_type, BB_BOUNTY_DESTINATION)
-		return SUBTREE_RETURN_FINISH_PLANNING
+		var/turf/approach = criminal.ai_hide_approach(spot)
+		if(approach)
+			controller.set_blackboard_key(BB_BOUNTY_DESTINATION, approach)
+			controller.queue_behavior(/datum/ai_behavior/travel_towards/bounty, BB_BOUNTY_DESTINATION)
+			return SUBTREE_RETURN_FINISH_PLANNING
+		controller.clear_blackboard_key(BB_BOUNTY_HIDE_SPOT)
 	if(seen)
-		controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, threat)
+		controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, bounty_ai_target_for(threat))
 		controller.queue_behavior(/datum/ai_behavior/run_away_from_target/bounty, BB_BASIC_MOB_FLEE_TARGET, BB_BASIC_MOB_FLEE_TARGET_HIDING_LOCATION)
 		if(controller.current_behaviors[GET_AI_BEHAVIOR(/datum/ai_behavior/run_away_from_target/bounty)])
 			return SUBTREE_RETURN_FINISH_PLANNING
@@ -303,25 +313,25 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	var/turf/here = get_turf(src)
 	if(!here || !threat)
 		return
-	var/here_distance = get_dist(here, threat)
+	var/here_distance = bounty_ai_dist(here, threat)
 	for(var/direction in GLOB.alldirs)
 		var/turf/next = get_step(here, direction)
-		if(!next || next.is_blocked_turf(source_atom = src) || get_dist(next, threat) <= here_distance || !leash_ok(next))
+		if(!next || next.is_blocked_turf(source_atom = src) || bounty_ai_dist(next, threat) <= here_distance || !leash_ok(next))
 			continue
 		.++
 
 /**
- * Whether they are cornered by `threat`, and have been for BOUNTY_MEEK_CORNERED_TIME: held by
- * someone, or the hunter close with running away failing or fewer than two ways out. Once it has
- * lasted, and the holdout is ready, the aim starts. Returns TRUE when it did.
+ * Whether they are cornered by `threat`, and have been for BOUNTY_MEEK_CORNERED_TIME: the hunter
+ * close, with running away failing or fewer than two ways out. Once it has lasted, and the holdout
+ * is ready, the aim starts. Returns TRUE when it did. Being held no longer counts: a free criminal
+ * pulls away from any hand (P2), so a grab only happens while it is stunned and can't act (H2).
  */
 /mob/living/basic/bounty_criminal/proc/ai_check_cornered(mob/living/threat)
-	if(world.time < ai_holdout_ready_at || !threat)
+	if(!ai_sprints() || world.time < ai_holdout_ready_at || !threat || !ai_can_act())
 		ai_cornered_since = 0
 		return FALSE
-	var/mob/living/holder = isliving(pulledby) ? pulledby : null
-	var/cornered = !!holder
-	if(!cornered && get_dist(src, threat) <= BOUNTY_MEEK_CORNER_RANGE)
+	var/cornered = FALSE
+	if(bounty_ai_dist(src, threat) <= BOUNTY_MEEK_CORNER_RANGE)
 		cornered = (ai_run_failed_at && world.time - ai_run_failed_at < BOUNTY_MEEK_RUN_FAIL_WINDOW) || ai_ways_out(threat) < 2
 	if(!cornered)
 		ai_cornered_since = 0
@@ -331,14 +341,13 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		return FALSE
 	if(world.time - ai_cornered_since < BOUNTY_MEEK_CORNERED_TIME)
 		return FALSE
-	var/mob/living/target = holder || threat
-	if(target.stat != CONSCIOUS || get_dist(src, target) > BOUNTY_MEEK_PISTOL_RANGE || !can_see(src, target, BOUNTY_MEEK_PISTOL_RANGE))
+	if(threat.stat != CONSCIOUS || !bounty_ai_can_see(src, threat, BOUNTY_MEEK_PISTOL_RANGE))
 		return FALSE
-	return ai_start_aim(target)
+	return ai_start_aim(threat)
 
-/// The aim: the holdout in hand, a mark where it points, a shout. The shots start BOUNTY_MEEK_PISTOL_WINDUP later.
+/// The aim: the holdout in hand, a mark where it points, a shout. The shots start BOUNTY_MEEK_PISTOL_WINDUP later. Never from the floor (H2).
 /mob/living/basic/bounty_criminal/proc/ai_start_aim(mob/living/target)
-	if(ai_aim_until || ai_volley_left || !ai_can_act() || !isturf(loc) || !isliving(target))
+	if(!ai_sprints() || ai_aim_until || ai_volley_left || !ai_can_act() || !isturf(loc) || !isliving(target))
 		return FALSE
 	ai_update_style()
 	ai_aim_ref = WEAKREF(target)
@@ -346,7 +355,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	ai_aim_stamina = staminaloss
 	ai_cornered_since = 0
 	REMOVE_TRAIT(src, TRAIT_BOUNTY_SPRINTING, BOUNTY_AI_TRAIT)
-	face_atom(target)
+	face_atom(bounty_ai_target_for(target))
 	var/datum/bounty_style/style = bounty_ai_style(src)
 	ai_hand = bounty_ai_update_held(src, ai_hand, style?.held_look || /obj/item/gun/ballistic/automatic/pistol)
 	new /obj/effect/temp_visual/telegraphing/bounty_aim(get_turf(target))
@@ -380,18 +389,30 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 
 /// Whether the volley may go on at `target`: awake (downed hunters are left alone, C4), close and in sight
 /mob/living/basic/bounty_criminal/proc/ai_volley_target_ok(mob/living/target)
-	return !QDELETED(target) && target.stat == CONSCIOUS && get_dist(src, target) <= BOUNTY_MEEK_PISTOL_RANGE && can_see(src, target, BOUNTY_MEEK_PISTOL_RANGE)
+	return !QDELETED(target) && target.stat == CONSCIOUS && bounty_ai_can_see(src, target, BOUNTY_MEEK_PISTOL_RANGE)
 
-/// One shot of the volley, if they can still shoot and the target is still there. Returns TRUE if it went.
+/**
+ * One shot of the volley, if they can still shoot (on their feet, not hidden) and the target is
+ * still there. Returns TRUE if a shot left the gun; a shot the gun refused ends the volley.
+ */
 /mob/living/basic/bounty_criminal/proc/ai_volley_shot()
 	var/mob/living/target = ai_volley_ref?.resolve()
 	if(!ai_volley_left || !ai_can_act() || hidden || !isturf(loc) || !ai_volley_target_ok(target))
 		ai_end_volley()
 		return FALSE
-	face_atom(target)
+	var/datum/component/ranged_attacks/gun = GetComponent(/datum/component/ranged_attacks)
+	if(!gun)
+		ai_end_volley()
+		return FALSE
+	face_atom(bounty_ai_target_for(target))
+	var/cooldown_before = gun.fire_cooldown
 	ai_firing = TRUE
-	RangedAttack(target)
+	RangedAttack(bounty_ai_target_for(target))
 	ai_firing = FALSE
+	// The gun starts its cooldown only when it fires: a refused shot leaves it as it was
+	if(gun.fire_cooldown == cooldown_before || gun.fire_cooldown <= world.time)
+		ai_end_volley()
+		return FALSE
 	ai_volley_left--
 	ai_next_volley_shot = world.time + BOUNTY_MEEK_PISTOL_GAP
 	if(!ai_volley_left)
@@ -460,7 +481,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		if(world.time < criminal.ai_aim_until)
 			var/mob/living/target = criminal.ai_aim_ref?.resolve()
 			if(target)
-				criminal.face_atom(target)
+				criminal.face_atom(bounty_ai_target_for(target))
 			return AI_BEHAVIOR_DELAY
 		if(!criminal.ai_fire_holdout())
 			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
@@ -487,27 +508,36 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 
 /**
  * The best hiding place within BOUNTY_MEEK_HIDE_RADIUS, looked for once per flight: lockers,
- * crates and potted plants in range, and up to BOUNTY_MEEK_DARK_SAMPLES dark tiles. Places the
- * hunter is closer to are out; further from the hunter, nearer to them and out of the hunter's
- * sight is better. Never where they were just found, never off their site. Null if nothing will do.
+ * crates and potted plants in range, and up to BOUNTY_MEEK_DARK_SAMPLES dark tiles. Only places
+ * they can walk to from where they stand (one flood of the floor on their side of any wall, window
+ * or locked door: H1). Places the hunter is closer to are out; further from the hunter, nearer to
+ * them and out of the hunter's sight is better. Never where they were just found, never off their
+ * site. Null if nothing will do.
  */
 /mob/living/basic/bounty_criminal/proc/ai_pick_hide_spot(mob/living/threat)
 	var/turf/center = get_turf(src)
 	if(!center)
 		return null
+	var/list/reachable = ai_reachable_turfs(BOUNTY_MEEK_HIDE_RADIUS)
 	var/atom/last = ai_last_hide_ref?.resolve()
 	var/atom/best
 	var/best_score
+	var/turf/best_stand
+	ai_hide_stand = null
 	for(var/obj/thing in range(BOUNTY_MEEK_HIDE_RADIUS, center))
 		if(thing == last)
 			continue
 		var/bonus
+		var/turf/stand
 		if(istype(thing, /obj/structure/closet))
 			if(!ai_container_usable(thing))
 				continue
+			stand = ai_container_approach(thing, reachable)
+			if(!stand)
+				continue
 			bonus = istype(thing, /obj/structure/closet/crate) ? BOUNTY_HIDE_SCORE_CRATE : BOUNTY_HIDE_SCORE_LOCKER
 		else if(istype(thing, /obj/item/kirbyplants))
-			if(!ai_plant_usable(thing))
+			if(!ai_plant_usable(thing) || !reachable[thing.loc])
 				continue
 			bonus = BOUNTY_HIDE_SCORE_PLANT
 		else
@@ -519,8 +549,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		if(isnull(best_score) || score > best_score)
 			best = thing
 			best_score = score
+			best_stand = stand
 	var/dark_bonus = BOUNTY_HIDE_SCORE_DARK + (ispath(record?.species, /datum/species/moth) ? BOUNTY_HIDE_SCORE_MOTH_DARK : 0)
-	for(var/turf/tile as anything in ai_dark_candidates(center))
+	for(var/turf/tile as anything in ai_dark_candidates(reachable))
 		if(tile == last)
 			continue
 		var/score = ai_score_hide_spot(tile, threat)
@@ -530,6 +561,8 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		if(isnull(best_score) || score > best_score)
 			best = tile
 			best_score = score
+			best_stand = null
+	ai_hide_stand = best_stand
 	return best
 
 /// How good `spot` is to hide from `threat`, or null if it is no good at all
@@ -539,26 +572,33 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		return null
 	var/own_distance = get_dist(src, spot_turf)
 	. = -own_distance
-	if(!threat || threat.z != z)
+	// By their turf: a pilot inside a mech has no map position of their own (H4)
+	var/turf/threat_turf = get_turf(threat)
+	if(!threat_turf || threat_turf.z != spot_turf.z)
 		return
-	var/their_distance = get_dist(threat, spot_turf)
+	var/their_distance = get_dist(threat_turf, spot_turf)
 	if(their_distance < own_distance)
 		return null
 	. += their_distance * 2
-	if(!can_see(threat, spot_turf, BOUNTY_MEEK_HIDE_RADIUS + 2))
+	if(!can_see(threat_turf, spot_turf, BOUNTY_MEEK_HIDE_RADIUS + 2))
 		. += BOUNTY_HIDE_SCORE_UNSEEN
 
-/// Up to `samples` dark tiles they could stand in, sampled once from within `radius` of `center`
-/mob/living/basic/bounty_criminal/proc/ai_dark_candidates(turf/center, radius = BOUNTY_MEEK_HIDE_RADIUS, samples = BOUNTY_MEEK_DARK_SAMPLES)
+/// Up to `samples` dark tiles they could stand in, sampled once from `reachable` (turf = TRUE, the floor they can walk to)
+/mob/living/basic/bounty_criminal/proc/ai_dark_candidates(list/reachable, samples = BOUNTY_MEEK_DARK_SAMPLES)
 	. = list()
-	var/list/pool = RANGE_TURFS(radius, center)
+	var/list/pool = list()
+	for(var/turf/tile as anything in reachable)
+		pool += tile
 	while(samples > 0 && length(pool))
 		samples--
 		var/turf/tile = pick_n_take(pool)
 		if(ai_dark_usable(tile))
 			. += tile
 
-/// Whether `tile` is dark enough to hide in
+/**
+ * Whether `tile` is dark enough to hide in. A turf with no lighting object (planet ground, lit by
+ * its area's ambient light) reads its area's base light instead, which tg's lumcount skips (L2).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_tile_is_dark(turf/tile)
 	if(!isturf(tile))
 		return FALSE
@@ -566,6 +606,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	if(tile in GLOB.bounty_ai_test_dark_turfs)
 		return TRUE
 #endif
+	if(!tile.lighting_object)
+		var/area/tile_area = tile.loc
+		return (tile_area.base_lighting_alpha / 255) + tile.dynamic_lumcount < BOUNTY_MEEK_DARK_LUMCOUNT
 	return tile.get_lumcount() < BOUNTY_MEEK_DARK_LUMCOUNT
 
 /mob/living/basic/bounty_criminal/proc/ai_hide_spot_usable(atom/spot)
@@ -620,13 +663,42 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		return FALSE
 	return leash_ok(tile) && ai_tile_is_dark(tile)
 
-/// Whether they are close enough to `spot` to hide in or as it
+/// Whether they can hide in or as `spot` from where they stand: on the dark tile, or right beside the closet or plant with nothing between (H1)
 /mob/living/basic/bounty_criminal/proc/ai_at_hide_spot(atom/spot)
 	if(!isturf(loc))
 		return FALSE
 	if(isturf(spot))
 		return loc == spot
-	return get_dist(src, spot) <= 1
+	if(istype(spot, /obj/item/kirbyplants) && loc == spot.loc)
+		return TRUE
+	return Adjacent(spot)
+
+/// Where they walk to to hide at `spot`: beside a closet on their side of it (the tile picked with it), onto a plant or a dark tile. Null if there is nowhere.
+/mob/living/basic/bounty_criminal/proc/ai_hide_approach(atom/spot)
+	if(istype(spot, /obj/structure/closet))
+		if(ai_hide_stand && (ai_hide_stand == loc || ai_standable(ai_hide_stand)) && ai_hide_stand.Adjacent(spot))
+			return ai_hide_stand
+		return ai_container_approach(spot)
+	return get_turf(spot)
+
+/**
+ * The tile to stand on to climb into `container`: beside it, free, with no wall, window or rail
+ * between (so Adjacent() holds from it), and in `reachable` when that is given. Nearest to them.
+ */
+/mob/living/basic/bounty_criminal/proc/ai_container_approach(obj/structure/closet/container, list/reachable)
+	var/turf/container_turf = get_turf(container)
+	if(!container_turf)
+		return null
+	var/turf/best
+	var/best_distance = INFINITY
+	for(var/turf/tile as anything in RANGE_TURFS(1, container_turf))
+		if(tile == container_turf || (reachable && !reachable[tile]) || !ai_standable(tile) || !tile.Adjacent(container))
+			continue
+		var/distance = get_dist(src, tile)
+		if(distance < best_distance)
+			best = tile
+			best_distance = distance
+	return best
 
 // ===== HIDING =====
 
@@ -647,7 +719,8 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
  * so is its look) or a dark turf (still and faded). Returns TRUE if they are hidden.
  */
 /mob/living/basic/bounty_criminal/proc/ai_hide_in(atom/spot)
-	if(hidden || stat != CONSCIOUS || QDELETED(spot) || !isturf(loc))
+	// Never from the floor: a knockdown is a cuff window (H2)
+	if(hidden || !ai_can_act() || QDELETED(spot) || !isturf(loc))
 		return FALSE
 	ai_suspend_activity()
 	ai_stop_aiming()
@@ -672,14 +745,16 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		ai_controller.clear_blackboard_key(BB_BOUNTY_HIDE_SPOT)
 		ai_controller.clear_blackboard_key(BB_BOUNTY_DESTINATION)
 		ai_controller.ai_movement?.stop_moving_towards(ai_controller)
+	ai_hide_stand = null
 	return TRUE
 
 /**
  * In a locker or a crate: opens it if shut, gets in, and shuts it from inside. A crate won't take
- * a standing person the ordinary way, so it is straight insertion for both, then close().
+ * a standing person the ordinary way, so it is straight insertion for both, then close(). Only
+ * from right beside it, with no wall or window between (H1).
  */
 /mob/living/basic/bounty_criminal/proc/ai_hide_in_container(obj/structure/closet/container)
-	if(!ai_container_usable(container) || get_dist(src, container) > 1)
+	if(!ai_container_usable(container) || !Adjacent(container))
 		return FALSE
 	ai_stand_up()
 	if(!container.opened && !container.open())
@@ -699,17 +774,23 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	return TRUE
 
 /**
- * As a potted plant: they step onto its tile, take it, keep their own look aside, and wear the
- * plant's: name, description, icon, overlays and layer.
+ * As a potted plant: they step onto its tile (a real step, from right beside it: H1), take it, keep
+ * their own look aside, and wear the plant's: name, description, icon, overlays and layer.
  */
 /mob/living/basic/bounty_criminal/proc/ai_hide_as_plant(obj/item/kirbyplants/plant)
-	if(!ai_plant_usable(plant) || get_dist(src, plant) > 1)
+	if(!ai_plant_usable(plant))
 		return FALSE
 	var/turf/plant_turf = plant.loc
-	ai_stand_up()
 	if(loc != plant_turf)
-		forceMove(plant_turf)
+		if(!Adjacent(plant))
+			return FALSE
+		ai_stand_up()
+		Move(plant_turf, get_dir(src, plant_turf))
+		if(loc != plant_turf)
+			return FALSE
+	ai_stand_up()
 	ai_disguise_saved = list(
+		"plant_turf" = plant_turf,
 		"name" = name,
 		"desc" = desc,
 		"icon" = icon,
@@ -766,10 +847,12 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 					RegisterSignal(container, COMSIG_QDELETING, PROC_REF(ai_on_container_gone))
 					return FALSE
 		if(BOUNTY_HIDE_PLANT)
+			// Back where it stood (L8): the outpost's decor stays where the outpost put it
+			var/turf/plant_turf = ai_disguise_saved?["plant_turf"]
 			ai_restore_look()
 			var/obj/item/kirbyplants/plant = spot
 			if(istype(plant) && plant.loc == src)
-				var/atom/put_down = drop_location()
+				var/atom/put_down = isturf(plant_turf) ? plant_turf : drop_location()
 				if(put_down)
 					plant.forceMove(put_down)
 				else
@@ -839,14 +922,21 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		ai_flee_event(isliving(finder) ? finder : ai_threat(), "found")
 	return TRUE
 
-/// Shoves `finder` back a tile, without a stun, to get a head start
+/// Shoves `finder` back a tile, without a stun, to get a head start; never onto lava, into a chasm or out into space (M5)
 /mob/living/basic/bounty_criminal/proc/ai_shove_away(mob/living/finder)
-	var/shove_dir = get_dir(src, finder)
-	var/turf/behind = get_step(finder, shove_dir)
-	if(shove_dir && behind && !behind.is_blocked_turf(source_atom = finder))
-		finder.Move(behind, shove_dir)
+	bounty_ai_shove_back(src, finder)
 	visible_message(span_warning("[src] shoves [finder] back and bolts!"))
 	playsound(finder, 'sound/items/weapons/shove.ogg', 50, TRUE)
+
+/// Pushes `victim` a tile away from `shover`, if the tile behind them is safe to stand on (M5). Returns TRUE if they moved.
+/proc/bounty_ai_shove_back(atom/shover, mob/living/victim)
+	var/shove_dir = get_dir(shover, victim)
+	var/turf/behind = shove_dir && get_step(victim, shove_dir)
+	if(!behind || behind.is_blocked_turf(source_atom = victim))
+		return FALSE
+	if(isspaceturf(behind) || isopenspaceturf(behind) || isgroundlessturf(behind) || islava(behind) || ischasm(behind) || !behind.can_cross_safely(victim))
+		return FALSE
+	return victim.Move(behind, shove_dir)
 
 /**
  * About once a second while hidden: whether they have been found out (let out of the closet, a

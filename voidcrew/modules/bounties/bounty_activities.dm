@@ -9,11 +9,14 @@
  * - trade: at a trader's counter or a vending machine, haggling out loud;
  * - explore: three to five things on the site to walk up to and look over;
  * - loot: lockers and crates (zone loot first) opened, gone through and shut again;
- * - camp: a small camp made once (a fire, or a lantern where it won't burn; a mattress; a crate),
- *   sat at, with errands;
+ * - camp: a small camp made once (a fire, or a fixed lamp where a fire won't burn; a mattress; a
+ *   crate), sat at, with errands;
  * - blend: the routine a trader-outpost fugitive and every one of its decoys share (AR-C6/C7): the
  *   same steps, weights, speed and lines, so nothing in how they act gives the fugitive away.
  * An activity scans for what it uses once, when it starts (or a blend step starts), never per tick.
+ * Anything it uses is used from right beside it (Adjacent(): never through a wall or glass), a spot
+ * they could not walk to is not picked again while the activity lasts, and at a trader outpost the
+ * blend routine only picks spots on the public floor (L5).
  * It runs while they are calm; a flight or a fight puts it away, and it is set up again after.
  * The decoy's AI (/mob/living/basic/bounty_criminal/decoy: blend, and getting out of the way when
  * hit) is here too; what a decoy does when accused is P6's.
@@ -37,10 +40,16 @@
 	var/datum/weakref/ai_seat_ref
 	/// Sitting on the floor
 	var/ai_crouching = FALSE
-	/// Weakrefs to the camp they made: the fire or lantern, the mattress, the crate
+	/// Weakrefs to the camp they made: the fire or lamp, the mattress, the crate
 	var/list/ai_camp
 	/// The mattress and crate were made; only the fire is ever made again
 	var/ai_camp_made = FALSE
+	/// Glasses left on tables at the bar; past BOUNTY_BAR_GLASSES_MAX the glass just goes (M4)
+	var/ai_glasses_left = 0
+	/// Spots they could not walk to (turf = TRUE), not picked again until the activity changes (L5)
+	var/list/ai_failed_spots
+	/// Where the activity may send them (turf = TRUE), or null for anywhere on their site: a trader outpost's public floor while blending in (L5)
+	var/list/ai_allowed_floor
 
 /**
  * Sets what they are doing until a hunter turns up: `kind` is a BOUNTY_ACTIVITY_*, `anchor` the
@@ -53,6 +62,8 @@
 	ai_activity_kind = kind
 	ai_activity_anchor = anchor ? WEAKREF(anchor) : null
 	ai_activity_retry_at = 0
+	ai_failed_spots = null
+	ai_allowed_floor = null
 	if(kind == BOUNTY_ACTIVITY_BLEND)
 		ai_start_blend()
 	else if(blended)
@@ -136,10 +147,14 @@
 	blended = TRUE
 	ai_set_pace(BOUNTY_CALM_SPEED)
 
-/// No longer passing as a patron: a fugitive found out does not go back to it
+/**
+ * No longer passing as a patron: a fugitive found out does not go back to it. P6's act ends with it
+ * (the component's stop_blending(): pulls, containers and the turrets' faction back to normal), so
+ * `blended` and the act never disagree (C1).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_end_blend()
-	if(!blended)
-		return
+	var/datum/component/bounty_outpost_blend/act = GetComponent(/datum/component/bounty_outpost_blend)
+	act?.stop_blending()
 	blended = FALSE
 	if(ai_activity_kind == BOUNTY_ACTIVITY_BLEND)
 		ai_end_activity()
@@ -201,14 +216,18 @@
 	ai_hand = bounty_ai_update_held(src, ai_hand, ai_drink)
 	return TRUE
 
-/// Sets the drink down on `table` if it is right there; otherwise it goes
+/**
+ * Sets the drink down on `table` if it is right there (on their side of any glass), up to
+ * BOUNTY_BAR_GLASSES_MAX glasses (M4); otherwise, or with no table, it goes.
+ */
 /mob/living/basic/bounty_criminal/proc/ai_put_drink_down(obj/structure/table/table)
 	var/obj/item/glass = ai_drink
 	ai_drink = null
 	ai_hand = bounty_ai_update_held(src, ai_hand, null)
 	if(QDELETED(glass))
 		return
-	if(stat == CONSCIOUS && !QDELETED(table) && isturf(table.loc) && get_dist(src, table) <= 1)
+	if(stat == CONSCIOUS && ai_glasses_left < BOUNTY_BAR_GLASSES_MAX && !QDELETED(table) && isturf(table.loc) && isturf(loc) && Adjacent(table))
+		ai_glasses_left++
 		glass.forceMove(table.loc)
 		glass.pixel_x = rand(-6, 6)
 		glass.pixel_y = rand(0, 6)
@@ -224,7 +243,25 @@
 		return FALSE
 	return leash_ok(tile)
 
-/// The nearest free tile within `distance` of `thing` they can stand on (not its own tile), or null
+/// Whether an activity may send them to `tile`: not a spot they failed to reach, and on the floor it is kept to (L5)
+/mob/living/basic/bounty_criminal/proc/ai_spot_allowed(turf/tile)
+	if(LAZYACCESS(ai_failed_spots, tile))
+		return FALSE
+	return !ai_allowed_floor || ai_allowed_floor[tile]
+
+/// Remembers `tile` as somewhere they could not walk to, for as long as the activity lasts (a few at most)
+/mob/living/basic/bounty_criminal/proc/ai_spot_failed(turf/tile)
+	if(!isturf(tile))
+		return
+	LAZYSET(ai_failed_spots, tile, TRUE)
+	if(length(ai_failed_spots) > BOUNTY_FAILED_SPOTS_MAX)
+		ai_failed_spots.Cut(1, 2)
+
+/**
+ * The nearest free tile within `distance` of `thing` they can stand on (not its own tile), or null.
+ * Right beside it (distance 1), nothing may stand between the tile and the thing (Adjacent(): no
+ * wall, glass or rail), since they will use it from there.
+ */
 /mob/living/basic/bounty_criminal/proc/ai_free_tile_beside(atom/thing, distance = 1)
 	var/turf/center = get_turf(thing)
 	if(!center)
@@ -232,7 +269,9 @@
 	var/turf/best
 	var/best_distance = INFINITY
 	for(var/turf/tile as anything in RANGE_TURFS(distance, center))
-		if(tile == center || !ai_standable(tile))
+		if(tile == center || !ai_standable(tile) || !ai_spot_allowed(tile))
+			continue
+		if(distance <= 1 && !tile.Adjacent(thing))
 			continue
 		var/from_us = get_dist(src, tile)
 		if(from_us < best_distance)
@@ -247,7 +286,7 @@
 	var/area/here = get_area(src)
 	for(var/attempt in 1 to 8)
 		var/turf/tile = locate(center.x + rand(-radius, radius), center.y + rand(-radius, radius), center.z)
-		if(tile && tile != loc && get_area(tile) == here && ai_standable(tile))
+		if(tile && tile != loc && get_area(tile) == here && ai_standable(tile) && ai_spot_allowed(tile))
 			return tile
 	return null
 
@@ -274,7 +313,7 @@
 	for(var/mob/living/other in seat.loc)
 		if(other != src && other.density)
 			return FALSE
-	return leash_ok(seat.loc)
+	return leash_ok(seat.loc) && (seat.loc == loc || ai_spot_allowed(seat.loc))
 
 /// The nearest seat within `range` of `near` they could sit on, beside a table if `needs_table`
 /mob/living/basic/bounty_criminal/proc/ai_find_seat(atom/near, range = BOUNTY_ACTIVITY_RANGE, needs_table = TRUE)
@@ -321,7 +360,8 @@
 		if(!leash_ok(get_turf(thing)))
 			continue
 		var/distance = get_dist(src, thing)
-		if(distance < best_distance)
+		// Only with somewhere in front of it they may stand (never only behind the counter, L5)
+		if(distance < best_distance && ai_free_tile_beside(thing, 2))
 			best = thing
 			best_distance = distance
 	return best
@@ -398,7 +438,7 @@
 		if(length(chosen) >= 3)
 			break
 		var/turf/tile = locate(center.x + rand(-BOUNTY_EXPLORE_RANGE, BOUNTY_EXPLORE_RANGE), center.y + rand(-BOUNTY_EXPLORE_RANGE, BOUNTY_EXPLORE_RANGE), center.z)
-		if(tile && ai_standable(tile))
+		if(tile && ai_standable(tile) && ai_spot_allowed(tile))
 			chosen += tile
 	for(var/atom/point as anything in chosen)
 		. += WEAKREF(point)
@@ -434,9 +474,9 @@
 		if(length(.) >= 4)
 			break
 
-/// Shuts `box` after going through it, unless someone is standing in it
+/// Shuts `box` after going through it, from right beside it, unless someone is standing in it
 /mob/living/basic/bounty_criminal/proc/ai_close_container(obj/structure/closet/box)
-	if(QDELETED(box) || !box.opened || get_dist(src, box) > 1)
+	if(QDELETED(box) || !box.opened || !isturf(loc) || !Adjacent(box))
 		return
 	if(locate(/mob/living) in box.loc)
 		return
@@ -444,9 +484,10 @@
 		visible_message(span_notice("[src] shuts [box]."), vision_distance = 7)
 
 /**
- * The camp: a fire in the middle (a lantern where there isn't the air for one), a mattress and an
- * empty crate around it. The mattress and crate are made once; a fire that went out is lit again,
- * and one that is gone is replaced. Returns the fire or lantern, or null.
+ * The camp: a fire in the middle (a fixed lamp where there isn't the air for one), a mattress and
+ * an empty crate around it. The mattress and crate are made once; a fire that went out is lit
+ * again, and one that is gone is replaced. The fire is solid, so no walk, flight or fight takes
+ * anyone through the flames (L4). Returns the fire or lamp, or null.
  */
 /mob/living/basic/bounty_criminal/proc/ai_make_camp(turf/center)
 	var/atom/fire = ai_camp_fire()
@@ -465,13 +506,13 @@
 		return null
 	var/turf/fire_turf = (center in tiles) ? center : pick(tiles)
 	tiles -= fire_turf
-	var/obj/structure/bonfire/bonfire = new(fire_turf)
+	var/obj/structure/bonfire/bounty_camp/bonfire = new(fire_turf)
 	bonfire.start_burning()
 	if(bonfire.burning)
 		fire = bonfire
 	else
 		qdel(bonfire)
-		fire = new /obj/item/flashlight/lantern/on(fire_turf)
+		fire = new /obj/structure/bounty_camp_lamp(fire_turf)
 	LAZYADD(ai_camp, WEAKREF(fire))
 	if(ai_camp_made)
 		return fire
@@ -486,9 +527,27 @@
 		ai_camp += WEAKREF(new /obj/structure/closet/crate(pick_n_take(tiles)))
 	return fire
 
-/// Their camp's fire or lantern, if it is still there
+/// Their camp's fire or lamp, if it is still there where they put it (one carried off is gone, L4)
 /mob/living/basic/bounty_criminal/proc/ai_camp_fire()
-	return ai_camp_piece(/obj/structure/bonfire) || ai_camp_piece(/obj/item/flashlight/lantern)
+	var/atom/movable/fire = ai_camp_piece(/obj/structure/bonfire) || ai_camp_piece(/obj/structure/bounty_camp_lamp)
+	return (fire && isturf(fire.loc)) ? fire : null
+
+/// A camp's fire: solid, so nobody walks through it and catches light (L4)
+/obj/structure/bonfire/bounty_camp
+	density = TRUE
+
+/// A camp's lamp where a fire won't burn: fixed where it was set down, so nobody carries it off (L4)
+/obj/structure/bounty_camp_lamp
+	name = "camp lantern"
+	desc = "A lantern set down on the ground and left burning."
+	icon = 'icons/obj/lighting.dmi'
+	icon_state = "lantern-on"
+	anchored = TRUE
+	density = FALSE
+	max_integrity = 50
+	light_range = 5
+	light_power = 1.5
+	light_color = "#ffcc66"
 
 /// They are gone: the camp stays as it is, but the fire burns down
 /mob/living/basic/bounty_criminal/proc/ai_put_out_camp()
@@ -632,8 +691,9 @@
 		doer.ai_put_drink_down(null)
 	doer?.ai_stand_up()
 
-/// They could not get to `spot`: stay where they are and let act() pick something else
+/// They could not get to `spot`: stay where they are, don't pick it again (L5), and let act() pick something else
 /datum/bounty_activity/proc/spot_unreachable()
+	doer?.ai_spot_failed(spot)
 	spot = null
 	arrived = FALSE
 
@@ -950,7 +1010,7 @@
 	var/obj/structure/closet/box = current()
 	stage = 2
 	stage_until = world.time + 2 SECONDS
-	if(!box || get_dist(doer, box) > 1)
+	if(!box || !isturf(doer.loc) || !doer.Adjacent(box))
 		return
 	doer.face_atom(box)
 	if(!box.opened && !box.open())
@@ -1027,7 +1087,7 @@
 	switch(errand)
 		if("crate")
 			var/obj/structure/closet/crate/box = doer.ai_camp_piece(/obj/structure/closet/crate)
-			if(box && get_dist(doer, box) <= 1 && (box.opened || box.open()))
+			if(box && isturf(doer.loc) && doer.Adjacent(box) && (box.opened || box.open()))
 				doer.face_atom(box)
 				doer.visible_message(span_notice("[doer] goes through [box]."), vision_distance = 7)
 			errand_until = world.time + rand(4, 8) SECONDS
@@ -1099,8 +1159,14 @@
 	var/datum/weakref/table_ref
 	var/next_sip = 0
 
-/// A bar stool as the anchor (what P5 places them at) makes the first step a drink there
+/datum/bounty_activity/blend/Destroy()
+	if(doer)
+		doer.ai_allowed_floor = null
+	return ..()
+
+/// A bar stool as the anchor (what P5 places them at) makes the first step a drink there. At a trader outpost, only its public floor is used (L5).
 /datum/bounty_activity/blend/setup()
+	doer.ai_allowed_floor = bounty_ai_outpost_floor(doer)
 	var/obj/structure/chair/seat = anchor()
 	if(istype(seat) && doer.ai_seat_usable(seat))
 		seat_ref = WEAKREF(seat)
@@ -1213,10 +1279,10 @@
 				addtimer(CALLBACK(doer, TYPE_PROC_REF(/mob/living/basic/bounty_criminal, ai_get_reply), WEAKREF(target)), rand(3, 6) SECONDS, TIMER_DELETE_ME)
 	return BOUNTY_STEP_CONTINUE
 
-/// Ends the step: the drink down, up from the seat
+/// Ends the step: the glass goes with them (never left on the bar, M4), up from the seat
 /datum/bounty_activity/blend/proc/end_step()
 	if(doer?.ai_drink)
-		doer.ai_put_drink_down(table_ref?.resolve())
+		doer.ai_put_drink_down(null)
 	doer?.ai_stand_up()
 	step_target = null
 	seat_ref = null
@@ -1224,7 +1290,31 @@
 
 /datum/bounty_activity/blend/finish()
 	end_step()
+	doer?.ai_allowed_floor = null
 	return ..()
+
+/**
+ * The public floor of the trader outpost `patron` blends in at (P6's bounty_outpost_public_floor(),
+ * as turf = TRUE), shared for BOUNTY_OUTPOST_FLOOR_CACHE between everyone there; null anywhere else,
+ * or when the outpost has none (a broken load).
+ */
+/proc/bounty_ai_outpost_floor(mob/living/basic/bounty_criminal/patron)
+	var/datum/component/bounty_outpost_blend/act = patron?.GetComponent(/datum/component/bounty_outpost_blend)
+	var/obj/structure/overmap/trader_outpost/outpost = act?.outpost_ref?.resolve()
+	if(!istype(outpost))
+		return null
+	var/static/list/cache = list()
+	var/datum/weakref/key = WEAKREF(outpost)
+	var/list/entry = cache[key]
+	if(entry && world.time < entry[1])
+		return entry[2]
+	var/list/floor = list()
+	for(var/turf/tile as anything in bounty_outpost_public_floor(outpost))
+		floor[tile] = TRUE
+	if(!length(floor))
+		floor = null
+	cache[key] = list(world.time + BOUNTY_OUTPOST_FLOOR_CACHE, floor)
+	return floor
 
 /datum/bounty_activity/blend/spot_unreachable()
 	. = ..()
@@ -1238,6 +1328,10 @@
  * start_activity(BOUNTY_ACTIVITY_BLEND)). While blended it shows no reaction of its own to
  * anything: what it says and does when accused or hit is P6's, which can move it out of the way
  * with ai_flee_from(). It never stops being a patron.
+ *
+ * P6 gives each production decoy its fugitive's controller type (so the two run the same routine);
+ * this controller is only the default for a decoy made some other way. Every criminal tree carries
+ * bounty_flee_and_calm, so a decoy that runs on any of them runs and then calms down (M3).
  */
 /mob/living/basic/bounty_criminal/decoy
 	ai_controller = /datum/ai_controller/basic_controller/bounty/criminal/decoy
@@ -1245,7 +1339,7 @@
 /datum/ai_controller/basic_controller/bounty/criminal/decoy
 	planning_subtrees = list(
 		/datum/ai_planning_subtree/bounty_gate,
-		/datum/ai_planning_subtree/bounty_decoy_flee,
+		/datum/ai_planning_subtree/bounty_flee_and_calm,
 		/datum/ai_planning_subtree/bounty_activity,
 	)
 
@@ -1253,19 +1347,21 @@
 /mob/living/basic/bounty_criminal/decoy/ai_expose()
 	return
 
-/// A blow does not give a decoy away: no reaction of its own (P6 decides)
-/mob/living/basic/bounty_criminal/decoy/ai_exposed_by_blows()
-	return FALSE
-
 /// Made to react (P6, or a decoy no longer blending in): they back away, then go back to their evening
 /mob/living/basic/bounty_criminal/decoy/ai_react(mob/living/threat, bark)
 	ai_flee_from(threat)
 
-/datum/ai_planning_subtree/bounty_decoy_flee
+/**
+ * Fleeing without sprinting or hiding (a decoy that got out of the way, on whichever tree it runs):
+ * away from the threat while it can see them, then still, then calm again once they have been out
+ * of sight for half the meek's time. First in line for a fleeing mob on every criminal tree that
+ * has no flight of its own (M3).
+ */
+/datum/ai_planning_subtree/bounty_flee_and_calm
 
-/datum/ai_planning_subtree/bounty_decoy_flee/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+/datum/ai_planning_subtree/bounty_flee_and_calm/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
-	if(criminal.ai_mode != BOUNTY_AI_FLEEING)
+	if(!istype(criminal) || criminal.ai_mode != BOUNTY_AI_FLEEING)
 		return
 	var/seen = criminal.ai_sees_threat(BOUNTY_FLEE_DISTANCE)
 	if(!criminal.ai_threat() || world.time - criminal.ai_threat_seen_at > BOUNTY_MEEK_CALM_AFTER / 2)
@@ -1274,6 +1370,9 @@
 	if(!seen)
 		controller.queue_behavior(/datum/ai_behavior/bounty_watch)
 		return SUBTREE_RETURN_FINISH_PLANNING
-	controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, criminal.ai_threat())
+	controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, bounty_ai_target_for(criminal.ai_threat()))
 	controller.queue_behavior(/datum/ai_behavior/run_away_from_target/bounty, BB_BASIC_MOB_FLEE_TARGET, BB_BASIC_MOB_FLEE_TARGET_HIDING_LOCATION)
+	// Nowhere to run: they stand their ground, facing them, and plan on
+	if(!controller.current_behaviors[GET_AI_BEHAVIOR(/datum/ai_behavior/run_away_from_target/bounty)])
+		controller.queue_behavior(/datum/ai_behavior/bounty_watch)
 	return SUBTREE_RETURN_FINISH_PLANNING

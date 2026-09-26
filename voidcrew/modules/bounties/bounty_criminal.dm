@@ -464,6 +464,17 @@
 		return FALSE
 	if(stat != CONSCIOUS || downed || is_restrained() || HAS_TRAIT(src, TRAIT_BOUNTY_SURRENDERED))
 		return FALSE
+	return may_attack_scope(target)
+
+/**
+ * P3 REVIEW ROUND (H3): may_attack() split in two. This half is only who and what is fair game on
+ * its side, whatever state it is in itself: never someone who is down, never its own side, only its
+ * grudge list off its site and at a trader outpost, structures only on its own ground. Its
+ * companions go by this alone, so they fight on when it is down, cuffed, dead or has given up.
+ */
+/mob/living/basic/bounty_criminal/proc/may_attack_scope(atom/target)
+	if(QDELETED(target) || target == src)
+		return FALSE
 	// A ship, hangar, outpost or dock strip inside the site's rectangle is not its site (H1)
 	var/limited = !body_on_site(get_turf(src)) || body_at_trader_outpost()
 	var/list/people
@@ -617,7 +628,11 @@
 
 /mob/living/basic/bounty_criminal/can_be_pulled(user, force)
 	if(!body_can_be_dragged())
-		if(ismob(user))
+		// P3 REVIEW ROUND (L1): the pull attempt is still announced before it is refused, so P3 hears
+		// it (pulling at a hider finds it) and P6's blend hooks see it. A hider shows no balloon: it
+		// is being found instead.
+		SEND_SIGNAL(src, COMSIG_ATOM_CAN_BE_PULLED, user)
+		if(ismob(user) && !hidden)
 			balloon_alert(user, "[p_they()] pull[p_s()] away!")
 		return FALSE
 	body_update_drag()

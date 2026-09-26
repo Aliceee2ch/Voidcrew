@@ -27,9 +27,9 @@
 		return FALSE
 	return istype(get_area(location), /area/voidcrew/trader_outpost) || !isnull(get_trader_outpost_for_turf(location))
 
-/// Engine hazards transported into a market must stop before processing damage.
+/// Engine hazards transported into a market, or into a player outpost's service room, must stop before processing damage.
 /proc/neutralize_trader_outpost_hazard(atom/movable/hazard)
-	if(!is_trader_outpost_protected(hazard))
+	if(!is_trader_outpost_protected(hazard) && !is_outpost_service_tile(hazard))
 		return FALSE
 	log_game("OUTPOST PROTECTION: Neutralized [hazard] ([hazard.type]) at [AREACOORD(hazard)].")
 	qdel(hazard)

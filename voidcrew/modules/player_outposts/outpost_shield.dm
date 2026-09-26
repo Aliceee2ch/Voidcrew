@@ -88,7 +88,11 @@
 /obj/machinery/outpost_shield_generator/proc/is_operational_unit()
 	if(!anchored || (machine_stat & (BROKEN | NOPOWER)))
 		return FALSE
-	return outpost?.is_turf_buildable(get_turf(src))
+	var/turf/location = get_turf(src)
+	// A service room's indestructible shell would put the generator out of every raider's reach
+	if(istype(outpost?.upgrade_at_turf(location), /datum/outpost_upgrade/service))
+		return FALSE
+	return outpost?.is_turf_buildable(location)
 
 /// Whether this unit currently holds the outpost's shield role
 /obj/machinery/outpost_shield_generator/proc/is_active_unit()

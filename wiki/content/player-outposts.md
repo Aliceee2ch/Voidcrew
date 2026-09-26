@@ -154,7 +154,7 @@ Ship docking has separate controls:
 - **By request:** approve requests in Outpost Management. A ship still waiting in your sector begins docking when cleared. It needs new clearance after leaving.
 - **Lockdown:** only the owner's crew ships may enter. Existing visitors can leave.
 
-Banning a ship overrides docking clearance. The outpost has four **standard berths**, each sized to fit the ship docking into it; if none is free, an arriving ship is told parking is unavailable. Use the hangar elevator to travel between the habitat and occupied visitor berths.
+Banning a ship overrides docking clearance. The outpost has four **standard berths**, each sized to fit the ship docking into it; if none is free, an arriving ship is told parking is unavailable. Visitor berths work as they do at [trader outposts](trader-outposts.md): only the visiting ship's crew can take the hangar elevator down to one. The owner gets no exception.
 
 A hull defense turret bolted to the outpost answers only to its owner, stewards, treasurers, residents and builders. Visitors cannot switch it off, change its targeting, unbolt it or scrap it. The same goes for turrets built on the outpost and for turret control panels. A cleanbot can pass a prison wing's staff doors, so one built in the office can clean the yard.
 

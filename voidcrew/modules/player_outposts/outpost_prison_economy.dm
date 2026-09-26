@@ -16,9 +16,10 @@
  * Arrivals come in lanes: one for the wing and one more for each cell block extension
  * (outpost_prison_extension.dm). Each lane brings one prisoner at a time and then waits its own
  * gap, so a ten-cell wing fills three cells in parallel rather than one after another. The
- * extensions' lanes only bring prisoners while a member of the wing is home (crew_home()): the
- * extra intake needs the crew there to process it, and a wing left alone should earn next to
- * nothing, however big. Their gaps still count down meanwhile.
+ * extensions' lanes, and their cells, only take new prisoners while the extensions are staffed:
+ * a member of the wing home now, or within OUTPOST_PRISON_EXTENSION_STAFFED_GRACE
+ * (extension_staffed()). The extra intake needs staff around to process it, and a wing left alone
+ * should earn next to nothing however big it is. The lanes' gaps still count down meanwhile.
  */
 
 /datum/outpost_prison
@@ -34,8 +35,12 @@
 	/// Seconds before the first arrival lane may bring another prisoner after its last one. Counts down while intake is shut too.
 	var/arrival_gap = 0
 	/// The same for each further lane, one per extension (arrival_lanes()), in lane order from the second.
-	/// These lanes bring nobody while the crew is away (lane_open()), though their gaps count down.
+	/// These lanes bring nobody while the extensions are unstaffed (lane_open()), though their gaps count down.
 	var/list/lane_gaps = list()
+	/// world.time a member of the wing was last home, or null; see extension_staffed()
+	var/last_crew_home_at
+	/// Whether the extensions took new prisoners at the last intake tick, to log it when that changes
+	var/extension_intake_was_open = TRUE
 	/// Seconds into the current deposit interval
 	var/pay_clock = 0
 	/// Credits earned and not yet deposited; deposits are whole credits, every OUTPOST_PRISON_DEPOSIT_INTERVAL
@@ -300,9 +305,14 @@
 			return "The wing has no power. Arrivals wait for it."
 	return null
 
-/// Whether a cell could take a new arrival once it is ready: empty, with somewhere to stand, and its door not bolted or welded
+/**
+ * Whether a cell could take a new arrival once it is ready: empty, with somewhere to stand, and its
+ * door not bolted or welded. An extension's cell also needs the extensions staffed (extension_staffed()).
+ */
 /datum/outpost_prison/proc/cell_takes_arrivals(datum/outpost_prison_cell/cell)
 	if(cell.occupant || !cell.arrival_turf())
+		return FALSE
+	if(cell.in_extension() && !extension_staffed())
 		return FALSE
 	var/obj/machinery/door/airlock/door = cell.door()
 	return !door || (!door.locked && !door.welded)
@@ -343,11 +353,33 @@
 	return lane - 1 <= length(lane_gaps) ? lane_gaps[lane - 1] : 0
 
 /**
- * Whether lane `lane` may bring prisoners now. The wing's own lane always may; an extension's only
- * while a member of the wing is home, who has to process the extra intake.
+ * Whether the extensions take new prisoners: a member of the wing is home now, or has been within
+ * the last OUTPOST_PRISON_EXTENSION_STAFFED_GRACE. The extra intake needs staff around to process it.
  */
+/datum/outpost_prison/proc/extension_staffed()
+	if(crew_home())
+		last_crew_home_at = world.time
+		return TRUE
+	return !isnull(last_crew_home_at) && world.time - last_crew_home_at < OUTPOST_PRISON_EXTENSION_STAFFED_GRACE
+
+/// Whether lane `lane` may bring prisoners now. The wing's own lane always may; an extension's only while the extensions are staffed.
 /datum/outpost_prison/proc/lane_open(lane)
-	return lane <= 1 || crew_home()
+	return lane <= 1 || extension_staffed()
+
+/// Notes in the warden's log when the extension cells stop or start taking new prisoners while intake is open
+/datum/outpost_prison/proc/note_extension_intake()
+	if(!extension_count())
+		return
+	var/open = extension_staffed()
+	if(open == extension_intake_was_open)
+		return
+	extension_intake_was_open = open
+	if(!intake_open)
+		return
+	if(open)
+		add_log("Staff are back. The extension cells take new prisoners again.")
+	else
+		add_log("Nobody from the outpost has been in for [DisplayTimeText(OUTPOST_PRISON_EXTENSION_STAFFED_GRACE)]. The extension cells take no new prisoners until someone is back.")
 
 /// The open lane due soonest, the first on a tie
 /datum/outpost_prison/proc/soonest_lane()
@@ -364,6 +396,7 @@
  * so the crew coming home finds the extensions' lanes ready, one prisoner each.
  */
 /datum/outpost_prison/proc/intake_tick(seconds)
+	note_extension_intake()
 	arrival_gap = max(arrival_gap - seconds, 0)
 	for(var/lane in 1 to length(lane_gaps))
 		lane_gaps[lane] = max(lane_gaps[lane] - seconds, 0)

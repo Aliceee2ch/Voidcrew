@@ -35,6 +35,9 @@
 	/// order they were built (outpost_prison_extension.dm). Kept here, not on the prison, so a prison
 	/// an admin starts again still covers them.
 	var/list/extension_bounds = list()
+	/// The cell block floor each extension added, in the same order: it counts toward the mess
+	/// density only as far as the extension's cells are occupied (mess_floor_size_now())
+	var/list/extension_floor_sizes = list()
 
 /datum/outpost_upgrade/prison/Destroy()
 	QDEL_NULL(prison)

@@ -326,9 +326,31 @@ GLOBAL_LIST_INIT(outpost_prison_furniture_types, zebra_typecacheof(list(
 /datum/outpost_prison/proc/clean_for_load(load)
 	if(!mess_floor_size)
 		return 100
-	var/density = 100 * load / mess_floor_size
+	var/density = 100 * load / mess_floor_size_now()
 	var/dirty = clamp((density - PRISON_MESS_FREE) / (PRISON_MESS_SQUALID - PRISON_MESS_FREE), 0, 1)
 	return round(100 * (1 - dirty), 1)
+
+/**
+ * The floor the mess is spread over: the wing's as placed, with each cell block extension's share
+ * counted only as far as its cells are occupied. Mess counts where the prisoners live, so empty
+ * extension cells never thin it out.
+ */
+/datum/outpost_prison/proc/mess_floor_size_now()
+	var/size = mess_floor_size
+	var/list/all_bounds = upgrade?.extension_bounds
+	var/list/floors = upgrade?.extension_floor_sizes
+	for(var/index in 1 to min(length(all_bounds), length(floors)))
+		var/total = 0
+		var/taken = 0
+		for(var/datum/outpost_prison_cell/cell as anything in cells)
+			if(!cell.door_in_bounds(all_bounds[index]))
+				continue
+			total++
+			if(cell.occupant)
+				taken++
+		if(total)
+			size -= floors[index] * (total - taken) / total
+	return max(1, size)
 
 /// Flies over the heavy mess that has lain longest, once it has lain PRISON_FLY_AFTER; gone once it is cleaned
 /datum/outpost_prison/proc/update_flies()

@@ -269,11 +269,11 @@
 	settle_prison_air(home)
 
 /**
- * The extensions' arrival lanes need the crew home to process the extra intake, so a wing left
- * alone earns next to nothing however big it is. With nobody home only the wing's own lane brings
- * prisoners, while the others' gaps keep counting down; back home, each ready lane brings one at
- * once, and no more than one however long the crew was away. The console counts down to the lanes
- * that are open.
+ * The extensions' arrival lanes need staff to process the extra intake, so a wing left alone earns
+ * next to nothing however big it is. With nobody home for longer than the grace
+ * (OUTPOST_PRISON_EXTENSION_STAFFED_GRACE) only the wing's own lane brings prisoners, while the
+ * others' gaps keep counting down; back home, each ready lane brings one at once, and no more than
+ * one however long the crew was away. The console counts down to the lanes that are open.
  */
 /datum/unit_test/voidcrew_outpost_prison_extension_lanes
 	parent_type = /datum/unit_test/voidcrew_outpost_prison_extension_kit
@@ -292,8 +292,9 @@
 		cell.ready_at = world.time
 	TEST_ASSERT(prison.set_intake(TRUE), "Intake would not open")
 
-	// Nobody home: every lane is due, and only the wing's own brings anyone.
+	// Nobody home, and nobody for a long while: every lane is due, and only the wing's own brings anyone.
 	prison.crew_home_override = FALSE
+	prison.last_crew_home_at = null
 	prison.arrival_gap = 0
 	prison.lane_gaps = list(0, 0)
 	prison.intake_tick(0)
@@ -322,6 +323,115 @@
 	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_economy_kit, all_present), prison), 8 SECONDS), "The arrivals never finished beaming in")
 	for(var/mob/living/basic/outpost_prisoner/arrival as anything in prison.prisoners)
 		ADD_TRAIT(arrival, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	settle_prison_air(home)
+
+/**
+ * The extension cells need staff around too. With nobody from the wing home for longer than
+ * OUTPOST_PRISON_EXTENSION_STAFFED_GRACE they take no new prisoners, though the wing's own cells
+ * still do, and the warden's log says so; within the grace, or with someone home, they take them.
+ */
+/datum/unit_test/voidcrew_outpost_prison_extension_staffing
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_extension_kit
+
+/datum/unit_test/voidcrew_outpost_prison_extension_staffing/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("extstaffowner")
+	TEST_ASSERT_NOTNULL(home, "The extension staffing test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "extstaffowner")
+	var/datum/outpost_upgrade/prison_extension/extension = place_extension(home, "right", owner)
+	TEST_ASSERT(istype(extension), "The extension was not placed: [extension]")
+	var/grace = 15 MINUTES // OUTPOST_PRISON_EXTENSION_STAFFED_GRACE
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		cell.ready_at = world.time
+		TEST_ASSERT_EQUAL(cell.in_extension(), cell.number > 4, "Cell [cell.number] is [cell.in_extension() ? "" : "not "]taken for an extension cell")
+	TEST_ASSERT(prison.set_intake(TRUE), "Intake would not open")
+
+	// Nobody home for longer than the grace: the wing's own four cells fill, one at a time...
+	prison.crew_home_override = FALSE
+	prison.last_crew_home_at = world.time - grace - 10 SECONDS
+	TEST_ASSERT(!prison.extension_staffed(), "The extensions counted as staffed past the grace")
+	for(var/i in 1 to 6)
+		prison.arrival_gap = 0
+		prison.lane_gaps = list(0)
+		prison.intake_tick(0)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 4, "With nobody home past the grace [length(prison.prisoners)] prisoners arrived, not the wing's four")
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		if(cell.number <= 4)
+			TEST_ASSERT_NOTNULL(cell.occupant, "The wing's cell [cell.number] took nobody with the crew away")
+		else
+			TEST_ASSERT_NULL(cell.occupant, "Extension cell [cell.number] took a prisoner with nobody home past the grace")
+	// ...no arrival is due with only extension cells free, and the log says why.
+	TEST_ASSERT_NULL(prison.arrival_countdown, "The console shows an arrival due with only the unstaffed extension cells free")
+	var/logged = FALSE
+	for(var/list/entry as anything in prison.entries)
+		if(findtext(entry["text"], "extension cells take no new prisoners"))
+			logged = TRUE
+	TEST_ASSERT(logged, "The warden's log does not say the extension cells wait for staff")
+
+	// Home within the grace: the extension cells take prisoners again, through both lanes.
+	prison.last_crew_home_at = world.time - grace + 1 MINUTES
+	TEST_ASSERT(prison.extension_staffed(), "The extensions did not count as staffed within the grace")
+	prison.arrival_gap = 0
+	prison.lane_gaps = list(0)
+	prison.intake_tick(0)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 6, "Within the grace the extension cells took [length(prison.prisoners) - 4] prisoners, not one per lane")
+	logged = FALSE
+	for(var/list/entry as anything in prison.entries)
+		if(findtext(entry["text"], "extension cells take new prisoners again"))
+			logged = TRUE
+	TEST_ASSERT(logged, "The warden's log does not say the extension cells take prisoners again")
+	// With someone home the grace starts again from now.
+	prison.last_crew_home_at = null
+	prison.crew_home_override = TRUE
+	TEST_ASSERT(prison.extension_staffed(), "The extensions did not count as staffed with the crew home")
+	TEST_ASSERT_EQUAL(prison.last_crew_home_at, world.time, "The crew being home was not noted")
+	prison.set_intake(FALSE)
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_economy_kit, all_present), prison), 8 SECONDS), "The arrivals never finished beaming in")
+	for(var/mob/living/basic/outpost_prisoner/arrival as anything in prison.prisoners)
+		ADD_TRAIT(arrival, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	settle_prison_air(home)
+
+/**
+ * Mess counts where the prisoners live: an extension's floor counts toward the mess density only as
+ * far as its cells are occupied, so a wing cannot keep its Clean score up with empty extensions.
+ */
+/datum/unit_test/voidcrew_outpost_prison_extension_mess_floor
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_extension_kit
+
+/datum/unit_test/voidcrew_outpost_prison_extension_mess_floor/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("extmessowner")
+	TEST_ASSERT_NOTNULL(home, "The extension mess test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/datum/outpost_upgrade/prison/wing_upgrade = home.outpost_upgrades["prison"]
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "extmessowner")
+	var/wing_floor = prison.mess_floor_size
+	TEST_ASSERT_EQUAL(prison.mess_floor_size_now(), wing_floor, "A wing with no extension spreads its mess over [prison.mess_floor_size_now()] tiles, not its [wing_floor]")
+	var/datum/outpost_upgrade/prison_extension/extension = place_extension(home, "right", owner)
+	TEST_ASSERT(istype(extension), "The extension was not placed: [extension]")
+	TEST_ASSERT_EQUAL(length(wing_upgrade.extension_floor_sizes), 1, "The extension's floor was not recorded")
+	var/extension_floor = wing_upgrade.extension_floor_sizes[1]
+	TEST_ASSERT_EQUAL(prison.mess_floor_size, wing_floor + extension_floor, "The floor size did not grow by the extension's floor")
+	TEST_ASSERT(extension_floor > 0, "The extension added no floor")
+
+	// Empty, the extension's floor counts for nothing; one cell of three taken, a third of it.
+	TEST_ASSERT(abs(prison.mess_floor_size_now() - wing_floor) < 0.01, "With the extension empty the mess is spread over [prison.mess_floor_size_now()] tiles, not the wing's [wing_floor]")
+	var/datum/outpost_prison_cell/fifth = prison.cells[5]
+	var/mob/living/basic/outpost_prisoner/lodger = new(fifth.arrival_turf())
+	prison.admit(lodger, fifth)
+	ADD_TRAIT(lodger, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	var/expected = wing_floor + extension_floor / 3
+	TEST_ASSERT(abs(prison.mess_floor_size_now() - expected) < 0.01, "With one extension cell of three taken the mess is spread over [prison.mess_floor_size_now()] tiles, not [expected]")
+
+	// The Clean score uses that floor: the same mess reads dirtier than over the whole floor would.
+	var/list/mess = list()
+	for(var/x in 3 to 14)
+		mess += allocate(/obj/effect/decal/cleanable/vomit, prison_spot(home, x, 8))
+	prison.refresh_conditions()
+	TEST_ASSERT(prison.mess_load > 0, "The test mess weighed nothing")
+	TEST_ASSERT_EQUAL(prison.clean_score, conditions_expected_clean(prison.mess_load, expected), "Clean is [prison.clean_score] for [prison.mess_load] mess over [expected] tiles")
+	TEST_ASSERT(prison.clean_score < conditions_expected_clean(prison.mess_load, prison.mess_floor_size), "The half-empty extension still thinned out the mess")
+	for(var/obj/effect/decal/cleanable/vomit/spill as anything in mess)
+		qdel(spill)
 	settle_prison_air(home)
 
 /**

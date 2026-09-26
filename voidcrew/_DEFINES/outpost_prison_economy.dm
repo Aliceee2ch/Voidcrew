@@ -18,8 +18,8 @@
 // refill. On top of that, arrivals are 30-180 seconds apart in each arrival lane, which an empty wing
 // feels (filling it takes 1.5-9 minutes) but four staggered cells rarely do. A wing has one lane,
 // and one more for each cell block extension, so a ten-cell wing takes three prisoners in parallel;
-// the extensions' lanes only while a member of the wing is home, so a wing left alone runs on its
-// own lane. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
+// the extensions' lanes and cells only while a member of the wing is home or has been within
+// OUTPOST_PRISON_EXTENSION_STAFFED_GRACE, so a wing left alone runs on its own lane and four cells. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
 // 4 x 60 / 13 = ~18.5 releases/h x 200 = ~3,700 cr/h in bonuses. Ceiling ~6,250 cr/h before
 // supplies; a well-kept wing nets 5,300-5,400 cr/h and pays back its 10,000 cr in about 2 hours.
 //
@@ -40,6 +40,9 @@
 #define OUTPOST_PRISON_EXTENSION_COST 7500
 /// Cell block extensions one wing may have
 #define OUTPOST_PRISON_MAX_EXTENSIONS 2
+/// How long after a member of the wing was last home the extensions' cells and arrival lanes still
+/// take new prisoners: extra intake needs staff around, so a big wing left alone runs on four cells
+#define OUTPOST_PRISON_EXTENSION_STAFFED_GRACE (15 MINUTES)
 /// Treasury credits per minute per prisoner at full care and conditions
 #define OUTPOST_PRISON_BASE_PAY 12
 /// Treasury credits for a release at full care and conditions

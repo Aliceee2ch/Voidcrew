@@ -143,6 +143,7 @@
 	var/datum/outpost_prison/prison = wing_upgrade.prison
 	if(QDELETED(prison))
 		// A prison an admin starts again finds all of it.
+		wing_upgrade.extension_floor_sizes += 0
 		open_seam(offer["openings"])
 	else
 		prison.add_extension(src, room, offer["openings"])
@@ -242,6 +243,7 @@
 		new_floor++
 	if(mess_floor_size)
 		mess_floor_size += new_floor
+	upgrade.extension_floor_sizes += new_floor
 	// 7. Capacity, arrival lanes, the cell block with its doors watched, and the conditions.
 	capacity = min(OUTPOST_PRISON_MAX_CAPACITY, length(cells))
 	sync_arrival_lanes()

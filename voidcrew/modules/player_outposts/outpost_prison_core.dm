@@ -86,6 +86,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	GLOB.outpost_prisons += src
 	find_cells()
 	capacity = min(OUTPOST_PRISON_MAX_CAPACITY, length(cells))
+	// Whoever placed the wing, or an admin starting it again, is there now.
+	last_crew_home_at = world.time
 	sync_arrival_lanes()
 	refresh_cell_block()
 	refresh_conditions()
@@ -837,6 +839,14 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 			if(!QDELETED(seat))
 				return seat
 	return null
+
+/// Whether the cell is in a cell block extension rather than the wing's own footprint
+/datum/outpost_prison_cell/proc/in_extension()
+	return prison?.upgrade?.footprint_bounds && !prison.upgrade.contains_turf(door_turf)
+
+/// Whether the cell's door stands inside `bounds`, a list(min_x, min_y, max_x, max_y, z)
+/datum/outpost_prison_cell/proc/door_in_bounds(list/bounds)
+	return door_turf && door_turf.z == bounds[5] && door_turf.x >= bounds[1] && door_turf.y >= bounds[2] && door_turf.x <= bounds[3] && door_turf.y <= bounds[4]
 
 /datum/outpost_prison_cell/proc/contains(atom/thing)
 	return !!turf_set[get_turf(thing)]

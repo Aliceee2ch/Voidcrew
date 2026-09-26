@@ -30,7 +30,8 @@
 /// Units of `stack_type` a mob holds or stands on
 /datum/unit_test/voidcrew_outpost_management/proc/shop_units_near(mob/living/holder, stack_type)
 	. = 0
-	for(var/obj/item/stack/stack in holder.get_all_contents_type(stack_type) + get_turf(holder).contents)
+	var/turf/floor = get_turf(holder)
+	for(var/obj/item/stack/stack in holder.get_all_contents_type(stack_type) + floor.contents)
 		if(istype(stack, stack_type))
 			. += stack.amount
 
@@ -70,9 +71,9 @@
 		TEST_ASSERT_EQUAL(bot.loc, shop_turf(shop, 6, 7), "The bot is on the wrong tile at [rotation] degrees")
 		TEST_ASSERT_EQUAL(bot.register_ref?.resolve(), register, "The bot does not know its register at [rotation] degrees")
 		TEST_ASSERT_EQUAL(register.dir, angle2dir(rotation + 180), "The register does not face the customers at [rotation] degrees")
-		TEST_ASSERT(HAS_TRAIT(stock, TRAIT_OUTPOST_PROPERTY), "The stock unit is not outpost property at [rotation] degrees")
+		TEST_ASSERT(HAS_TRAIT(stock, "outpost_property"), "The stock unit is not outpost property at [rotation] degrees")
 		TEST_ASSERT(stock.flags_1 & PREVENT_CONTENTS_EXPLOSION_1, "Explosions reach the stock at [rotation] degrees")
-		TEST_ASSERT(HAS_TRAIT(register, TRAIT_OUTPOST_PROPERTY), "The register is not outpost property at [rotation] degrees")
+		TEST_ASSERT(HAS_TRAIT(register, "outpost_property"), "The register is not outpost property at [rotation] degrees")
 		TEST_ASSERT(register.Adjacent(bot), "The bot is not behind the register at [rotation] degrees")
 		TEST_ASSERT(register.Adjacent(shop_turf(shop, 6, 5)), "The queue mark does not reach the register at [rotation] degrees")
 
@@ -366,7 +367,7 @@
 	var/datum/outpost_shop_listing/marked_listing = stock.listing_of[marked]
 	stock.owner_action(owner, "set_price", list("ids" = list(marked_listing.id), "price" = 1))
 	TEST_ASSERT_NULL(stock.sell(marked_listing, 1, 1, visitor, register), "The marked wrench did not sell")
-	TEST_ASSERT(HAS_TRAIT(marked, TRAIT_RECALL_SEVERED), "A sold unit was not severed from summon marks")
+	TEST_ASSERT(HAS_TRAIT(marked, "recall_severed"), "A sold unit was not severed from summon marks")
 	summons.try_recall_item(owner)
 	TEST_ASSERT_NULL(summons.marked_item, "The seller's mark survived the sale")
 	TEST_ASSERT(get(marked, /mob) == visitor || get_turf(marked) == queue, "The seller recalled a sold item")
@@ -415,7 +416,7 @@
 	TEST_ASSERT_EQUAL(get_turf(bot), bot_spot, "The shop bot left its tile")
 	visitor.start_pulling(bot)
 	TEST_ASSERT(visitor.pulling != bot, "The shop bot can be pulled")
-	TEST_ASSERT(HAS_TRAIT(bot, TRAIT_NO_CONTAINMENT), "The shop bot can be bagged")
+	TEST_ASSERT(HAS_TRAIT(bot, "no_containment"), "The shop bot can be bagged")
 	TEST_ASSERT_NULL(bot.mind, "The shop bot has a mind")
 	TEST_ASSERT_EQUAL(bot.singularity_act(), 0, "A singularity ate the shop bot")
 

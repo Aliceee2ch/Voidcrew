@@ -1122,8 +1122,10 @@
 					return TRUE
 				if("decline_dock_fee")
 					var/mob/living/decliner = usr
-					if(istype(decliner))
-						current_ship.decline_dock_fee(decliner, params["ref"])
+					var/refusal = istype(decliner) ? current_ship.decline_dock_fee(decliner, params["ref"]) : "Crew authorization required."
+					if(refusal)
+						say(refusal)
+						playsound(src, 'sound/machines/terminal/terminal_error.ogg', 30)
 					return TRUE
 				if("active_scan")
 					var/category = params["category"]

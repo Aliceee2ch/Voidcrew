@@ -290,6 +290,8 @@
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost_ref.resolve()
 	if(!istext(outpost_ref_text) || outpost_ref_text != REF(home))
 		return "That docking fee quote is no longer current."
+	if(!can_approve_dock_fee(user))
+		return "Docking fees need the captain's approval."
 	dock_fee_quote = null
 	ship_notify("[user.real_name] declined the [quote["amount"]] cr docking fee at [home.name].", "DOCKING", SHIP_NOTIFY_NOTICE)
 	push_helm_frame()
@@ -516,6 +518,17 @@
 	if(eviction["timer"])
 		deltimer(eviction["timer"])
 	bay_evictions -= ship_ref
+
+/// The owner abandoned or handed over the outpost: every running eviction ends and the ships keep their bays
+/obj/structure/overmap/dynamic/player_outpost/proc/stop_all_bay_evictions()
+	if(!length(bay_evictions))
+		return
+	for(var/datum/weakref/ship_ref as anything in bay_evictions.Copy())
+		stop_bay_eviction(ship_ref)
+		var/obj/structure/overmap/ship/ship = ship_ref.resolve()
+		if(!QDELETED(ship))
+			ship.ship_notify("[name] changed hands. Your bay clearance was restored.", "DOCKING", SHIP_NOTIFY_NOTICE)
+	management_console?.on_dock_requests_changed()
 
 /// Tries again later, or gives up and tells the admins once the retries are spent
 /obj/structure/overmap/dynamic/player_outpost/proc/retry_bay_eviction(datum/weakref/ship_ref, reason)

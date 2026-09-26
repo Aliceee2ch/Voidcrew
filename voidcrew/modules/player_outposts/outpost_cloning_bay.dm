@@ -329,10 +329,6 @@
 
 // ===== RAID LOCK =====
 
-/**
- * Whether a raid on this outpost bars visitors from waking in its vats.
- * INTEGRATION (P8): the teleporter network owns the raid-lock stamp. Once `last_siege_time`
- * exists, this becomes `return world.time < last_siege_time + OUTPOST_NETWORK_RAID_LOCK`.
- */
+/// Whether a raid on this outpost bars visitors from waking in its vats (the network's raid lock, outpost_raid_locked())
 /obj/structure/overmap/dynamic/player_outpost/proc/clone_wake_raid_locked()
 	return outpost_raid_locked()

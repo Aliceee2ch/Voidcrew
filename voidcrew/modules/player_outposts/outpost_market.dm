@@ -275,6 +275,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 	pricers.Cut()
 	reset_prices()
 	playtest_visitor_ckey = null
+	stop_all_bay_evictions()
 	for(var/datum/outpost_upgrade/service/room as anything in installed_service_rooms())
 		room.on_outpost_abandoned()
 
@@ -347,6 +348,8 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
  */
 /datum/player_outpost_management_ui/proc/market_action(action, list/params, mob/living/user)
 	switch(action)
+		if("dismiss_market_error")
+			market_error = null
 		if("set_price")
 			market_error = outpost.set_price(user, params["key"], params["value"])
 		if("set_room_visitors")

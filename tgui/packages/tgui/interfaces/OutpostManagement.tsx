@@ -141,6 +141,8 @@ type TeleporterDetail = {
   candidates?: NetworkPad[];
   /** Seconds left on the raid lock. */
   raidLockLeft?: number;
+  /** Why visitors cannot arrive right now (lockdown, raid lock, request mode), if anything. */
+  policyNote?: string | null;
   fee?: number;
   price?: number;
   can_edit?: BooleanLike;
@@ -214,6 +216,8 @@ export type OutpostData = {
   playtest_visitor?: BooleanLike;
   pricing?: Pricing | null;
   services?: ServiceRoom[] | null;
+  /** The last refusal from a pricing, service room or eviction action; null once one succeeds. */
+  market_error?: string | null;
   /** Ship names whose crews count as members (abuse review F-12). */
   owner_crews?: (string | Vessel)[] | null;
   /** grounding-teleporter §7.5 top-level shape, used when no service row carries it. */
@@ -1780,33 +1784,35 @@ function PricingTab({ data, act }: Props) {
           {ledger.length === 0 && (
             <div className="Outpost__quiet">No entries</div>
           )}
-          {ledger
-            .slice()
-            .reverse()
-            .map((entry, index) => (
-              <div
-                className="Outpost__row"
-                key={`${entry.time}-${ledger.length - index}`}
-              >
-                <span className="Outpost__time">{entry.time}</span>
-                <div className="Outpost__person">
-                  <strong>{entry.label || serviceName(entry.service)}</strong>
-                  {entry.payer || entry.account ? (
-                    <small>
-                      {entry.payer}
-                      {entry.account && entry.account !== entry.payer
-                        ? ` (${entry.account})`
-                        : ''}
-                    </small>
-                  ) : null}
-                </div>
-                {Number(entry.amount) > 0 ? (
-                  <strong className="Outpost__amount">
-                    +{Number(entry.amount).toLocaleString()} cr
-                  </strong>
+          {/* The server sends the ledger newest first. */}
+          {ledger.map((entry, index) => (
+            <div
+              className="Outpost__row"
+              key={`${entry.time}-${ledger.length - index}`}
+            >
+              <span className="Outpost__time">{entry.time}</span>
+              <div className="Outpost__person">
+                <strong>{entry.label || serviceName(entry.service)}</strong>
+                {entry.payer || entry.account ? (
+                  <small>
+                    {entry.payer}
+                    {entry.account && entry.account !== entry.payer
+                      ? ` (${entry.account})`
+                      : ''}
+                  </small>
                 ) : null}
               </div>
-            ))}
+              {Number(entry.amount) > 0 ? (
+                <strong className="Outpost__amount">
+                  +{Number(entry.amount).toLocaleString()} cr
+                </strong>
+              ) : Number(entry.amount) < 0 ? (
+                <strong className="Outpost__amount Outpost__amount--refund">
+                  -{Math.abs(Number(entry.amount)).toLocaleString()} cr
+                </strong>
+              ) : null}
+            </div>
+          ))}
         </>
       ) : null}
     </>
@@ -2030,6 +2036,11 @@ function TeleporterCard({
           </Button>
         ))}
       </div>
+      {detail.policyNote ? (
+        <div className="Outpost__research-error" role="status">
+          {detail.policyNote}
+        </div>
+      ) : null}
       <div className="Outpost__section-label">
         Allow list<span>{allowlist.length}</span>
       </div>
@@ -2632,8 +2643,13 @@ function Ownership({ data, act }: Props) {
 type Tab = { id: string; title: string; icon: string };
 const TAB_DOCKING: Tab = { id: 'docking', title: 'Docking', icon: 'anchor' };
 const TAB_PRICING: Tab = { id: 'pricing', title: 'Pricing', icon: 'tags' };
+const TAB_SERVICES: Tab = { id: 'services', title: 'Services', icon: 'store' };
 
-/** Tabs by role (spec §1.4): managers see all; treasurers Docking and Pricing; pricers Pricing; others Docking. */
+/**
+ * Tabs by role (spec §1.4): managers see all; treasurers Docking and Pricing; pricers Pricing;
+ * others Docking. Staff also get Services when the server sends them room cards: a treasurer
+ * evicts unused vat imprints there (ruling R4), and each card gates its own buttons.
+ */
 function visibleTabs(data: OutpostData): Tab[] {
   if (data.is_owner || data.can_manage) {
     return [
@@ -2643,7 +2659,7 @@ function visibleTabs(data: OutpostData): Tab[] {
       { id: 'access', title: 'Access', icon: 'id-card' },
       { id: 'research', title: 'Research', icon: 'flask' },
       { id: 'upgrades', title: 'Upgrades', icon: 'cubes' },
-      { id: 'services', title: 'Services', icon: 'store' },
+      TAB_SERVICES,
     ];
   }
   const pricing = !!data.can_set_prices || !!data.can_view_income;
@@ -2654,6 +2670,9 @@ function visibleTabs(data: OutpostData): Tab[] {
   }
   if (pricing) {
     tabs.push(TAB_PRICING);
+  }
+  if ((data.services?.length || 0) > 0) {
+    tabs.push(TAB_SERVICES);
   }
   return tabs;
 }
@@ -2747,6 +2766,19 @@ export function OutpostManagementPanel({ data, act }: Props) {
                 <Icon name="user-secret" />
                 Billed as a visitor. Services charge you and staff doors stay
                 shut.
+              </div>
+            ) : null}
+            {data.market_error ? (
+              <div
+                className="Outpost__research-error Outpost__market-error"
+                role="alert"
+              >
+                <span className="Outpost__grow">{data.market_error}</span>
+                <Button
+                  icon="xmark"
+                  tooltip="Dismiss"
+                  onClick={() => act('dismiss_market_error')}
+                />
               </div>
             ) : null}
             <div className="Outpost__directory-scroll">

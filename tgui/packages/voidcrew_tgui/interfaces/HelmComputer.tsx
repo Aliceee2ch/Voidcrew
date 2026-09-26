@@ -3496,8 +3496,12 @@ const DockFeeQuoteCard = () => {
           <button
             type="button"
             className="Helm__btn"
-            disabled={locked}
-            title="Decline the fee and stay out"
+            disabled={locked || !quote.canApprove}
+            title={
+              quote.canApprove
+                ? 'Decline the fee and stay out'
+                : 'Only the captain can decline this fee'
+            }
             onClick={() => act('decline_dock_fee', { ref: quote.ref })}
           >
             Decline

@@ -807,6 +807,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	pricers -= former_owner
 	pricers -= user.mind
 	playtest_visitor_ckey = null
+	stop_all_bay_evictions() // VOIDCREW MARKET: an eviction ordered by the former owner does not outlive the deed
 	if(claiming)
 		// A claimant starts with their own crew, not the previous owner's residents
 		residents.Cut()

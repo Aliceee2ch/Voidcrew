@@ -221,6 +221,8 @@
 		return TRUE
 	if(!outpost.is_current_management_user(user))
 		return
+	// Any other accepted console action clears a stale market refusal
+	market_error = null
 	if((action in list("transfer", "abandon", "add_builder", "remove_builder")) && !outpost.is_owner(user))
 		return
 	if(action in list("resident_mode", "resident_password", "invite_resident", "block_resident", "unblock_resident", "reset_resident_access", "add_resident", "remove_resident", "delegate"))

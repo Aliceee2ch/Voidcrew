@@ -119,6 +119,7 @@ $range: #e03c3c;
 .Outpost__dot--online { background: #8dbb79; box-shadow: 0 0 6px #63945280; }
 .Outpost__quiet { padding: 10px 0; color: $muted; font-size: 11px; }
 .Outpost__research-error { margin-top: 10px; color: #e7a296; font-size: 11px; }
+.Outpost__market-error { display: flex; align-items: center; gap: 6px; margin: 4px 0 6px; }
 .Outpost__research-status { flex: 0 0 auto; color: $muted; font-size: 10px; text-align: right; }
 .Outpost__empty {
   display: flex;
@@ -171,6 +172,7 @@ $range: #e03c3c;
 }
 .Outpost__countdown { flex: 0 0 auto; color: $amber; font: 12px 'Consolas', monospace; }
 .Outpost__amount { flex: 0 0 auto; color: #9fbd85; font: 12px 'Consolas', monospace; }
+.Outpost__amount--refund { color: #e7a296; }
 .Outpost__time { flex: 0 0 38px; color: $muted; font: 10px 'Consolas', monospace; }
 .Outpost__service { margin-bottom: 6px; }
 .Outpost__allow-add { margin-top: 8px; > .Dropdown { flex: 1; min-width: 0; } }

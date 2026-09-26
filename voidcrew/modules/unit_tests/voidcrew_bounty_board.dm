@@ -724,7 +724,7 @@
 
 // ===== THE BOARD'S DATA =====
 
-/// `wanted` and `wanted_hunt` per the data contract, every key there, and no picture in the live data (spec 11, AR-G1)
+/// `wanted` per the data contract, every key there, no rules on the card, and no picture in the live data (spec 11, AR-G1)
 /datum/unit_test/voidcrew_bounty_board/ui_data
 
 /datum/unit_test/voidcrew_bounty_board/ui_data/Run()
@@ -739,18 +739,16 @@
 	var/list/data = list()
 	console.board_add_wanted_data(data, ship, null)
 	TEST_ASSERT(islist(data["wanted"]), "There is no wanted list")
-	TEST_ASSERT("wanted_hunt" in data, "There is no wanted_hunt")
-	TEST_ASSERT_EQUAL(data["wanted_hunt"], REF(hunted), "wanted_hunt isn't the ship's hunt")
 	var/list/refs = list()
-	var/list/contract = list("ref", "name", "alias", "species", "sex", "tier", "hint", "tactics", "place", "zone", "mugshot_id", "value", "shares", "share_rows", "time_left", "status", "private", "hunting_by_us", "hunters", "can_turn_in", "turn_in_state", "turn_in_refusal", "turn_in_pay", "photo_old")
+	var/list/contract = list("ref", "name", "alias", "species", "sex", "tier", "tier_name", "terms", "crime", "place", "zone", "mugshot_id", "value", "vouchers", "time_left", "private", "hunting_by_us", "hunt_refusal", "can_turn_in", "turn_in_refusal", "photo_old")
 	for(var/list/entry as anything in data["wanted"])
 		refs += entry["ref"]
 		for(var/key in contract)
 			TEST_ASSERT(key in entry, "A wanted entry has no [key]")
 		TEST_ASSERT(!("mugshot" in entry), "A wanted entry carries its mugshot in the live data")
-		TEST_ASSERT(istext(entry["pay_note"]) && findtext(entry["pay_note"], "stun"), "A wanted card has no stun weapon hint")
-		TEST_ASSERT(findtext(entry["pay_note"], "cuffs"), "A wanted card doesn't say to bring cuffs")
-		TEST_ASSERT_EQUAL(length(entry["shares"]), 3, "A wanted entry's shares are not three numbers")
+		// A poster, not the rules: nothing about pay by state, tactics or crew size (2026-09-26)
+		for(var/key in list("shares", "share_rows", "pay_note", "tactics", "hint", "crew_note", "turn_in_pay", "hunters"))
+			TEST_ASSERT(!(key in entry), "A wanted card still carries [key]")
 		for(var/key in entry)
 			var/entry_value = entry[key]
 			TEST_ASSERT(!istext(entry_value) || length(entry_value) < 500, "The wanted entry's [key] is [length(entry_value)] characters, an image in the live data")
@@ -762,8 +760,6 @@
 		if(entry["ref"] != REF(hunted))
 			continue
 		TEST_ASSERT(entry["hunting_by_us"], "The hunted bounty doesn't say the ship hunts it")
-		TEST_ASSERT_EQUAL(entry["hunters"], 1, "The hunted bounty doesn't count its hunter")
-		TEST_ASSERT_EQUAL(entry["crew_note"], "Crew of 2+ recommended", "A green most wanted card doesn't recommend a crew of 2")
 		TEST_ASSERT(!entry["can_turn_in"], "A bounty with nothing on a pad can be turned in")
 		TEST_ASSERT(istext(entry["turn_in_refusal"]), "A bounty that can't be turned in doesn't say why")
 
@@ -1017,7 +1013,7 @@
 
 // ===== THE CARD AND THE WARRANT =====
 
-/// The warrant leaves one feature off, so the traders' clues tell a hunter something new; the Heavy's card warns of its armour
+/// The warrant leaves one feature off, so the traders' clues tell a hunter something new
 /datum/unit_test/voidcrew_bounty_board/card
 
 /datum/unit_test/voidcrew_bounty_board/card/Run()
@@ -1036,34 +1032,18 @@
 		TEST_ASSERT(!findtext(text, features[length(features)]), "The warrant lists every feature")
 	qdel(warrant)
 
-	posting.record.archetype = "boss" // BOUNTY_ARCHETYPE_BOSS
-	posting.record.kit = "heavy" // BOUNTY_KIT_HEAVY
-	TEST_ASSERT(findtext(posting.board_hint(), "heavy armour"), "The Heavy's card doesn't warn of its armour")
-	posting.record.kit = "ghost" // BOUNTY_KIT_GHOST
-	TEST_ASSERT(!findtext(posting.board_hint(), "heavy armour"), "Every mini-boss's card warns of heavy armour")
-
 // ===== THE POLISH ROUND =====
 
-/// The card and the warrant: a tactics line for each archetype, cuffs in the pay note, the old photo, the rows from the posting's own shares, and a ruin's real name (P3, P12, BUG-9)
+/// The card and the warrant read like a poster: the terms, the old photo, one reward and no rules, and a ruin's real name (BUG-9)
 /datum/unit_test/voidcrew_bounty_board/card_polish
 
 /datum/unit_test/voidcrew_bounty_board/card_polish/Run()
 	var/datum/criminal_bounty/posting = board_test_posting()
-	TEST_ASSERT(findtext(posting.board_pay_note(), "cuffs"), "The pay note doesn't say to bring cuffs")
-
-	// Tactics, by archetype, style and kit
-	posting.record.archetype = "meek" // BOUNTY_ARCHETYPE_MEEK
-	TEST_ASSERT(findtext(posting.board_tactics(), "light"), "A meek card doesn't say a light finds them: [posting.board_tactics()]")
-	posting.record.archetype = "normal" // BOUNTY_ARCHETYPE_NORMAL
-	posting.record.style = "knife" // BOUNTY_STYLE_KNIFE
-	TEST_ASSERT(findtext(posting.board_tactics(), "knife"), "A knife fighter's card doesn't say knife: [posting.board_tactics()]")
-	TEST_ASSERT(findtext(posting.board_tactics(), "give up"), "A normal card doesn't say they may give up")
-	posting.record.archetype = "boss" // BOUNTY_ARCHETYPE_BOSS
-	posting.record.kit = "pyromaniac" // BOUNTY_KIT_PYROMANIAC
-	TEST_ASSERT(findtext(posting.board_tactics(), "lasers will"), "The Pyromaniac's card doesn't say lasers work: [posting.board_tactics()]")
-	TEST_ASSERT(findtext(posting.board_tactics(), "worn out"), "A mini-boss card doesn't say when stuns work")
+	TEST_ASSERT_EQUAL(posting.board_terms(), "Wanted alive", "A plain bounty's terms")
 	var/text = posting.board_warrant_text()
-	TEST_ASSERT(findtext(text, "Tactics:"), "The warrant has no tactics line")
+	TEST_ASSERT(findtext(text, "Wanted alive"), "The warrant doesn't say wanted alive")
+	for(var/rule in list("Tactics", "never downed", "Turn In", "cuffs", "%"))
+		TEST_ASSERT(!findtext(text, rule), "The warrant still explains the rules: [rule]")
 
 	// The old photo, on the card and the warrant
 	var/list/entry = posting.board_ui_entry(null, null)
@@ -1074,22 +1054,12 @@
 	TEST_ASSERT(findtext(posting.board_warrant_text(), "Old photo"), "The warrant doesn't say the photo is old")
 	posting.record.old_look = null
 
-	// Reward rows from the posting's own shares: 100 / 60 / 25 of 1000 cr and a voucher (VOUCHER_CREDIT_VALUE 1200)
-	var/list/rows = posting.board_share_rows()
-	TEST_ASSERT_EQUAL(length(rows), 3, "A plain bounty doesn't show three reward rows")
-	var/list/full_row = rows[1]
-	TEST_ASSERT_EQUAL(full_row["label"], "Never downed", "The first row isn't the clean catch")
-	TEST_ASSERT_EQUAL(full_row["vouchers"], 1, "The clean catch row doesn't carry the voucher")
-	TEST_ASSERT_EQUAL(full_row["worth"], 2200, "The clean catch row doesn't count the voucher's worth")
-	var/list/downed_row = rows[2]
-	TEST_ASSERT(full_row["worth"] > downed_row["credits"], "Full pay looks worse than downed pay")
-	TEST_ASSERT(findtext(text, "never downed: 1000 cr and 1 trade voucher"), "The warrant's reward line doesn't come from the rows")
+	// One reward, the full one: 1000 cr and a voucher
+	TEST_ASSERT_EQUAL(posting.board_reward_text(), "1000 cr and 1 trade voucher", "The reward line")
+	TEST_ASSERT(findtext(text, "1000 cr and 1 trade voucher"), "The warrant's reward isn't the full reward")
 	var/datum/criminal_bounty/kill_only/kill = new
 	allocated += kill
-	var/list/kill_rows = kill.board_share_rows()
-	TEST_ASSERT_EQUAL(length(kill_rows), 1, "A kill-only bounty shows more than its trophy row")
-	var/list/trophy_row = kill_rows[1]
-	TEST_ASSERT_EQUAL(trophy_row["label"], "On the trophy", "A kill-only bounty's row isn't the trophy")
+	TEST_ASSERT_EQUAL(kill.board_terms(), "Wanted dead", "A kill-only bounty's terms")
 
 	// A ruin nobody has surveyed isn't named "unknown signal"; surveyed, it is named for what it is (BUG-9)
 	var/obj/structure/overmap/space_ruin/ruin = allocate(/obj/structure/overmap/space_ruin, outpost_lead_overmap_turf(56, 44))
@@ -1228,7 +1198,6 @@
 	TEST_ASSERT(findtext(line, "restrained") && findtext(line, "The pad must be aboard your ship"), "The pad's line for a cuffed criminal: [line]")
 	var/list/entry = posting.board_ui_entry(ship, pad)
 	TEST_ASSERT_EQUAL(entry["turn_in_refusal"], "the pad must be aboard your ship", "The card entry doesn't carry the refusal")
-	TEST_ASSERT_EQUAL(entry["turn_in_pay"], "1320 cr (downed earlier)", "The card entry doesn't carry the pay")
 
 	// Once per few seconds, however often they're dragged on and off (dragging them on above already spoke)
 	COOLDOWN_RESET(pad, bounty_announce_cooldown)

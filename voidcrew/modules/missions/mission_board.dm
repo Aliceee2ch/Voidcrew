@@ -174,7 +174,7 @@
 	data["has_claimed_player_bounty"] = SSbounty?.ship_has_claimed_player_bounty(ship) || FALSE
 	data["ship_balance"] = ship.ship_account?.account_balance || 0
 
-	// Wanted criminals: `wanted` and `wanted_hunt`. Mugshots are in ui_static_data(). (voidcrew/modules/bounties/bounty_board.dm)
+	// Wanted criminals: `wanted`. Mugshots are in ui_static_data(). (voidcrew/modules/bounties/bounty_board.dm)
 	board_add_wanted_data(data, ship, user)
 
 	// Live player-outpost advertisements (see voidcrew/modules/player_outposts/outpost_adverts.dm)

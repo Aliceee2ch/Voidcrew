@@ -106,11 +106,10 @@
 		TEST_ASSERT_EQUAL(posting.board_share_for(state, state), 0, "A kill-only bounty pays for a [state] boss")
 	TEST_ASSERT_EQUAL(posting.board_share_for("dead", "dead"), 100, "A kill-only bounty doesn't pay in full on the kill") // BOUNTY_STATE_DEAD
 
-	// The card says WANTED: DEAD, with the full value as its one figure; so does the warrant
+	// The card says wanted dead, with the full value as its one figure; the warrant says WANTED: DEAD
 	var/list/card = posting.board_ui_entry(ship, pad)
-	TEST_ASSERT(card["kill_only"], "The card doesn't mark the bounty kill only")
-	var/list/shares = card["shares"]
-	TEST_ASSERT_EQUAL(shares[1], 5000, "The card's pay figure isn't the full value")
+	TEST_ASSERT_EQUAL(card["terms"], "Wanted dead", "The card doesn't say wanted dead")
+	TEST_ASSERT_EQUAL(card["value"], 5000, "The card's pay figure isn't the full value")
 	TEST_ASSERT(findtext(posting.board_warrant_text(), "WANTED: DEAD"), "The warrant doesn't say WANTED: DEAD")
 
 	// The pad never takes the boss, alive or dead, even one wanted on this very bounty: only its trophy

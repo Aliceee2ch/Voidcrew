@@ -118,8 +118,6 @@ type Data = {
   outpost_adverts: OutpostAdvert[];
   // Wanted criminals (voidcrew/modules/bounties/bounty_board.dm)
   wanted?: WantedEntry[];
-  wanted_hunt?: string | null;
-  wanted_max_hunts?: number;
   // Static data: record id -> base64 mugshot, never sent in the live data
   wanted_mugshots?: Record<string, string>;
 };
@@ -133,7 +131,8 @@ type WantedEntry = {
   sex?: string;
   tier?: number;
   tier_name?: string;
-  hint?: string;
+  // "Wanted alive", "Wanted dead or alive" or "Wanted dead"
+  terms?: string;
   crime?: string | null;
   place?: string;
   zone?: string;
@@ -141,40 +140,14 @@ type WantedEntry = {
   mugshot_id?: string | null;
   value?: number;
   vouchers?: number;
-  shares?: number[];
   time_left?: number;
-  clock_held?: BooleanLike;
-  status?: 'offered' | 'open' | 'relisting' | string;
   private?: BooleanLike;
   hunting_by_us?: BooleanLike;
-  hunters?: number;
-  was_abandoned?: BooleanLike;
   hunt_refusal?: string | null;
-  crew_note?: string | null;
-  crew_note_bad?: BooleanLike;
-  pay_note?: string | null;
-  // How they fight and how to take them, by archetype, style or kit
-  tactics?: string | null;
   // The mugshot is how they looked before (a trader-outpost fugitive)
   photo_old?: BooleanLike;
-  // The reward rows from this posting's own shares
-  share_rows?: WantedShareRow[];
   can_turn_in?: BooleanLike;
-  turn_in_state?: string | null;
-  // Why Turn In won't work now, and what it would pay now
   turn_in_refusal?: string | null;
-  turn_in_pay?: string | null;
-  // Kill-only (bounty_lair.dm): WANTED: DEAD, paid in full on the boss's trophy
-  kill_only?: BooleanLike;
-};
-
-/** One reward row: what a capture state pays, with each voucher's worth folded into `worth`. */
-type WantedShareRow = {
-  label: string;
-  percent: number;
-  credits: number;
-  vouchers: number;
-  worth: number;
 };
 
 type OutpostAdvert = {
@@ -844,37 +817,16 @@ const BountyCard = (props: BountyCardProps) => {
 
 // ========== WANTED COMPONENTS ==========
 
-/** Card colour for each tier: Petty, Wanted, Most Wanted */
+/** Name colour for each tier: Petty, Wanted, Most Wanted */
 const WANTED_TIER_COLORS: Record<number, string> = {
   1: 'average',
   2: 'orange',
   3: 'bad',
 };
 
-/** What the pad preview says about the criminal standing on it */
-const WANTED_PAD_STATES: Record<string, string> = {
-  restrained: 'On the pad, restrained',
-  stunned: 'On the pad, subdued',
-  downed: 'On the pad, downed',
-  dead: 'On the pad, dead',
-  free: 'On the pad, but standing free',
-  proof: 'Evidence tag on the pad',
-  trophy: 'Trophy on the pad',
-};
-
-/** A reward row's pay: credits, and any vouchers with what they come to in all */
-const formatShareRow = (row: WantedShareRow) => {
-  const credits = `${formatMoney(row.credits)} cr`;
-  if (row.vouchers <= 0) {
-    return credits;
-  }
-  const vouchers = `${row.vouchers} voucher${row.vouchers > 1 ? 's' : ''}`;
-  return `${credits} + ${vouchers} (about ${formatMoney(row.worth)} cr)`;
-};
-
 /** A server phrase as the start of a sentence */
 const toSentence = (text?: string | null) =>
-  text ? text.charAt(0).toUpperCase() + text.slice(1) : null;
+  text ? text.charAt(0).toUpperCase() + text.slice(1) : undefined;
 
 const formatWantedTime = (seconds: number) => {
   const total = Math.max(0, Math.floor(seconds));
@@ -900,15 +852,9 @@ const WantedSection = (props: WantedSectionProps) => {
   const sorted = [...wanted].sort((a, b) => rank(a) - rank(b));
 
   return (
-    <Section title={`Wanted (${wanted.length})`}>
-      <NoticeBox info mb={1}>
-        Bring a wanted criminal onto your mission pad and press Turn In. Each
-        card shows what it pays: most pay in full only if never downed, so bring
-        a stun weapon and cuffs. Any crew can turn in a public bounty; offers
-        are for your ship only.
-      </NoticeBox>
+    <Section title="Wanted">
       {sorted.length === 0 ? (
-        <NoticeBox>No one is wanted right now.</NoticeBox>
+        <Box color="label">No one is wanted right now.</Box>
       ) : (
         <Stack vertical>
           {sorted.map((entry) => (
@@ -934,58 +880,42 @@ type WantedCardProps = {
   hasPad: boolean;
 };
 
+/** A wanted poster: picture, name, what they're wanted for, where they were seen, the reward. */
 const WantedCard = (props: WantedCardProps) => {
   const { act } = useBackend<Data>();
   const { entry, mugshot, hasPad } = props;
 
-  const tier = entry.tier ?? 1;
-  const tierColor = WANTED_TIER_COLORS[tier] ?? 'label';
-  const shares = entry.shares ?? [];
-  const full = shares[0] ?? entry.value ?? 0;
+  const tierColor = WANTED_TIER_COLORS[entry.tier ?? 1] ?? 'label';
   const vouchers = entry.vouchers ?? 0;
-  const hunters = entry.hunters ?? 0;
   const hunting = !!entry.hunting_by_us;
   const isOffer = !!entry.private;
-  const relisting = entry.status === 'relisting';
-  const killOnly = !!entry.kill_only;
-  const abandoned = !!entry.was_abandoned;
-  const huntRefusal = entry.hunt_refusal ?? null;
-  const shareRows = entry.share_rows ?? [];
-  const turnInPay = entry.turn_in_pay ?? null;
-  const turnInRefusal = toSentence(entry.turn_in_refusal);
-  const padState = entry.turn_in_state
-    ? (WANTED_PAD_STATES[entry.turn_in_state] ?? 'On the pad')
-    : null;
-  const voucherText =
-    vouchers > 0
-      ? ` + ${vouchers} trade voucher${vouchers > 1 ? 's' : ''}`
-      : '';
+  const huntRefusal = toSentence(entry.hunt_refusal);
+  const description = [
+    entry.species,
+    entry.sex && entry.sex !== 'Unknown' ? entry.sex.toLowerCase() : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <Section
       className="MissionBoard__card"
       title={
-        <Box inline color={abandoned ? 'gray' : undefined}>
-          <Box as="span" color={abandoned ? 'gray' : tierColor} mr={1}>
-            ☠
-          </Box>
+        <Box inline color={tierColor}>
           {entry.name || 'Unknown'}
         </Box>
       }
       buttons={
-        <Box inline>
-          <Box inline color={abandoned ? 'gray' : 'gold'} bold mr={1}>
-            {full} cr
-            {vouchers > 0 ? ` + ${vouchers}v` : ''}
-          </Box>
-          <Box inline color={entry.zone_color || 'label'}>
-            [{entry.zone || 'Unknown Zone'}]
-          </Box>
+        <Box inline bold color="gold">
+          {formatMoney(entry.value ?? 0)} cr
+          {vouchers > 0
+            ? ` + ${vouchers} voucher${vouchers > 1 ? 's' : ''}`
+            : ''}
         </Box>
       }
     >
       <Flex mb={1}>
-        <Flex.Item mr={1}>
+        <Flex.Item mr={1} textAlign="center">
           {mugshot ? (
             <img
               src={`data:image/png;base64,${mugshot}`}
@@ -1009,121 +939,43 @@ const WantedCard = (props: WantedCardProps) => {
               ?
             </Box>
           )}
+          {entry.photo_old ? (
+            <Box fontSize="0.8em" italic color="label">
+              Old photo
+            </Box>
+          ) : null}
         </Flex.Item>
         <Flex.Item grow>
-          <Box>
-            <Box as="span" bold color={tierColor}>
-              {killOnly ? 'WANTED: DEAD' : entry.tier_name || 'Wanted'}
-            </Box>
-            {entry.alias && entry.alias !== entry.name ? (
-              <Box as="span" color="label" ml={1}>
-                aka {entry.alias}
+          <Box bold color={tierColor}>
+            {(entry.tier_name || 'Wanted').toUpperCase()}
+            {isOffer ? (
+              <Box as="span" color="teal" ml={1}>
+                Private contract
               </Box>
             ) : null}
           </Box>
+          <Box>
+            {entry.terms || 'Wanted alive'}
+            {entry.crime ? ` for ${entry.crime}` : ''}.
+          </Box>
+          {description ? (
+            <Box color="label">
+              {description}
+              {entry.alias && entry.alias !== entry.name
+                ? `. Goes by ${entry.alias}`
+                : ''}
+              .
+            </Box>
+          ) : null}
           <Box color="label">
-            {entry.species || 'Unknown'}, {entry.sex || 'Unknown'}
-          </Box>
-          {entry.photo_old ? (
-            <Box color="average" italic>
-              Old photo: their hair and clothes may have changed.
+            {entry.place || 'Last seen: unknown'}{' '}
+            <Box as="span" color={entry.zone_color || 'label'}>
+              [{entry.zone || 'Unknown Zone'}]
             </Box>
-          ) : null}
-          {entry.crime ? <Box>Wanted for {entry.crime}.</Box> : null}
-          <Box color={tier >= 3 ? 'bad' : 'average'}>
-            {entry.hint || 'Unknown'}
           </Box>
-          {entry.tactics ? <Box color="label">{entry.tactics}</Box> : null}
-          {entry.crew_note ? (
-            <Box bold color={entry.crew_note_bad ? 'bad' : 'average'}>
-              {entry.crew_note}
-            </Box>
-          ) : null}
-          <Box color="teal">
-            {entry.pay_note ||
-              'Bring a stun weapon and cuffs: full pay only if never downed.'}
-          </Box>
-          <Box color={relisting ? 'average' : 'label'}>
-            {entry.place || 'Last seen: unknown'}
-          </Box>
+          <Box color="label">{formatWantedTime(entry.time_left ?? 0)} left</Box>
         </Flex.Item>
       </Flex>
-
-      <LabeledList>
-        {shareRows.length > 0 ? (
-          shareRows.map((row, index) => (
-            <LabeledList.Item key={row.label} label={row.label}>
-              <Box
-                as="span"
-                color={
-                  index === 0
-                    ? 'good'
-                    : row.label === 'Dead'
-                      ? 'bad'
-                      : 'average'
-                }
-                bold={index === 0}
-              >
-                {formatShareRow(row)}
-              </Box>
-            </LabeledList.Item>
-          ))
-        ) : (
-          <LabeledList.Item label={killOnly ? 'On the trophy' : 'Never downed'}>
-            <Box as="span" color="good" bold>
-              {full} cr{voucherText}
-            </Box>
-          </LabeledList.Item>
-        )}
-        <LabeledList.Item label="Time left">
-          {formatWantedTime(entry.time_left ?? 0)}
-          {entry.clock_held ? (
-            <Box as="span" color="label" ml={1}>
-              {killOnly ? '(clock held)' : '(held while hunted)'}
-            </Box>
-          ) : null}
-        </LabeledList.Item>
-      </LabeledList>
-
-      <Flex justify="space-between" align="center" mt={1} mb={1}>
-        <Flex.Item>
-          {isOffer ? (
-            <Box color="teal">Offered to your ship</Box>
-          ) : (
-            <Box as="span" color={hunters > 0 ? 'orange' : 'gray'}>
-              ⚔ {hunters} crew{hunters !== 1 ? 's' : ''} hunting
-            </Box>
-          )}
-        </Flex.Item>
-        <Flex.Item>
-          {hunting ? (
-            <Box color="green" bold>
-              [HUNTING]
-            </Box>
-          ) : null}
-          {relisting ? (
-            <Box color="average" bold>
-              [RELOCATING]
-            </Box>
-          ) : null}
-        </Flex.Item>
-      </Flex>
-
-      {abandoned ? (
-        <Box mb={1} color="average">
-          Abandoned: you can't hunt it again, but you can still turn{' '}
-          {killOnly ? 'the trophy' : 'them'} in.
-        </Box>
-      ) : null}
-
-      {padState ? (
-        <Box mb={1} color={entry.can_turn_in ? 'good' : 'average'}>
-          {padState}
-          {turnInPay ? `: pays ${turnInPay}` : ''}
-        </Box>
-      ) : null}
-
-      <Divider />
 
       <Stack>
         <Stack.Item grow>
@@ -1134,18 +986,18 @@ const WantedCard = (props: WantedCardProps) => {
               color="bad"
               onClick={() => act('abandon_wanted', { ref: entry.ref })}
             >
-              {isOffer ? 'Drop Offer' : 'Abandon'}
+              {isOffer ? 'Drop Contract' : 'Abandon'}
             </Button>
           ) : (
             <Button
               fluid
               icon="crosshairs"
-              color={huntRefusal ? 'gray' : 'caution'}
+              color="caution"
               disabled={!!huntRefusal}
-              tooltip={huntRefusal || 'Sets a helm waypoint to the site'}
+              tooltip={huntRefusal}
               onClick={() => act('hunt_wanted', { ref: entry.ref })}
             >
-              {isOffer ? 'Accept Offer' : abandoned ? 'Abandoned' : 'Hunt'}
+              {isOffer ? 'Accept Contract' : 'Hunt'}
             </Button>
           )}
         </Stack.Item>
@@ -1156,13 +1008,10 @@ const WantedCard = (props: WantedCardProps) => {
             disabled={!hasPad || !entry.can_turn_in}
             tooltip={
               !hasPad
-                ? 'Requires a mission pad'
+                ? 'No mission pad'
                 : entry.can_turn_in
-                  ? `Beam them off the pad and collect${turnInPay ? ` ${turnInPay}` : ''}`
-                  : turnInRefusal ||
-                    (killOnly
-                      ? 'Put the trophy on your mission pad first'
-                      : 'Put them on your mission pad first')
+                  ? undefined
+                  : toSentence(entry.turn_in_refusal)
             }
             onClick={() => act('turn_in_wanted', { ref: entry.ref })}
           >
@@ -1173,11 +1022,7 @@ const WantedCard = (props: WantedCardProps) => {
           <Button
             icon="print"
             disabled={!hasPad}
-            tooltip={
-              hasPad
-                ? 'Print a warrant with their picture on the pad'
-                : 'Requires a mission pad'
-            }
+            tooltip={hasPad ? undefined : 'No mission pad'}
             onClick={() => act('print_warrant', { ref: entry.ref })}
           >
             Warrant

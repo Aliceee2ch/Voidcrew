@@ -2433,11 +2433,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/list/dead = board_payout(BOUNTY_KINGPIN_PAY_DEAD)
 	return list(alive[1], alive[1], dead[1])
 
-/datum/criminal_bounty/kingpin/board_hint()
-	return "Armed and guarded. Bring spare charges"
-
-/datum/criminal_bounty/kingpin/board_pay_note()
-	return "Wanted dead or alive: full pay alive, downed counts; 80% dead."
+/datum/criminal_bounty/kingpin/board_terms()
+	return "Wanted dead or alive"
 
 /datum/criminal_bounty/kingpin/board_place_text()
 	if(board_relisting)

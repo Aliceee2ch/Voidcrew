@@ -507,23 +507,17 @@ SUBSYSTEM_DEF(criminal_bounties)
 
 /**
  * Adds the Wanted section to the board's ui_data() `data` for `ship` (spec 11): `wanted`, every
- * public bounty and this ship's private offers, and `wanted_hunt`, the ref of the public bounty it
- * hunts or null. Looking at the board is what makes the ship's private offers. When the set of
+ * public bounty and this ship's private offers. Looking at the board is what makes the ship's private offers. When the set of
  * postings has changed, the viewers get fresh static data (the mugshots) a moment later.
  */
 /obj/machinery/computer/mission_board/proc/board_add_wanted_data(list/data, obj/structure/overmap/ship/ship, mob/user)
 	SScriminal_bounties.board_offer_private(ship)
 	var/list/wanted = list()
-	var/hunt_ref = null
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
 		if(!posting.is_open() || !posting.board_visible_to(ship))
 			continue
 		wanted += list(posting.board_ui_entry(ship, linked_pad))
-		if(!posting.private_to && posting.is_hunting(ship))
-			hunt_ref = REF(posting)
 	data["wanted"] = wanted
-	data["wanted_hunt"] = hunt_ref
-	data["wanted_max_hunts"] = BOUNTY_MAX_HUNTS_PER_SHIP
 	var/signature = board_static_signature(ship)
 	if(board_static_sent != signature)
 		board_static_sent = signature

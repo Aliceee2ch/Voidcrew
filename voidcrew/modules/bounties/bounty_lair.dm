@@ -72,10 +72,6 @@
 	var/kill_trophy_type = /obj/item/bounty_proof/trophy
 	/// What the card says the boss is, in place of a species
 	var/kill_species = "Unknown"
-	/// The card's warning line
-	var/kill_hint = "Extremely dangerous"
-	/// The card's crew line
-	var/kill_crew_note = "Crew of 3+ recommended"
 
 /// No criminal to spawn: the boss belongs to its lair or its event
 /datum/criminal_bounty/kill_only/board_arm()
@@ -121,19 +117,8 @@
 		preview[2] = "trophy"
 	return preview
 
-/// The card: WANTED: DEAD, with one pay figure (MissionBoard.tsx reads kill_only)
-/datum/criminal_bounty/kill_only/board_ui_entry(obj/structure/overmap/ship/ship, obj/machinery/mission_pad/pad)
-	. = ..()
-	.["kill_only"] = TRUE
-
-/datum/criminal_bounty/kill_only/board_hint()
-	return kill_hint
-
-/datum/criminal_bounty/kill_only/board_pay_note()
-	return "Kill only. Bring the trophy from the body to your mission pad."
-
-/datum/criminal_bounty/kill_only/board_crew_note()
-	return kill_crew_note
+/datum/criminal_bounty/kill_only/board_terms()
+	return "Wanted dead"
 
 /datum/criminal_bounty/kill_only/board_species_name()
 	return kill_species
@@ -159,11 +144,9 @@
 	lines += "<b>Species:</b> [board_species_name()]. <b>Sex:</b> [board_sex_name()].<br>"
 	if(record?.crime)
 		lines += "<b>Wanted for:</b> [record.crime].<br>"
-	lines += "<b>Warning:</b> [board_hint()]<br>"
-	lines += "<b>[board_place_text()]</b>, [board_zone_name()].<br>"
-	var/voucher_text = board_vouchers ? " and [board_vouchers] trade voucher[board_vouchers > 1 ? "s" : ""]" : ""
-	lines += "<b>Reward:</b> [value] cr[voucher_text] on proof of death. Nothing for taking them alive.<br>"
-	lines += "<i>Bring the trophy from the body to your ship's mission pad and press Turn In on the mission board.</i>"
+	lines += "<b>[board_terms()]</b>.<br>"
+	lines += "[board_place_text()], [board_zone_name()].<br>"
+	lines += "<b>Reward:</b> [board_reward_text()].<br>"
 	return lines.Join("\n")
 
 /**
@@ -832,10 +815,6 @@
 	var/species_name = "Human"
 	/// The boss's sex on the card
 	var/gender = MALE
-	/// The card's warning line
-	var/hint
-	/// The card's crew line
-	var/crew_note = "Crew of 3+ recommended"
 	/// The boss's trophy (/obj/item/bounty_proof/trophy)
 	var/trophy_type = /obj/item/bounty_proof/trophy
 	/// The card's picture: an icon file and state
@@ -923,8 +902,6 @@
 	template_type = /datum/map_template/ruin/space/bounty_lair/mafia_club
 	boss_name = "Arkady Sokolov"
 	crime = "racketeering and murder"
-	hint = "Fortified club with dozens of armed guards. Bring spare charges."
-	crew_note = "Crew of 3+ recommended"
 	trophy_type = /obj/item/bounty_proof/trophy/mafia_don
 	mugshot_icon = 'icons/mob/rideables/mecha.dmi'
 	mugshot_state = "mauler"
@@ -957,8 +934,6 @@
 	posting.lair_kind = kind
 	posting.kill_trophy_type = kind.trophy_type
 	posting.kill_species = kind.species_name
-	posting.kill_hint = kind.hint
-	posting.kill_crew_note = kind.crew_note
 	posting.record = bounty_kill_record(kind.boss_name, kind.crime, kind.gender, rand(kind.pay_min, kind.pay_max), kind.mugshot())
 
 	var/obj/structure/overmap/space_ruin/bounty_lair/lair = new(spawn_turf)
@@ -1060,8 +1035,6 @@ ADMIN_VERB(post_bounty_lair, R_ADMIN, "Post Bounty Lair", "Post a kill-only lair
 /datum/criminal_bounty/kill_only/lich
 	kill_trophy_type = /obj/item/bounty_proof/trophy/lich
 	kill_species = "Undead"
-	kill_hint = "An undead sorcerer behind four sealed wards. Extremely dangerous."
-	kill_crew_note = "Crew of 4+ recommended"
 	/// Ilthuun is dead, and the clock runs
 	var/lich_slain = FALSE
 

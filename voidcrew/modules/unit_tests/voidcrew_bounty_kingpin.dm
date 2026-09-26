@@ -123,7 +123,7 @@
 	TEST_ASSERT_EQUAL(amounts[1], 1000, "The card's full pay is wrong")
 	TEST_ASSERT_EQUAL(amounts[2], 1000, "The card's downed pay isn't full pay")
 	TEST_ASSERT_EQUAL(amounts[3], 2720, "The card's dead pay is wrong")
-	TEST_ASSERT(findtext(posting.board_pay_note(), "dead or alive"), "The card doesn't say dead or alive")
+	TEST_ASSERT_EQUAL(posting.board_terms(), "Wanted dead or alive", "The card doesn't say dead or alive")
 	posting.close("admin")
 
 	// Through the pad: downed, cuffed and dead, each on its own posting

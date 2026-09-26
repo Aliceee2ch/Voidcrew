@@ -5,13 +5,21 @@ order: 5.5
 blurb: Hold prisoners at your outpost and get paid for keeping them fed, clean and calm.
 ---
 
-A prison wing is an upgrade for a [player outpost](player-outposts.md). The corrections service beams prisoners into its four cells and pays the outpost bank for every minute they spend in your care. Feed them, keep them clean and patched up, and keep the wing tidy, lit and powered. Neglect costs you pay, and an unhappy yard fights, climbs out and riots.
+A prison wing is an upgrade for a [player outpost](player-outposts.md). The corrections service beams prisoners into its cells and pays the outpost bank for every minute they spend in your care. Feed them, keep them clean and patched up, and keep the wing tidy, lit and powered. Neglect costs you pay, and an unhappy yard fights, climbs out and riots.
 
 ## Getting a wing
 
 Buy the **Prison Wing** from the **Upgrades** tab of the outpost management console, then place it beside your outpost. Placement is permanent. The wing has cells along the back, a yard in the middle, and the warden's office at the front behind a glass divider. It runs on its own APC, so keep that powered.
 
 The office is behind **staff doors**, which never open for prisoners and only open for the outpost's members unless visitors are allowed. Two **serving hatches** in the divider pass things between the office and the yard.
+
+## Extending the cell block
+
+Once the wing is built, the **Cell Block Extension** in the Upgrades tab adds three more cells, a strip of yard with its own serving hatch, and more office. It costs 7,500 cr. A wing can have two, for ten cells in all.
+
+An extension joins the wing's east or west wall, or the far wall of an extension already there. The placement map only offers those spots, each already turned the right way. The wall there has to be whole and the ground beside it clear. You can't place one during a riot or a breakout, while prisoners are loose, or during an experiment.
+
+Once it is built, the wall opens into the office and the yard, and the new cells take the next numbers. Each extension lets one more prisoner arrive at a time and adds one more guard post. It runs off the wing's APC and has no door of its own; staff get to it through the wing's office.
 
 ## The warden's console
 

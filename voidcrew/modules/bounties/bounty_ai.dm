@@ -164,11 +164,14 @@
 	layer = ABOVE_MOB_LAYER
 	/// Over the head rather than in the hand
 	var/over_head = FALSE
+	/// Drawn with the item's own in-hand sprite, which turns with the holder, rather than its item icon
+	var/inhand = FALSE
 
 /**
  * Draws `look` in `owner`'s hand (or over their head), reusing `holder`: `look` is an atom, whose
- * appearance is copied, or an atom typepath, whose icon is used. A null `look` takes it away.
- * Returns the holder to keep, or null.
+ * appearance is copied, or an atom typepath, whose icon is used. An item with an in-hand sprite is
+ * drawn with that instead, the way a player holds it, so it points the way they face. A null `look`
+ * takes it away. Returns the holder to keep, or null.
  */
 /proc/bounty_ai_update_held(mob/living/owner, obj/effect/abstract/bounty_held/holder, look, over_head = FALSE)
 	if(isnull(look) || QDELETED(owner))
@@ -179,7 +182,10 @@
 	if(!holder)
 		holder = new(null)
 		owner.vis_contents += holder
-	if(ispath(look, /atom))
+	var/list/inhand_look = over_head ? null : bounty_ai_inhand_look(look)
+	if(inhand_look)
+		holder.appearance = mutable_appearance(inhand_look[1], inhand_look[2])
+	else if(ispath(look, /atom))
 		var/atom/look_type = look
 		holder.appearance = mutable_appearance(initial(look_type.icon), initial(look_type.icon_state))
 	else if(isatom(look))
@@ -187,6 +193,7 @@
 		holder.appearance = look_atom.appearance
 	holder.name = ""
 	holder.over_head = over_head
+	holder.inhand = !!inhand_look
 	holder.mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 	holder.appearance_flags = KEEP_APART | RESET_COLOR | RESET_TRANSFORM | PIXEL_SCALE
 	holder.vis_flags = VIS_INHERIT_PLANE
@@ -198,9 +205,32 @@
 	bounty_ai_place_held(owner, holder)
 	return holder
 
+/// The right-hand sprite of `look` (an item or item typepath) as list(file, state), or null when it has none
+/proc/bounty_ai_inhand_look(look)
+	var/hand_file
+	var/state
+	if(ispath(look, /obj/item))
+		var/obj/item/item_type = look
+		hand_file = initial(item_type.righthand_file)
+		state = initial(item_type.inhand_icon_state) || initial(item_type.icon_state)
+	else if(isitem(look))
+		var/obj/item/item = look
+		hand_file = item.righthand_file
+		state = item.inhand_icon_state || item.icon_state
+	if(!hand_file || !state || !icon_exists(hand_file, state))
+		return null
+	return list(hand_file, state)
+
 /// Puts a held thing in the hand on the side they face (`facing`, or the way they face now), or over their head
 /proc/bounty_ai_place_held(mob/living/owner, obj/effect/abstract/bounty_held/holder, facing)
 	if(!holder || !owner)
+		return
+	// An in-hand sprite is drawn for a whole body: full size, no offset, facing their way
+	if(holder.inhand)
+		holder.transform = matrix()
+		holder.pixel_w = 0
+		holder.pixel_z = 0
+		holder.dir = facing || owner.dir
 		return
 	holder.transform = matrix().Scale(0.6)
 	if(holder.over_head)

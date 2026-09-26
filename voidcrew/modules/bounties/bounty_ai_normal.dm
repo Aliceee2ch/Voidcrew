@@ -731,7 +731,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	windup_message = "%USER winds up to throw a bottle."
 
 /**
- * The meek's little gun: three weak shots when cornered, once per cornering. The volley is fired
+ * The meek's little gun: a quick volley when cornered, once per cornering. The volley is fired
  * one shot at a time by the meek AI (bounty_ai_meek.dm), each shot checking they can still shoot,
  * so the gun here only has to be ready again between shots.
  */

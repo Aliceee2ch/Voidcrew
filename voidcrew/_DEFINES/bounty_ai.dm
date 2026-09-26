@@ -150,13 +150,13 @@
 /// The aim before the shots: the telegraph
 #define BOUNTY_MEEK_PISTOL_WINDUP (1 SECONDS)
 /// Shots in the holdout's volley
-#define BOUNTY_MEEK_PISTOL_SHOTS 3
+#define BOUNTY_MEEK_PISTOL_SHOTS 5
 /// Between them
-#define BOUNTY_MEEK_PISTOL_GAP (0.5 SECONDS)
+#define BOUNTY_MEEK_PISTOL_GAP (0.3 SECONDS)
 /// Brute per shot; bullet armour applies
 #define BOUNTY_MEEK_PISTOL_DAMAGE 10
 /// One volley per cornering
-#define BOUNTY_MEEK_PISTOL_COOLDOWN (20 SECONDS)
+#define BOUNTY_MEEK_PISTOL_COOLDOWN (12 SECONDS)
 /// They only aim at someone this close
 #define BOUNTY_MEEK_PISTOL_RANGE 6
 /// Hiding place scores: what kind of place
@@ -245,13 +245,13 @@
 #define BOUNTY_PISTOL_HEALTH 0.9
 #define BOUNTY_PISTOL_DAMAGE_LOW 12
 #define BOUNTY_PISTOL_DAMAGE_HIGH 14
-#define BOUNTY_PISTOL_INTERVAL (1.4 SECONDS)
+#define BOUNTY_PISTOL_INTERVAL (0.5 SECONDS)
 /// Keeps about this far away
 #define BOUNTY_PISTOL_RANGE 5
 #define BOUNTY_PISTOL_MIN_RANGE 3
-#define BOUNTY_PISTOL_MAGAZINE 6
+#define BOUNTY_PISTOL_MAGAZINE 8
 /// The reload: the window to close in
-#define BOUNTY_PISTOL_RELOAD (3 SECONDS)
+#define BOUNTY_PISTOL_RELOAD (2 SECONDS)
 /// Raising the gun before the first shot of a string
 #define BOUNTY_PISTOL_WINDUP (0.4 SECONDS)
 /// Shots further apart than this start a new string

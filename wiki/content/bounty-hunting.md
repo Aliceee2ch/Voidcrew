@@ -82,7 +82,7 @@ About 70% of Petty criminals and 30% of Wanted ones are meek. They never start a
 - They sprint faster than you can run, and duck about half the shots fired at them while sprinting. After about 8 seconds of sprinting they're winded and slow down.
 - They hide in a locker or crate, pose as a potted plant, or stand still on a dark tile. Opening the locker, bumping into them, examining them from the next tile, hurting them, or lighting up their dark spot finds them. They shove you back a tile and run again.
 - After a minute and a half in hiding they start to fidget: a rustle or a shake every 20 seconds. If nobody is around for a few minutes, they come out.
-- Cornered, they shout and aim a small pistol for a second, then fire three weak shots. A stamina hit during the aim makes them fumble it.
+- Cornered, they shout and aim a small pistol for a second, then fire five quick shots. A stamina hit during the aim makes them fumble it.
 - 80 health. Three disabler shots stun one.
 
 **Bring:** a disabler or other ranged stun, a flashlight, cuffs, and someone to block the exits.
@@ -95,7 +95,7 @@ About 70% of Petty criminals and 30% of Wanted ones are meek. They never start a
 About 70% of Wanted criminals and 30% of Petty ones are normal. A Wanted criminal on a pirate ship is always normal.
 
 - They notice anyone holding a weapon, cuffs or a warrant within 6 tiles, stop what they're doing and watch them. Come within 4 tiles with a weapon out and they fight.
-- Each has one fighting style: fists (tougher, and harder to stun), a knife (cuts that bleed), a pistol (keeps its distance, reloads after six shots), a shotgun (close range), a club (drains your stamina) or thrown bottles.
+- Each has one fighting style: fists (tougher, and harder to stun), a knife (cuts that bleed), a pistol (keeps its distance, reloads after eight shots), a shotgun (close range), a club (drains your stamina) or thrown bottles.
 - They may have up to two companions who fight beside them. Companions pay nothing. They may run when badly hurt or when their criminal goes down, and give up for good once stunned.
 - Below 40% health, with two hunters nearby who can see them, they may give up and put their hands up. Someone who has given up counts as stunned: cuff them for full pay. Stop hitting them, because they can still be downed.
 - Badly hurt with nobody around, they break off and retreat. They never heal.

@@ -12,7 +12,7 @@
  * - being found (the container opened; bumped, touched, pulled, hit or examined up close; a light
  *   coming near), which shoves the finder back a tile and sends them running again;
  * - a restless tell while hidden a long time, so a search can end;
- * - cornered: a shout, a one-second aim with the holdout (the telegraph), three weak shots, then
+ * - cornered: a shout, a one-second aim with the holdout (the telegraph), five quick shots, then
  *   running again. A stamina hit during the aim makes them fumble it; each shot checks they can
  *   still shoot.
  * It never loots and never attacks first.

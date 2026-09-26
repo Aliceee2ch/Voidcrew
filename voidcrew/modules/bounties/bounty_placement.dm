@@ -178,7 +178,8 @@
 
 /// What the card calls a site
 /datum/criminal_bounty/proc/board_describe_site(obj/structure/overmap/where)
-	return where?.name
+	// Without \improper: the text macro shows as a stray character in the UI and the logs
+	return where ? format_text(where.name) : null
 
 /// Stops listening to the site it was placed at (safe to call with none)
 /datum/criminal_bounty/proc/board_unhook_site(obj/structure/overmap/hooked)

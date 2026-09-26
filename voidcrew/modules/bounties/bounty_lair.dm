@@ -123,7 +123,7 @@
 	if(istype(where, /obj/structure/overmap/space_ruin))
 		var/obj/structure/overmap/space_ruin/ruin = where
 		if(ruin.true_name)
-			return ruin.true_name
+			return format_text(ruin.true_name)
 	return ..()
 
 /datum/criminal_bounty/kill_only/board_place_text()

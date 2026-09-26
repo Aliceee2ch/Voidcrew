@@ -279,9 +279,9 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		if("Relist it")
 			admin_relist_posting(user, posting)
 		if("Jump to the criminal")
-			admin_jump(user, posting.criminal())
+			admin_jump(user, posting.criminal(), posting)
 		if("Bring the criminal here")
-			admin_bring(user, posting.criminal())
+			admin_bring(user, posting.criminal(), posting)
 
 /datum/bounty_admin_panel/proc/menu_force(mob/user)
 	var/datum/weakref/criminal_ref = WEAKREF(pick_criminal(user, "Force a capture state on whom?"))
@@ -656,7 +656,7 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	var/obj/structure/overmap/site = posting.site()
 	var/obj/structure/overmap/ship/private_ship = posting.offered_to()
 	var/mob/living/basic/bounty_criminal/criminal = posting.criminal()
-	var/location = criminal ? "[ADMIN_VERBOSEJMP(criminal)], [criminal.capture_state()]" : (posting.board_relisting ? "none while it relists" : "not spawned (its site is not loaded)")
+	var/location = criminal ? "[ADMIN_VERBOSEJMP(criminal)], [criminal.capture_state()]" : absent_reason(posting)
 	return list(
 		"tier" = bounty_tier_name(record?.tier),
 		"name" = record?.name || "nobody",
@@ -864,25 +864,50 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	tell(user, span_notice("The bounty on [wanted_name] is relisting."))
 	return TRUE
 
+/**
+ * Why `posting` has no criminal right now, for the panel: relisting (and when it lists again), an
+ * offer not taken yet, a body already dead (its proof is out), a spawn under way, the server's
+ * live-criminal cap, or a site whose interior isn't loaded.
+ */
+/datum/bounty_admin_panel/proc/absent_reason(datum/criminal_bounty/posting)
+	if(QDELETED(posting))
+		return "no bounty"
+	if(posting.board_relisting)
+		return "none while it relists (next sighting in [DisplayTimeText(max(posting.board_relist_at - world.time, 0))])"
+	if(posting.private_to && !posting.board_accepted)
+		return "not spawned until the offer is accepted"
+	if(posting.board_proof())
+		return "dead: its proof of death is out"
+	if(posting.board_spawning)
+		return "spawning now"
+	var/obj/structure/overmap/where = posting.site()
+	if(!where)
+		return "not spawned: it has no site"
+	if(!posting.board_site_loaded(where))
+		return "not spawned: its site is not loaded"
+	if(SScriminal_bounties.board_criminal_slots_used() >= BOUNTY_MAX_LIVE_CRIMINALS)
+		return "not spawned: the live-criminal cap is full"
+	return "not spawned yet"
+
 /// Moves the admin to `criminal`. Returns TRUE if they moved.
-/datum/bounty_admin_panel/proc/admin_jump(mob/user, mob/living/basic/bounty_criminal/criminal)
+/datum/bounty_admin_panel/proc/admin_jump(mob/user, mob/living/basic/bounty_criminal/criminal, datum/criminal_bounty/posting)
 	error = null
 	if(!authorized(user))
 		return FALSE
 	var/turf/spot = get_turf(criminal)
 	if(QDELETED(criminal) || !spot)
-		return refuse(user, "The criminal is not spawned: their site is not loaded.")
+		return refuse(user, "No criminal to jump to: [absent_reason(posting || criminal?.posting())].")
 	user.abstract_move(spot)
 	log_action(user, "jump to [criminal_name(criminal)] at [AREACOORD(spot)]")
 	return TRUE
 
 /// Brings `criminal` to the admin's tile, out of any locker or crate. Returns TRUE if they came.
-/datum/bounty_admin_panel/proc/admin_bring(mob/user, mob/living/basic/bounty_criminal/criminal)
+/datum/bounty_admin_panel/proc/admin_bring(mob/user, mob/living/basic/bounty_criminal/criminal, datum/criminal_bounty/posting)
 	error = null
 	if(!authorized(user))
 		return FALSE
 	if(QDELETED(criminal))
-		return refuse(user, "The criminal is not spawned: their site is not loaded.")
+		return refuse(user, "No criminal to bring: [absent_reason(posting || criminal?.posting())].")
 	var/turf/spot = get_turf(user)
 	if(!spot)
 		return refuse(user, "You are nowhere.")

@@ -241,7 +241,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 	if(!fugitive || !fugitive.blended || fugitive.capture_state() != BOUNTY_STATE_FREE)
 		return FALSE
 	var/obj/structure/overmap/trader_outpost/outpost = outpost_site?.resolve() || site_ref?.resolve()
-	var/where = outpost ? outpost.name : "the outpost"
+	var/where = outpost ? format_text(outpost.name) : "the outpost"
 	log_game("BOUNTY: [record?.name] slipped away from [where].")
 	// Detached first (outpost_release_site()), so relist() never deletes them mid-walk. P5 shows the
 	// reason as "WANTED: <name> <reason>."

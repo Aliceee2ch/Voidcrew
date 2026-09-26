@@ -118,6 +118,10 @@
 #define BOUNTY_MOBSTER_SIGHT 9
 /// How far a goon keeps after a hunter it can't see any more (inside its own room)
 #define BOUNTY_MOBSTER_CHASE 12
+/// Out of its room with nobody to fight and unable to walk back this long (another leash holds it), it takes the room it's in
+#define BOUNTY_MOBSTER_ROOM_GIVE_UP (20 SECONDS)
+/// A room bigger than this many tiles isn't searched for its doors (a goon spawned somewhere odd)
+#define BOUNTY_MOBSTER_ROOM_MAX_TILES 400
 
 // ----- lieutenants -----
 
@@ -156,8 +160,10 @@
 #define BOUNTY_MECH_BRUTE_MOD 0.6
 #define BOUNTY_MECH_BURN_MOD 0.8
 #define BOUNTY_MECH_SPEED 2.5
-/// How far it sees hunters and aims its guns
-#define BOUNTY_MECH_SIGHT 12
+/// How far it sees hunters and aims its guns: the garage and the back office behind its gate (about 21 tiles deep)
+#define BOUNTY_MECH_SIGHT 20
+/// How far it keeps after someone who has hurt it, seen or not: it closes in as far as its arena lets it
+#define BOUNTY_MECH_GRUDGE_RANGE 30
 
 #define BOUNTY_MECH_STOMP_DAMAGE_MIN 20
 #define BOUNTY_MECH_STOMP_DAMAGE_MAX 26
@@ -171,6 +177,8 @@
 #define BOUNTY_MECH_ROCKET_COOLDOWN (14 SECONDS)
 /// Damage a rocket does to a table, window or door it hits in the arena, as a multiple of its damage
 #define BOUNTY_MECH_ROCKET_DEMOLITION 8
+/// What a rocket does to a player's exosuit in its way, against its bullet armour: never the anti-furniture multiplier
+#define BOUNTY_MECH_ROCKET_EXOSUIT_DAMAGE 90
 
 #define BOUNTY_MECH_LMG_WINDUP (1.2 SECONDS)
 #define BOUNTY_MECH_LMG_ROUNDS 12
@@ -180,7 +188,7 @@
 #define BOUNTY_MECH_LMG_COOLDOWN (8 SECONDS)
 /// Full width of the red cone, in degrees; the rounds spread over it
 #define BOUNTY_MECH_LMG_ARC 30
-/// How far the cone is marked
+/// The cone's shortest reach; it always reaches as far as its target, and no round flies past it
 #define BOUNTY_MECH_LMG_RANGE 8
 #define BOUNTY_MECH_LMG_DEMOLITION 0.25
 

@@ -108,10 +108,32 @@
 
 /datum/unit_test/voidcrew_bounty_lair_mafia/rocket_flight
 	var/explosions = 0
+	/// Every hit the target took, as "amount type to zone (blocked%) at time", for the failure messages
+	var/list/target_hits = list()
 
 /datum/unit_test/voidcrew_bounty_lair_mafia/rocket_flight/proc/on_explosion(datum/source)
 	SIGNAL_HANDLER
 	explosions++
+
+/datum/unit_test/voidcrew_bounty_lair_mafia/rocket_flight/proc/on_target_hit(mob/living/source, damage_dealt, damagetype, def_zone, blocked)
+	SIGNAL_HANDLER
+	var/zone = def_zone
+	if(isbodypart(def_zone))
+		var/obj/item/bodypart/part = def_zone
+		zone = part.body_zone
+	target_hits += "[damage_dealt] [damagetype] to [zone || "no zone"] ([blocked]% blocked) at [world.time]"
+
+/// Waits up to two seconds, a tenth at a time, for `rocket` to burst. Returns the target's brute the moment it was gone
+/// (null if it never was) and adds "time: brute" to `timeline` for each tenth, so a failure shows what happened when.
+/datum/unit_test/voidcrew_bounty_lair_mafia/rocket_flight/proc/watch_flight(obj/projectile/rocket, mob/living/target, list/timeline)
+	var/landed_brute
+	var/started = world.time
+	for(var/tenth in 1 to 20)
+		sleep(0.1 SECONDS)
+		timeline += "[(world.time - started) / 10]s [target.getBruteLoss()][QDELETED(rocket) ? "" : " (in flight)"]"
+		if(isnull(landed_brute) && QDELETED(rocket))
+			landed_brute = target.getBruteLoss()
+	return landed_brute
 
 /datum/unit_test/voidcrew_bounty_lair_mafia/rocket_flight/Run()
 	var/mob/living/basic/bounty_lair_boss/mafia_mech/mech = allocate(/mob/living/basic/bounty_lair_boss/mafia_mech, spot(0, 2))
@@ -120,14 +142,18 @@
 	var/obj/structure/table/wood/table = allocate(/obj/structure/table/wood, spot(4, 3))
 	var/table_health = table.get_integrity()
 	RegisterSignal(SSdcs, COMSIG_GLOB_EXPLOSION, PROC_REF(on_explosion))
+	RegisterSignal(target, COMSIG_MOB_AFTER_APPLY_DAMAGE, PROC_REF(on_target_hit))
 
 	var/serial = mech.mech_start_rockets(list(target))
 	TEST_ASSERT(serial, "The volley didn't start")
 	var/list/rockets = mech.mech_fire_rockets(serial)
 	TEST_ASSERT_EQUAL(length(rockets), 1, "Not one rocket at the one marker")
-	sleep(2 SECONDS)
-	TEST_ASSERT(QDELETED(rockets[1]), "The rocket never reached its marker")
-	TEST_ASSERT_EQUAL(target.getBruteLoss(), 60, "The rocket didn't hit the hunter on its marker") // BOUNTY_MECH_ROCKET_DAMAGE
+	var/list/timeline = list()
+	var/landed_brute = watch_flight(rockets[1], target, timeline)
+	var/seen = "Hits: [length(target_hits) ? target_hits.Join("; ") : "none"]. Brute by tenth of a second: [timeline.Join(", ")]"
+	TEST_ASSERT(QDELETED(rockets[1]), "The rocket never reached its marker. [seen]")
+	TEST_ASSERT_EQUAL(landed_brute, 60, "The rocket didn't hit the hunter on its marker. [seen]") // BOUNTY_MECH_ROCKET_DAMAGE
+	TEST_ASSERT_EQUAL(target.getBruteLoss(), landed_brute, "The hunter's brute changed after the rocket burst. [seen]")
 	TEST_ASSERT_EQUAL(bystander.getBruteLoss(), 0, "The rocket hit someone it flew past on the way")
 	// explosion() would have gone off, and flattened the table beside the marker
 	TEST_ASSERT_EQUAL(explosions, 0, "The rocket called explosion()")
@@ -144,10 +170,14 @@
 	target.SetKnockdown(0)
 	serial = mech.mech_start_rockets(list(target))
 	TEST_ASSERT(serial, "The second volley didn't start")
-	mech.mech_fire_rockets(serial)
-	sleep(2 SECONDS)
+	rockets = mech.mech_fire_rockets(serial)
+	TEST_ASSERT_EQUAL(length(rockets), 1, "Not one rocket at the one marker in the second volley")
+	target_hits.Cut()
+	timeline.Cut()
+	watch_flight(rockets[1], target, timeline)
+	seen = "Hits: [length(target_hits) ? target_hits.Join("; ") : "none"]. Brute by tenth of a second: [timeline.Join(", ")]"
 	TEST_ASSERT(!QDELETED(window) && window.get_integrity() == window_health, "A rocket outside the garage damaged a window")
-	TEST_ASSERT_EQUAL(target.getBruteLoss(), second_target_health, "A rocket went through a window to its marker")
+	TEST_ASSERT_EQUAL(target.getBruteLoss(), second_target_health, "A rocket went through a window to its marker. [seen]")
 	TEST_ASSERT_EQUAL(explosions, 0, "The rocket called explosion()")
 	UnregisterSignal(SSdcs, COMSIG_GLOB_EXPLOSION)
 

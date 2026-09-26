@@ -369,8 +369,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 			else if(action == "evict_bay_ship")
 				market_error = outpost.request_bay_eviction(user, bay)
 			else
-				market_error = null
-				outpost.cancel_bay_eviction(user, bay)
+				market_error = outpost.cancel_bay_eviction(user, bay)
 		else
 			return FALSE
 	return TRUE

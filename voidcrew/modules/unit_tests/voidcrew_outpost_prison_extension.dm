@@ -517,7 +517,7 @@
 	// Not through a broken wall: a hole where the wall stays would let the cell block into the new office.
 	var/turf/wall_spot = prison_spot(home, 17, 5)
 	wall_spot.ChangeTurf(/turf/open/floor/plating)
-	TEST_ASSERT_EQUAL(home.place_outpost_upgrade(blueprint, corner, 0, owner), "Repair the prison wing's side wall first.", "An extension joined a broken wall")
+	TEST_ASSERT_EQUAL(home.place_outpost_upgrade(blueprint, corner, 0, owner), "Prison wing wall damaged.", "An extension joined a broken wall")
 	wall_spot.ChangeTurf(/turf/closed/wall)
 	TEST_ASSERT_NULL(home.snap_seam_denial(blueprint, offer), "A repaired wall still refused the extension")
 	qdel(blueprint)

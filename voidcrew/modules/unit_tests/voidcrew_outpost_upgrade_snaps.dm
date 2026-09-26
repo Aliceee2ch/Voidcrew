@@ -132,10 +132,10 @@
 		var/list/payload = panel.upgrade_snap_payload()
 		TEST_ASSERT_EQUAL(length(payload), 2, "The placement map offers [length(payload)] joints at [rotation] degrees")
 		for(var/list/entry as anything in payload)
-			for(var/key in list("x", "y", "rotation", "side", "reason", "blocked", "seam", "openings"))
+			for(var/key in list("x", "y", "rotation", "side", "reason", "blocked", "openings"))
 				TEST_ASSERT(key in entry, "A placement map offer has no [key]")
 			TEST_ASSERT_NULL(entry["reason"], "A clear [entry["side"]] offer at [rotation] degrees was refused on the map: [entry["reason"]]")
-			TEST_ASSERT_EQUAL(length(entry["seam"]), 4, "The placement map's seam has [length(entry["seam"])] tiles")
+			TEST_ASSERT_EQUAL(length(entry["openings"]), 2, "The placement map shows [length(entry["openings"])] openings, not 2")
 
 		// Anywhere else is refused, and nothing is claimed.
 		var/list/right_offer = offer_on(offers, "right")

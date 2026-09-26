@@ -23,7 +23,7 @@
 /datum/outpost_upgrade/prison
 	id = "prison"
 	name = "Prison Wing"
-	desc = "Four cells, a yard and a warden's office on its own power."
+	desc = "Four cells, a yard and a warden's office."
 	price = OUTPOST_PRISON_COST
 	template_type = /datum/map_template/outpost_upgrade/prison
 	area_type = /area/voidcrew/player_outpost/prison

@@ -173,7 +173,6 @@
 		bays += list(list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
 	data["ship_bays"] = bays
 	data["upgrades"] = upgrade_ui_data(user)
-	data["upgrade_error"] = upgrade_error
 	data["upgrade_surveying"] = outpost.upgrade_surveying
 	return data
 

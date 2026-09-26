@@ -62,7 +62,7 @@
 /datum/outpost_upgrade/prison_extension
 	id = "prison_extension"
 	name = "Cell Block Extension"
-	desc = "Three more cells, with more yard and office, joined onto a side wall of the prison wing."
+	desc = "Three more cells, with yard and office space, built onto the prison wing."
 	price = OUTPOST_PRISON_EXTENSION_COST
 	max_owned = OUTPOST_PRISON_MAX_EXTENSIONS
 	template_type = /datum/map_template/outpost_upgrade/prison_extension
@@ -73,7 +73,7 @@
 	entrance_side = EAST
 	snap_group = "prison_cells"
 	snap_refusal = "Must join the prison wing's side wall."
-	seam_refusal = "Repair the prison wing's side wall first."
+	seam_refusal = "Prison wing wall damaged."
 	/// Whether it has joined the wing: its tiles are the wing's, its cells the prison's and the seam is open
 	var/joined = FALSE
 
@@ -81,7 +81,7 @@
 	if(!home.running_prison())
 		return "Needs a prison wing."
 	if(!length(snap_offers(home)))
-		return "No free joint on the prison wing."
+		return "No free wall on the prison wing."
 	return null
 
 /// Not while the wing is in uproar: the seam opens into the cell block, and new cells would change who is where mid-incident.

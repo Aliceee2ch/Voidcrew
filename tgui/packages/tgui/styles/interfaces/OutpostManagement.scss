@@ -3,7 +3,6 @@ $ice: #80c7d0;
 $ink: #0b0c0c;
 $text: #dddcd4;
 $muted: #969588;
-$range: #e03c3c;
 
 .Outpost {
   position: relative;
@@ -227,18 +226,6 @@ $range: #e03c3c;
   overflow-y: auto;
 }
 .Outpost__map-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.Outpost__legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  margin-top: 10px;
-  font-size: 10px;
-  color: $muted;
-  > span { display: inline-flex; align-items: center; gap: 4px; }
-  i { display: inline-block; width: 9px; height: 9px; border: 1px solid #ffffff30; }
-}
-// The placement map's build range border. Keep in step with RANGE_COLOR in OutpostManagement.tsx.
-.Outpost__legend .Outpost__legend-range { width: 12px; height: 0; border: 0; border-top: 2px solid $range; }
 
 .Outpost {
   .Button {

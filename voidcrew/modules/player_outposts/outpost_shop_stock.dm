@@ -519,7 +519,7 @@
 		if(QDELETED(good))
 			continue
 		// A marked item must not be recalled out of the buyer's hands and sold again
-		ADD_TRAIT(good, TRAIT_RECALL_SEVERED, REF(src))
+		sever_magic_recall(good)
 		if(!buyer.put_in_hands(good))
 			good.forceMove(buyer.drop_location())
 	record_sale(buyer, listing.name, quantity, total, taker)

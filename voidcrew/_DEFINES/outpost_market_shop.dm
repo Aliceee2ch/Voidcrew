@@ -26,10 +26,3 @@
 /// How far from the shop bot a customer may click it (across the counter)
 #define OUTPOST_SHOP_COUNTER_RANGE 2
 
-/**
- * Put on a sold unit: the summon item spell unmarks it instead of recalling it (abuse review F-25).
- * P0.1 owns this define and the spell seam; this copy only stands in until that lands.
- */
-#ifndef TRAIT_RECALL_SEVERED
-#define TRAIT_RECALL_SEVERED "recall_severed"
-#endif

@@ -335,4 +335,4 @@
  * exists, this becomes `return world.time < last_siege_time + OUTPOST_NETWORK_RAID_LOCK`.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/clone_wake_raid_locked()
-	return FALSE
+	return outpost_raid_locked()

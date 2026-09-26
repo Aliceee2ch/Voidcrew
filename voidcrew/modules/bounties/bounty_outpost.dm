@@ -217,8 +217,10 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	var/obj/structure/overmap/trader_outpost/outpost = outpost_site?.resolve() || site_ref?.resolve()
 	var/where = outpost ? outpost.name : "the outpost"
 	log_game("BOUNTY: [record?.name] slipped away from [where].")
+	// Detached first (outpost_release_site()), so relist() never deletes them mid-walk. P5 shows the
+	// reason as "WANTED: <name>: <reason>."
 	outpost_release_site()
-	relist("Slipped away from [where].")
+	relist("slipped away from [where]")
 	return TRUE
 
 /// The decoys at the current site leave and fade out, and the posting forgets them
@@ -253,13 +255,19 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	UnregisterSignal(src, COMSIG_BOUNTY_POSTING_CLOSED)
 	outpost_release_site()
 
-/// Whether `outpost` can take another fugitive: at most BOUNTY_OUTPOST_MAX_FUGITIVES open postings there, not counting `except`
+/**
+ * Whether `outpost` can take another fugitive (AR-C9): fewer than BOUNTY_OUTPOST_MAX_FUGITIVES open
+ * postings set up to blend in there, not counting `except`. A posting refused at setup (a
+ * mini-boss, say) never counts. P5 asks before it places a bounty at a trader outpost.
+ */
 /proc/bounty_outpost_has_room(obj/structure/overmap/trader_outpost/outpost, datum/criminal_bounty/except)
 	var/count = 0
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
 		if(QDELETED(posting) || posting == except || posting.status != BOUNTY_POSTING_OPEN)
 			continue
 		if(posting.placement_kind != BOUNTY_PLACEMENT_TRADER_OUTPOST || posting.site_ref?.resolve() != outpost)
+			continue
+		if(posting.outpost_site?.resolve() != outpost)
 			continue
 		count++
 	return count < BOUNTY_OUTPOST_MAX_FUGITIVES

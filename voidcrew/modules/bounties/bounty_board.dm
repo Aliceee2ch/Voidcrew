@@ -117,7 +117,7 @@ SUBSYSTEM_DEF(criminal_bounties)
 /datum/controller/subsystem/criminal_bounties/proc/board_public_count()
 	var/count = 0
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
-		if(posting.is_open() && !posting.private_to)
+		if(posting.is_open() && !posting.private_to && !istype(posting, /datum/criminal_bounty/kill_only)) // BOUNTY P10: lairs and the lich don't take a public slot
 			count++
 	return count
 

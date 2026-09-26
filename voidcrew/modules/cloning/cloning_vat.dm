@@ -71,6 +71,8 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 	var/body_ready = FALSE
 	/// Whether we have successfully delivered a "your clone is ready" prompt for the holder's current death.
 	var/death_notified = FALSE
+	/// world.time the "your clone is ready" prompt reached the dead holder; 0 while none has
+	var/ready_notified_at = 0
 	/// Whether we have already announced this clone finishing growth. Cleared once the clone
 	/// decays out of the ready band, so only a real outage earns a second announcement.
 	var/completion_announced = FALSE
@@ -189,6 +191,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 	growth_progress = 0
 	body_ready = FALSE
 	death_notified = FALSE
+	ready_notified_at = 0
 	completion_announced = FALSE
 	if(use_power != IDLE_POWER_USE)
 		update_use_power(IDLE_POWER_USE)
@@ -274,6 +277,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 	var/mob/living/current_body = mind.current
 	if(current_body && current_body.stat != DEAD)
 		death_notified = FALSE // Alive again - re-arm the prompt for their next death.
+		ready_notified_at = 0
 		return
 	if(death_notified)
 		return
@@ -284,6 +288,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 	if(isnull(target)) // Player is logged out; keep trying until they return.
 		return
 	death_notified = TRUE
+	ready_notified_at = world.time
 	to_chat(target, span_ghostalert("A clone of you is ready in [get_area_name(src, format_text = TRUE)]. [isobserver(target) ? "Use the Clone Ready alert, or click the vat, to wake up in it." : "Ghost, then use the Clone Ready alert to wake up in it."]"))
 	SEND_SOUND(target, sound('sound/machines/chime.ogg', volume = 50))
 	window_flash(target.client)

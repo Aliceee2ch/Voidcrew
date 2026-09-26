@@ -58,12 +58,13 @@
 			"holder" = vat.imprint_mind_ref ? vat.imprint_name : null,
 			"percent" = vat.imprint_mind_ref ? vat.get_growth_percent() : 0,
 			"paid" = vat.paid_amount,
+			"refund" = vat.eviction_refund(),
 			"evict_denial" = vat.imprint_mind_ref ? vat.eviction_denial(user) : null,
 		))
 	return list(
 		"kind" = "cloning",
 		"price" = outpost.get_price(OUTPOST_PRICE_CLONE_IMPRINT),
-		"can_evict" = outpost.is_current_treasury_user(user),
+		"can_evict" = outpost.is_current_treasury_user(user) || outpost.is_current_management_user(user),
 		"vats" = rows,
 	)
 
@@ -241,6 +242,10 @@
 		return FALSE
 	if(home.is_owner(ghost))
 		return TRUE
+	// A blocked player's ghost has no mind and their corpse no ckey, so the block is checked here
+	var/holder_key = ckey(mind?.key) || ghost?.ckey
+	if(holder_key && (holder_key in home.blocked_residents))
+		return FALSE
 	if(ghost?.mind)
 		return home.is_outpost_member(ghost)
 	if(!mind)
@@ -284,44 +289,70 @@
 
 // ===== EVICTION =====
 
-/// Why `user` cannot evict this vat's imprint, or null
+/**
+ * Why `user` cannot evict this vat's imprint, or null. Treasury users evict paid imprints for a
+ * full refund. A free imprint (a member's) refunds nothing, so management may evict it too. The
+ * refund goes back to the paying account; when that account is gone (its ship was deleted) the
+ * imprint is still evicted and nothing is paid.
+ */
 /obj/machinery/cloning_vat/outpost/proc/eviction_denial(mob/living/user)
 	var/obj/structure/overmap/dynamic/player_outpost/home = host_outpost()
 	if(!home)
 		return "Not on an outpost."
-	if(!home.is_current_treasury_user(user))
+	var/free = paid_amount <= 0
+	if(!home.is_current_treasury_user(user) && !(free && home.is_current_management_user(user)))
 		return "Treasury access required."
 	if(!imprint_mind_ref)
 		return "The vat is empty."
-	if(paid_amount <= 0)
-		return "Nothing was paid for this imprint."
 	var/datum/mind/mind = imprint_mind_ref.resolve()
-	// A dead holder who is online may be about to wake. A banned holder may still be evicted.
+	// A dead holder who is online may be about to wake, until they have let the ready clone sit
+	// for the grace. A banned holder may still be evicted.
 	if(mind && (!mind.current || mind.current.stat == DEAD) && !holder_banned(home, mind))
-		if(holder_ghost(mind) || mind.current?.client)
+		var/waited_out = ready_notified_at && world.time >= ready_notified_at + OUTPOST_CLONE_DEAD_EVICT_GRACE
+		if(!waited_out && dead_holder_online(mind))
 			return "Its owner is dead and may wake in it."
+	if(free)
+		return null
 	var/datum/bank_account/account = payer_account_ref?.resolve()
-	if(QDELETED(account))
-		return "The payer's account is gone."
-	if(!home.treasury?.has_money(paid_amount))
+	if(!QDELETED(account) && !home.treasury?.has_money(paid_amount))
 		return "The treasury cannot cover the [paid_amount] cr refund."
 	return null
 
-/// Erases the imprint and refunds exactly what was paid. Null on success, else a refusal.
+/// Whether the dead holder is connected: as a ghost, or still in their corpse
+/obj/machinery/cloning_vat/outpost/proc/dead_holder_online(datum/mind/mind)
+	return !!(holder_ghost(mind) || mind.current?.client)
+
+/// What an eviction would refund now: what was paid, or 0 when it was free or the paying account is gone
+/obj/machinery/cloning_vat/outpost/proc/eviction_refund()
+	if(paid_amount <= 0)
+		return 0
+	var/datum/bank_account/account = payer_account_ref?.resolve()
+	return QDELETED(account) ? 0 : paid_amount
+
+/// Erases the imprint and refunds exactly what was paid, if anything and to anyone. Null on success, else a refusal.
 /obj/machinery/cloning_vat/outpost/proc/evict(mob/living/user)
 	var/denial = eviction_denial(user)
 	if(denial)
 		return denial
 	var/obj/structure/overmap/dynamic/player_outpost/home = host_outpost()
-	var/datum/bank_account/account = payer_account_ref.resolve()
+	var/datum/bank_account/account = payer_account_ref?.resolve()
 	var/refund = paid_amount
-	if(!home.refund_payment(account, refund, OUTPOST_PRICE_CLONE_IMPRINT, "Cloning imprint"))
-		return "The treasury cannot cover the [refund] cr refund."
+	var/refund_note
+	if(refund <= 0)
+		refund = 0
+		refund_note = "free imprint, nothing refunded"
+	else if(QDELETED(account))
+		refund = 0
+		refund_note = "payer account closed, nothing refunded"
+	else
+		if(!home.refund_payment(account, refund, OUTPOST_PRICE_CLONE_IMPRINT, "Cloning imprint"))
+			return "The treasury cannot cover the [refund] cr refund."
+		refund_note = "refunding [refund] cr to [account.account_holder]"
 	var/datum/mind/mind = imprint_mind_ref?.resolve()
-	log_game("PLAYER OUTPOST: [key_name(user)] evicted [imprint_name]'s imprint ([imprint_ckey]) from [src] at '[home.name]', refunding [refund] cr to [account.account_holder]")
+	log_game("PLAYER OUTPOST: [key_name(user)] evicted [imprint_name]'s imprint ([imprint_ckey]) from [src] at '[home.name]', [refund_note]")
 	var/mob/holder = mind?.current?.client ? mind.current : (mind && holder_ghost(mind))
 	if(holder)
-		to_chat(holder, span_warning("Your clone at [home.name] was removed by the outpost. [refund] cr were refunded to [account.account_holder]."))
+		to_chat(holder, span_warning("Your clone at [home.name] was removed by the outpost.[refund ? " [refund] cr were refunded to [account.account_holder]." : ""]"))
 	wipe_imprint()
 	visible_message(span_notice("[src] drains as its stored pattern is erased."))
 	return null

@@ -106,6 +106,8 @@ type CloningVat = {
   holder: string | null;
   percent: number;
   paid: number;
+  /** What an eviction refunds now: 0 when free or the paying account is gone. */
+  refund?: number;
   evict_denial: string | null;
 };
 type CloningDetail = {
@@ -1845,6 +1847,7 @@ function CloningCard({
       {vats.length === 0 && <div className="Outpost__quiet">No vats</div>}
       {vats.map((vat, index) => {
         const paid = Number(vat.paid) || 0;
+        const refund = Number(vat.refund) || 0;
         return (
           <div className="Outpost__row" key={vat.ref || index}>
             <Icon name="dna" />
@@ -1869,7 +1872,7 @@ function CloningCard({
                 disabled={!detail.can_evict || !!vat.evict_denial}
                 tooltip={
                   vat.evict_denial ||
-                  (paid > 0 ? `Refund ${paid} cr` : 'No refund')
+                  (refund > 0 ? `Refund ${refund} cr` : 'No refund')
                 }
                 onClick={() => serviceAct('evict', { ref: vat.ref })}
               >

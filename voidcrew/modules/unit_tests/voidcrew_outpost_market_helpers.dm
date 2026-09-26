@@ -23,10 +23,14 @@
 	ADD_TRAIT(visitor, TRAIT_PRESERVE_UI_WITHOUT_CLIENT, REF(src))
 	var/datum/bank_account/account = allocate(/datum/bank_account, visitor.real_name, null, 1, FALSE)
 	account.account_balance = balance
+	// The ID slot needs a jumpsuit; without one the card is deleted instead of worn
+	visitor.equip_to_slot_or_del(allocate(/obj/item/clothing/under/color/grey), ITEM_SLOT_ICLOTHING)
 	var/obj/item/card/id/card = allocate(/obj/item/card/id)
 	card.registered_account = account
 	card.registered_name = visitor.real_name
 	visitor.equip_to_slot_or_del(card, ITEM_SLOT_ID)
+	if(visitor.wear_id != card)
+		TEST_FAIL("[player_key || visitor] could not wear the market test ID")
 	return visitor
 
 /**

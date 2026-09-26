@@ -33,6 +33,8 @@
 
 	locker.locked = FALSE
 	TEST_ASSERT(locker.open(renter), "The unlocked rental locker would not open")
+	// Swiping keeps the card in hand; put it away to free the hand
+	TEST_ASSERT(renter.dropItemToGround(card), "The renter could not put the ID down")
 	var/obj/item/wrench/stored = allocate(/obj/item/wrench)
 	TEST_ASSERT(renter.put_in_active_hand(stored), "The renter could not hold the item to store")
 	var/integrity = locker.get_integrity()

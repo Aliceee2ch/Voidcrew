@@ -787,7 +787,7 @@
 			if(!chosen)
 				return "Invalid selection."
 			var/price = params["price"]
-			if(!isnum(price) || price != price)
+			if(!isnum(price) || isnan(price))
 				return "Invalid price."
 			price = round(price, 1)
 			if(price < 1 || price > OUTPOST_SHOP_MAX_PRICE)
@@ -871,7 +871,7 @@
 			var/index = params["index"]
 			if(!istext(category_id) || category_id == "0" || !categories[category_id])
 				return "Unknown category."
-			if(!isnum(index) || index != index)
+			if(!isnum(index) || isnan(index))
 				return "Invalid position."
 			var/list/order = list()
 			for(var/other_id in categories)

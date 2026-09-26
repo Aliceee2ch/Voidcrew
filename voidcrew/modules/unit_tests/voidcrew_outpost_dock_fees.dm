@@ -133,7 +133,7 @@
 	TEST_ASSERT_EQUAL(ship.dock_fee_quote["amount"], 500, "The quote named the wrong fee")
 	TEST_ASSERT(bay.is_available(), "An unapproved dock took the bay")
 	TEST_ASSERT(!home.first_dock_taken && !home.second_dock_taken, "An unapproved dock claimed a reserve pad")
-	TEST_ASSERT_EQUAL(ship.dock_index, 0, "An unapproved dock left a pad index")
+	TEST_ASSERT(!ship.dock_index, "An unapproved dock left a pad index: [ship.dock_index]")
 	TEST_ASSERT_EQUAL(ship.state, previous_state, "An unapproved dock changed the ship's state")
 	TEST_ASSERT(!home.concerned, "An unapproved dock left the outpost busy")
 	TEST_ASSERT_EQUAL(ship.ship_account.account_balance, 1000, "An unapproved dock debited the ship")

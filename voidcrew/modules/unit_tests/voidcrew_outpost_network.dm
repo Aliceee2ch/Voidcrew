@@ -134,6 +134,10 @@
 	visitor.forceMove(beside)
 	TEST_ASSERT(!pad_a.is_charging(), "Leaving the pad did not cancel the charge")
 	visitor.forceMove(pad_turf)
+	// B-14: walking off a charge costs a short recharge
+	TEST_ASSERT(findtext(pad_a.start_trip(visitor, pad_b, 200), "Recharging"), "Stepping off a charging pad cost no recharge")
+	TEST_ASSERT(GLOB.outpost_network_ready_at["netrefused"] <= world.time + 15 SECONDS, "The cancel recharge is longer than 15 seconds")
+	GLOB.outpost_network_ready_at.Cut()
 	TEST_ASSERT_NULL(pad_a.start_trip(visitor, pad_b, 200), "The trip did not restart after stepping off")
 	visitor.set_stat(UNCONSCIOUS)
 	TEST_ASSERT(!pad_a.is_charging(), "Passing out did not cancel the charge")
@@ -157,13 +161,21 @@
 	visitor.mind.outpost_network_combat_until = 0
 	attacker.mind.outpost_network_combat_until = 0
 
-	// Shoves never stamp the combat lock; punches do (F-35)
+	// Shoves never stamp the combat lock; punches that land do, on both sides (F-35, B-15, R10)
 	attacker.set_combat_mode(TRUE)
 	GLOB.outpost_pvp_enforcement.on_outpost_pvp_unarmed_attack(visitor, attacker, list(RIGHT_CLICK = "1"))
 	TEST_ASSERT_EQUAL(visitor.mind.outpost_network_combat_until, 0, "A shove locked the traveller out of the network")
+	// The attack-hand signal fires before the hit roll: a swing alone locks nobody
 	GLOB.outpost_pvp_enforcement.on_outpost_pvp_unarmed_attack(visitor, attacker, list())
-	TEST_ASSERT(visitor.mind.outpost_network_combat_until > world.time, "A punch did not lock the traveller out of the network")
+	TEST_ASSERT_EQUAL(visitor.mind.outpost_network_combat_until, 0, "A punch that may have missed locked the traveller")
+	TEST_ASSERT_EQUAL(attacker.mind.outpost_network_combat_until, 0, "A punch that may have missed locked the attacker")
+	SEND_SIGNAL(visitor, COMSIG_HUMAN_GOT_PUNCHED, attacker, 0, BRUTE)
+	TEST_ASSERT_EQUAL(visitor.mind.outpost_network_combat_until, 0, "A harmless punch locked the traveller")
+	SEND_SIGNAL(visitor, COMSIG_HUMAN_GOT_PUNCHED, attacker, 5, BRUTE)
+	TEST_ASSERT(visitor.mind.outpost_network_combat_until > world.time, "A landed punch did not lock the traveller out of the network")
+	TEST_ASSERT(attacker.mind.outpost_network_combat_until > world.time, "A landed punch did not lock the attacker out of the network")
 	visitor.mind.outpost_network_combat_until = 0
+	attacker.mind.outpost_network_combat_until = 0
 
 	// What cannot travel
 	TEST_ASSERT_EQUAL(pad_a.departure_denial(attacker), "Stand on the pad.", "Someone off the pad could leave")
@@ -345,4 +357,86 @@
 		checked++
 	if(!checked)
 		log_test("No trading outpost is loaded in this test world; trader pads were not checked.")
+	network_test_cleanup(rig)
+
+// ===== ONE CHARGE PER PAD, BUSY RULES, CLUTTER (abuse review B-06, B-11, B-12, B-14) =====
+
+/datum/unit_test/voidcrew_outpost_network_pad_holds
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_network_pad_holds/Run()
+	var/list/rig = list()
+	var/error = network_test_pair(rig)
+	TEST_ASSERT_NULL(error, error)
+	var/obj/structure/overmap/dynamic/player_outpost/home_b = rig["home_b"]
+	var/datum/outpost_upgrade/service/teleporter/room_b = rig["room_b"]
+	var/obj/machinery/outpost_network_pad/pad_a = rig["pad_a"]
+	var/obj/machinery/outpost_network_pad/pad_b = rig["pad_b"]
+	var/mob/living/carbon/human/traveller = make_market_visitor(get_turf(pad_a), "netdouble", 1000)
+
+	// B-06: a second confirm on a charging pad is refused and the first trip stands
+	TEST_ASSERT_NULL(pad_a.start_trip(traveller, pad_b, 200), "The first trip did not start")
+	TEST_ASSERT_EQUAL(pad_a.start_trip(traveller, pad_b, 200), "Pad in use.", "A second confirm restarted the charge")
+	TEST_ASSERT_EQUAL(pad_a.charge_target_ref?.resolve(), pad_b, "The charge changed its destination")
+
+	// B-14: a pad receiving a trip still sends its own travellers, including toward the charging pad
+	var/mob/living/carbon/human/outbound = make_market_visitor(get_turf(pad_b), "netoutbound", 1000)
+	TEST_ASSERT(pad_b.is_receiving(), "The second pad is not receiving")
+	TEST_ASSERT_NULL(pad_b.departure_denial(outbound), "A receiving pad refused its own departure: [pad_b.departure_denial(outbound)]")
+	TEST_ASSERT_NULL(pad_a.arrival_denial(outbound, pad_b), "A pad charging a departure refused an arrival: [pad_a.arrival_denial(outbound, pad_b)]")
+
+	TEST_ASSERT_NULL(pad_a.finish_trip(), "The trip did not finish")
+	TEST_ASSERT_EQUAL(get_turf(traveller), pad_b.arrival_turf, "The traveller did not arrive")
+	TEST_ASSERT_EQUAL(traveller.alpha, 255, "The traveller arrived faded")
+	traveller.forceMove(get_turf(pad_a))
+
+	// B-11: a closet a visitor wrenched down never closes the pad or the room
+	var/obj/structure/closet/clutter = allocate(/obj/structure/closet, pad_b.arrival_turf)
+	clutter.set_anchored(TRUE)
+	TEST_ASSERT_NULL(pad_b.arrival_tile_denial(), "A wrenched-down closet blocked the arrival spot")
+	qdel(clutter)
+	var/list/exit_clutter = list()
+	for(var/turf/exit as anything in room_b.exit_turfs())
+		var/obj/structure/closet/blocker = allocate(/obj/structure/closet, exit)
+		blocker.set_anchored(TRUE)
+		exit_clutter += blocker
+	TEST_ASSERT_NULL(room_b.exit_denial(), "A wrenched-down closet outside the door closed the room: [room_b.exit_denial()]")
+	TEST_ASSERT_NULL(pad_b.arrival_denial(traveller, pad_a), "Clutter outside the door refused arrivals: [pad_b.arrival_denial(traveller, pad_a)]")
+	QDEL_LIST(exit_clutter)
+
+	// B-12: something nobody can remove just inside the door does close it
+	var/list/fixed = list()
+	for(var/list/route as anything in room_b.exit_routes())
+		var/turf/inside = route[1]
+		if(!inside)
+			continue
+		var/obj/structure/closet/fixed_blocker = allocate(/obj/structure/closet, inside)
+		fixed_blocker.set_anchored(TRUE)
+		fixed_blocker.resistance_flags |= INDESTRUCTIBLE
+		fixed += fixed_blocker
+	TEST_ASSERT(length(fixed), "The teleporter room has no tile inside its door")
+	TEST_ASSERT_EQUAL(room_b.exit_denial(), "Exit blocked", "A fixed block inside the door did not close the room")
+	QDEL_LIST(fixed)
+
+	// B-12: visitors cannot build or bolt things down inside a service room; members can
+	var/turf/room_tile = pad_b.arrival_turf
+	var/mob/living/carbon/human/builder = make_market_visitor(room_tile, "netbuilder", 0)
+	var/mob/living/carbon/human/owner_b = make_market_visitor(room_tile, "netownerb", 0)
+	TEST_ASSERT(!outpost_service_build_allowed(builder, room_tile), "A visitor may build in a service room")
+	TEST_ASSERT(outpost_service_build_allowed(owner_b, room_tile), "The owner may not build in their own service room")
+	TEST_ASSERT(outpost_service_build_allowed(builder, get_turf(home_b.management_console)), "The build guard reached outside the service rooms")
+	var/obj/item/stack/sheet/iron/iron = allocate(/obj/item/stack/sheet/iron, room_tile, 50)
+	var/datum/stack_recipe/girder_recipe
+	for(var/datum/stack_recipe/recipe in iron.recipes)
+		if(ispath(recipe.result_type, /obj/structure/girder))
+			girder_recipe = recipe
+			break
+	TEST_ASSERT_NOTNULL(girder_recipe, "Iron has no girder recipe")
+	TEST_ASSERT(!iron.building_checks(builder, girder_recipe, 1), "A visitor passed the girder checks in a service room")
+	var/obj/structure/disposalconstruct/disposal = allocate(/obj/structure/disposalconstruct, room_tile)
+	disposal.set_anchored(FALSE)
+	var/obj/item/wrench/wrench = allocate(/obj/item/wrench)
+	builder.put_in_hands(wrench)
+	disposal.wrench_act(builder, wrench)
+	TEST_ASSERT(!disposal.anchored, "A visitor bolted a disposal part down in a service room")
 	network_test_cleanup(rig)

@@ -458,6 +458,9 @@
 	// Check for placed/wrenched atmospherics pipes first
 	var/obj/machinery/atmospherics/atmos_pipe = locate() in target_turf
 	if(atmos_pipe)
+		if(HAS_TRAIT(atmos_pipe, TRAIT_OUTPOST_PROPERTY))
+			remote_eye.balloon_alert(owner, "outpost property!")
+			return
 		// Need unwrench upgrade to remove placed pipes
 		if(!(rpd.upgrade_flags & RPD_UPGRADE_UNWRENCH))
 			remote_eye.balloon_alert(owner, "need unwrench upgrade!")

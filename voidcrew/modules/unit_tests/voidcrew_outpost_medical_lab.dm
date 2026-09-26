@@ -525,3 +525,68 @@
 		canister.attackby(tank, visitor)
 		TEST_ASSERT_NULL(canister.holding, "A visitor put a tank in [canister]")
 	settle_room_air(lab.room_turfs())
+
+// ===== THE LOOP STAYS SEALED (abuse review B-02, B-03, B-25) =====
+
+/datum/unit_test/voidcrew_outpost_medical_lab_loop_seal
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_medical_lab_loop_seal/Run()
+	var/datum/outpost_upgrade/service/medical_lab/lab = medlab_test_lab("medlabsealowner")
+	if(!lab)
+		return
+	var/turf/inside = get_turf(medlab_find(lab, /obj/machinery/computer/outpost_medlab_terminal))
+	var/mob/living/carbon/human/visitor = make_market_visitor(inside, "medlabsealvisitor", 0)
+	var/obj/machinery/atmospherics/components/trinary/filter/atmos/co2/outpost_lab/filter = medlab_find(lab, /obj/machinery/atmospherics/components/trinary/filter/atmos/co2/outpost_lab)
+	var/obj/machinery/atmospherics/pipe/smart/pipe = medlab_find(lab, /obj/machinery/atmospherics/pipe/smart)
+	TEST_ASSERT_NOTNULL(filter, "The lab has no CO2 filter")
+	TEST_ASSERT_NOTNULL(pipe, "The lab has no loop pipe")
+
+	// B-02: the RPD's unwrench upgrade and the console's Remove Pipe both go through can_unwrench()
+	var/obj/item/pipe_dispenser/rpd = allocate(/obj/item/pipe_dispenser)
+	rpd.upgrade_flags |= RPD_UPGRADE_UNWRENCH
+	visitor.put_in_hands(rpd)
+	filter.on = FALSE
+	for(var/obj/machinery/atmospherics/part as anything in list(filter, pipe))
+		var/turf/was_at = part.loc
+		TEST_ASSERT(!part.can_unwrench(visitor), "[part] can be unwrenched")
+		part.wrench_act(visitor, rpd)
+		TEST_ASSERT(!QDELETED(part), "An RPD unwrenched [part]")
+		TEST_ASSERT_EQUAL(part.loc, was_at, "An RPD moved [part]")
+		TEST_ASSERT_EQUAL(SEND_SIGNAL(part, COMSIG_ATOM_ITEM_INTERACTION, visitor, rpd, list()), ITEM_INTERACT_BLOCKING, "An RPD click on [part] was not refused")
+	filter.on = TRUE
+
+	// B-03: every loop pipe is locked to the links it had at install
+	for(var/obj/machinery/atmospherics/pipe/smart/loop_pipe as anything in medlab_find_all(lab, /obj/machinery/atmospherics/pipe/smart))
+		var/linked = NONE
+		for(var/obj/machinery/atmospherics/node as anything in loop_pipe.nodes)
+			if(node)
+				linked |= get_dir(loop_pipe, node)
+		TEST_ASSERT_EQUAL(loop_pipe.initialize_directions, linked, "The loop pipe at [loop_pipe.x],[loop_pipe.y] still links on its free sides")
+
+	// B-03: a vent wrenched down beside a loop pipe, facing it, does not join the loop
+	var/list/room = lab.room_turfs()
+	var/obj/machinery/atmospherics/pipe/smart/tapped
+	var/turf/open/tap_spot
+	for(var/obj/machinery/atmospherics/pipe/smart/loop_pipe as anything in medlab_find_all(lab, /obj/machinery/atmospherics/pipe/smart))
+		for(var/direction in GLOB.cardinals)
+			if(loop_pipe.initialize_directions & direction)
+				continue
+			var/turf/open/spot = get_step(loop_pipe, direction)
+			if(!istype(spot) || !(spot in room) || (locate(/obj/machinery/atmospherics) in spot))
+				continue
+			tapped = loop_pipe
+			tap_spot = spot
+			break
+		if(tapped)
+			break
+	TEST_ASSERT_NOTNULL(tap_spot, "No free tile beside a loop pipe to test a tap on")
+	var/obj/machinery/atmospherics/components/unary/passive_vent/tap = allocate(/obj/machinery/atmospherics/components/unary/passive_vent, tap_spot, TRUE, get_dir(tap_spot, tapped))
+	tap.atmos_init()
+	TEST_ASSERT_NULL(tap.nodes[1], "A visitor's vent linked to the lab loop")
+	TEST_ASSERT(!(tap in tapped.nodes), "The lab loop took a visitor's vent as a node")
+	TEST_ASSERT(tap.parents[1] != tapped.parent, "A visitor's vent joined the lab loop's pipeline")
+
+	// B-25: every lab canister is bolted down
+	for(var/obj/machinery/portable_atmospherics/canister/canister as anything in medlab_find_all(lab, /obj/machinery/portable_atmospherics/canister))
+		TEST_ASSERT(canister.anchored, "[canister] is not bolted down")

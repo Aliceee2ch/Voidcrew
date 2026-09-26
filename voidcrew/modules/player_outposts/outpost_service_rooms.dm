@@ -89,13 +89,36 @@
 	fixture.AddElement(/datum/element/outpost_property)
 	fixture.flags_1 |= PREVENT_CONTENTS_EXPLOSION_1
 	ADD_TRAIT(fixture, TRAIT_SINGULARITY_IMMUNE, OUTPOST_SERVICE_TRAIT)
+	if(istype(fixture, /obj/machinery/atmospherics/pipe/smart))
+		seal_smart_pipe(fixture)
 	if(!isstructure(fixture))
 		return
+	// Placing someone on a table puts them on its tile past any window on it: the shop counter
+	// would let a visitor into the staff back room (abuse review B-13). Climbing still steps.
+	if(istype(fixture, /obj/structure/table))
+		qdel(fixture.GetComponent(/datum/component/table_smash))
 	if(!fixture.anchored)
 		fixture.set_anchored(TRUE)
 	if(istype(fixture, /obj/structure/closet))
 		var/obj/structure/closet/closet = fixture
 		closet.anchorable = FALSE
+
+/**
+ * A smart pipe links in every direction (smart.dm), so a fitting a visitor wrenches down beside
+ * it would join the room's loop: a vent dumps the loop's gas into the room, a connector takes a
+ * canister of anything. Locking the pipe to the links it has now shuts every other side, since
+ * connection_check() needs both ends to face each other. can_unwrench is off (outpost_property),
+ * so the lock cannot be undone by re-laying the pipe.
+ */
+/datum/outpost_upgrade/service/proc/seal_smart_pipe(obj/machinery/atmospherics/pipe/smart/pipe)
+	var/linked = NONE
+	for(var/obj/machinery/atmospherics/node as anything in pipe.nodes)
+		if(node)
+			linked |= get_dir(pipe, node)
+	if(!linked)
+		log_mapping("OUTPOST SERVICE ROOM: [pipe] at [AREACOORD(pipe)] in the [name] has no links; left unsealed")
+		return
+	pipe.set_init_directions(linked)
 
 /// Records the room's service airlocks. A door out of the room whose map forgot its unrestricted-side helper gets one pointing inside.
 /datum/outpost_upgrade/service/proc/adopt_doors()
@@ -127,6 +150,16 @@
 /// The turfs just outside the room's exterior service doors, one per door and side off the room
 /datum/outpost_upgrade/service/proc/exit_turfs()
 	var/list/exits = list()
+	for(var/list/route as anything in exit_routes())
+		exits += route[2]
+	return exits
+
+/**
+ * One list(inside, outside) per exterior door and side off the room: the room tile in front of the
+ * door and the tile beyond it. `inside` is null when the door has no room tile behind it.
+ */
+/datum/outpost_upgrade/service/proc/exit_routes()
+	var/list/routes = list()
 	for(var/datum/weakref/door_ref as anything in doors)
 		var/obj/machinery/door/airlock/outpost/service/door = door_ref.resolve()
 		var/turf/door_turf = get_turf(door)
@@ -134,20 +167,25 @@
 			continue
 		for(var/direction in GLOB.cardinals)
 			var/turf/beyond = get_step(door_turf, direction)
-			if(beyond && !contains_turf(beyond))
-				exits += beyond
-	return exits
+			if(!beyond || contains_turf(beyond))
+				continue
+			var/turf/inside = get_step(door_turf, turn(direction, 180))
+			routes += list(list(contains_turf(inside) ? inside : null, beyond))
+	return routes
 
 /**
  * Why nobody could walk out of the room right now, or null when some exterior door leads onto
- * open, breathable ground. "Exit blocked": every door's outside is a wall or something solid.
+ * open, breathable ground. "Exit blocked": every door is walled off, inside or out, by a wall or
+ * something fixed that nobody can move. Clutter a player can wrench or break away never counts.
  * "Exit to vacuum": the way out has no safe air. The cloning chooser and the teleporter's
- * destination list show it as a warning; it never refuses a wake or an arrival by itself.
+ * destination list show it as a warning; the teleporter also refuses arrivals on it.
  */
 /datum/outpost_upgrade/service/proc/exit_denial()
 	var/open_exit = FALSE
-	for(var/turf/exit as anything in exit_turfs())
-		if(outpost_exit_blocked(exit))
+	for(var/list/route as anything in exit_routes())
+		var/turf/inside = route[1]
+		var/turf/exit = route[2]
+		if(outpost_exit_blocked(exit) || (inside && outpost_exit_blocked(inside)))
 			continue
 		open_exit = TRUE
 		if(outpost_exit_breathable(exit))
@@ -259,17 +297,26 @@
 
 // ===== EXITS =====
 
-/// A closed turf, or something dense and bolted down a person cannot open or climb. Doors open, so they never block.
+/// A closed turf, or something fixed in the way (outpost_exit_fixed_blocker())
 /proc/outpost_exit_blocked(turf/exit)
 	if(!exit || isclosedturf(exit))
 		return TRUE
 	for(var/obj/thing in exit)
-		if(!thing.density || !thing.anchored || istype(thing, /obj/machinery/door))
-			continue
-		if((thing.flags_1 & ON_BORDER_1) || HAS_TRAIT(thing, TRAIT_CLIMBABLE))
-			continue
-		return TRUE
+		if(outpost_exit_fixed_blocker(thing))
+			return TRUE
 	return FALSE
+
+/**
+ * Something dense and bolted down that a person cannot open, climb, or take away: outpost property
+ * or anything indestructible. A closet or frame a visitor wrenched down can be unwrenched or broken,
+ * so it never closes a room or a pad (abuse review B-11). Doors open, so they never block.
+ */
+/proc/outpost_exit_fixed_blocker(obj/thing)
+	if(!thing.density || !thing.anchored || istype(thing, /obj/machinery/door))
+		return FALSE
+	if((thing.flags_1 & ON_BORDER_1) || HAS_TRAIT(thing, TRAIT_CLIMBABLE))
+		return FALSE
+	return (thing.resistance_flags & INDESTRUCTIBLE) || HAS_TRAIT(thing, TRAIT_OUTPOST_PROPERTY)
 
 /// Breathable by the teleport safety numbers (is_safe_turf() in teleport.dm, which refuses indestructible floors itself)
 /proc/outpost_exit_breathable(turf/open/exit)
@@ -299,6 +346,35 @@
  */
 /proc/singularity_spares(atom/thing)
 	return HAS_TRAIT(thing, TRAIT_SINGULARITY_IMMUNE)
+
+/**
+ * Whether `builder` may build or bolt something down on `target`. Inside an installed service room
+ * only members may: a visitor's girder, wall or pipe in a room is grief against the owner and every
+ * other visitor (abuse review B-12). Everywhere else this says yes.
+ */
+/proc/outpost_service_build_allowed(mob/builder, atom/target)
+	if(!is_outpost_service_tile(target))
+		return TRUE
+	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost_from_atom(get_turf(target))
+	return !!home?.is_outpost_member(builder)
+
+/obj/item/stack/building_checks(mob/builder, datum/stack_recipe/recipe, multiplier)
+	if(!outpost_service_build_allowed(builder, get_turf(builder)))
+		builder.balloon_alert(builder, "outpost property!")
+		return FALSE
+	return ..()
+
+/obj/structure/disposalconstruct/wrench_act(mob/living/user, obj/item/tool)
+	if(!anchored && !outpost_service_build_allowed(user, src))
+		balloon_alert(user, "outpost property!")
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/obj/item/pipe/wrench_act(mob/living/user, obj/item/tool)
+	if(!outpost_service_build_allowed(user, src))
+		balloon_alert(user, "outpost property!")
+		return ITEM_INTERACT_BLOCKING
+	return ..()
 
 /// Whether `thing` stands inside an installed service room of a player outpost
 /proc/is_outpost_service_tile(atom/thing)

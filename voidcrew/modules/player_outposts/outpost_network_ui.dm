@@ -85,6 +85,7 @@
 		if("cancel")
 			if(charging_ref?.resolve() == user)
 				cancel_charge("You stopped the trip.")
+				stamp_cancel_cooldown(user)
 			return TRUE
 		if("clear_pad")
 			if(!clear_idle_occupant(user))
@@ -96,6 +97,9 @@
  * prompt, including the fare they saw.
  */
 /obj/machinery/outpost_network_pad/proc/confirm_trip(mob/living/user, obj/machinery/outpost_network_pad/destination, shown_fee)
+	if(charging_ref?.resolve() == user)
+		balloon_alert(user, "already charging")
+		return
 	var/denial = departure_denial(user) || destination.arrival_denial(user, src)
 	if(!denial && destination.arrival_fee(user) != shown_fee)
 		denial = "Price changed to [destination.arrival_fee(user)] cr."

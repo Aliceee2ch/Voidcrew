@@ -12,6 +12,8 @@
 #define OUTPOST_NETWORK_CROSS_ZONE_CHARGE_TIME (10 SECONDS)
 /// Per traveller, between trips
 #define OUTPOST_NETWORK_TRAVELLER_COOLDOWN (2 MINUTES)
+/// Per traveller, after walking off a charging pad or calling the trip off
+#define OUTPOST_NETWORK_CANCEL_COOLDOWN (15 SECONDS)
 /// No trips this long after a fight
 #define OUTPOST_NETWORK_COMBAT_LOCK (60 SECONDS)
 /// Non-members may not travel to an outpost this long after it was attacked

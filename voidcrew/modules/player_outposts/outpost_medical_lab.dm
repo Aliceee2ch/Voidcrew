@@ -46,6 +46,8 @@
 				continue
 			if(!port.parents[1])
 				log_mapping("OUTPOST MEDICAL LAB: [port] at [AREACOORD(port)] had no pipeline at install; [canister] left unconnected")
+				// Bolted all the same, so nobody drags it off the outpost (B-25)
+				canister.set_anchored(TRUE)
 				continue
 			canister.connect(port)
 

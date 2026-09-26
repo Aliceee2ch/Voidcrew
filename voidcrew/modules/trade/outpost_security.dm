@@ -67,6 +67,7 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 			COMSIG_ATOM_ATTACK_BASIC_MOB,
 			COMSIG_ATOM_ATTACK_ANIMAL,
 		), PROC_REF(on_outpost_pvp_npc_attack))
+	RegisterSignal(living_mob, COMSIG_HUMAN_GOT_PUNCHED, PROC_REF(on_outpost_pvp_punched))
 	RegisterSignal(living_mob, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_outpost_pvp_projectile))
 	RegisterSignal(living_mob, COMSIG_ATOM_PREHITBY, PROC_REF(on_outpost_pvp_thrown_item))
 	RegisterSignal(living_mob, COMSIG_ATOM_HULK_ATTACK, PROC_REF(on_outpost_pvp_hulk_attack))
@@ -95,8 +96,13 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	SIGNAL_HANDLER
 	if(offender.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK))
 		register_pvp_aggression(victim, offender)
-	// MARKET P8: a shove never locks the outpost network, a punch does (outpost_network.dm)
-	if(offender.combat_mode && !LAZYACCESS(modifiers, RIGHT_CLICK))
+	// The outpost network's combat lock waits for a punch that lands (on_outpost_pvp_punched()).
+	// This signal fires before the hit roll, so a miss or a shove would lock the victim for free.
+
+/// A punch that landed and hurt: the outpost network's combat lock (outpost_network.dm)
+/datum/outpost_pvp_enforcement/proc/on_outpost_pvp_punched(mob/living/victim, mob/living/offender, damage, attack_type)
+	SIGNAL_HANDLER
+	if(damage > 0 && attack_type != STAMINA)
 		stamp_outpost_network_combat(victim, offender)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_npc_attack(mob/living/victim, mob/living/offender)
@@ -389,6 +395,11 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	var/obj/property = target
 	property.resistance_flags |= INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 	property.AddElement(/datum/element/empprotection, EMP_PROTECT_ALL)
+	// The RPD's unwrench upgrade and the construction console's Remove Pipe call wrench_act()
+	// directly, skipping the tool signal below; both still ask can_unwrench()
+	if(istype(target, /obj/machinery/atmospherics))
+		var/obj/machinery/atmospherics/atmos_part = target
+		atmos_part.can_unwrench = FALSE
 
 	RegisterSignals(target, list(
 		COMSIG_ATOM_TOOL_ACT(TOOL_CROWBAR),
@@ -450,10 +461,14 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 
 /**
  * A bluespace RPED skips the panel_open check in exchange_parts(), so blocking the
- * screwdriver doesn't keep the parts inside on its own.
+ * screwdriver doesn't keep the parts inside on its own. An RPD (pipe dispenser) clicked on
+ * a pipe or atmos machine unwrenches, repaints or reprograms it without any tool signal.
  */
 /datum/element/outpost_property/proc/block_part_replacer(obj/source, mob/living/user, obj/item/tool)
 	SIGNAL_HANDLER
+	if(istype(tool, /obj/item/pipe_dispenser))
+		source.balloon_alert(user, "outpost property!")
+		return ITEM_INTERACT_BLOCKING
 	if(!istype(tool, /obj/item/storage/part_replacer))
 		return NONE
 	source.balloon_alert(user, "casing is sealed!")

@@ -304,8 +304,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/mob/living/current = charging_ref?.resolve()
 	if(current && current != traveller)
 		return "Pad in use."
-	if(is_receiving())
-		return "Pad busy."
+	// An inbound trip lands on the arrival spot, not the pad, so it never holds departures
 	return null
 
 /// A mob the traveller carries at any depth (bags, holders, cards, body bags), or null. A cyborg's own brain is fine.
@@ -363,7 +362,8 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 		var/exit_denial = room?.exit_denial()
 		if(exit_denial)
 			return exit_denial
-	if(!ignore_busy && (is_receiving() || is_charging()))
+	// One inbound trip at a time. A traveller charging out from here does not block arrivals.
+	if(!ignore_busy && is_receiving())
 		return "Busy"
 	return null
 
@@ -394,7 +394,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	if(!istype(tile))
 		return "Arrival blocked"
 	for(var/obj/thing in tile)
-		if(thing.density && thing.anchored)
+		if(outpost_exit_fixed_blocker(thing))
 			return "Arrival blocked"
 	if(!is_trader && outpost_network_air_unsafe(tile))
 		return "Arrival unsafe"
@@ -429,6 +429,9 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 /obj/machinery/outpost_network_pad/proc/start_trip(mob/living/traveller, obj/machinery/outpost_network_pad/destination, shown_fee)
 	if(QDELETED(destination) || !(destination in GLOB.outpost_network_pads))
 		return "Destination offline."
+	// One charge per pad: a second confirm would retarget the running charge (abuse review B-06)
+	if(charging_ref?.resolve())
+		return "Pad in use."
 	var/denial = departure_denial(traveller) || destination.arrival_denial(traveller, src)
 	if(denial)
 		return denial
@@ -458,6 +461,8 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	playsound(src, 'sound/machines/terminal/terminal_alert.ogg', 40, TRUE)
 	playsound(destination.arrival_turf, 'sound/machines/terminal/terminal_alert.ogg', 40, TRUE)
 	destination.arrival_turf.visible_message(span_notice("The arrival spot beside [destination] lights up. Someone is on the way."), vision_distance = 7)
+	if(charge_timer)
+		deltimer(charge_timer)
 	charge_timer = addtimer(CALLBACK(src, PROC_REF(finish_trip)), charge_time, TIMER_STOPPABLE)
 	update_appearance()
 	destination.update_appearance()
@@ -520,6 +525,18 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 /obj/machinery/outpost_network_pad/proc/on_traveller_moved(mob/living/source)
 	SIGNAL_HANDLER
 	cancel_charge("You left the pad.")
+	stamp_cancel_cooldown(source)
+
+/**
+ * A trip the traveller walked away from (or called off) costs a short recharge, so charging and
+ * cancelling cannot hold two pads busy for free. Damage, passing out and a grab at the end
+ * cancel without it: the traveller did not choose those.
+ */
+/obj/machinery/outpost_network_pad/proc/stamp_cancel_cooldown(mob/living/traveller)
+	var/key = traveller?.ckey
+	if(!key)
+		return
+	GLOB.outpost_network_ready_at[key] = max(GLOB.outpost_network_ready_at[key], world.time + OUTPOST_NETWORK_CANCEL_COOLDOWN)
 
 /obj/machinery/outpost_network_pad/proc/on_traveller_damaged(mob/living/source, damage)
 	SIGNAL_HANDLER

@@ -98,8 +98,17 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	"I didn't do anything!",
 ))
 
+/// What the nearest trader calls out when a warrant exposes a fugitive in front of them
+GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
+	"Hey! Not in here!",
+	"Take it outside!",
+	"Watch the stock!",
+))
+
 /// A trader's answer when they know nothing the others haven't said
 #define BOUNTY_OUTPOST_NO_CLUE "Can't help you there."
+/// How far a trader can be from an exposed fugitive and still call out
+#define BOUNTY_OUTPOST_REACT_RANGE 7
 
 // =========================================================================
 // THE POSTING'S TRADER-OUTPOST STATE
@@ -127,7 +136,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
  * - BOUNTY_DECOY_COUNT decoys spawn out of sight, each sharing one or two of its features;
  * - the alert and the traders' clues start over.
  *
- * Refuses (FALSE) a mini-boss (AR-C9), an outpost that already has BOUNTY_OUTPOST_MAX_FUGITIVES,
+ * Refuses (FALSE) a mini-boss (AR-C9), an outpost that already has BOUNTY_MAX_FUGITIVES_PER_OUTPOST,
  * and a posting whose site is not a loaded trader outpost. Returns TRUE when set up.
  */
 /datum/criminal_bounty/proc/setup_outpost_blend()
@@ -139,7 +148,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 		log_game("BOUNTY: a mini-boss ([record.name]) was refused at [outpost]. Mini-bosses never go to trader outposts.")
 		return FALSE
 	if(!bounty_outpost_has_room(outpost, src))
-		log_game("BOUNTY: [record.name] was refused at [outpost], which already has [BOUNTY_OUTPOST_MAX_FUGITIVES] fugitives.")
+		log_game("BOUNTY: [record.name] was refused at [outpost], which already has [BOUNTY_MAX_FUGITIVES_PER_OUTPOST] fugitives.")
 		return FALSE
 
 	// A fresh start: decoys from an earlier site leave, and the alert and the clues start over.
@@ -277,7 +286,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	outpost_release_site()
 
 /**
- * Whether `outpost` can take another fugitive (AR-C9): fewer than BOUNTY_OUTPOST_MAX_FUGITIVES open
+ * Whether `outpost` can take another fugitive (AR-C9): fewer than BOUNTY_MAX_FUGITIVES_PER_OUTPOST open
  * postings set up to blend in there, not counting `except`. A posting refused at setup (a
  * mini-boss, say) never counts. P5 asks before it places a bounty at a trader outpost.
  */
@@ -291,7 +300,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 		if(posting.outpost_site?.resolve() != outpost)
 			continue
 		count++
-	return count < BOUNTY_OUTPOST_MAX_FUGITIVES
+	return count < BOUNTY_MAX_FUGITIVES_PER_OUTPOST
 
 /// The concourse as a leash, list(min_x, min_y, max_x, max_y, z) (the shape of site_bounds)
 /proc/bounty_outpost_bounds(obj/structure/overmap/trader_outpost/outpost)
@@ -436,8 +445,29 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	blend?.stop_blending()
 	fugitive.blended = FALSE
 	log_game("BOUNTY: [key_name(user)] confronted [record?.name] with the warrant at [AREACOORD(fugitive)].")
+	// A clear yes, as the wrong warrant gets a clear no
+	to_chat(user, span_notice("That's them."))
 	fugitive.on_confronted(user)
 	fugitive.bounty_say("accused_rightly")
+	outpost_trader_reacts(fugitive)
+
+/**
+ * The room notices an exposed fugitive: the nearest trader who can see them, within
+ * BOUNTY_OUTPOST_REACT_RANGE, calls out. Returns the trader, or null.
+ */
+/datum/criminal_bounty/proc/outpost_trader_reacts(mob/living/basic/bounty_criminal/fugitive)
+	var/mob/living/basic/outpost_trader/nearest
+	var/nearest_distance = INFINITY
+	for(var/mob/living/basic/outpost_trader/trader in view(BOUNTY_OUTPOST_REACT_RANGE, fugitive))
+		if(trader.stat != CONSCIOUS)
+			continue
+		var/distance = get_dist(trader, fugitive)
+		if(distance < nearest_distance)
+			nearest = trader
+			nearest_distance = distance
+	if(nearest)
+		INVOKE_ASYNC(nearest, TYPE_PROC_REF(/atom/movable, say), pick(GLOB.bounty_outpost_trader_react_lines))
+	return nearest
 
 /**
  * `user` showed this posting's warrant to the wrong person, `target`: they protest and show their
@@ -720,11 +750,21 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 		owner.faction = new_faction
 		added_turret_faction = FALSE
 
+/**
+ * Nobody pulls someone blending in, or walking out. By P2's rule, though, anyone down, cuffed or dead
+ * can be dragged: a fugitive (or a decoy, the same, AR-C6) downed or cuffed while still blending in,
+ * by a blast say, is dragged like any other catch.
+ */
 /datum/component/bounty_outpost_blend/proc/on_pull_attempt(datum/source, mob/living/puller)
 	SIGNAL_HANDLER
-	if(blending || leaving)
+	if(leaving)
 		return COMSIG_ATOM_CANT_PULL
-	return NONE
+	if(!blending)
+		return NONE
+	var/mob/living/basic/bounty_criminal/owner = parent
+	if(owner.stat == DEAD || owner.downed || owner.is_restrained())
+		return NONE
+	return COMSIG_ATOM_CANT_PULL
 
 /// Drag-drops (onto a bed, into a crate or disposals) never check move_resist, so they are refused here
 /datum/component/bounty_outpost_blend/proc/on_dragged(datum/source, atom/over, mob/user)
@@ -1134,14 +1174,18 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 		return candidate
 	return null
 
-/// Every clue the traders here could give, shuffled: where they were seen, their hair, each feature, each decoy ruled out
+/**
+ * Every clue the traders here could give, shuffled: where they were seen, their hair, the feature the
+ * printed warrant leaves off (the last: P5's board_warrant_text()), and each decoy ruled out. The
+ * features the warrant already lists are never a clue, so a feature clue is always news (BUG-10).
+ */
 /datum/criminal_bounty/proc/outpost_build_clue_pool()
 	var/list/pool = list(list(BOUNTY_CLUE_SEEN, 0))
 	if(bounty_outpost_hair_clue(record))
 		pool += list(list(BOUNTY_CLUE_HAIR, 0))
 	var/list/lines = record?.feature_lines()
-	for(var/index in 1 to length(lines))
-		pool += list(list(BOUNTY_CLUE_FEATURE, index))
+	if(length(lines))
+		pool += list(list(BOUNTY_CLUE_FEATURE, length(lines)))
 	for(var/index in 1 to length(decoys))
 		pool += list(list(BOUNTY_CLUE_RULED_OUT, index))
 	shuffle_inplace(pool)
@@ -1445,11 +1489,17 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/bounty_wanted_board, 32)
 	UnregisterSignal(source, COMSIG_BOUNTY_RECORD_MUGSHOT_READY)
 	outpost_refresh_viewers()
 
-/// The public postings as the board lists them
+/**
+ * The public postings as the board lists them. Where they were seen is the ship card's own words (a
+ * lair's real name, never "encrypted signal": BUG-5), and a fugitive at this very outpost is marked
+ * "here" (P11). A kill-only bounty says so, and the vouchers show beside the credits (BUG-13).
+ */
 /obj/structure/bounty_wanted_board/proc/outpost_board_entries()
 	var/list/entries = list()
+	var/obj/structure/overmap/trader_outpost/this_outpost = get_trader_outpost_for_turf(get_turf(src))
 	for(var/datum/criminal_bounty/posting as anything in bounty_public_postings())
 		var/datum/bounty_record/record = posting.record
+		var/obj/structure/overmap/where = posting.site()
 		entries += list(list(
 			"id" = record.id,
 			"name" = record.name,
@@ -1458,7 +1508,10 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/bounty_wanted_board, 32)
 			"tier_level" = record.tier,
 			"crime" = record.crime,
 			"reward" = posting.value,
-			"place" = bounty_posting_place_words(posting),
+			"vouchers" = posting.board_vouchers,
+			"kill_only" = !posting.board_share_for(BOUNTY_STATE_RESTRAINED, BOUNTY_STATE_FREE),
+			"place" = posting.board_place_text(),
+			"here" = !!this_outpost && posting.placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST && where == this_outpost,
 			"time_left" = posting.expires_at ? max(0, round((posting.expires_at - world.time) / (1 SECONDS))) : null,
 		))
 	return entries
@@ -1478,16 +1531,5 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/bounty_wanted_board, 32)
 		parts += "[posting.record.id]:[posting.static_data_serial]"
 	return parts.Join(",")
 
-/// Where a posting's criminal was last seen, for the board
-/proc/bounty_posting_place_words(datum/criminal_bounty/posting)
-	var/atom/site = posting.site_ref?.resolve()
-	if(!site)
-		return "Whereabouts unknown"
-	switch(posting.placement_kind)
-		if(BOUNTY_PLACEMENT_TRADER_OUTPOST)
-			return "Seen at [site.name]"
-		if(BOUNTY_PLACEMENT_NPC_SHIP)
-			return "Somewhere aboard [site.name]"
-	return "Last seen at [site.name]"
-
 #undef BOUNTY_OUTPOST_NO_CLUE
+#undef BOUNTY_OUTPOST_REACT_RANGE

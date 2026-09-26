@@ -305,8 +305,24 @@ SUBSYSTEM_DEF(criminal_bounties)
 	posting.board_set_site(site)
 	board_changed()
 	log_game("BOUNTY: posted the [posting.board_log_name()] in zone [zone], worth [posting.value] cr and [posting.board_vouchers] voucher(s)")
+	// A Most Wanted is news for every crew (P8); Wanted and petty ones never are
+	if(tier == BOUNTY_TIER_MOST_WANTED && !private_to)
+		board_announce("WANTED: a new Most Wanted is on your mission board: [record.name], [posting.board_zone_name()].")
 	posting.board_arm()
 	return posting
+
+/**
+ * Tells every player crew `message` on their ships, as a lair's kill-only notice does: every ship
+ * that isn't an NPC ship or abandoned, except those in `exclude`. Returns the ships told.
+ */
+/datum/controller/subsystem/criminal_bounties/proc/board_announce(message, list/exclude)
+	var/list/told = list()
+	for(var/obj/structure/overmap/ship/ship as anything in SSovermap.simulated_ships)
+		if(QDELETED(ship) || ship.abandoned || istype(ship, /obj/structure/overmap/ship/npc) || (exclude && (ship in exclude)))
+			continue
+		ship.ship_notify(message, "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+		told += ship
+	return told
 
 /// The value in credits of a bounty with `base_value` in zone band `zone`, fixed at posting (AR-A9)
 /datum/controller/subsystem/criminal_bounties/proc/board_value_for(base_value, zone)

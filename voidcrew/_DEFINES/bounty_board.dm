@@ -79,10 +79,11 @@
 #define BOUNTY_PLACEMENT_WEIGHT_RUIN 3
 #define BOUNTY_PLACEMENT_WEIGHT_NPC_SHIP 2
 #define BOUNTY_PLACEMENT_WEIGHT_TRADER_OUTPOST 2
-/// Percent chance a petty criminal is meek (else normal), and a wanted one normal (else meek) (spec 2)
+/// Percent chance a petty criminal is meek (else normal), and a wanted one normal (else meek) (spec 2).
+/// The board's roll is the one in use: every posting passes its archetype to generate_bounty_record().
 #define BOUNTY_BOARD_PETTY_MEEK_CHANCE 70
 #define BOUNTY_BOARD_WANTED_NORMAL_CHANCE 70
-/// Open postings one trader outpost may hold at once (AR-C9)
+/// Fugitives one trader outpost may hold at once (AR-C9): the board's pick counts open postings there, P6's setup counts those set up to blend in
 #define BOUNTY_MAX_FUGITIVES_PER_OUTPOST 2
 /// Open postings one pirate ship may hold at once
 #define BOUNTY_MAX_PER_NPC_SHIP 1
@@ -131,6 +132,8 @@
 
 /// How long the pad's beam takes to take the criminal (OUTPOST_PRISON_BEAM_TIME, the prisoner beam)
 #define BOUNTY_BEAM_TIME (3 SECONDS)
+/// Between two lines the pad says about a bounty target landing on it, so dragging on and off doesn't spam
+#define BOUNTY_PAD_ANNOUNCE_COOLDOWN (5 SECONDS)
 /// On a criminal the pad or the board is taking away (turned in, expired, relisted, gone with its site): nothing it leaves behind is proof of death
 #define TRAIT_BOUNTY_REMOVED "bounty_removed"
 /// Trait source for what the pad and the board put on a criminal they take: the removal mark, and the pad holding it still for the beam

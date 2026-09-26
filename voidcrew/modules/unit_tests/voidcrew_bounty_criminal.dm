@@ -137,12 +137,25 @@
 	// BOUNTY_RECOVER_TO 35: 42 of 120
 	TEST_ASSERT_EQUAL(other.health, 42, "A criminal got up with the wrong health")
 
-	// Only mini-bosses rally.
+	// Only mini-bosses rally: stamina does nothing to one that just got up, until the rally ends.
 	TEST_ASSERT(!other.body_is_rallying(), "A normal criminal rallies")
-	// BOUNTY_RECOVER_TIME_MEEK, _NORMAL (60 SECONDS, 75 SECONDS)
+	var/mob/living/basic/bounty_criminal/boss/juggernaut/brute = allocate(__IMPLIED_TYPE__)
+	brute.adjustBruteLoss(brute.maxHealth * 2)
+	TEST_ASSERT(brute.is_downed(), "A mini-boss was not downed")
+	TEST_ASSERT(brute.body_stand_up(), "A downed mini-boss did not get up")
+	TEST_ASSERT(brute.body_is_rallying(), "A mini-boss that got up is not rallying")
+	TEST_ASSERT_NOTNULL(brute.body_rally_timer, "A rallying mini-boss has no end to its rally")
+	var/stamina_before = brute.getStaminaLoss()
+	brute.adjustStaminaLoss(50)
+	TEST_ASSERT_EQUAL(brute.getStaminaLoss(), stamina_before, "A rallying mini-boss took stamina damage")
+	brute.body_end_rally()
+	TEST_ASSERT(!brute.body_is_rallying(), "A mini-boss's rally did not end")
+
+	// BOUNTY_RECOVER_TIME_MEEK, _NORMAL, _BOSS (60 SECONDS, 75 SECONDS, 45 SECONDS)
 	var/mob/living/basic/bounty_criminal/meek/runner = allocate(__IMPLIED_TYPE__)
 	TEST_ASSERT_EQUAL(runner.body_recovery_time(), 600, "A meek criminal's recovery time is wrong")
 	TEST_ASSERT_EQUAL(other.body_recovery_time(), 750, "A normal criminal's recovery time is wrong")
+	TEST_ASSERT_EQUAL(brute.body_recovery_time(), 450, "A mini-boss's recovery time is wrong")
 
 // ===== WORST STATE AND THE STATE ORDER =====
 
@@ -299,8 +312,10 @@
 	var/mob/living/basic/bounty_criminal/boss/juggernaut/brute = allocate(__IMPLIED_TYPE__)
 	TEST_ASSERT(brute.body_apply_cuffs(allocate(/obj/item/restraints/handcuffs/cable)), "Cable restraints did not go on a mini-boss")
 	TEST_ASSERT_EQUAL(brute.body_slip_time(), 900, "A mini-boss slips cable at the wrong time")
+	var/obj/item/restraints/handcuffs/cable/snapped = brute.restraints
 	TEST_ASSERT(brute.body_slip_cuffs(), "A mini-boss did not snap its cable restraints")
-	TEST_ASSERT_NULL(locate(/obj/item/restraints/handcuffs/cable) in brute.loc, "Snapped cable restraints dropped whole")
+	TEST_ASSERT(!brute.is_restrained(), "A mini-boss that snapped its restraints is still restrained")
+	TEST_ASSERT(QDELETED(snapped), "Snapped cable restraints dropped whole")
 
 // ===== DRAGGING =====
 
@@ -379,17 +394,23 @@
 	blown_up.gib()
 	TEST_ASSERT(blown_up.body_proof_dropped, "A criminal gibbed alive left no proof")
 
-	// Removed by the pad: no proof. Deleted alive (its site unloading): no proof.
+	// Deleted any other way, it asks for proof too; P5's bounty_drop_proof() decides.
+	var/mob/living/basic/bounty_criminal/normal/vanished = allocate(__IMPLIED_TYPE__)
+	vanished.posting_ref = WEAKREF(posting)
+	qdel(vanished)
+	TEST_ASSERT(vanished.body_proof_dropped, "A criminal deleted with its posting open did not ask for proof")
+
+	// Removed on purpose, by P5's mark (the pad, closing, relisting, its site unloading) or ours: no proof.
 	var/mob/living/basic/bounty_criminal/normal/beamed = allocate(__IMPLIED_TYPE__)
 	beamed.posting_ref = WEAKREF(posting)
-	beamed.death()
-	beamed.body_mark_removed()
+	ADD_TRAIT(beamed, "bounty_removed", "bounty") // TRAIT_BOUNTY_REMOVED, BOUNTY_TRAIT
 	qdel(beamed)
 	TEST_ASSERT(!beamed.body_proof_dropped, "A criminal the pad removed left proof")
 	var/mob/living/basic/bounty_criminal/normal/unloaded = allocate(__IMPLIED_TYPE__)
 	unloaded.posting_ref = WEAKREF(posting)
+	unloaded.body_mark_removed()
 	qdel(unloaded)
-	TEST_ASSERT(!unloaded.body_proof_dropped, "A live criminal deleted with its site left proof")
+	TEST_ASSERT(!unloaded.body_proof_dropped, "A criminal removed on purpose left proof")
 
 	// A closed posting takes no proof.
 	posting.status = "closed" // BOUNTY_POSTING_CLOSED

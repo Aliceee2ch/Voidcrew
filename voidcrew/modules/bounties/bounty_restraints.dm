@@ -248,7 +248,8 @@
 	if(!is_restrained() || stat == DEAD)
 		return FALSE
 	var/snapped = istype(src, /mob/living/basic/bounty_criminal/boss)
-	visible_message(span_danger(snapped ? "[src] snaps [restraints]!" : "[src] slips out of [restraints]!"))
+	var/message = snapped ? "[src] snaps [restraints]!" : "[src] slips out of [restraints]!"
+	visible_message(span_danger(message))
 	var/obj/item/restraints/handcuffs/worn = body_remove_cuffs()
 	if(snapped && worn)
 		qdel(worn)

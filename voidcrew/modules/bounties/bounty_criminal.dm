@@ -23,9 +23,9 @@
  * - On its site, damage with nobody's mind behind it (turrets, traps, fire, fauna) stops at
  *   BOUNTY_AUTOMATED_FLOOR percent. /datum/component/bounty_body keeps the ledger (AR-D3).
  * - worst_state only ever gets worse (spec 12.1); P5 pays on it.
- * - Dead, the body stays and can't be revived (AR-A5). Destroyed with its posting open (gibbed, dusted,
- *   lost in a chasm), it leaves proof of death through P5's bounty_drop_proof(), unless it was
- *   removed on purpose (body_mark_removed()).
+ * - Dead, the body stays and can't be revived (AR-A5). Destroyed any way with its posting open
+ *   (gibbed, dusted, lost in a chasm, deleted), it asks P5's bounty_drop_proof() for proof of death,
+ *   unless it was removed on purpose (P5's TRAIT_BOUNTY_REMOVED, or body_mark_removed()). P5 decides.
  * - Leashed to its site (AR-D2): its own feet never take it off the site, onto a ship other than the
  *   pirate ship it is aboard, into a hangar or a player outpost, or into lava, a chasm or space. Anyone
  *   can still drag it anywhere. Off its site, and anywhere at a trader outpost, it fights only those
@@ -79,8 +79,9 @@
 	var/body_stirring = FALSE
 	/// Its recovery came due while it was cuffed: it gets up once the cuffs are off
 	var/body_recovery_due = FALSE
-	/// world.time until which a mini-boss that just got up shrugs off stamina
+	/// world.time until which a mini-boss that just got up shrugs off stamina, and the timer that ends it
 	var/body_rally_until = 0
+	var/body_rally_timer
 	/// world.time a projectile last got through to it, for the meek's dodge
 	var/body_last_shot_at = -1
 	/// Removed on purpose (beamed out by the pad, cleaned up by its posting, its site unloading): being deleted is not a death, so it leaves no proof
@@ -305,9 +306,11 @@
 	var/datum/space_level/level = length(planet.mapzone?.z_levels) ? planet.mapzone.z_levels[1] : null
 	return planet.get_dock_strip_top_y(level)
 
-/// The pirate ship that is its site, if it is wanted aboard one
+/// The pirate ship that is its site, if it is wanted aboard one: the site it was spawned for, else its posting's
 /mob/living/basic/bounty_criminal/proc/body_site_ship()
 	var/obj/structure/overmap/ship/site_ship = body_site_ref?.resolve()
+	if(!site_ship)
+		site_ship = posting()?.site_ref?.resolve()
 	return (istype(site_ship) && !QDELETED(site_ship)) ? site_ship : null
 
 /// Whether it has a site to be leashed to
@@ -591,6 +594,8 @@
 	downed = TRUE
 	body_recovery_due = FALSE
 	body_rally_until = 0
+	deltimer(body_rally_timer)
+	body_rally_timer = null
 	add_traits(list(TRAIT_FLOORED, TRAIT_INCAPACITATED, TRAIT_IMMOBILIZED), BOUNTY_BODY_DOWNED_TRAIT)
 	body_update_held()
 	ai_controller?.CancelActions()
@@ -665,6 +670,8 @@
 	var/rally = body_rally_time()
 	if(rally > 0)
 		body_rally_until = world.time + rally
+		deltimer(body_rally_timer)
+		body_rally_timer = addtimer(CALLBACK(src, PROC_REF(body_end_rally)), rally, TIMER_STOPPABLE | TIMER_DELETE_ME)
 	body_state_changed()
 	visible_message(span_warning("[src] gets back up."))
 	SEND_SIGNAL(src, COMSIG_BOUNTY_CRIMINAL_RECOVERED)
@@ -678,6 +685,21 @@
 /// Whether it is rallying after getting up: stamina does nothing, and it won't surrender (P3)
 /mob/living/basic/bounty_criminal/proc/body_is_rallying()
 	return world.time < body_rally_until
+
+/// The rally is over: stamina works on it again, as far as its tiredness lets it (P4's boss_update_tired())
+/mob/living/basic/bounty_criminal/proc/body_end_rally()
+	body_rally_timer = null
+	body_rally_until = 0
+	if(QDELETED(src) || stat == DEAD)
+		return
+	boss_update_tired(force = TRUE)
+
+/**
+ * A mini-boss re-reads how tired it is: its stamina coefficient and stun flags (P4). Nothing for
+ * anyone else. P4 overrides it on /boss; the override must not repeat the `proc/` keyword.
+ */
+/mob/living/basic/bounty_criminal/proc/boss_update_tired(silent = FALSE, force = FALSE)
+	return
 
 // A stamina hit while it is down starts its recovery over; rallying, it shrugs stamina off.
 /mob/living/basic/bounty_criminal/adjustStaminaLoss(amount, updating_stamina = TRUE, forced = FALSE, required_biotype)
@@ -713,15 +735,20 @@
 		body_drop_proof()
 
 /**
- * Marks it as removed on purpose, before it is deleted: the pad beaming it out, its posting cleaning
- * up, its site unloading. Its deletion is then not a death and leaves no proof. P5 calls it.
+ * Marks it as removed on purpose, before it is deleted: its deletion is then not a death and leaves
+ * no proof. P5 marks removals with TRAIT_BOUNTY_REMOVED instead (the pad, closing, relisting, a site
+ * unloading); this is for anything else that takes a criminal away on purpose.
  */
 /mob/living/basic/bounty_criminal/proc/body_mark_removed()
 	body_removed = TRUE
 
-/// Whether destroying its body now leaves proof of death: dead, not removed on purpose, and its posting still open
+/**
+ * Whether destroying its body now should ask for proof of death: not removed on purpose, and its
+ * posting still open. P5's bounty_drop_proof() makes the final call (a site unloading, a relist).
+ */
 /mob/living/basic/bounty_criminal/proc/body_leaves_proof()
-	if(body_removed || body_proof_dropped || stat != DEAD)
+	// "bounty_removed" is TRAIT_BOUNTY_REMOVED (P5, voidcrew/_DEFINES/bounty_board.dm)
+	if(body_removed || body_proof_dropped || HAS_TRAIT(src, "bounty_removed"))
 		return FALSE
 	var/datum/criminal_bounty/wanted_on = posting()
 	return wanted_on?.status == BOUNTY_POSTING_OPEN
@@ -744,10 +771,10 @@
 		return
 	update_appearance(UPDATE_OVERLAYS)
 
-/// The outfit it wears: a mini-boss its kit's (boss_outfit()), anyone else plain clothes for their archetype and the zone of their site
+/// The outfit it wears: a mini-boss its kit's (boss_kit_outfit(), P4), anyone else plain clothes for their archetype and the zone of their site
 /mob/living/basic/bounty_criminal/proc/bounty_outfit()
 	if(istype(src, /mob/living/basic/bounty_criminal/boss))
-		return boss_outfit()
+		return boss_kit_outfit() || boss_outfit()
 	var/meek = istype(src, /mob/living/basic/bounty_criminal/meek)
 	switch(body_zone())
 		if(ZONE_RED)
@@ -756,7 +783,11 @@
 			return meek ? /datum/outfit/bounty_criminal/spacer : /datum/outfit/bounty_criminal/hauler
 	return meek ? /datum/outfit/bounty_criminal : /datum/outfit/bounty_criminal/local
 
-/// A mini-boss's outfit. P4 overrides it per kit; this is the plain fallback.
+/// A mini-boss's kit outfit, or null. P4 overrides it on /boss; the override must not repeat the `proc/` keyword.
+/mob/living/basic/bounty_criminal/proc/boss_kit_outfit()
+	return null
+
+/// What a mini-boss wears when its kit has no outfit: plain rough clothes
 /mob/living/basic/bounty_criminal/proc/boss_outfit()
 	return /datum/outfit/bounty_criminal/tough
 
@@ -892,7 +923,9 @@
 	RegisterSignal(criminal, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(refuse_type_change))
 	RegisterSignal(criminal, COMSIG_BASICMOB_PRE_ATTACK_RANGED, PROC_REF(on_pre_ranged_attack))
 	RegisterSignal(criminal, COMSIG_MOUSEDROP_ONTO, PROC_REF(on_mousedrop))
-	RegisterSignals(criminal, list(SIGNAL_ADDTRAIT(TRAIT_BOUNTY_SURRENDERED), SIGNAL_REMOVETRAIT(TRAIT_BOUNTY_SURRENDERED)), PROC_REF(on_surrender_changed))
+	RegisterSignals(criminal, list(SIGNAL_ADDTRAIT(TRAIT_BOUNTY_SURRENDERED), SIGNAL_REMOVETRAIT(TRAIT_BOUNTY_SURRENDERED)), PROC_REF(on_state_signal))
+	// A stun's traits land before the stun is on its list, so the trait handlers alone would miss it.
+	RegisterSignals(criminal, list(COMSIG_LIVING_STATUS_APPLIED, COMSIG_LIVING_STATUS_REMOVED), PROC_REF(on_state_signal))
 
 /datum/component/bounty_body/UnregisterFromParent()
 	UnregisterSignal(parent, list(
@@ -906,6 +939,8 @@
 		COMSIG_MOUSEDROP_ONTO,
 		SIGNAL_ADDTRAIT(TRAIT_BOUNTY_SURRENDERED),
 		SIGNAL_REMOVETRAIT(TRAIT_BOUNTY_SURRENDERED),
+		COMSIG_LIVING_STATUS_APPLIED,
+		COMSIG_LIVING_STATUS_REMOVED,
 	))
 
 /// Whether someone with a mind behind them attacked it this tick
@@ -982,7 +1017,8 @@
 	if(!criminal.body_can_be_dragged())
 		return COMPONENT_CANCEL_MOUSEDROP_ONTO
 
-/datum/component/bounty_body/proc/on_surrender_changed(datum/source, trait)
+/// It surrendered or stopped, or a stun, knockdown or stamina crit came or went: its capture state may have changed
+/datum/component/bounty_body/proc/on_state_signal(datum/source)
 	SIGNAL_HANDLER
 	var/mob/living/basic/bounty_criminal/criminal = parent
 	criminal.body_state_changed()

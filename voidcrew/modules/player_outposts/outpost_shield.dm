@@ -234,6 +234,8 @@
 		return FALSE
 	if(!outpost.is_turf_buildable(current))
 		return FALSE // still outside the shield envelope
+	// MARKET P8: a hostile impact starts the teleporter network's raid lock (outpost_network.dm)
+	outpost.note_network_siege(source_ship)
 	// Chemical missiles can carry ~0 listed damage; the shield still pays a minimum toll to stop them
 	var/drain = max(damage * OUTPOST_SHIELD_MISSILE_DRAIN_MULT, OUTPOST_SHIELD_MIN_DRAIN)
 	if(!outpost.try_absorb_siege_damage(drain, current, source_ship))

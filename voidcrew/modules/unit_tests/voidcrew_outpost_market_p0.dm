@@ -139,6 +139,9 @@
 	outside = outside.ChangeTurf(/turf/closed/wall)
 	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "A wall against the door was not reported")
 	outside = outside.ChangeTurf(/turf/open/floor/iron)
+	// A wall turned to floor averages its neighbours' air (vacuum here); give the corridor station air
+	var/turf/open/corridor = outside
+	corridor.air.copy_from(SSair.parse_gas_string(OPENTURF_DEFAULT_ATMOS, /datum/gas_mixture/turf))
 	TEST_ASSERT_NULL(blueprint.exit_denial(), "A breathable corridor outside the door was reported: [blueprint.exit_denial()]")
 	var/obj/structure/grille/grille = allocate(__IMPLIED_TYPE__, outside)
 	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "A grille across the door was not reported")

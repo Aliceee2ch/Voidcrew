@@ -69,8 +69,8 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		return "Unknown price."
 	if(!is_current_pricing_user(user))
 		return "Pricing access required."
-	// isnum() accepts NaN, which is the one number unequal to itself
-	if(!isnum(value) || value != value)
+	// isnum() accepts NaN
+	if(!isnum(value) || isnan(value))
 		return "Invalid price."
 	var/list/row = GLOB.outpost_price_table[key]
 	value = clamp(round(value, 1), 0, row["max"])

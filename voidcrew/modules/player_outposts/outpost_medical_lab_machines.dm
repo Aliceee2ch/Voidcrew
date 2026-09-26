@@ -117,6 +117,8 @@
 	autoeject = TRUE
 	/// world.time the current occupant was closed in
 	var/entered_at = 0
+	/// TRUE while open_machine() runs. It switches the cell off, and the switch-off must not open it again.
+	var/opening = FALSE
 
 /obj/machinery/cryo_cell/outpost_lab/Initialize(mapload)
 	. = ..()
@@ -158,7 +160,7 @@
 
 /// Opens the cell on its occupant, telling them why
 /obj/machinery/cryo_cell/outpost_lab/proc/eject_patient(reason)
-	if(state_open || !occupant)
+	if(state_open || opening || !occupant)
 		return
 	var/mob/living/patient = occupant
 	open_machine()
@@ -168,7 +170,9 @@
 /// Switched off with someone inside (power loss, a member, the stock shutdowns): let them out.
 /obj/machinery/cryo_cell/outpost_lab/proc/on_cryo_set_on(datum/source, active)
 	SIGNAL_HANDLER
-	if(active || state_open || !occupant)
+	// set_on() signals before it sets `on`, so an eject from here would switch off, signal and eject
+	// again without end. That recursion crashed the server; open_machine() is already letting them out.
+	if(active || state_open || opening || !occupant)
 		return
 	INVOKE_ASYNC(src, PROC_REF(eject_patient), "The cryo cell switched off.")
 
@@ -183,7 +187,9 @@
 
 /obj/machinery/cryo_cell/outpost_lab/open_machine(drop = TRUE, density_to_set = FALSE)
 	entered_at = 0
-	return ..()
+	opening = TRUE
+	. = ..()
+	opening = FALSE
 
 /obj/machinery/cryo_cell/outpost_lab/process(seconds_per_tick)
 	if(on && occupant)

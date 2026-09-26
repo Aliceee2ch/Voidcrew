@@ -100,8 +100,10 @@
 	TEST_ASSERT_EQUAL(home.get_price("clone_imprint"), max_price, "A huge price was not clamped to the maximum")
 	home.price_set_times.Cut()
 
-	var/infinite = INFINITY
+	// INFINITY is only 1e31, so INFINITY - INFINITY is 0; 1.#INF is the real thing
+	var/infinite = 1.#INF
 	var/not_a_number = infinite - infinite
+	TEST_ASSERT(isnan(not_a_number), "The test could not make a NaN")
 	TEST_ASSERT_EQUAL(home.set_price(owner, "clone_imprint", not_a_number), "Invalid price.", "NaN was accepted as a price")
 	TEST_ASSERT_EQUAL(home.set_price(owner, "clone_imprint", "12"), "Invalid price.", "Text was accepted as a price")
 	TEST_ASSERT_EQUAL(home.set_price(owner, "free_lunch", 10), "Unknown price.", "An unknown key was accepted")

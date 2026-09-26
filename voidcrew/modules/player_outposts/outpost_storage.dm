@@ -397,6 +397,13 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 		return ITEM_INTERACT_BLOCKING
 	return NONE
 
+// Tools act before item_interaction(), and the property element refuses every tool, so an open
+// locker takes a tool here as it takes any other item
+/obj/structure/closet/secure_closet/outpost_storage/tool_act(mob/living/user, obj/item/tool, list/modifiers)
+	if(opened && !user.combat_mode && !LAZYACCESS(modifiers, RIGHT_CLICK))
+		return item_interaction(user, tool, modifiers)
+	return ..()
+
 // No painting, electronics, card readers, pens, welding or cutting
 /obj/structure/closet/secure_closet/outpost_storage/tool_interact(obj/item/weapon, mob/living/user)
 	return FALSE

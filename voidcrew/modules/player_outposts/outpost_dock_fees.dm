@@ -192,7 +192,8 @@
 /// A ship with a visit fee or eviction here was deleted (records never outlive the ship)
 /obj/structure/overmap/dynamic/player_outpost/proc/on_bay_ship_deleted(obj/structure/overmap/ship/source)
 	SIGNAL_HANDLER
-	forget_bay_ship(WEAKREF(source))
+	// WEAKREF() of a datum being deleted is null; the records are keyed by the weakref it already had
+	forget_bay_ship(source.weak_reference)
 
 /// Keeps per-ship records honest: they are dropped when the ship is deleted
 /obj/structure/overmap/dynamic/player_outpost/proc/watch_bay_ship(obj/structure/overmap/ship/ship)

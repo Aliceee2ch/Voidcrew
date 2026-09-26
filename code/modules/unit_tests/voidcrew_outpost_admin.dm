@@ -80,6 +80,11 @@
 	operator.forceMove(home.arrival_turf)
 	TEST_ASSERT(panel.deletion_denial(home), "Deletion allowed a living occupant")
 	operator.forceMove(run_loc_floor_bottom_left)
+	// Mindless mobs (service bots, animals) are deleted with the outpost and never block it.
+	var/mob/living/basic/mouse/stray = allocate(/mob/living/basic/mouse, home.arrival_turf)
+	TEST_ASSERT_NULL(stray.mind, "The mindless occupant fixture has a mind")
+	TEST_ASSERT_NULL(panel.deletion_denial(home), "A mindless mob on the claim blocked deletion")
+	qdel(stray)
 	TEST_ASSERT_NULL(panel.deletion_denial(home), "An empty idle admin-created home could not be deleted")
 	panel.manage_outpost(home, operator, "delete", list())
 	TEST_ASSERT(QDELETED(home), "Confirmed admin deletion did not remove the empty home")

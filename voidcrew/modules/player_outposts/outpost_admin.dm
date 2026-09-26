@@ -314,7 +314,11 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 			return
 	record(user, home, "[action][params["mode"] ? " ([params["mode"]])" : ""]")
 
-/// Never tear a loaded ship, occupied habitat or unfinished map load out from under it.
+/**
+ * Never tear a loaded ship, occupied habitat or unfinished map load out from under it.
+ * Only player bodies (anything with a mind, alive or dead) count as occupants. Mindless mobs,
+ * such as service bots, prisoners and loose animals, are deleted with the outpost.
+ */
 /datum/outpost_manipulator/proc/deletion_denial(obj/structure/overmap/dynamic/player_outpost/home)
 	if(home.loading || home.freight?.load_pending || home.freight?.busy || length(home.arrival_reservations))
 		return "An arrival or map load is in progress."
@@ -323,6 +327,8 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		if(ship.docked == home)
 			return "Undock visiting ships and cancel their approaches first."
 	for(var/mob/living/occupant as anything in GLOB.mob_living_list)
+		if(!occupant.mind)
+			continue
 		if(get_outpost_from_atom(occupant) == home)
 			return "Move living occupants out of the outpost first."
 	return null

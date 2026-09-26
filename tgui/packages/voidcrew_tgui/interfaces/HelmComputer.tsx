@@ -220,6 +220,24 @@ type DockOption = {
   variant?: string;
   /** Short action label when the contact's name is already displayed. */
   label?: string;
+  /** Docking fee for this option in credits; 0 or absent when free or exempt. */
+  fee?: number;
+};
+
+/**
+ * An outpost's docking fee waiting for approval. The captain (or, with no live
+ * captain, any crew) approves it here; the ship account pays on arrival.
+ */
+type DockFeeQuote = {
+  outpost: string;
+  ref: string;
+  variant: string;
+  amount: number;
+  /** The ship account's balance. */
+  balance: number;
+  /** Seconds before the quote lapses. */
+  expiresIn: number;
+  canApprove: BooleanLike;
 };
 
 type Data = {
@@ -325,6 +343,7 @@ type Data = {
   nebulaHideRemaining: number;
   canLand: BooleanLike;
   dockOptions: DockOption[];
+  dockFeeQuote?: DockFeeQuote | null;
   autopilot: Autopilot;
   /** This ship's own distress beacon. Everyone else's rides the contact set. */
   distress: {
@@ -1027,6 +1046,7 @@ const Faceplate = () => {
               onClose={() => setMenu(null)}
             />
           )}
+          <DockFeeQuoteCard />
           {!!dockMenu && (
             <DockPickerMenu
               left={dockMenu.left}
@@ -3253,7 +3273,7 @@ const ContactMenu = (props: {
     for (const option of variants) {
       items.push({
         label: option.label ?? option.name,
-        hint: 'Dock for ship construction',
+        hint: feeHint(option.fee) ?? 'Dock for ship construction',
         disabled: locked || state !== 'flying',
         onClick: () =>
           act('dock', { target: option.ref, variant: option.variant }),
@@ -3399,9 +3419,91 @@ const DockPickerMenu = (props: {
             }}
           >
             <span className="Helm__menuLabel">{option.name}</span>
+            {!!feeHint(option.fee) && (
+              <span className="Helm__menuHint">{feeHint(option.fee)}</span>
+            )}
           </button>
         ))
       )}
+    </div>
+  );
+};
+
+/** "Docking fee N cr" for a priced option, else undefined. */
+const feeHint = (fee?: number | null) =>
+  Number(fee) > 0 ? `Docking fee ${Number(fee)} cr` : undefined;
+
+/**
+ * A pending docking fee, pinned over the foot of the chart so the crew can keep
+ * flying while the captain decides. Approve re-sends the dock request itself.
+ */
+const DockFeeQuoteCard = () => {
+  const { act, data } = useBackend<Data>();
+  const locked = useLocked();
+  const quote = data.dockFeeQuote;
+  if (!quote?.ref) return null;
+  const amount = Number(quote.amount) || 0;
+  const balance = Number(quote.balance) || 0;
+  const short = balance < amount;
+  const expires = Math.max(0, Math.ceil(Number(quote.expiresIn) || 0));
+  const approveTitle = !quote.canApprove
+    ? 'Only the captain can approve this fee'
+    : short
+      ? 'The ship account cannot cover this fee yet'
+      : `Pay ${amount} cr from the ship account when the ship docks`;
+  return (
+    <div
+      className="Helm__menu"
+      role="alertdialog"
+      aria-label="Docking fee"
+      style={{
+        left: `${((GEOMETRY.CHART.x + GEOMETRY.CHART.w / 2 - 150) / FRAME.w) * 100}%`,
+        top: `${((GEOMETRY.CHART.y + GEOMETRY.CHART.h - 150) / FRAME.h) * 100}%`,
+        width: `${(300 / FRAME.w) * 100}%`,
+        maxWidth: 'none',
+      }}
+    >
+      <div className="Helm__menuHead">
+        Docking fee · {quote.outpost || 'Outpost'}
+      </div>
+      <div style={{ padding: '0.6cqw 0.7cqw' }}>
+        <div className="Helm__cardName">{amount} cr</div>
+        <div className="Helm__cardMeta">
+          Ship account {balance} cr
+          {expires > 0 ? ` · expires in ${expires}s` : ''}
+        </div>
+        <div className="Helm__cardDesc">
+          {short
+            ? 'The ship account is short. The dock is refused unless it can pay.'
+            : 'Paid into the outpost treasury when the ship docks. Refunded if the dock does not happen.'}
+        </div>
+        <div className="Helm__overlayActions">
+          <button
+            type="button"
+            className="Helm__btn"
+            disabled={locked || !quote.canApprove}
+            title={approveTitle}
+            onClick={() =>
+              act('approve_dock_fee', {
+                ref: quote.ref,
+                variant: quote.variant,
+                amount,
+              })
+            }
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            className="Helm__btn"
+            disabled={locked}
+            title="Decline the fee and stay out"
+            onClick={() => act('decline_dock_fee', { ref: quote.ref })}
+          >
+            Decline
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -4005,13 +4107,14 @@ const DockVariantButtons = (props: { target?: string | null }) => {
         type="button"
         className="Helm__btn"
         disabled={locked || data.state !== 'flying'}
-        title="Dock for ship construction"
+        title={feeHint(option.fee) ?? 'Dock for ship construction'}
         onClick={(event) => {
           event.stopPropagation();
           act('dock', { target: option.ref, variant: option.variant });
         }}
       >
         {option.label ?? option.name}
+        {Number(option.fee) > 0 ? ` · ${Number(option.fee)} cr` : ''}
       </button>
     ));
 };
@@ -4580,9 +4683,11 @@ const OpsRow = () => {
         ? 'Auto-stop and hold position here in empty space'
         : 'Hold position here in empty space';
     }
-    return autoStopping
+    const fee = feeHint(primaryDockOption?.fee);
+    const reason = autoStopping
       ? `Auto-stop and dock with ${dockName}`
       : `Dock with ${dockName}`;
+    return fee ? `${reason}. ${fee}, approved at this helm` : reason;
   };
 
   return (

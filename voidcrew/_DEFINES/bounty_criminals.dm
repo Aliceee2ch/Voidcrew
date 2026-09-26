@@ -17,6 +17,11 @@
 #define TRAIT_BOUNTY_HELD "bounty_held"
 /// A meek criminal sprinting, and neither winded nor cornered: P3 adds and removes it (source BOUNTY_TRAIT). P2 dodges projectiles while it is on (BOUNTY_MEEK_DODGE).
 #define TRAIT_BOUNTY_SPRINTING "bounty_sprinting"
+/**
+ * A script is walking the criminal somewhere on purpose (a walk-out, a cutscene): the leash lets its
+ * steps through. Godmode counts the same, which covers P6's walk out to the hangar lift.
+ */
+#define TRAIT_BOUNTY_SCRIPTED_MOVE "bounty_scripted_move"
 
 /// Trait source for what the body always has (no teleports, no mob swaps)
 #define BOUNTY_BODY_TRAIT "bounty_body"
@@ -50,6 +55,13 @@
 #define BOUNTY_STYLE_HEALTH_BOTTLE 0.9
 /// A brawler takes stamina damage x this
 #define BOUNTY_STYLE_STAMINA_BRAWLER 0.8
+
+/// Fire and heat (L3): a criminal on fire, or hotter than this, burns like a suited person, BOUNTY_CRIMINAL_BURN_DAMAGE a second. The mercy line and the automated floor still hold it. Mini-bosses keep P4's own fire rules.
+#define BOUNTY_CRIMINAL_MAX_TEMP SPACE_SUIT_MAX_TEMP_PROTECT
+#define BOUNTY_CRIMINAL_BURN_DAMAGE 3
+
+/// An explosion counts as a player's when the explosive was last touched by one, or someone with a mind stands within this many tiles
+#define BOUNTY_EXPLOSION_WITNESS_RANGE 7
 
 /// Pace of a meek criminal: its sprint (P3 slows it while winded)
 #define BOUNTY_BODY_MEEK_SPEED 1.1

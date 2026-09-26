@@ -11,6 +11,34 @@
 	abstract_type = /datum/unit_test/voidcrew_bounty_criminal
 	/// How many times each bounty signal was sent in the test
 	var/list/signal_counts
+	/// Turfs moved into a test area, and the area each came from
+	var/list/original_areas
+	/// Areas made for the test
+	var/list/test_areas
+
+/datum/unit_test/voidcrew_bounty_criminal/Destroy()
+	for(var/turf/location as anything in original_areas)
+		location.change_area(get_area(location), original_areas[location])
+	original_areas = null
+	QDEL_LIST(test_areas)
+	return ..()
+
+/// Moves `turfs` into a new area of `area_type` (a ship, a hangar, an outpost), put back when the test ends
+/datum/unit_test/voidcrew_bounty_criminal/proc/swap_area(list/turfs, area_type)
+	var/area/new_area = new area_type()
+	LAZYADD(test_areas, new_area)
+	for(var/turf/location as anything in turfs)
+		if(!LAZYACCESS(original_areas, location))
+			LAZYSET(original_areas, location, get_area(location))
+		location.change_area(get_area(location), new_area)
+	return new_area
+
+/// The proof of death lying near the test room's corner for `posting`, or null
+/datum/unit_test/voidcrew_bounty_criminal/proc/proof_for(datum/criminal_bounty/posting)
+	for(var/obj/item/bounty_proof/proof in range(2, run_loc_floor_bottom_left))
+		if(proof.posting_ref?.resolve() == posting)
+			return proof
+	return null
 
 /datum/unit_test/voidcrew_bounty_criminal/proc/on_downed(datum/source)
 	SIGNAL_HANDLER
@@ -79,6 +107,18 @@
 	TEST_ASSERT(chipped.is_downed(), "Small hits never downed a criminal")
 	TEST_ASSERT(chipped.health > 0 && chipped.health <= 30, "Small hits left a downed criminal at [chipped.health]")
 
+	// Fire and heat burn it like a suited person (BOUNTY_CRIMINAL_MAX_TEMP 1500, BOUNTY_CRIMINAL_BURN_DAMAGE 3 a second), but not past the mercy line.
+	var/mob/living/basic/bounty_criminal/normal/burning = allocate(__IMPLIED_TYPE__)
+	burning.bodytemperature = 3000
+	burning.Life(2)
+	TEST_ASSERT(burning.health < 120, "Heat did not hurt a criminal")
+	burning.adjustBruteLoss(burning.health - 31)
+	TEST_ASSERT_EQUAL(burning.health, 31, "The burning criminal was not brought near the line")
+	burning.bodytemperature = 3000
+	burning.Life(2)
+	TEST_ASSERT_EQUAL(burning.stat, CONSCIOUS, "Heat killed a criminal on its feet")
+	TEST_ASSERT_EQUAL(burning.health, 29, "Heat took a criminal on its feet past the downed line")
+
 // ===== DOWNED AND GETTING UP =====
 
 /datum/unit_test/voidcrew_bounty_criminal_recovery
@@ -117,6 +157,17 @@
 	TEST_ASSERT(!criminal.body_stand_up(), "A cuffed, downed criminal got up")
 	TEST_ASSERT(criminal.body_recovery_due, "A cuffed criminal's recovery did not wait for the cuffs")
 	TEST_ASSERT_EQUAL(criminal.capture_state(), "downed", "A cuffed, downed criminal is not downed") // BOUNTY_STATE_DOWNED
+	// A baton on it now starts the clock over: uncuffed, it doesn't jump up at once (L4).
+	criminal.adjustStaminaLoss(10)
+	TEST_ASSERT(!criminal.body_recovery_due, "A stamina hit left a cuffed criminal's recovery due")
+	var/restarted_clock = criminal.body_recovery_timer
+	criminal.body_remove_cuffs()
+	TEST_ASSERT(!criminal.body_stirring, "An uncuffed criminal stirred at once after a stamina hit restarted its clock")
+	TEST_ASSERT_EQUAL(criminal.body_recovery_timer, restarted_clock, "Uncuffing threw away a restarted recovery clock")
+	// Its time comes again, cuffed: it waits, then stirs once the cuffs are off.
+	TEST_ASSERT(criminal.body_apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The downed criminal could not be cuffed again")
+	criminal.body_stir()
+	TEST_ASSERT(criminal.body_recovery_due, "A cuffed criminal's recovery did not wait for the cuffs the second time")
 	criminal.body_remove_cuffs()
 	TEST_ASSERT(criminal.body_stirring, "A downed criminal whose time had come did not stir once uncuffed")
 	TEST_ASSERT(criminal.body_stand_up(), "A stirring criminal could not get up")
@@ -211,6 +262,16 @@
 	TEST_ASSERT_NOTNULL(locate(/obj/item/restraints/handcuffs) in criminal.loc, "A dead criminal's cuffs did not drop")
 	TEST_ASSERT(!criminal.is_downed(), "A dead criminal counts as downed")
 
+	// A copy respawned after its site reloaded keeps the old worst state, and it never gets better (M4).
+	var/mob/living/basic/bounty_criminal/normal/respawned = allocate(__IMPLIED_TYPE__)
+	TEST_ASSERT_EQUAL(respawned.body_restore_worst_state("downed"), "downed", "A respawned criminal did not take its old worst state")
+	TEST_ASSERT_EQUAL(respawned.body_restore_worst_state("stunned"), "downed", "Restoring a better state improved the worst state")
+	TEST_ASSERT_EQUAL(respawned.body_restore_worst_state("free"), "downed", "Restoring free improved the worst state")
+	TEST_ASSERT_EQUAL(respawned.body_restore_worst_state(null), "downed", "Restoring nothing changed the worst state")
+	respawned.Knockdown(5 SECONDS)
+	TEST_ASSERT_EQUAL(respawned.worst_state, "downed", "Stunning a respawned criminal improved its worst state")
+	TEST_ASSERT_EQUAL(respawned.body_restore_worst_state("dead"), "dead", "Restoring dead did not make the worst state dead")
+
 // ===== RESTRAINTS =====
 
 /datum/unit_test/voidcrew_bounty_criminal_cuffs
@@ -276,6 +337,17 @@
 	var/mob/living/basic/bounty_criminal/normal/quitter = allocate(__IMPLIED_TYPE__)
 	ADD_TRAIT(quitter, "bounty_surrendered", "bounty") // TRAIT_BOUNTY_SURRENDERED, BOUNTY_TRAIT
 	TEST_ASSERT_NULL(quitter.body_cuff_refusal(hunter, allocate(/obj/item/restraints/handcuffs)), "A surrendered criminal could not be cuffed")
+
+	// Joke zipties stay joke zipties once worn, and slip like them (L5; BOUNTY_FAKE_CUFF_SLIP 5 SECONDS).
+	TEST_ASSERT(quitter.body_apply_cuffs(allocate(/obj/item/restraints/handcuffs/cable/zipties/fake)), "Fake zipties did not go on")
+	TEST_ASSERT(istype(quitter.restraints, /obj/item/restraints/handcuffs/cable/zipties/fake/used), "Fake zipties went on as [quitter.restraints?.type]")
+	TEST_ASSERT_EQUAL(quitter.body_slip_time(), 50, "Fake zipties hold as long as real ones")
+	TEST_ASSERT_EQUAL(quitter.body_cuff_refusal(hunter, allocate(/obj/item/restraints/handcuffs/cable/zipties/fake/used)), "already cuffed", "Used fake zipties were not refused")
+	quitter.body_remove_cuffs()
+	TEST_ASSERT_EQUAL(quitter.body_cuff_refusal(hunter, allocate(/obj/item/restraints/handcuffs/cable/zipties/fake/used)), "used up", "Used fake zipties could go on")
+
+	// A fulton never goes on a criminal (M2).
+	TEST_ASSERT_EQUAL(quitter.item_interaction(hunter, allocate(/obj/item/extraction_pack)), ITEM_INTERACT_BLOCKING, "A fulton could go on a criminal")
 
 // ===== SLIPPING =====
 
@@ -378,47 +450,85 @@
 	criminal.revive(ADMIN_HEAL_ALL)
 	TEST_ASSERT_EQUAL(criminal.stat, DEAD, "A dead criminal came back")
 
-	// Its body is the proof: a death that leaves the body drops none; a gib drops it.
-	var/datum/criminal_bounty/posting = new
+	// Its body is the proof: a death that leaves the body leaves no tag; gibbing the body leaves one.
+	var/list/postings = list()
+	var/datum/criminal_bounty/gib_posting = new
+	postings += gib_posting
 	var/mob/living/basic/bounty_criminal/normal/gibbed = allocate(__IMPLIED_TYPE__)
-	gibbed.posting_ref = WEAKREF(posting)
+	gibbed.posting_ref = WEAKREF(gib_posting)
 	gibbed.death()
-	TEST_ASSERT(!gibbed.body_proof_dropped, "A dead criminal whose body stays left proof")
+	TEST_ASSERT(!gibbed.body_proof_dropped, "A dead criminal whose body stays asked for proof")
+	TEST_ASSERT_NULL(proof_for(gib_posting), "A dead criminal whose body stays left a tag")
 	gibbed.gib()
 	TEST_ASSERT(QDELETED(gibbed), "The gibbed criminal was not deleted")
-	TEST_ASSERT(gibbed.body_proof_dropped, "A gibbed criminal left no proof")
+	TEST_ASSERT_NOTNULL(proof_for(gib_posting), "A gibbed criminal left no tag")
 
-	// A live one gibbed dies first, and leaves proof.
+	// Gibbed alive, it dies first, and leaves a tag.
+	var/datum/criminal_bounty/blast_posting = new
+	postings += blast_posting
 	var/mob/living/basic/bounty_criminal/normal/blown_up = allocate(__IMPLIED_TYPE__)
-	blown_up.posting_ref = WEAKREF(posting)
+	blown_up.posting_ref = WEAKREF(blast_posting)
 	blown_up.gib()
-	TEST_ASSERT(blown_up.body_proof_dropped, "A criminal gibbed alive left no proof")
+	TEST_ASSERT_NOTNULL(proof_for(blast_posting), "A criminal gibbed alive left no tag")
 
-	// Deleted any other way, it asks for proof too; P5's bounty_drop_proof() decides.
+	// Fallen into a chasm alive, or dragged in dead: gone for good, and a tag stays up top.
+	var/obj/effect/abstract/chasm_storage/depths = allocate(__IMPLIED_TYPE__)
+	var/datum/criminal_bounty/fall_posting = new
+	postings += fall_posting
+	var/mob/living/basic/bounty_criminal/normal/faller = allocate(__IMPLIED_TYPE__)
+	faller.posting_ref = WEAKREF(fall_posting)
+	faller.forceMove(depths)
+	faller.death(TRUE)
+	TEST_ASSERT_NOTNULL(proof_for(fall_posting), "A criminal that fell into a chasm left no tag")
+	var/datum/criminal_bounty/corpse_posting = new
+	postings += corpse_posting
+	var/mob/living/basic/bounty_criminal/normal/corpse = allocate(__IMPLIED_TYPE__)
+	corpse.posting_ref = WEAKREF(corpse_posting)
+	corpse.death()
+	TEST_ASSERT_NULL(proof_for(corpse_posting), "A body on the floor left a tag")
+	corpse.forceMove(depths)
+	TEST_ASSERT_NOTNULL(proof_for(corpse_posting), "A body dragged into a chasm left no tag")
+
+	// Deleted alive (a despawning ship, a stray delete), it was never killed: no proof (M5).
+	var/datum/criminal_bounty/vanish_posting = new
+	postings += vanish_posting
 	var/mob/living/basic/bounty_criminal/normal/vanished = allocate(__IMPLIED_TYPE__)
-	vanished.posting_ref = WEAKREF(posting)
+	vanished.posting_ref = WEAKREF(vanish_posting)
 	qdel(vanished)
-	TEST_ASSERT(vanished.body_proof_dropped, "A criminal deleted with its posting open did not ask for proof")
+	TEST_ASSERT(!vanished.body_proof_dropped, "A live criminal deleted asked for proof")
+	TEST_ASSERT_NULL(proof_for(vanish_posting), "A live criminal deleted left a tag")
 
 	// Removed on purpose, by P5's mark (the pad, closing, relisting, its site unloading) or ours: no proof.
+	var/datum/criminal_bounty/pad_posting = new
+	postings += pad_posting
 	var/mob/living/basic/bounty_criminal/normal/beamed = allocate(__IMPLIED_TYPE__)
-	beamed.posting_ref = WEAKREF(posting)
+	beamed.posting_ref = WEAKREF(pad_posting)
+	beamed.death()
 	ADD_TRAIT(beamed, "bounty_removed", "bounty") // TRAIT_BOUNTY_REMOVED, BOUNTY_TRAIT
 	qdel(beamed)
-	TEST_ASSERT(!beamed.body_proof_dropped, "A criminal the pad removed left proof")
+	TEST_ASSERT_NULL(proof_for(pad_posting), "A criminal the pad removed left a tag")
 	var/mob/living/basic/bounty_criminal/normal/unloaded = allocate(__IMPLIED_TYPE__)
-	unloaded.posting_ref = WEAKREF(posting)
+	unloaded.posting_ref = WEAKREF(pad_posting)
+	unloaded.death()
 	unloaded.body_mark_removed()
 	qdel(unloaded)
-	TEST_ASSERT(!unloaded.body_proof_dropped, "A criminal removed on purpose left proof")
+	TEST_ASSERT(!unloaded.body_proof_dropped, "A criminal removed on purpose asked for proof")
 
 	// A closed posting takes no proof.
-	posting.status = "closed" // BOUNTY_POSTING_CLOSED
+	var/datum/criminal_bounty/closed_posting = new
+	postings += closed_posting
+	closed_posting.status = "closed" // BOUNTY_POSTING_CLOSED
 	var/mob/living/basic/bounty_criminal/normal/late = allocate(__IMPLIED_TYPE__)
-	late.posting_ref = WEAKREF(posting)
+	late.posting_ref = WEAKREF(closed_posting)
 	late.gib()
-	TEST_ASSERT(!late.body_proof_dropped, "A criminal gibbed after its posting closed left proof")
-	qdel(posting)
+	TEST_ASSERT(!late.body_proof_dropped, "A criminal gibbed after its posting closed asked for proof")
+	TEST_ASSERT_NULL(proof_for(closed_posting), "A criminal gibbed after its posting closed left a tag")
+
+	// Marked closed first: deleting an open posting runs close(), which deletes it again (P5), and the
+	// tags going with the test room must not send a posting off to relist.
+	for(var/datum/criminal_bounty/posting as anything in postings)
+		posting.status = "closed" // BOUNTY_POSTING_CLOSED
+	QDEL_LIST(postings)
 
 // ===== THE AUTOMATED DAMAGE FLOOR =====
 
@@ -426,13 +536,22 @@
 	parent_type = /datum/unit_test/voidcrew_bounty_criminal
 
 /datum/unit_test/voidcrew_bounty_criminal_automated/Run()
+	var/turf/here = run_loc_floor_bottom_left
+	var/list/site = list(here.x - 2, here.y - 2, here.x + 4, here.y + 4, here.z)
+
+	// An explosion with nobody near is automated too: it stops at the floor (BOUNTY_AUTOMATED_FLOOR 40: 48 of 120).
+	var/mob/living/basic/bounty_criminal/normal/unwatched = allocate(__IMPLIED_TYPE__)
+	unwatched.site_bounds = site
+	unwatched.ex_act(EXPLODE_HEAVY)
+	unwatched.ex_act(EXPLODE_HEAVY)
+	TEST_ASSERT_EQUAL(unwatched.health, 48, "An explosion nobody set took a criminal on its site past the floor")
+
 	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(__IMPLIED_TYPE__)
-	var/turf/here = get_turf(criminal)
-	criminal.site_bounds = list(here.x - 2, here.y - 2, here.x + 2, here.y + 2, here.z)
+	criminal.site_bounds = site
 	var/datum/component/bounty_body/ledger = criminal.GetComponent(/datum/component/bounty_body)
 	TEST_ASSERT_NOTNULL(ledger, "A criminal has no damage ledger")
 
-	// Nobody's mind behind it: it stops at the floor, on its feet (BOUNTY_AUTOMATED_FLOOR 40: 48 of 120).
+	// Nobody's mind behind it: it stops at the floor, on its feet.
 	criminal.adjustBruteLoss(500)
 	TEST_ASSERT_EQUAL(criminal.health, 48, "Automated damage took a criminal on its site past the floor")
 	TEST_ASSERT(!criminal.is_downed(), "Automated damage downed a criminal on its site")
@@ -452,6 +571,32 @@
 	criminal.adjustBruteLoss(500)
 	TEST_ASSERT_EQUAL(criminal.stat, CONSCIOUS, "Automated damage killed a downed criminal on its site")
 
+	// A shot is its firer's, and a mech's shot its pilot's, though relay_attackers only reports mobs (M1).
+	var/mob/living/basic/bounty_criminal/normal/target = allocate(__IMPLIED_TYPE__)
+	target.site_bounds = site
+	var/datum/component/bounty_body/target_ledger = target.GetComponent(/datum/component/bounty_body)
+	var/obj/projectile/bullet/shot = allocate(__IMPLIED_TYPE__)
+	shot.firer = hunter
+	SEND_SIGNAL(target, COMSIG_PROJECTILE_PREHIT, shot)
+	TEST_ASSERT(target_ledger.player_hit_now(), "A hunter's shot did not count as a player's")
+	target_ledger.player_hit_at = -1
+	var/mob/living/carbon/human/consistent/pilot = allocate(__IMPLIED_TYPE__, get_step(get_step(here, EAST), EAST))
+	pilot.mind_initialize()
+	var/obj/vehicle/sealed/mecha/ripley/mech = allocate(__IMPLIED_TYPE__, get_step(get_step(here, NORTH), NORTH))
+	mech.add_occupant(pilot, VEHICLE_CONTROL_DRIVE)
+	shot.firer = mech
+	SEND_SIGNAL(target, COMSIG_PROJECTILE_PREHIT, shot)
+	TEST_ASSERT(target_ledger.player_hit_now(), "A mech's shot did not count as its pilot's")
+	TEST_ASSERT(target.body_has_grudge(pilot), "A mech's pilot did not go on the grudge list")
+	mech.remove_occupant(pilot)
+	target_ledger.player_hit_at = -1
+
+	// An explosion with someone near counts as theirs: only the mercy rule.
+	target.ex_act(EXPLODE_HEAVY)
+	target.ex_act(EXPLODE_HEAVY)
+	TEST_ASSERT_EQUAL(target.health, 29, "An explosion beside a hunter was held at the automated floor")
+	TEST_ASSERT(target.is_downed(), "An explosion beside a hunter did not down the criminal")
+
 	// Its own side's blows miss it while it is down.
 	var/mob/living/basic/bounty_criminal/normal/downed_off_site = allocate(__IMPLIED_TYPE__)
 	downed_off_site.adjustBruteLoss(500)
@@ -462,7 +607,7 @@
 
 	// Off its site, automated damage gets the mercy rule only.
 	var/mob/living/basic/bounty_criminal/normal/stray = allocate(__IMPLIED_TYPE__)
-	stray.site_bounds = list(here.x + 3, here.y + 3, here.x + 4, here.y + 4, here.z)
+	stray.site_bounds = list(here.x + 5, here.y + 5, here.x + 6, here.y + 6, here.z)
 	stray.adjustBruteLoss(500)
 	TEST_ASSERT_EQUAL(stray.health, 29, "Automated damage off its site did not stop at the downed line")
 
@@ -546,19 +691,114 @@
 	ADD_TRAIT(friend, "bounty_sprinting", "bounty")
 	TEST_ASSERT_EQUAL(friend.body_dodge_chance(), 0, "A normal criminal ducks shots")
 
+// ===== SHIPS, OUTPOSTS AND DOCK STRIPS INSIDE ITS SITE =====
+
+/datum/unit_test/voidcrew_bounty_criminal_ground
+	parent_type = /datum/unit_test/voidcrew_bounty_criminal
+
+/datum/unit_test/voidcrew_bounty_criminal_ground/Run()
+	var/turf/here = run_loc_floor_bottom_left
+	var/turf/east = get_step(here, EAST)
+	var/turf/far_east = get_step(east, EAST)
+	var/turf/north = get_step(here, NORTH)
+	var/turf/north_east = get_step(east, NORTH)
+	var/turf/two_north = get_step(north, NORTH)
+	// Ship A lands over two tiles, ship B beside it, a player outpost to the north; all inside the site's rectangle.
+	swap_area(list(east, north_east), /area/shuttle)
+	swap_area(list(far_east), /area/shuttle)
+	swap_area(list(north), /area/voidcrew/player_outpost)
+	var/list/site = list(here.x, here.y, here.x + 4, here.y + 4, here.z)
+
+	// A ship or outpost inside the site's rectangle is not its site, and it doesn't walk onto one (H1).
+	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(__IMPLIED_TYPE__)
+	criminal.site_bounds = site
+	TEST_ASSERT(criminal.body_on_site(here), "Plain ground inside its site is not its site")
+	TEST_ASSERT(!criminal.body_on_site(east), "A landed ship inside its site's rectangle counts as its site")
+	TEST_ASSERT(!criminal.leash_ok(east), "A landed ship inside its site is on its leash")
+	TEST_ASSERT(!criminal.leash_ok(north), "A player outpost inside its site is on its leash")
+	criminal.Move(east, EAST)
+	TEST_ASSERT_EQUAL(criminal.loc, here, "A criminal walked onto a ship inside its site")
+
+	// Aboard that ship it fights only its grudge list, and the automated floor doesn't hold it there.
+	var/mob/living/basic/bounty_criminal/normal/stowaway = allocate(__IMPLIED_TYPE__, north_east)
+	stowaway.site_bounds = site
+	var/mob/living/carbon/human/consistent/crew = allocate(__IMPLIED_TYPE__, two_north)
+	TEST_ASSERT(!stowaway.may_attack(crew), "A criminal aboard a ship inside its site may fight anyone")
+	stowaway.body_add_grudge(crew)
+	TEST_ASSERT(stowaway.may_attack(crew), "A criminal aboard a ship may not fight someone it holds a grudge against")
+	stowaway.adjustBruteLoss(500)
+	TEST_ASSERT_EQUAL(stowaway.health, 29, "The automated floor held a criminal aboard a ship")
+	qdel(stowaway)
+
+	// Off its leash aboard ship A, it walks about that ship and back to its site, never on into
+	// ship B or the player outpost (M3).
+	criminal.forceMove(east)
+	criminal.Move(north_east, NORTH)
+	TEST_ASSERT_EQUAL(criminal.loc, north_east, "A criminal aboard a ship could not walk about it")
+	criminal.Move(north, WEST)
+	TEST_ASSERT_EQUAL(criminal.loc, north_east, "A criminal walked from a ship into a player outpost")
+	criminal.forceMove(east)
+	criminal.Move(far_east, EAST)
+	TEST_ASSERT_EQUAL(criminal.loc, east, "A criminal walked from one ship on into another")
+	criminal.Move(here, WEST)
+	TEST_ASSERT_EQUAL(criminal.loc, here, "A criminal aboard a ship could not walk back onto its site")
+	// A scripted walk goes where it is sent.
+	ADD_TRAIT(criminal, "bounty_scripted_move", "test") // TRAIT_BOUNTY_SCRIPTED_MOVE
+	criminal.Move(east, EAST)
+	TEST_ASSERT_EQUAL(criminal.loc, east, "A scripted walk was held to the leash")
+	REMOVE_TRAIT(criminal, "bounty_scripted_move", "test")
+	criminal.forceMove(here)
+
+	// Its planet's dock strip, where ships land, is not its ground either (L1).
+	criminal.body_dock_top_y = here.y
+	TEST_ASSERT(!criminal.body_on_site(here), "The dock strip counts as its site")
+	TEST_ASSERT(!criminal.leash_ok(here), "The dock strip is on its leash")
+	TEST_ASSERT(criminal.leash_ok(two_north), "Ground above the dock strip is off its leash")
+	criminal.body_dock_top_y = null
+
+	// Whatever holds it can't be teleported, and lets go when it gets out (M2).
+	var/obj/structure/closet/locker = allocate(__IMPLIED_TYPE__, two_north)
+	criminal.forceMove(locker)
+	TEST_ASSERT(HAS_TRAIT(locker, TRAIT_NO_TELEPORT), "A locker holding a criminal can be teleported")
+	TEST_ASSERT(!do_teleport(locker, here, no_effects = TRUE), "A locker holding a criminal was teleported")
+	TEST_ASSERT_EQUAL(locker.loc, two_north, "A locker holding a criminal moved when teleported")
+	criminal.forceMove(here)
+	TEST_ASSERT(!HAS_TRAIT(locker, TRAIT_NO_TELEPORT), "An empty locker still can't be teleported")
+
 // ===== TURRETS =====
 
 /datum/unit_test/voidcrew_bounty_criminal_turrets
 	parent_type = /datum/unit_test/voidcrew_bounty_criminal
 
 /datum/unit_test/voidcrew_bounty_criminal_turrets/Run()
-	// Even with an AI that hunts people, turrets leave criminals, decoys and companions to the hunters.
+	var/turf/here = run_loc_floor_bottom_left
+	// Away from a trader outpost, a free criminal with an AI that hunts people is judged like any creature...
 	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(__IMPLIED_TYPE__)
 	new /datum/ai_controller/basic_controller/simple/simple_hostile(criminal)
 	TEST_ASSERT(istype(criminal.ai_controller, /datum/ai_controller/basic_controller/simple/simple_hostile), "The criminal did not take the hostile AI")
-	TEST_ASSERT(!is_hostile_creature(criminal), "Turrets would shoot a bounty criminal")
-	TEST_ASSERT(!is_hostile_creature(allocate(/mob/living/basic/bounty_criminal/decoy)), "Turrets would shoot a decoy")
-	TEST_ASSERT(!is_hostile_creature(allocate(/mob/living/basic/bounty_companion)), "Turrets would shoot a companion")
+	TEST_ASSERT(is_hostile_creature(criminal), "A free, hunting criminal away from a trader outpost is never a turret's")
+	// ...but no turret shoots one that is down, stunned or cuffed: a crew's turrets don't finish off its catch.
+	criminal.Knockdown(5 SECONDS)
+	TEST_ASSERT(!is_hostile_creature(criminal), "A turret would shoot a stunned criminal")
+	criminal.SetKnockdown(0)
+	TEST_ASSERT(criminal.body_apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The criminal could not be cuffed")
+	TEST_ASSERT(!is_hostile_creature(criminal), "A turret would shoot a cuffed criminal")
+	criminal.body_remove_cuffs()
+
+	// At a trader outpost, criminals, decoys and companions are all left to the hunters.
+	var/mob/living/basic/bounty_criminal/decoy/decoy = allocate(__IMPLIED_TYPE__)
+	new /datum/ai_controller/basic_controller/simple/simple_hostile(decoy)
+	var/mob/living/basic/bounty_companion/companion = allocate(__IMPLIED_TYPE__)
+	new /datum/ai_controller/basic_controller/simple/simple_hostile(companion)
+	TEST_ASSERT(bounty_turret_ignores(criminal, TRUE), "Trader-outpost turrets would shoot a criminal")
+	TEST_ASSERT(bounty_turret_ignores(decoy, TRUE), "Trader-outpost turrets would shoot a decoy")
+	TEST_ASSERT(bounty_turret_ignores(companion, TRUE), "Trader-outpost turrets would shoot a companion")
+	TEST_ASSERT(!bounty_turret_ignores(decoy, FALSE), "Turrets anywhere leave a free decoy alone")
+	TEST_ASSERT(!bounty_turret_ignores(companion, FALSE), "Turrets anywhere leave a companion alone")
+	var/turf/concourse = get_step(get_step(here, NORTH), NORTH)
+	swap_area(list(concourse), /area/voidcrew/trader_outpost)
+	criminal.forceMove(concourse)
+	TEST_ASSERT(!is_hostile_creature(criminal), "A turret in a trader outpost's concourse would shoot a free criminal")
 
 // ===== SPAWNING, EXAMINE AND MAKING THEM WITH NO ARGUMENTS =====
 
@@ -648,5 +888,8 @@
 
 	for(var/mob/living/basic/bounty_criminal/criminal as anything in spawned)
 		qdel(criminal)
+	// Marked closed first: deleting an open posting runs close(), which deletes it again (P5)
+	posting.status = "closed" // BOUNTY_POSTING_CLOSED
+	outpost_posting.status = "closed"
 	qdel(posting)
 	qdel(outpost_posting)

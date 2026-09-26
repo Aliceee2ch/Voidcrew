@@ -180,27 +180,10 @@
 		// An offer's mugshot is only built once it is taken (AR-G1): the board resends its static data
 		static_data_serial++
 	board_push_waypoint(ship)
-	ship.ship_notify("WANTED: now hunting [record?.name]. [board_place_text()]. [board_hunt_tip()]", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+	ship.ship_notify("WANTED: now hunting [record?.name]. [board_place_text()].", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 	log_game("BOUNTY: [ship.name] is hunting the [board_log_name()]")
 	board_arm()
 	return TRUE
-
-/**
- * What the hunt notice tells a crew to do next, by where the criminal is: the GPS on a planet or in
- * a ruin, boarding a pirate ship, the warrant and the traders at a trader outpost. A bounty that
- * pays nothing alive (kill-only) asks for the trophy instead.
- */
-/datum/criminal_bounty/proc/board_hunt_tip()
-	if(!board_share_for(BOUNTY_STATE_RESTRAINED, BOUNTY_STATE_FREE))
-		return "Bring the trophy from the body to your mission pad."
-	switch(placement_kind)
-		if(BOUNTY_PLACEMENT_PLANET, BOUNTY_PLACEMENT_RUIN)
-			return "Tap a GPS on your mission board for their last sighting."
-		if(BOUNTY_PLACEMENT_NPC_SHIP)
-			return "They're aboard a pirate ship: you'll have to board it."
-		if(BOUNTY_PLACEMENT_TRADER_OUTPOST)
-			return "No tracker there. Print a warrant, check faces and features, and ask the traders."
-	return "Bring them to your mission pad."
 
 /**
  * `ship` stops hunting it and may not hunt it again. A private offer dropped this way closes, and
@@ -374,7 +357,7 @@
 		var/obj/structure/overmap/ship/holder = get_ship_from_atom(criminal)
 		if(holder && !istype(holder, /obj/structure/overmap/ship/npc) && reason != BOUNTY_CLOSE_CLAIMED)
 			if(relisting)
-				holder.ship_notify("WANTED: the corrections service took [record?.name || "your prisoner"] off your ship. The bounty stays open and they will turn up somewhere else.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
+				holder.ship_notify("WANTED: the corrections service took [record?.name || "your prisoner"] off your ship.","MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
 			else
 				holder.ship_notify("WANTED: the corrections service collected [record?.name || "your prisoner"]. The bounty on them is closed.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
 		board_dispose_mob(criminal)
@@ -399,8 +382,8 @@
 
 /**
  * Takes the bounty off its site and lists it again somewhere else after BOUNTY_RELIST_DELAY, for
- * `reason` (a short phrase hunters are told after the name: "slipped away", "lost, with nothing
- * left to bring in"). The criminal, companions, decoys and marker go now; hunters keep hunting it
+ * `reason` (the end of the sentence hunters are told after the name: "slipped away from ...", "has
+ * vanished"). The criminal, companions, decoys and marker go now; hunters keep hunting it
  * and get the new waypoint when it lists. The clock is held for the delay. Returns TRUE if it
  * started relisting.
  */
@@ -427,7 +410,7 @@
 	board_worst_state = BOUNTY_STATE_FREE
 	for(var/obj/structure/overmap/ship/hunter as anything in hunter_ships())
 		hunter.remove_waypoint(board_waypoint_key())
-		hunter.ship_notify("WANTED: [record?.name]: [reason || "slipped away"]. A new last-known location should come in within [DisplayTimeText(BOUNTY_RELIST_DELAY)].", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
+		hunter.ship_notify("WANTED: [record?.name] [reason || "slipped away"].","MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
 	log_game("BOUNTY: the [board_log_name()] is relisting: [reason]")
 	return TRUE
 
@@ -516,13 +499,6 @@
 	var/whole = value + board_vouchers * VOUCHER_CREDIT_VALUE
 	return list(round(whole * share / 100), 0)
 
-/// The card's reward table: credits restrained or stunned, downed, and dead
-/datum/criminal_bounty/proc/board_share_amounts()
-	var/list/full = board_payout(BOUNTY_SHARE_RESTRAINED)
-	var/list/downed = board_payout(BOUNTY_SHARE_DOWNED)
-	var/list/dead = board_payout(BOUNTY_SHARE_DEAD)
-	return list(full[1], downed[1], dead[1])
-
 // ===== THE CARD =====
 
 /// Its zone band's name ("Neutral Zone" ...)
@@ -606,7 +582,6 @@
 		"species" = board_species_name(),
 		"sex" = board_sex_name(),
 		"tier" = record?.tier || BOUNTY_TIER_PETTY,
-		"tier_name" = bounty_tier_name(record?.tier),
 		"terms" = board_terms(),
 		"crime" = record?.crime,
 		"place" = board_place_text(),

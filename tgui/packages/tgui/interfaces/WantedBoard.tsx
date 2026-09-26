@@ -1,9 +1,10 @@
 /**
  * The wanted board on a trader outpost's concourse (bounty_outpost.dm, P6).
- * Read-only: the public bounties with their mugshots, tier, reward and
- * where they were last seen. Mugshots come in the static data.
+ * Read-only wanted posters: the mugshot, name, what they're wanted for,
+ * where they were seen and the reward. Mugshots come in the static data.
  */
-import { Box, NoticeBox, Section, Stack } from 'tgui-core/components';
+import { Box, Section, Stack } from 'tgui-core/components';
+import { formatMoney } from 'tgui-core/format';
 
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
@@ -12,18 +13,13 @@ type Entry = {
   id: string;
   name: string;
   alias: string | null;
-  tier: string;
   tier_level: number;
+  // "Wanted alive", "Wanted dead or alive" or "Wanted dead"
+  terms: string;
   crime: string | null;
   reward: number;
-  // Trade vouchers on top of the reward, on a full-share turn-in
   vouchers?: number;
-  // WANTED: DEAD, paid only on the kill
-  kill_only?: boolean;
   place: string;
-  // The fugitive is somewhere on this concourse
-  here?: boolean;
-  time_left: number | null;
 };
 
 type Data = {
@@ -34,24 +30,30 @@ type Data = {
 const tierColor = (level: number) =>
   level >= 3 ? 'bad' : level === 2 ? 'average' : 'label';
 
-const timeText = (seconds: number | null) => {
-  if (seconds === null || seconds === undefined) {
-    return null;
-  }
-  const minutes = Math.ceil(seconds / 60);
-  return minutes <= 1 ? 'Under a minute left' : `${minutes} minutes left`;
-};
+/** The poster's heading: MOST WANTED for tier 3, WANTED for the rest */
+const heading = (level: number) => (level >= 3 ? 'MOST WANTED' : 'WANTED');
 
 const WantedCard = (props: { entry: Entry; mugshot?: string }) => {
   const { entry, mugshot } = props;
-  const time = timeText(entry.time_left);
   const vouchers = entry.vouchers ?? 0;
-  const voucherText =
-    vouchers > 0
-      ? ` + ${vouchers} trade voucher${vouchers > 1 ? 's' : ''}`
-      : '';
+  const color = tierColor(entry.tier_level);
   return (
-    <Section>
+    <Section
+      title={
+        <Box inline color={color}>
+          {entry.name}
+          {entry.alias ? ` "${entry.alias}"` : ''}
+        </Box>
+      }
+      buttons={
+        <Box inline bold color="gold">
+          {formatMoney(entry.reward)} cr
+          {vouchers > 0
+            ? ` + ${vouchers} voucher${vouchers > 1 ? 's' : ''}`
+            : ''}
+        </Box>
+      }
+    >
       <Stack>
         <Stack.Item>
           {mugshot ? (
@@ -70,35 +72,19 @@ const WantedCard = (props: { entry: Entry; mugshot?: string }) => {
               lineHeight="64px"
               color="label"
             >
-              No photo
+              ?
             </Box>
           )}
         </Stack.Item>
         <Stack.Item grow>
-          <Box bold>
-            {entry.name}
-            {entry.alias ? (
-              <Box as="span" color="label" bold={false}>
-                {` "${entry.alias}"`}
-              </Box>
-            ) : null}
+          <Box bold color={color}>
+            {heading(entry.tier_level)}
           </Box>
-          <Box color={tierColor(entry.tier_level)} bold>
-            {entry.kill_only ? 'WANTED: DEAD' : entry.tier}
+          <Box>
+            {entry.terms}
+            {entry.crime ? ` for ${entry.crime}` : ''}.
           </Box>
-          {entry.crime ? <Box>Wanted for {entry.crime}.</Box> : null}
-          <Box>{entry.place}.</Box>
-          {entry.here ? (
-            <Box bold color="bad">
-              Seen on this concourse.
-            </Box>
-          ) : null}
-          <Box color="good">
-            {entry.kill_only
-              ? `Reward: ${entry.reward} cr${voucherText}, dead only`
-              : `Reward: up to ${entry.reward} cr${voucherText}`}
-          </Box>
-          {time ? <Box color="label">{time}</Box> : null}
+          <Box color="label">{entry.place}.</Box>
         </Stack.Item>
       </Stack>
     </Section>
@@ -113,7 +99,7 @@ export const WantedBoard = (props) => {
     <Window width={420} height={520}>
       <Window.Content scrollable>
         {entries.length === 0 ? (
-          <NoticeBox>Nobody is wanted right now.</NoticeBox>
+          <Box color="label">No one is wanted right now.</Box>
         ) : (
           entries.map((entry) => (
             <WantedCard
@@ -123,9 +109,6 @@ export const WantedBoard = (props) => {
             />
           ))
         )}
-        <Box color="label" mt={1}>
-          Hunts are taken on at your ship's mission console.
-        </Box>
       </Window.Content>
     </Window>
   );

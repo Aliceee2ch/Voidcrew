@@ -84,7 +84,7 @@
 	if(!target)
 		var/mob/living/basic/bounty_criminal/criminal = criminal()
 		if(criminal && get_turf(criminal) == get_turf(pad))
-			return "get them out of [criminal.loc] first"
+			return "they're inside [criminal.loc]"
 		return "nothing on the pad for this bounty"
 	var/state = BOUNTY_STATE_DEAD
 	if(istype(target, /mob/living/basic/bounty_criminal))
@@ -93,7 +93,7 @@
 			return "the pad won't take them"
 		state = criminal.capture_state()
 		if(!bounty_state_share(state))
-			return "they're standing free, subdue them first"
+			return "they're standing free"
 	found["target"] = target
 	found["state"] = state
 	return null
@@ -118,7 +118,7 @@
 		state = BOUNTY_STATE_DEAD
 	var/share = board_share_for(state, criminal ? criminal.worst_state : BOUNTY_STATE_DEAD)
 	if(!share)
-		return "they're standing free, subdue them first"
+		return "they're standing free"
 	var/list/pay = board_payout(share)
 	var/datum/bounty_record/claimed = record
 	var/wanted_name = claimed?.name || "the fugitive"
@@ -143,7 +143,6 @@
 	// The record: a live catch goes on to the prisons, a dead one ends here. The crew's own prison
 	// (P7's lookup) is named only if it would take them now (BUG-3).
 	var/datum/outpost_prison/prison
-	var/datum/outpost_prison/refusing_prison
 	if(claimed)
 		claimed.captor_name = ship.name
 		claimed.captor_ship = WEAKREF(ship)
@@ -153,8 +152,6 @@
 			claimed.preferred_prison = own ? WEAKREF(own) : null
 			if(own?.bounty_accepts(claimed))
 				prison = own
-			else
-				refusing_prison = own
 		else
 			claimed.status = BOUNTY_RECORD_DEAD
 
@@ -171,16 +168,8 @@
 	if(pay[2] > 0)
 		paid += "[pay[2]] trade voucher[pay[2] > 1 ? "s" : ""]"
 	var/how = proof ? "confirmed dead" : bounty_state_words(state)
-	if(share < 100 && !proof && state != BOUNTY_STATE_DEAD && share < bounty_state_share(state))
-		how += " (they were downed earlier, so it pays the downed share)"
-	var/after = ""
-	if(live)
-		if(prison)
-			after = " They go to your prison at [prison.outpost?.name || "your outpost"] first."
-		else if(refusing_prison)
-			after = " Your prison isn't taking bounty transfers, so they go into the transfer pool."
-		else
-			after = " They go into the prisoner transfer pool."
+	// Only the crew's own prison is named: the transfer pool is the corrections service's business
+	var/after = (live && prison) ? " They're headed for your prison at [prison.outpost?.name || "your outpost"]." : ""
 	ship.ship_notify("BOUNTY: [wanted_name] turned in, [how]. Paid [english_list(paid)].[after]", "BOUNTY COMPLETE", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 	// A Most Wanted catch is news for every other crew (the hunters already heard from close())
 	if(most_wanted)
@@ -213,18 +202,17 @@
 		pad.do_teleport_effect()
 
 /**
- * What the board's card shows about the pad for `ship` (BUG-4, P10): list(can_turn_in,
- * turn_in_state, refusal, pay). The state is the capture state of this bounty's criminal on the
- * pad's tile ("proof" for its proof of death), or null with nothing there. The refusal is why Turn In
- * won't work now, in the same words the press would answer with, or null. The pay is what a press
- * would pay now, as text ("720 cr (downed earlier)"), or null with nothing there. The press itself
- * still checks everything.
+ * What the board's card and the pad know about the pad for `ship` (BUG-4, P10): list(can_turn_in,
+ * turn_in_state, refusal). The state is the capture state of this bounty's criminal on the pad's tile
+ * ("proof" for its proof of death), or null with nothing there. The refusal is why Turn In won't work
+ * now, in the same words the press would answer with, or null. Nothing says what a press would pay:
+ * the receipt does, after. The press itself still checks everything.
  */
 /datum/criminal_bounty/proc/board_pad_preview(obj/structure/overmap/ship/ship, obj/machinery/mission_pad/pad)
 	if(!is_open())
-		return list(FALSE, null, "that bounty is closed", null)
+		return list(FALSE, null, "that bounty is closed")
 	if(!pad || QDELETED(pad))
-		return list(FALSE, null, "no mission pad linked", null)
+		return list(FALSE, null, "no mission pad linked")
 	var/atom/movable/target = board_target_on_pad(pad)
 	var/state = null
 	if(target)
@@ -237,7 +225,7 @@
 		refusal = "that offer is for another crew"
 	else
 		refusal = board_target_refusal(pad, list()) || pad.bounty_turn_in_refusal(ship)
-	return list(!refusal, state, refusal, target ? board_pay_text(target) : null)
+	return list(!refusal, state, refusal)
 
 /**
  * Why Turn In is off for `ship`, from its `preview` (board_pad_preview()), or null when it is on. A
@@ -252,29 +240,6 @@
 		refusal = hunt_refusal(ship) || "you can't turn this one in"
 	return refusal
 
-/**
- * What turning in `target` (this bounty's criminal or its proof) would pay now, as the card says it:
- * "1000 cr + 1 voucher", or "720 cr (downed earlier)" when an earlier downing cut the share. Null
- * when it would pay nothing (standing free).
- */
-/datum/criminal_bounty/proc/board_pay_text(atom/movable/target)
-	var/state = BOUNTY_STATE_DEAD
-	var/worst = BOUNTY_STATE_DEAD
-	if(istype(target, /mob/living/basic/bounty_criminal))
-		var/mob/living/basic/bounty_criminal/criminal = target
-		state = criminal.capture_state()
-		worst = criminal.worst_state
-	var/share = board_share_for(state, worst)
-	if(!share)
-		return null
-	var/list/pay = board_payout(share)
-	var/text = "[pay[1]] cr"
-	if(pay[2] > 0)
-		text += " + [pay[2]] voucher[pay[2] > 1 ? "s" : ""]"
-	if(state != BOUNTY_STATE_DEAD && share < board_share_for(state, BOUNTY_STATE_FREE))
-		text += " (downed earlier)"
-	return text
-
 // ===== THE PAD SPEAKS UP (P2) =====
 
 /obj/machinery/mission_pad
@@ -282,8 +247,8 @@
 	COOLDOWN_DECLARE(bounty_announce_cooldown)
 
 /**
- * `arrived` (a bounty criminal or proof of death) landed on the pad: the pad says what it is and what
- * Turn In would pay, and the linked console chimes. Nothing for a decoy, a companion, another crew's
+ * `arrived` (a bounty criminal or proof of death) landed on the pad: the pad says who or what it is,
+ * and why Turn In won't take it if it won't, and the linked console chimes. Nothing for a decoy, a companion, another crew's
  * offer or a closed bounty. Once every BOUNTY_PAD_ANNOUNCE_COOLDOWN at most. Returns what it said.
  */
 /obj/machinery/mission_pad/proc/bounty_pad_announce(atom/movable/arrived)
@@ -315,19 +280,16 @@
 		return null
 	var/list/preview = posting.board_pad_preview(ship, src)
 	var/wanted_name = posting.record?.name || "the fugitive"
-	var/pay = preview[4]
 	var/refusal = posting.board_preview_refusal(preview, ship)
 	var/line
 	if(istype(arrived, /obj/item/bounty_proof))
 		line = "[istype(arrived, /obj/item/bounty_proof/trophy) ? "Trophy" : "Evidence tag"] for [wanted_name] on the pad."
 	else
 		var/state = preview[2]
-		line = "Bounty target on the pad: [wanted_name], [state == BOUNTY_STATE_FREE ? "standing free" : bounty_state_words(state)]."
+		line = "On the pad: [wanted_name], [state == BOUNTY_STATE_FREE ? "standing free" : bounty_state_words(state)]."
 		if(state == BOUNTY_STATE_FREE)
-			return "[line] Subdue them first."
-	if(refusal)
-		return "[line] [capitalize(refusal)]."
-	return pay ? "[line] Turn In pays [pay]." : line
+			return line
+	return refusal ? "[line] [capitalize(refusal)]." : line
 
 // ===== THE BEAM =====
 
@@ -400,7 +362,7 @@
 
 /obj/item/bounty_proof
 	name = "evidence tag"
-	desc = "A sealed evidence tag with what was left of a wanted criminal. A ship's mission pad takes it for the dead share of their bounty."
+	desc = "A sealed evidence tag with what was left of a wanted criminal."
 	icon = 'voidcrew/modules/missions/icons/recovery.dmi'
 	icon_state = "recovery_proof"
 	inhand_icon_state = null
@@ -419,8 +381,6 @@
 		. += span_notice("It's marked for [record.name].")
 	if(!posting || !posting.is_open())
 		. += span_warning("Their bounty is closed. It's worth nothing now.")
-	else
-		. += span_notice("Put it on your ship's mission pad and press Turn In on the mission board.")
 
 /obj/item/bounty_proof/Destroy()
 	posting_ref = null

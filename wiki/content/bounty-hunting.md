@@ -17,16 +17,18 @@ The **Wanted** section is at the top of the **Bounties** tab on your ship's miss
 
 ### Reading a card
 
-Each card shows:
+Each card is a wanted poster:
 
-- the mugshot, name, alias, species, sex, and what they're wanted for;
-- a warning that tells you what kind of criminal it is: **Known to run** (meek), **Armed, fights back** (normal) or **Extremely dangerous** (a mini-boss; "heavy armour" means the Heavy kit);
-- a recommended crew size on Most Wanted cards: 2+, or 3+ in the Lawless Zone;
+- **WANTED** or **MOST WANTED**, and **Private contract** on an offer made to your ship alone;
+- the mugshot, name, species, sex and alias. "Old photo" under the mugshot means it shows how they used to look (a trader-outpost fugitive);
+- how they're wanted and what for: **Wanted alive**, **Wanted dead or alive** (the kingpin) or **Wanted dead** (lairs and the lich);
 - where they were last seen, and the zone;
-- the reward for each outcome: **Never downed**, **Downed** and **Dead**;
-- the time left, and how many crews are hunting.
+- the reward: the full pay, in credits and vouchers. The card doesn't show what a downed or dead catch pays; see [the pad and turning in](#the-pad-and-turning-in);
+- the time left.
 
-A private offer shows no mugshot until you accept it.
+The card doesn't say what kind of criminal it is, or how they fight. [The three kinds of criminal](#the-three-kinds-of-criminal) below does. A private offer shows no mugshot until you accept it.
+
+The wanted board on a trader outpost's concourse shows the same posters without the buttons or the clock, and says "Seen on this concourse" for a fugitive hiding among the patrons there.
 
 ### Rewards
 
@@ -47,10 +49,10 @@ The reward is fixed when the bounty is posted. It depends on the tier and the zo
 
 ## Taking a bounty
 
-Press **Hunt** on a public bounty, or **Accept Offer** on a private one. This puts a waypoint on your helm chart (for a pirate ship, the waypoint follows the ship), lets you link GPS units to the criminal's last sighting, and sends your ship notices when anything changes. It doesn't use a mission slot.
+Press **Hunt** on a public bounty, or **Accept Contract** on a private offer. This puts a waypoint on your helm chart (for a pirate ship, the waypoint follows the ship), lets you link GPS units to the criminal's last sighting, and sends your ship notices when anything changes. It doesn't use a mission slot.
 
 - Your ship can hunt **one** public bounty at a time. The kingpin and kill-only bounties count as that one. Private offers don't.
-- **Abandon** frees your hunt, but your ship can never hunt that bounty again. **Drop Offer** closes a private offer.
+- **Abandon** frees your hunt, but your ship can never hunt that bounty again. **Drop Contract** closes a private offer.
 - Any crew that gets a public bounty's criminal onto its own pad gets paid, whether it was hunting or not. A private offer only pays the ship it was offered to.
 - **Warrant** prints a warrant on your mission pad: the mugshot, the listing, the reward, and all but one of their distinguishing features. The printer needs 30 seconds between warrants, and each ship gets three per bounty.
 
@@ -73,7 +75,7 @@ Meek and normal criminals notice anyone within 6 tiles holding a weapon, cuffs o
 
 ## The three kinds of criminal
 
-### Meek: "Known to run"
+### Meek
 
 About 70% of Petty criminals and 30% of Wanted ones are meek. They never start a fight.
 
@@ -88,7 +90,7 @@ About 70% of Petty criminals and 30% of Wanted ones are meek. They never start a
 !!! tip "Bring a light for runners"
     A meek criminal hiding in the dark gives up as soon as the tile is lit. A flashlight finds them faster than walking into every corner.
 
-### Normal: "Armed, fights back"
+### Normal
 
 About 70% of Wanted criminals and 30% of Petty ones are normal. A Wanted criminal on a pirate ship is always normal.
 
@@ -100,7 +102,7 @@ About 70% of Wanted criminals and 30% of Petty ones are normal. A Wanted crimina
 
 **Bring:** a partner, stun weapons, armour and cuffs.
 
-### Mini-bosses: "Extremely dangerous"
+### Mini-bosses
 
 Every Most Wanted criminal is a mini-boss with one of five kits.
 
@@ -140,8 +142,9 @@ Every Most Wanted criminal is a mini-boss with one of five kits.
 
 - Put the criminal, or their evidence tag or trophy, on the mission pad's own tile. Not in a locker or a bag, and not next to the pad.
 - The pad must be bolted down and aboard your ship.
-- Press **Turn In** on their card. The card shows what is on the pad and whether it can be turned in.
-- The pad beams them away over 3 seconds. Credits go to the ship account. Vouchers appear on the pad.
+- The pad says who is on it and what state they're in ("On the pad: Tess Harlow, restrained."), and why it won't take them if it won't. It never says what they'll pay.
+- Press **Turn In** on their card. If it's greyed out, its tooltip says why.
+- The pad beams them away over 3 seconds. Credits go to the ship account. Vouchers appear on the pad. Your ship's notice says what state they were in and what was paid.
 
 Pay follows the **worst** state the criminal ever reached:
 

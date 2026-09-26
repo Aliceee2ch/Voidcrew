@@ -21,17 +21,26 @@
  *   stand it up; a stamina hit starts the clock again (C1). A mini-boss that gets up rallies for
  *   BOUNTY_BODY_RALLY_TIME: stamina does nothing to it.
  * - On its site, damage with nobody's mind behind it (turrets, traps, fire, fauna) stops at
- *   BOUNTY_AUTOMATED_FLOOR percent. /datum/component/bounty_body keeps the ledger (AR-D3).
- * - worst_state only ever gets worse (spec 12.1); P5 pays on it.
- * - Dead, the body stays and can't be revived (AR-A5). Destroyed any way with its posting open
- *   (gibbed, dusted, lost in a chasm, deleted), it asks P5's bounty_drop_proof() for proof of death,
- *   unless it was removed on purpose (P5's TRAIT_BOUNTY_REMOVED, or body_mark_removed()). P5 decides.
- * - Leashed to its site (AR-D2): its own feet never take it off the site, onto a ship other than the
- *   pirate ship it is aboard, into a hangar or a player outpost, or into lava, a chasm or space. Anyone
- *   can still drag it anywhere. Off its site, and anywhere at a trader outpost, it fights only those
- *   on its grudge list and never structures (AR-D1, AR-C8).
- * - No teleports (the pad deletes it), no polymorph, no type change, no sentience; turrets leave it
- *   alone (hostile_creatures.dm).
+ *   BOUNTY_AUTOMATED_FLOOR percent. /datum/component/bounty_body keeps the ledger (AR-D3): a hit is a
+ *   player's when someone with a mind made it, fired it (a mech's or vehicle's shot counts its pilot),
+ *   last touched the explosive, or stands near an explosion.
+ * - Fire and heat burn it like a suited person (L3), within the mercy line and the floor.
+ * - worst_state only ever gets worse (spec 12.1); P5 pays on it, and carries it to a respawned copy
+ *   with body_restore_worst_state().
+ * - Dead, the body stays and can't be revived (AR-A5). A dead body destroyed with its posting open
+ *   (gibbed, dusted, lost in a chasm) asks P5's bounty_drop_proof() for proof of death, unless it was
+ *   removed on purpose (P5's TRAIT_BOUNTY_REMOVED, or body_mark_removed()). A live one deleted never
+ *   does. P5 decides where the proof goes.
+ * - Its site: the site's rectangle (or the pirate ship it is wanted aboard), less every ship, hangar,
+ *   player outpost and planet dock strip inside it (H1). Leashed to it (AR-D2): its own feet never
+ *   take it off, nor onto a trader outpost's lift alcove, lava, a chasm or space. Once off (woken
+ *   aboard a ship, dragged away), it may walk about where it is and back, but never on into another
+ *   ship or hangar or into a player outpost (M3). Anyone can still drag it anywhere, and a scripted
+ *   walk (TRAIT_BOUNTY_SCRIPTED_MOVE, or godmode) goes where it is sent. Off its site, and anywhere at
+ *   a trader outpost, it fights only those on its grudge list and never structures (AR-D1, AR-C8).
+ * - No teleports (the pad deletes it), and a container it is in can't be teleported either; no
+ *   fultons, no polymorph, no type change, no sentience (M2). Turrets at trader outposts leave it
+ *   alone, and no turret shoots one that is down, stunned or restrained (bounty_turret_ignores()).
  * Restraints are in bounty_restraints.dm.
  *
  * The shared vars are declared in bounty_types.dm and nowhere else; a var only P2 uses goes here
@@ -65,7 +74,8 @@
 	mobility_flags = MOBILITY_FLAGS_REST_CAPABLE_DEFAULT
 	rotate_on_lying = TRUE
 	blood_volume = BLOOD_VOLUME_NORMAL
-	// Dressed for out there: vacuum and cold don't hurt them (D-A9). Weapons, lava and chasms do.
+	// Dressed for out there: vacuum and cold don't hurt them (D-A9). Weapons, lava, chasms and fire do;
+	// fire and heat through Life(), not tg's element, so the mercy line holds.
 	unsuitable_atmos_damage = 0
 	unsuitable_cold_damage = 0
 	unsuitable_heat_damage = 0
@@ -97,6 +107,8 @@
 	/// The timers for its restraints slipping: the visible struggle, then the slip (bounty_restraints.dm)
 	var/body_slip_warn_timer
 	var/body_slip_timer
+	/// Weakref to the container holding it (a locker, a crate, a body bag), kept from being teleported while it is inside
+	var/datum/weakref/body_holder_ref
 
 /mob/living/basic/bounty_criminal/meek
 	maxHealth = BOUNTY_MEEK_HEALTH
@@ -120,9 +132,18 @@
 	deltimer(body_recovery_timer)
 	body_recovery_timer = null
 	body_remove_cuffs()
+	body_set_holder(null)
 	grudge?.Cut()
 	body_site_ref = null
 	return ..()
+
+// Fire and heat burn it like a suited person (L3). Not forced, so the mercy line and the automated floor hold. Mini-bosses keep P4's own fire rules.
+/mob/living/basic/bounty_criminal/Life(seconds_per_tick = SSMOBS_DT, times_fired)
+	. = ..()
+	if(stat == DEAD || istype(src, /mob/living/basic/bounty_criminal/boss))
+		return
+	if(on_fire || bodytemperature > BOUNTY_CRIMINAL_MAX_TEMP)
+		adjustFireLoss(BOUNTY_CRIMINAL_BURN_DAMAGE * seconds_per_tick)
 
 // ===== SPAWNING =====
 
@@ -306,21 +327,28 @@
 	var/datum/space_level/level = length(planet.mapzone?.z_levels) ? planet.mapzone.z_levels[1] : null
 	return planet.get_dock_strip_top_y(level)
 
-/// The pirate ship that is its site, if it is wanted aboard one: the site it was spawned for, else its posting's
+/// The overmap object of its site: the one it was spawned for, else its posting's
+/mob/living/basic/bounty_criminal/proc/body_site()
+	var/obj/structure/overmap/site = body_site_ref?.resolve() || posting()?.site_ref?.resolve()
+	return (istype(site) && !QDELETED(site)) ? site : null
+
+/// The pirate ship that is its site, if it is wanted aboard one
 /mob/living/basic/bounty_criminal/proc/body_site_ship()
-	var/obj/structure/overmap/ship/site_ship = body_site_ref?.resolve()
-	if(!site_ship)
-		site_ship = posting()?.site_ref?.resolve()
-	return (istype(site_ship) && !QDELETED(site_ship)) ? site_ship : null
+	var/obj/structure/overmap/ship/site_ship = body_site()
+	return istype(site_ship) ? site_ship : null
 
 /// Whether it has a site to be leashed to
 /mob/living/basic/bounty_criminal/proc/body_has_site()
 	return !!site_bounds || !!body_site_ship()
 
-/// Whether `place` is on its site. With no site, everywhere is.
+/**
+ * Whether `place` is on its site: inside the site's rectangle (or aboard the pirate ship it is wanted
+ * on), and not part of a ship, a hangar, a player outpost or a planet's dock strip that happens to lie
+ * inside that rectangle (H1). With no site, anywhere but those is.
+ */
 /mob/living/basic/bounty_criminal/proc/body_on_site(turf/place)
 	place = get_turf(place)
-	if(!place)
+	if(!place || body_forbidden_turf(place))
 		return FALSE
 	if(site_bounds)
 		return place.z == site_bounds[5] && place.x >= site_bounds[1] && place.x <= site_bounds[3] && place.y >= site_bounds[2] && place.y <= site_bounds[4]
@@ -329,42 +357,77 @@
 		return site_ship.is_aboard(place)
 	return TRUE
 
-/// Whether `place` is somewhere it never goes by itself: a ship (other than the pirate ship it is wanted aboard), a hangar or a player outpost
+/// Whether `place` is never its ground: a ship (other than the pirate ship it is wanted aboard), a hangar, a player outpost, or its planet's dock strip
 /mob/living/basic/bounty_criminal/proc/body_forbidden_turf(turf/place)
+	return !!body_hold(place) || body_on_dock_strip(place)
+
+/**
+ * The ship, hangar or player outpost `place` is part of, or null: the pirate ship it is wanted aboard
+ * is its site, not a hold. A ship is known by its docking port, so every room aboard is one hold.
+ */
+/mob/living/basic/bounty_criminal/proc/body_hold(turf/place)
 	var/area/place_area = get_area(place)
 	if(istype(place_area, /area/shuttle))
 		var/obj/structure/overmap/ship/site_ship = body_site_ship()
-		return !site_ship?.is_aboard(place)
-	return istype(place_area, /area/voidcrew/outpost_hangar) || istype(place_area, /area/voidcrew/player_outpost)
+		if(site_ship?.is_aboard(place))
+			return null
+		var/area/shuttle/voidcrew/ship_area = place_area
+		return (istype(ship_area) && ship_area.shuttle_port) || place_area
+	if(istype(place_area, /area/voidcrew/outpost_hangar) || istype(place_area, /area/voidcrew/player_outpost))
+		return place_area
+	return null
+
+/// Whether `place` is on its planet's dock strip, where ships land (L1)
+/mob/living/basic/bounty_criminal/proc/body_on_dock_strip(turf/place)
+	if(isnull(body_dock_top_y) || !place)
+		return FALSE
+	return (!site_bounds || place.z == site_bounds[5]) && place.y <= body_dock_top_y
 
 /// Whether it is at a trader outpost, wanted there or standing in one: there it fights only its grudge list (AR-C8)
 /mob/living/basic/bounty_criminal/proc/body_at_trader_outpost()
 	return posting()?.placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST || istype(get_area(src), /area/voidcrew/trader_outpost)
 
 /**
- * Whether it may go onto `destination` by itself (AR-D2, AR-E1): on its site, never a ship, a hangar
- * or a player outpost, and never lava, a chasm or open space. P3 checks hiding spots and flight paths
- * with it; its own steps are held to it too (Move()).
+ * Whether it may go onto `destination` by itself (AR-D2, AR-E1, L1): on its site (so never a ship, a
+ * hangar, a player outpost or a dock strip), never a lift alcove that would carry it off, and never
+ * lava, a chasm or open space. P3 checks hiding spots and flight paths with it; its own steps are held
+ * to it too (Move()).
  */
 /mob/living/basic/bounty_criminal/proc/leash_ok(turf/destination)
 	destination = get_turf(destination)
-	if(!destination || !body_on_site(destination) || body_forbidden_turf(destination))
+	if(!destination || !body_on_site(destination))
+		return FALSE
+	var/obj/structure/overmap/site = body_site()
+	if(site && (destination in site.lobby_alcove_turfs))
 		return FALSE
 	return destination.can_cross_safely(src)
 
-// Its own steps stay on the leash. Dragged, carried along, thrown or already off its site, it goes where it is taken.
+// Its own steps stay on the leash (M3). Dragged, carried along, thrown or walked by a script, it goes where it is taken.
 /mob/living/basic/bounty_criminal/Move(atom/newloc, direct, glide_size_override)
 	if(!body_move_allowed(newloc))
 		return FALSE
 	return ..()
 
-/// Whether a move onto `newloc` is allowed: always, unless it is walking there by itself from somewhere on its leash to somewhere off it
+/// Whether a script is walking it on purpose: TRAIT_BOUNTY_SCRIPTED_MOVE, or godmode (P6's walk out to the lift)
+/mob/living/basic/bounty_criminal/proc/body_scripted()
+	return HAS_TRAIT(src, TRAIT_BOUNTY_SCRIPTED_MOVE) || HAS_TRAIT(src, TRAIT_GODMODE)
+
+/**
+ * Whether a step of its own onto `newloc` is allowed. Onto its leash, always. Off it from on it,
+ * never. Already off it (woken aboard a ship, dragged off its site, carried somewhere), it may walk
+ * about and back toward its site, but never into a hazard and never on into a ship, hangar or player
+ * outpost other than the one it is already in (M3).
+ */
 /mob/living/basic/bounty_criminal/proc/body_move_allowed(atom/newloc)
-	if(!isturf(newloc) || !isturf(loc) || pulledby || buckled || throwing || stat == DEAD)
+	if(!isturf(newloc) || !isturf(loc) || pulledby || buckled || throwing || stat == DEAD || body_scripted())
 		return TRUE
-	if(!leash_ok(loc))
+	var/turf/destination = newloc
+	if(leash_ok(destination))
 		return TRUE
-	return leash_ok(newloc)
+	if(leash_ok(loc) || !destination.can_cross_safely(src))
+		return FALSE
+	var/destination_hold = body_hold(destination)
+	return !destination_hold || destination_hold == body_hold(loc)
 
 /**
  * Whether environment damage aimed at `target_turf` is allowed (AR-D2), for P4's abilities that
@@ -374,7 +437,7 @@
  */
 /mob/living/basic/bounty_criminal/proc/environment_damage_allowed(turf/target_turf)
 	target_turf = get_turf(target_turf)
-	if(!target_turf || !body_on_site(target_turf) || body_forbidden_turf(target_turf) || body_at_trader_outpost())
+	if(!target_turf || !body_on_site(target_turf) || body_at_trader_outpost())
 		return FALSE
 	if(!isnull(body_dock_top_y) && (!site_bounds || target_turf.z == site_bounds[5]) && target_turf.y <= body_dock_top_y + BOUNTY_ENV_SAFE_RANGE)
 		return FALSE
@@ -384,7 +447,7 @@
 		if(checked_areas[nearby_area])
 			continue
 		checked_areas[nearby_area] = TRUE
-		if(body_forbidden_turf(nearby))
+		if(body_hold(nearby))
 			return FALSE
 	return TRUE
 
@@ -401,14 +464,15 @@
 		return FALSE
 	if(stat != CONSCIOUS || downed || is_restrained() || HAS_TRAIT(src, TRAIT_BOUNTY_SURRENDERED))
 		return FALSE
+	// A ship, hangar, outpost or dock strip inside the site's rectangle is not its site (H1)
 	var/limited = !body_on_site(get_turf(src)) || body_at_trader_outpost()
 	var/list/people
 	if(isliving(target))
 		people = list(target)
-	else if(ismecha(target))
-		var/obj/vehicle/sealed/mecha/mech = target
+	else if(istype(target, /obj/vehicle/sealed))
+		var/obj/vehicle/sealed/vehicle = target
 		people = list()
-		for(var/mob/living/pilot in mech.occupants)
+		for(var/mob/living/pilot in vehicle.occupants)
 			people += pilot
 	else
 		// A structure, a machine, a wall: only on its own ground, and never part of a ship, a hangar or an outpost.
@@ -492,6 +556,16 @@
 	var/state = capture_state()
 	if(bounty_state_rank(state) <= bounty_state_rank(worst_state))
 		worst_state = state
+
+/**
+ * Carries a worst state over from an earlier copy of this criminal (M4): P5 respawns the same record
+ * when its site loads again, and pay must not forget that it was downed or killed before. Only ever
+ * makes worst_state worse. Returns the worst state now.
+ */
+/mob/living/basic/bounty_criminal/proc/body_restore_worst_state(state)
+	if(state && bounty_state_rank(state) < bounty_state_rank(worst_state))
+		worst_state = state
+	return worst_state
 
 /// Something about its state changed: worst_state, and whether it can be dragged
 /mob/living/basic/bounty_criminal/proc/body_state_changed()
@@ -579,6 +653,12 @@
 		return amount
 	return max(0, health_left - floor)
 
+// An explosion names no attacker; the ledger works out whose it was before the blast lands (M1).
+/mob/living/basic/bounty_criminal/ex_act(severity, target, origin)
+	var/datum/component/bounty_body/ledger = GetComponent(/datum/component/bounty_body)
+	ledger?.note_explosion(origin)
+	return ..()
+
 /mob/living/basic/bounty_criminal/updatehealth()
 	. = ..()
 	body_check_downed()
@@ -622,10 +702,11 @@
 		return BOUNTY_RECOVER_TIME_MEEK
 	return BOUNTY_RECOVER_TIME_NORMAL
 
-/// (Re)starts its recovery clock from the top: on going down, and on every stamina hit while down
+/// (Re)starts its recovery clock from the top: on going down, and on every stamina hit while down, cuffed or not (L4)
 /mob/living/basic/bounty_criminal/proc/body_start_recovery()
 	deltimer(body_recovery_timer)
 	body_stirring = FALSE
+	body_recovery_due = FALSE
 	body_recovery_timer = addtimer(CALLBACK(src, PROC_REF(body_stir)), max(0, body_recovery_time() - BOUNTY_BODY_STIRRING_TELL), TIMER_STOPPABLE | TIMER_DELETE_ME)
 
 /// Stops its recovery clock
@@ -720,7 +801,8 @@
 		return
 	body_remove_cuffs()
 	body_state_changed()
-	// Fallen into a chasm: gone for good, so the proof stays at the edge.
+	// Fallen into a chasm: the body is in the chasm's depths for good. P5 puts the proof on safe ground
+	// beside the chasm (get_turf() here is the chasm itself).
 	if(istype(loc, /obj/effect/abstract/chasm_storage) && body_leaves_proof())
 		body_drop_proof()
 
@@ -728,11 +810,31 @@
 /mob/living/basic/bounty_criminal/can_be_revived()
 	return FALSE
 
-// A body dragged into a chasm is gone for good too.
 /mob/living/basic/bounty_criminal/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
+	body_set_holder(isturf(loc) ? null : loc)
+	// A body dragged into a chasm is gone for good too; P5 puts the proof beside it.
 	if(stat == DEAD && istype(loc, /obj/effect/abstract/chasm_storage) && body_leaves_proof())
 		body_drop_proof()
+
+/**
+ * Keeps whatever holds it (`holder`, the outermost thing it is inside, or null on a turf) from being
+ * teleported while it is inside (M2): a ship's transporter can't beam up a locker, crate or body bag
+ * with a criminal in it, any more than the criminal itself. Moves the block when it changes hands.
+ */
+/mob/living/basic/bounty_criminal/proc/body_set_holder(atom/movable/holder)
+	while(ismovable(holder?.loc))
+		holder = holder.loc
+	var/atom/movable/old_holder = body_holder_ref?.resolve()
+	if(old_holder == holder)
+		return
+	if(old_holder)
+		REMOVE_TRAIT(old_holder, TRAIT_NO_TELEPORT, REF(src))
+	body_holder_ref = null
+	if(!ismovable(holder) || QDELETED(holder))
+		return
+	ADD_TRAIT(holder, TRAIT_NO_TELEPORT, REF(src))
+	body_holder_ref = WEAKREF(holder)
 
 /**
  * Marks it as removed on purpose, before it is deleted: its deletion is then not a death and leaves
@@ -743,12 +845,12 @@
 	body_removed = TRUE
 
 /**
- * Whether destroying its body now should ask for proof of death: not removed on purpose, and its
- * posting still open. P5's bounty_drop_proof() makes the final call (a site unloading, a relist).
+ * Whether destroying its body now should ask for proof of death: dead (gibs, dust and chasms all kill
+ * first; a live one deleted is never a death, M5), not removed on purpose, and its posting still open.
+ * P5's bounty_drop_proof() makes the final call (a site unloading, a relist) and places the proof.
  */
 /mob/living/basic/bounty_criminal/proc/body_leaves_proof()
-	// "bounty_removed" is TRAIT_BOUNTY_REMOVED (P5, voidcrew/_DEFINES/bounty_board.dm)
-	if(body_removed || body_proof_dropped || HAS_TRAIT(src, "bounty_removed"))
+	if(stat != DEAD || body_removed || body_proof_dropped || HAS_TRAIT(src, TRAIT_BOUNTY_REMOVED))
 		return FALSE
 	var/datum/criminal_bounty/wanted_on = posting()
 	return wanted_on?.status == BOUNTY_POSTING_OPEN
@@ -958,12 +1060,31 @@
 		player_hit_at = world.time
 	if(istype(attacker, /mob/living/basic/bounty_criminal) || istype(attacker, /mob/living/basic/bounty_companion))
 		own_side_hit_at = world.time
-	if(ismecha(attacker))
-		var/obj/vehicle/sealed/mecha/mech = attacker
-		for(var/mob/living/pilot in mech.occupants)
+	if(istype(attacker, /obj/vehicle/sealed))
+		var/obj/vehicle/sealed/vehicle = attacker
+		for(var/mob/living/pilot in vehicle.occupants)
 			criminal.body_add_grudge(pilot)
 	else if(isliving(attacker))
 		criminal.body_add_grudge(attacker)
+
+/**
+ * An explosion is about to hit it (M1). ex_act() carries no attacker, so the blast counts as a
+ * player's when the explosive was last handled by one (`origin`'s last fingerprints: a grenade
+ * someone threw or set), or when someone with a mind stands within BOUNTY_EXPLOSION_WITNESS_RANGE
+ * tiles. Anything else is automated, like fire.
+ */
+/datum/component/bounty_body/proc/note_explosion(atom/origin)
+	var/mob/living/basic/bounty_criminal/criminal = parent
+	if(isatom(origin) && origin.fingerprintslast)
+		player_hit_at = world.time
+		return
+	var/turf/here = get_turf(criminal)
+	if(!here)
+		return
+	for(var/mob/living/person in range(BOUNTY_EXPLOSION_WITNESS_RANGE, here))
+		if(bounty_player_behind(person))
+			player_hit_at = world.time
+			return
 
 /datum/component/bounty_body/proc/on_attacked(datum/source, atom/attacker, attack_flags)
 	SIGNAL_HANDLER
@@ -977,10 +1098,12 @@
 	if(attacking_item?.force > 0 || user?.combat_mode)
 		note_attacker(user)
 
-/// A sprinting meek criminal ducks some shots (C5); a shot that gets through spoils the next second's dodging
+/// Whose shot it is, even a mech's or a vehicle's (relay_attackers only reports mobs, M1); and a sprinting meek criminal ducks some shots (C5), though one that gets through spoils the next second's dodging
 /datum/component/bounty_body/proc/on_projectile_prehit(datum/source, obj/projectile/shot)
 	SIGNAL_HANDLER
 	var/mob/living/basic/bounty_criminal/criminal = parent
+	if(shot?.firer && shot.is_hostile_projectile())
+		note_attacker(shot.firer)
 	if(prob(criminal.body_dodge_chance()))
 		criminal.visible_message(span_warning("[criminal] ducks out of the way of [shot]!"))
 		return PROJECTILE_INTERRUPT_HIT_PHASE
@@ -1035,11 +1158,24 @@
 		return 0
 	return BOUNTY_MEEK_DODGE
 
-/// Whether someone with a mind is behind `attacker`: a person, a borg, or the pilot of a mech. Criminals and their companions never count.
+/**
+ * Whether a turret leaves `creature` alone for being part of a bounty (L2; hostile_creatures.dm).
+ * `at_trader_outpost`: it stands in a trader outpost's concourse. There, criminals, decoys and
+ * companions are left to the hunters (spec 4). Anywhere else a criminal is left alone only once it is
+ * down, stunned, restrained or dead, so a crew's own turrets don't finish off their catch; a free one,
+ * and any companion, is judged like any other creature.
+ */
+/proc/bounty_turret_ignores(mob/living/creature, at_trader_outpost)
+	var/mob/living/basic/bounty_criminal/criminal = creature
+	if(istype(criminal))
+		return at_trader_outpost || criminal.capture_state() != BOUNTY_STATE_FREE
+	return at_trader_outpost && istype(creature, /mob/living/basic/bounty_companion)
+
+/// Whether someone with a mind is behind `attacker`: a person, a borg, or the pilot of a mech or other vehicle. Criminals and their companions never count.
 /proc/bounty_player_behind(atom/attacker)
-	if(ismecha(attacker))
-		var/obj/vehicle/sealed/mecha/mech = attacker
-		for(var/mob/living/pilot in mech.occupants)
+	if(istype(attacker, /obj/vehicle/sealed))
+		var/obj/vehicle/sealed/vehicle = attacker
+		for(var/mob/living/pilot in vehicle.occupants)
 			if(pilot.mind || pilot.ckey)
 				return TRUE
 		return FALSE

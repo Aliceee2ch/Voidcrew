@@ -73,9 +73,11 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
 	// headslug, whose stock AI already reads as hostile. Their custom AI does not.
 	if(istype(creature, /mob/living/basic/outpost_experiment))
 		return is_outpost_experiment_turret_target(creature)
-	// Bounty criminals, their decoys and companions (voidcrew/modules/bounties/): turrets leave them to the hunters.
+	// Bounty criminals, decoys and companions (voidcrew/modules/bounties/bounty_criminal.dm): trader-outpost
+	// turrets leave them to the hunters, and no turret shoots a criminal already down, stunned or cuffed.
 	if(istype(creature, /mob/living/basic/bounty_criminal) || istype(creature, /mob/living/basic/bounty_companion))
-		return FALSE
+		if(bounty_turret_ignores(creature, istype(get_area(creature), /area/voidcrew/trader_outpost)))
+			return FALSE
 
 	// The /hostile branch of the old simple animal tree is aggressive by definition; its
 	// retaliate-only subtypes were all moved over to /mob/living/basic long ago.

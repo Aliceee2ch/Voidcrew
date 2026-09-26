@@ -25,10 +25,14 @@
 
 // ===== CUFFING =====
 
-// Restraints go on from the item interaction, ahead of anything else that item might do to it.
+// Restraints go on from the item interaction, ahead of anything else that item might do to it. A
+// fulton never goes on: the pad is the only way off its site bar the carry (M2, owner question 10).
 /mob/living/basic/bounty_criminal/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if(istype(tool, /obj/item/restraints/handcuffs))
 		return body_on_cuffs_used(user, tool)
+	if(istype(tool, /obj/item/extraction_pack))
+		balloon_alert(user, "won't hold [p_them()]!")
+		return ITEM_INTERACT_BLOCKING
 	return ..()
 
 /// Why `user` can't put `cuffs` on it now, as a balloon alert, or null if they can
@@ -37,7 +41,7 @@
 		return "can't cuff [p_them()]"
 	if(is_restrained())
 		return "already cuffed"
-	if(istype(cuffs, /obj/item/restraints/handcuffs/cable/zipties/used))
+	if(istype(cuffs, /obj/item/restraints/handcuffs/cable/zipties/used) || istype(cuffs, /obj/item/restraints/handcuffs/cable/zipties/fake/used))
 		return "used up"
 	if(user && !iscyborg(user) && user.usable_hands <= 0)
 		return "no hands free"
@@ -51,8 +55,9 @@
 	var/refusal = body_cuff_work ? "already busy" : body_cuff_refusal(user, cuffs)
 	if(refusal)
 		balloon_alert(user, refusal)
-		if(!body_cuff_work && capture_state() == BOUNTY_STATE_FREE)
-			// Reaching for its wrists is a confrontation: a meek one bolts, a normal one fights (P3).
+		// Reaching for its wrists is a confrontation: a meek one bolts, a normal one fights (P3). Blending
+		// in, P6's blend component answers for it, the same for the fugitive and its decoys.
+		if(!body_cuff_work && !blended && capture_state() == BOUNTY_STATE_FREE)
 			body_add_grudge(user)
 			INVOKE_ASYNC(src, PROC_REF(on_confronted), user)
 		return ITEM_INTERACT_BLOCKING
@@ -87,6 +92,12 @@
 	log_combat(user, src, "restrained")
 	return TRUE
 
+/// What `cuffs` turn into once worn: zipties their used pair, fake zipties their fake used pair (tg gives both the real one), anything else stays itself (null)
+/proc/bounty_worn_cuffs_type(obj/item/restraints/handcuffs/cuffs)
+	if(istype(cuffs, /obj/item/restraints/handcuffs/cable/zipties/fake) && !istype(cuffs, /obj/item/restraints/handcuffs/cable/zipties/fake/used))
+		return /obj/item/restraints/handcuffs/cable/zipties/fake/used
+	return cuffs?.trashtype
+
 /**
  * Puts `cuffs` on it at once; zipties become their used pair, as on people. `user`, if any, gives
  * them up from their hands, unless `dispense` (a borg), which puts on a new pair of the same kind
@@ -96,15 +107,15 @@
 	if(is_restrained() || QDELETED(cuffs) || stat == DEAD)
 		return FALSE
 	var/obj/item/restraints/handcuffs/worn = cuffs
+	var/used_path = bounty_worn_cuffs_type(cuffs)
 	if(dispense)
-		var/dispensed_path = cuffs.trashtype || cuffs.type
+		var/dispensed_path = used_path || cuffs.type
 		worn = new dispensed_path(src)
 	else
 		if(user && !user.temporarilyRemoveItemFromInventory(cuffs))
 			return FALSE
-		if(cuffs.trashtype)
-			var/trash_path = cuffs.trashtype
-			worn = new trash_path(src)
+		if(used_path)
+			worn = new used_path(src)
 			qdel(cuffs)
 		else
 			cuffs.forceMove(src)

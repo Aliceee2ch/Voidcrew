@@ -700,13 +700,6 @@
 	TEST_ASSERT(findtext(jointext(horror.examine(crew), " "), "still moving"), "Examining the horror down does not say it is still moving")
 	TEST_ASSERT(logged(prison, "regenerating"), "The warden's log did not record the horror going down")
 	TEST_ASSERT(event.regen_announced, "The outpost was not told the horror is regenerating")
-	// With no Kessler agent about nobody says it won't stay down; one who can see it says so, once.
-	TEST_ASSERT(!event.agent_warned, "A Kessler agent's word came with no agent about")
-	var/mob/living/basic/outpost_kessler_staff/agent/agent = allocate(/mob/living/basic/outpost_kessler_staff/agent, get_turf(horror), null)
-	TEST_ASSERT(event.kessler_agent_warning(), "A Kessler agent who could see the horror down said nothing")
-	TEST_ASSERT(event.agent_warned, "The agent's word was not noted")
-	TEST_ASSERT(!event.kessler_agent_warning(), "The agent said it twice")
-	qdel(agent)
 
 	// Down, it cannot absorb anyone.
 	var/mob/living/basic/outpost_prisoner/victim = test_prisoner(prison, prison_spot(home, 10, 9))

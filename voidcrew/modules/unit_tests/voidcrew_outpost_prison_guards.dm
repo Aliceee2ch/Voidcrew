@@ -169,7 +169,8 @@
 	// A runner about to get away: the guard on duty calls it out by name, with no clock, and the log and the crew get their words.
 	TEST_ASSERT(prison.call_out_nearly_away(list(prisoner)), "Nobody called out a runner about to get away")
 	TEST_ASSERT(guard_test_is_line(officer.last_line, "loose_nearly"), "The guard's call was [officer.last_line]")
-	TEST_ASSERT(findtext(officer.last_line, prisoner.speech_name()), "The guard's call does not name the runner: [officer.last_line]")
+	TEST_ASSERT(findtextEx(officer.last_line, prisoner.speech_name()), "The guard's call does not name the runner: [officer.last_line]")
+	TEST_ASSERT(findtextEx(officer.last_line, get_area_name(prisoner)), "The guard's call does not say where the runner is: [officer.last_line]")
 	var/list/called_line = prison.entries[1]
 	TEST_ASSERT(findtext(called_line["text"], officer.last_line), "The guard's call was not logged: [called_line["text"]]")
 

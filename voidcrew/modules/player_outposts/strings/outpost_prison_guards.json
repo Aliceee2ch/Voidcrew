@@ -604,22 +604,22 @@
 		},
 		"loose_nearly": {
 			"any": [
-				"We're about to lose {prisoner}!",
-				"Someone stop {prisoner}, they're nearly gone!",
+				"We're about to lose {prisoner}! {place}!",
+				"Someone stop {prisoner}, they're nearly gone! {place}!",
 				"{place}! We're about to lose {prisoner}!",
 				"Don't let {prisoner} get away! Last seen in {place}!"
 			],
 			"by_the_book": [
-				"All staff, {prisoner} about to get away!",
+				"All staff, {prisoner} about to get away! Last seen in {place}!",
 				"Runner nearly clear! Stop {prisoner}, last seen in {place}!"
 			],
 			"hard_nosed": [
-				"We're losing {prisoner}. Somebody move!",
+				"We're losing {prisoner}. {place}, somebody move!",
 				"{place}, now, or we lose {prisoner}!"
 			],
 			"tired": [
-				"Pretty sure we're about to lose {prisoner}.",
-				"Someone should really go get {prisoner}. They're nearly gone."
+				"Pretty sure we're about to lose {prisoner}. Somewhere around {place}.",
+				"Someone should really go get {prisoner}. {place}, last I saw."
 			]
 		},
 		"creature_flee": {

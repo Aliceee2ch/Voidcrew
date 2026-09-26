@@ -1241,13 +1241,13 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		return FALSE
 	var/list/first_names = list()
 	var/list/full_names = list()
+	var/list/places = list()
 	for(var/mob/living/basic/outpost_prisoner/runner as anything in runners)
 		first_names += runner.speech_name()
 		full_names += runner.real_name
-	var/list/values = list("{prisoner}" = english_list(first_names))
-	// Where one runner was last seen; several can be anywhere
-	if(length(runners) == 1)
-		values["{place}"] = get_area_name(runners[1])
+		places |= get_area_name(runner)
+	// Every line says where they were last seen
+	var/list/values = list("{prisoner}" = english_list(first_names), "{place}" = english_list(places))
 	var/list/on_duty = list()
 	for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs)
 		if(guard.on_duty())

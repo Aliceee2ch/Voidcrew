@@ -740,7 +740,7 @@
 	var/obj/item/restraints/handcuffs/cuffs = allocate(/obj/item/restraints/handcuffs)
 	TEST_ASSERT(prisoner.apply_cuffs(cuffs), "The prisoner could not be cuffed")
 	choices = prisoner.talk_menu_choices(owner)
-	TEST_ASSERT(("Uncuff" in choices) && !("Home" in choices), "A cuffed prisoner's menu has [english_list(choices)]")
+	TEST_ASSERT(("Uncuff" in choices) && !("Back to your cell" in choices), "A cuffed prisoner's menu has [english_list(choices)]")
 	TEST_ASSERT(prisoner.talk_menu_act(owner, "Uncuff"), "Picking Uncuff did not take the cuffs off")
 	TEST_ASSERT_NULL(prisoner.cuffs, "The prisoner is still cuffed")
 	TEST_ASSERT(owner.is_holding(cuffs), "The cuffs did not go to the member's hand")
@@ -766,7 +766,7 @@
 
 	// Free and on their feet: the walk back to the cell and the search, and no cuffs to take off.
 	var/list/choices = prisoner.talk_menu_choices(owner)
-	TEST_ASSERT("Home" in choices, "A free prisoner's menu has no walk back to the cell") // PRISON_TALK_CELL
+	TEST_ASSERT("Back to your cell" in choices, "A free prisoner's menu has no walk back to the cell") // PRISON_TALK_CELL
 	TEST_ASSERT("Search" in choices, "A free prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CHOICE
 	TEST_ASSERT(!("Get up" in choices), "A prisoner already on their feet was offered getting up") // PRISON_TALK_GET_UP
 	TEST_ASSERT(!("Uncuff" in choices), "A free prisoner was offered the cuffs off") // PRISON_TALK_UNCUFF
@@ -778,9 +778,9 @@
 	TEST_ASSERT("How are you doing?" in choices, "A cuffed prisoner can't be asked how they are") // PRISON_TALK_HOW
 	TEST_ASSERT("Calm down" in choices, "A cuffed prisoner who will listen can't be talked down") // PRISON_TALK_CALM
 	TEST_ASSERT("Search" in choices, "A cuffed prisoner's menu has no pat-down") // CONTRABAND_PATDOWN_CHOICE
-	TEST_ASSERT("Rumour" in choices, "A cuffed prisoner can't be asked what they know") // LEAD_ASK_CHOICE
+	TEST_ASSERT("Heard anything?" in choices, "A cuffed prisoner can't be asked what they know") // LEAD_ASK_CHOICE
 	TEST_ASSERT("Uncuff" in choices, "A cuffed prisoner's menu has no way to take the cuffs off") // PRISON_TALK_UNCUFF
-	TEST_ASSERT(!("Home" in choices), "A cuffed prisoner was offered a walk back to the cell")
+	TEST_ASSERT(!("Back to your cell" in choices), "A cuffed prisoner was offered a walk back to the cell")
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A cuffed prisoner was sent back to the cell")
 	TEST_ASSERT(!istype(prisoner.activity, /datum/prisoner_activity/sent_to_cell), "A cuffed prisoner has somewhere to walk to")
 
@@ -904,7 +904,7 @@
 	TEST_ASSERT(prisoner.talk_menu_allowed(member), "A cuffed prisoner lying on the bed has no talk menu")
 	var/list/choices = prisoner.talk_menu_choices(member)
 	TEST_ASSERT("Get up" in choices, "A cuffed prisoner lying on the bed was not offered getting up")
-	TEST_ASSERT(!("Home" in choices), "A cuffed prisoner was offered a walk back to the cell") // PRISON_TALK_CELL
+	TEST_ASSERT(!("Back to your cell" in choices), "A cuffed prisoner was offered a walk back to the cell") // PRISON_TALK_CELL
 	TEST_ASSERT(prisoner.talk_menu_act(member, "Get up"), "A cuffed prisoner did not get up")
 	TEST_ASSERT(!prisoner.buckled && prisoner.loc != bed_turf, "A cuffed prisoner stayed on the bed")
 	TEST_ASSERT_NULL(prisoner.activity, "A cuffed prisoner was given something to do")
@@ -1174,7 +1174,7 @@
 		prison.open_leads += tip
 	var/list/choices = prisoner.talk_menu_choices(member)
 	// PRISON_TALK_CALM, _HOW, _CRIME, _CELL, _GET_UP, CONTRABAND_PATDOWN_CHOICE, LEAD_ASK_CHOICE, LEAD_TIP_CHOICE
-	for(var/expected in list("Calm down", "How are you doing?", "Crime", "Home", "Get up", "Search", "Rumour", "Tip"))
+	for(var/expected in list("Calm down", "How are you doing?", "What are you in for?", "Back to your cell", "Get up", "Search", "Heard anything?", "About that tip"))
 		TEST_ASSERT(expected in choices, "The talk menu has no [expected]")
 	TEST_ASSERT_EQUAL(length(choices), 8, "The talk menu has [length(choices)] choices ([english_list(choices)]), more than fit on one page of the radial")
 	// Only the newest tip is asked about.

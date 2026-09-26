@@ -1173,14 +1173,18 @@
 /**
  * The warden console's alarm banner: list(alarm, text). In order: a breakout, an escape, a riot,
  * a riot brewing, a hatch someone is waiting at with nothing on it. The loose are named with where
- * they were last seen: "Loose: Tom Hale (Cargo Bay)".
+ * they were last seen, three at most: "Loose: Tom Hale (Cargo Bay), and 2 more".
  */
 /datum/outpost_prison/proc/alarm_state()
 	var/list/sightings = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
 		if(prisoner.trouble == PRISONER_TROUBLE_LOOSE && prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD)
 			sightings += "[prisoner.real_name] ([get_area_name(prisoner)])"
-	var/loose_text = length(sightings) ? "Loose: [jointext(sightings, ", ")]" : null
+	var/loose_text
+	if(length(sightings) > 3)
+		loose_text = "Loose: [jointext(sightings.Copy(1, 4), ", ")], and [length(sightings) - 3] more"
+	else if(length(sightings))
+		loose_text = "Loose: [jointext(sightings, ", ")]"
 	if(breaking_out || (loose_text && broke_out))
 		return list("breakout", loose_text || "Prisoners breaking out")
 	if(loose_text)

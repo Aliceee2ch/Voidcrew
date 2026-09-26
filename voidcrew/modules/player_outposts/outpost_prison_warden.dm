@@ -147,8 +147,8 @@
 	return list(
 		"linked" = TRUE,
 		"powered" = is_powered(),
-		// The wing's APC running down its cell, as a panel would show it
-		"on_battery" = !isnull(battery_percent()),
+		// The wing's APC has no mains and runs on its cell, as a panel would show it
+		"on_battery" = !!wing?.apc?.cell && wing.apc.main_status == APC_NO_POWER,
 		"intake_open" = intake_open,
 		// The admin panel reads this too (outpost_admin_prison.dm)
 		"intake_state" = intake_state(),

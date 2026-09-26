@@ -483,7 +483,8 @@
 			))
 			var/obj/structure/overmap/dynamic/player_outpost/home = astype(candidate)
 			if(home?.ship_bay_installed && home.has_hangar_elevator())
-				dock_options += list(list("name" = "[home.name] - Ship Bay", "ref" = REF(home), "isEmpty" = FALSE, "variant" = OUTPOST_DOCK_VARIANT_BAY, "label" = "Dock at ship bay"))
+				// The docking fee this ship would owe, 0 when free or exempt (outpost_dock_fees.dm)
+				dock_options += list(list("name" = "[home.name] - Ship Bay", "ref" = REF(home), "isEmpty" = FALSE, "variant" = OUTPOST_DOCK_VARIANT_BAY, "label" = "Dock at ship bay", "fee" = home.dock_fee_for(current_ship, OUTPOST_DOCK_VARIANT_BAY)))
 	else
 		// Nebulas aren't a docking target. Concealment is the Cloak control's job,
 		// but sitting in one and being told only "empty space" reads as the console
@@ -497,6 +498,8 @@
 			"isEmpty" = TRUE,
 		))
 	data["dockOptions"] = dock_options
+	// A player outpost's ship bay fee waiting for the captain's approval (outpost_dock_fees.dm)
+	data["dockFeeQuote"] = current_ship.dock_fee_quote_data(user)
 
 	// Undock cooldown data (after docking)
 	data["undockCooldown"] = !COOLDOWN_FINISHED(current_ship, undock_cooldown)
@@ -1108,6 +1111,20 @@
 	switch(current_ship.state) // Ship state-limited topics
 		if(OVERMAP_SHIP_FLYING)
 			switch(action)
+				// A player outpost's ship bay fee (outpost_dock_fees.dm). Params are client data;
+				// the ship checks them against its quote.
+				if("approve_dock_fee")
+					var/mob/living/approver = usr
+					var/refusal = istype(approver) ? current_ship.approve_dock_fee(approver, params["ref"], params["variant"], params["amount"]) : "Crew authorization required."
+					if(refusal)
+						say(refusal)
+						playsound(src, 'sound/machines/terminal/terminal_error.ogg', 30)
+					return TRUE
+				if("decline_dock_fee")
+					var/mob/living/decliner = usr
+					if(istype(decliner))
+						current_ship.decline_dock_fee(decliner, params["ref"])
+					return TRUE
 				if("active_scan")
 					var/category = params["category"]
 					// active_scan() treats an unrecognised category as "no filter" and

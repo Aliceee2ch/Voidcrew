@@ -13,7 +13,8 @@
  *   coming near), which shoves the finder back a tile and sends them running again;
  * - a restless tell while hidden a long time, so a search can end;
  * - cornered: a shout, a one-second aim with the holdout (the telegraph), three weak shots, then
- *   running again. A stamina hit during the aim makes them fumble it.
+ *   running again. A stamina hit during the aim makes them fumble it; each shot checks they can
+ *   still shoot.
  * It never loots and never attacks first.
  *
  * The shared vars (`hidden` and the rest) are declared in bounty_types.dm and nowhere else; a var
@@ -54,7 +55,12 @@
 	var/ai_aim_stamina = 0
 	/// Weakref to who they aim at
 	var/datum/weakref/ai_aim_ref
-	/// Set only while the volley is being fired, so no other shot gets out
+	/// Shots of the volley still to fire, and when the next goes
+	var/ai_volley_left = 0
+	var/ai_next_volley_shot = 0
+	/// Weakref to who the volley is at
+	var/datum/weakref/ai_volley_ref
+	/// Set only while a volley shot is being fired, so no other shot gets out
 	var/ai_firing = FALSE
 
 #ifdef UNIT_TESTS
@@ -84,6 +90,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 /// The holdout is the same little gun whatever the tier
 /mob/living/basic/bounty_criminal/meek/ai_damage_mult()
 	return 1
+
+/mob/living/basic/bounty_criminal/meek/ai_sprints()
+	return TRUE
 
 /mob/living/basic/bounty_criminal/meek/ai_notice(mob/living/hunter)
 	ai_flee_event(hunter, "noticed")
@@ -122,6 +131,10 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 
 // ===== RUNNING =====
 
+/// Whether they sprint and tire (only the meek)
+/mob/living/basic/bounty_criminal/proc/ai_sprints()
+	return FALSE
+
 /**
  * Starts running from `threat`: gets up, drops what they are doing, and (if `seek_hiding`) picks
  * the best hiding place in reach, once for this whole flight. `bark` is the line to shout, or
@@ -155,7 +168,8 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		ai_bark(bark)
 	else if(fresh && !quiet)
 		ai_bark("flee")
-	ai_update_sprint()
+	if(ai_sprints())
+		ai_update_sprint()
 	return TRUE
 
 /// Their sprint speed: a lizard's is a little quicker
@@ -168,13 +182,13 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
  * Works out their sprint since the last time: running in sight of the hunter uses it up, and then
  * they are winded (slow) until it is all back. It comes back fastest hidden, slowly while out of
  * sight but still on the run, and at a rest in BOUNTY_MEEK_REST_TIME. Sets their pace and
- * TRAIT_BOUNTY_SPRINTING while running flat out.
+ * TRAIT_BOUNTY_SPRINTING while running flat out (never winded, cornered or shooting).
  */
 /mob/living/basic/bounty_criminal/proc/ai_update_sprint()
 	var/now = world.time
 	var/elapsed = ai_sprint_checked_at ? min(now - ai_sprint_checked_at, 5 SECONDS) : 0
 	ai_sprint_checked_at = now
-	var/running = ai_mode == BOUNTY_AI_FLEEING && !hidden && !ai_aim_until && (now - ai_threat_seen_at) <= 1 SECONDS
+	var/running = ai_mode == BOUNTY_AI_FLEEING && !hidden && !ai_aim_until && !ai_volley_left && !ai_cornered_since && (now - ai_threat_seen_at) <= 1 SECONDS
 	if(running)
 		if(!ai_winded)
 			ai_sprint_left -= elapsed
@@ -230,12 +244,13 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		var/walk_type = istype(spot, /obj/structure/closet) ? /datum/ai_behavior/travel_towards/bounty/adjacent : /datum/ai_behavior/travel_towards/bounty
 		controller.queue_behavior(walk_type, BB_BOUNTY_DESTINATION)
 		return SUBTREE_RETURN_FINISH_PLANNING
-	if(!seen)
-		// Out of their sight with nowhere to hide: keep still and get their breath back
-		controller.queue_behavior(/datum/ai_behavior/bounty_watch)
-		return SUBTREE_RETURN_FINISH_PLANNING
-	controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, threat)
-	controller.queue_behavior(/datum/ai_behavior/run_away_from_target/bounty, BB_BASIC_MOB_FLEE_TARGET, BB_BASIC_MOB_FLEE_TARGET_HIDING_LOCATION)
+	if(seen)
+		controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, threat)
+		controller.queue_behavior(/datum/ai_behavior/run_away_from_target/bounty, BB_BASIC_MOB_FLEE_TARGET, BB_BASIC_MOB_FLEE_TARGET_HIDING_LOCATION)
+		if(controller.current_behaviors[GET_AI_BEHAVIOR(/datum/ai_behavior/run_away_from_target/bounty)])
+			return SUBTREE_RETURN_FINISH_PLANNING
+	// Out of their sight with nowhere to hide, or nowhere to run: keep still, facing them, and plan on
+	controller.queue_behavior(/datum/ai_behavior/bounty_watch)
 	return SUBTREE_RETURN_FINISH_PLANNING
 
 /**
@@ -274,7 +289,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		return_turf = test_destination
 	return return_turf
 
-/// A tg flee subtree that runs with the leash-keeping run above: for decoys and companions that break
+/// A tg flee subtree that runs with the leash-keeping run above: for companions that break
 /datum/ai_planning_subtree/flee_target/bounty
 	flee_behaviour = /datum/ai_behavior/run_away_from_target/bounty
 	target_key = BB_BASIC_MOB_FLEE_TARGET
@@ -307,7 +322,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	var/mob/living/holder = isliving(pulledby) ? pulledby : null
 	var/cornered = !!holder
 	if(!cornered && get_dist(src, threat) <= BOUNTY_MEEK_CORNER_RANGE)
-		cornered = (ai_run_failed_at && world.time - ai_run_failed_at < 1 SECONDS) || ai_ways_out(threat) < 2
+		cornered = (ai_run_failed_at && world.time - ai_run_failed_at < BOUNTY_MEEK_RUN_FAIL_WINDOW) || ai_ways_out(threat) < 2
 	if(!cornered)
 		ai_cornered_since = 0
 		return FALSE
@@ -321,9 +336,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		return FALSE
 	return ai_start_aim(target)
 
-/// The aim: the holdout in hand, a mark where it points, a shout. The shots go off BOUNTY_MEEK_PISTOL_WINDUP later.
+/// The aim: the holdout in hand, a mark where it points, a shout. The shots start BOUNTY_MEEK_PISTOL_WINDUP later.
 /mob/living/basic/bounty_criminal/proc/ai_start_aim(mob/living/target)
-	if(ai_aim_until || !ai_can_act() || !isturf(loc) || !isliving(target))
+	if(ai_aim_until || ai_volley_left || !ai_can_act() || !isturf(loc) || !isliving(target))
 		return FALSE
 	ai_update_style()
 	ai_aim_ref = WEAKREF(target)
@@ -341,7 +356,11 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	ai_bark("cornered")
 	return TRUE
 
-/// Fires the volley at who they aimed at: three weak shots. A stamina hit or a stun during the aim makes them fumble it.
+/**
+ * The aim is up: the volley starts, BOUNTY_MEEK_PISTOL_SHOTS weak shots BOUNTY_MEEK_PISTOL_GAP apart,
+ * the first one now. A stamina hit or a stun during the aim makes them fumble it instead. Returns
+ * TRUE if the first shot went.
+ */
 /mob/living/basic/bounty_criminal/proc/ai_fire_holdout()
 	var/mob/living/target = ai_aim_ref?.resolve()
 	var/stunned = !ai_can_act() || staminaloss > ai_aim_stamina + 1 || HAS_TRAIT(src, TRAIT_INCAPACITATED)
@@ -352,20 +371,45 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	if(stunned)
 		ai_fumble()
 		return FALSE
-	if(QDELETED(target) || target.stat != CONSCIOUS || !can_see(src, target, BOUNTY_MEEK_PISTOL_RANGE))
+	if(!ai_volley_target_ok(target))
 		ai_put_gun_away()
+		return FALSE
+	ai_volley_left = BOUNTY_MEEK_PISTOL_SHOTS
+	ai_volley_ref = WEAKREF(target)
+	return ai_volley_shot()
+
+/// Whether the volley may go on at `target`: awake (downed hunters are left alone, C4), close and in sight
+/mob/living/basic/bounty_criminal/proc/ai_volley_target_ok(mob/living/target)
+	return !QDELETED(target) && target.stat == CONSCIOUS && get_dist(src, target) <= BOUNTY_MEEK_PISTOL_RANGE && can_see(src, target, BOUNTY_MEEK_PISTOL_RANGE)
+
+/// One shot of the volley, if they can still shoot and the target is still there. Returns TRUE if it went.
+/mob/living/basic/bounty_criminal/proc/ai_volley_shot()
+	var/mob/living/target = ai_volley_ref?.resolve()
+	if(!ai_volley_left || !ai_can_act() || hidden || !isturf(loc) || !ai_volley_target_ok(target))
+		ai_end_volley()
 		return FALSE
 	face_atom(target)
 	ai_firing = TRUE
 	RangedAttack(target)
 	ai_firing = FALSE
-	addtimer(CALLBACK(src, PROC_REF(ai_put_gun_away)), BOUNTY_MEEK_PISTOL_GAP * BOUNTY_MEEK_PISTOL_SHOTS + 0.5 SECONDS, TIMER_DELETE_ME)
+	ai_volley_left--
+	ai_next_volley_shot = world.time + BOUNTY_MEEK_PISTOL_GAP
+	if(!ai_volley_left)
+		ai_end_volley()
 	return TRUE
+
+/// The volley is over (or cut short): the gun goes away a moment later
+/mob/living/basic/bounty_criminal/proc/ai_end_volley()
+	ai_volley_left = 0
+	ai_volley_ref = null
+	addtimer(CALLBACK(src, PROC_REF(ai_put_gun_away)), 0.5 SECONDS, TIMER_DELETE_ME)
 
 /// A stamina hit or a stun during the aim: the volley never happens and they run
 /mob/living/basic/bounty_criminal/proc/ai_fumble()
 	ai_aim_until = 0
 	ai_aim_ref = null
+	ai_volley_left = 0
+	ai_volley_ref = null
 	ai_holdout_ready_at = max(ai_holdout_ready_at, world.time + BOUNTY_MEEK_PISTOL_COOLDOWN)
 	ai_hand = bounty_ai_update_held(src, ai_hand, null)
 	if(stat != DEAD)
@@ -373,51 +417,58 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 
 /// Puts the holdout away after the volley
 /mob/living/basic/bounty_criminal/proc/ai_put_gun_away()
-	if(ai_aim_until || ai_mode == BOUNTY_AI_FIGHTING)
+	if(ai_aim_until || ai_volley_left || ai_mode == BOUNTY_AI_FIGHTING)
 		return
 	ai_hand = bounty_ai_update_held(src, ai_hand, null)
 
-/// Drops the aim without a word: they calmed down, hid, were cuffed, died
+/// Drops the aim and the volley without a word: they calmed down, hid, were cuffed, died
 /mob/living/basic/bounty_criminal/proc/ai_stop_aiming()
-	if(!ai_aim_until)
+	if(!ai_aim_until && !ai_volley_left)
 		return
 	ai_aim_until = 0
 	ai_aim_ref = null
+	ai_volley_left = 0
+	ai_volley_ref = null
 	ai_hand = bounty_ai_update_held(src, ai_hand, null)
 
 /// The mark where a cornered criminal aims, for the length of the aim
 /obj/effect/temp_visual/telegraphing/bounty_aim
 	duration = BOUNTY_MEEK_PISTOL_WINDUP
 
-/// The volley: first in a meek criminal's tree while an aim is on
+/// The volley: first in a meek criminal's tree while an aim or a volley is on
 /datum/ai_planning_subtree/bounty_meek_volley
 	operational_datums = list(/datum/component/ranged_attacks)
 
 /datum/ai_planning_subtree/bounty_meek_volley/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
-	if(!criminal.ai_aim_until)
+	if(!criminal.ai_aim_until && !criminal.ai_volley_left)
 		return
 	controller.queue_behavior(/datum/ai_behavior/bounty_holdout_volley)
 	return SUBTREE_RETURN_FINISH_PLANNING
 
-/// Holds the aim, then fires. Cancelled (a stun stops the AI), they fumble it.
+/// Holds the aim, then fires the volley shot by shot. Cancelled (a stun stops the AI), the aim is fumbled or the volley cut short.
 /datum/ai_behavior/bounty_holdout_volley
 	action_cooldown = 0.2 SECONDS
 
 /datum/ai_behavior/bounty_holdout_volley/setup(datum/ai_controller/controller)
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
-	return istype(criminal) && criminal.ai_aim_until
+	return istype(criminal) && (criminal.ai_aim_until || criminal.ai_volley_left)
 
 /datum/ai_behavior/bounty_holdout_volley/perform(seconds_per_tick, datum/ai_controller/controller)
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
-	if(!criminal.ai_aim_until)
-		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-	if(world.time < criminal.ai_aim_until)
-		var/mob/living/target = criminal.ai_aim_ref?.resolve()
-		if(target)
-			criminal.face_atom(target)
-		return AI_BEHAVIOR_DELAY
-	criminal.ai_fire_holdout()
+	if(criminal.ai_aim_until)
+		if(world.time < criminal.ai_aim_until)
+			var/mob/living/target = criminal.ai_aim_ref?.resolve()
+			if(target)
+				criminal.face_atom(target)
+			return AI_BEHAVIOR_DELAY
+		if(!criminal.ai_fire_holdout())
+			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
+		return criminal.ai_volley_left ? AI_BEHAVIOR_DELAY : (AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED)
+	if(criminal.ai_volley_left)
+		if(world.time >= criminal.ai_next_volley_shot)
+			criminal.ai_volley_shot()
+		return criminal.ai_volley_left ? AI_BEHAVIOR_DELAY : (AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED)
 	return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
 
 /datum/ai_behavior/bounty_holdout_volley/finish_action(datum/ai_controller/controller, succeeded)
@@ -425,8 +476,12 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	if(succeeded)
 		return
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
-	if(istype(criminal) && criminal.ai_aim_until)
+	if(!istype(criminal))
+		return
+	if(criminal.ai_aim_until)
 		criminal.ai_fumble()
+	else if(criminal.ai_volley_left)
+		criminal.ai_end_volley()
 
 // ===== CHOOSING A HIDING PLACE =====
 
@@ -493,11 +548,10 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	if(!can_see(threat, spot_turf, BOUNTY_MEEK_HIDE_RADIUS + 2))
 		. += BOUNTY_HIDE_SCORE_UNSEEN
 
-/// Up to BOUNTY_MEEK_DARK_SAMPLES dark tiles they could stand in, sampled once from around `center`
-/mob/living/basic/bounty_criminal/proc/ai_dark_candidates(turf/center)
+/// Up to `samples` dark tiles they could stand in, sampled once from within `radius` of `center`
+/mob/living/basic/bounty_criminal/proc/ai_dark_candidates(turf/center, radius = BOUNTY_MEEK_HIDE_RADIUS, samples = BOUNTY_MEEK_DARK_SAMPLES)
 	. = list()
-	var/list/pool = RANGE_TURFS(BOUNTY_MEEK_HIDE_RADIUS, center)
-	var/samples = BOUNTY_MEEK_DARK_SAMPLES
+	var/list/pool = RANGE_TURFS(radius, center)
 	while(samples > 0 && length(pool))
 		samples--
 		var/turf/tile = pick_n_take(pool)
@@ -525,7 +579,10 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		return ai_dark_usable(spot)
 	return FALSE
 
-/// A locker or crate they fit in: on the floor, unlocked, not welded, not full, not outpost property, not a body bag
+/**
+ * A locker or crate they fit in: on the floor, unlocked, not welded, not full, not outpost property,
+ * not a body bag, and nobody standing in it (shutting it would take them along).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_container_usable(obj/structure/closet/container)
 	if(QDELETED(container) || !isturf(container.loc) || container.locked || container.welded)
 		return FALSE
@@ -533,6 +590,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		return FALSE
 	if(mob_size > container.max_mob_size || length(container.contents) >= container.storage_capacity)
 		return FALSE
+	for(var/mob/living/standing in container.loc)
+		if(standing != src)
+			return FALSE
 	var/mobs_inside = 0
 	for(var/mob/living/inside in container)
 		mobs_inside++
@@ -640,7 +700,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 
 /**
  * As a potted plant: they step onto its tile, take it, keep their own look aside, and wear the
- * plant's: name, description, icon and overlays.
+ * plant's: name, description, icon, overlays and layer.
  */
 /mob/living/basic/bounty_criminal/proc/ai_hide_as_plant(obj/item/kirbyplants/plant)
 	if(!ai_plant_usable(plant) || get_dist(src, plant) > 1)
@@ -656,6 +716,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		"icon_state" = icon_state,
 		"overlays" = overlays.Copy(),
 		"underlays" = underlays.Copy(),
+		"layer" = layer,
 		"alpha" = alpha,
 	)
 	plant.forceMove(src)
@@ -668,6 +729,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	icon_state = plant.icon_state
 	overlays = plant.overlays.Copy()
 	underlays = null
+	layer = plant.layer
 	ai_hide_mode = BOUNTY_HIDE_PLANT
 	ai_hide_ref = WEAKREF(plant)
 	return TRUE
@@ -685,8 +747,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	return TRUE
 
 /**
- * Stops hiding, whatever the reason: out of the closet if it opens (welded or locked, they stay
- * stuck in it), the plant put back where it stood and their own look back, the fade gone.
+ * Stops hiding: out of the closet if it opens, the plant put back where it stood and their own look
+ * back, the fade gone. Welded or locked in, they stay in (and hidden, so opening it later finds
+ * them) and it returns FALSE.
  */
 /mob/living/basic/bounty_criminal/proc/ai_unhide()
 	var/atom/spot = ai_hide_ref?.resolve()
@@ -694,9 +757,14 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		if(BOUNTY_HIDE_CONTAINER)
 			var/obj/structure/closet/container = spot
 			if(istype(container))
+				// Off first, so opening it here does not find them a second time
 				UnregisterSignal(container, list(COMSIG_CLOSET_POST_OPEN, COMSIG_QDELETING))
 				if(loc == container && !container.opened)
 					container.open()
+				if(loc == container)
+					RegisterSignal(container, COMSIG_CLOSET_POST_OPEN, PROC_REF(ai_on_container_opened))
+					RegisterSignal(container, COMSIG_QDELETING, PROC_REF(ai_on_container_gone))
+					return FALSE
 		if(BOUNTY_HIDE_PLANT)
 			ai_restore_look()
 			var/obj/item/kirbyplants/plant = spot
@@ -712,6 +780,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	ai_hide_mode = null
 	ai_hide_ref = null
 	ai_sprint_checked_at = world.time
+	return TRUE
 
 /// Their own look back after passing as a plant or standing faded
 /mob/living/basic/bounty_criminal/proc/ai_restore_look()
@@ -726,6 +795,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		icon_state = saved["icon_state"]
 		overlays = saved["overlays"]
 		underlays = saved["underlays"]
+		layer = saved["layer"]
 	alpha = saved["alpha"]
 
 /mob/living/basic/bounty_criminal/proc/ai_on_container_opened(obj/structure/closet/source, mob/living/user, force)
@@ -738,15 +808,16 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 
 /**
  * Found: out of hiding, a word, the finder shoved back a tile if they are right there (M4), and
- * off again, to a new hiding place. `finder` may be null (a light came, the closet broke).
- * Returns TRUE if they were hidden.
+ * off again, to a new hiding place. `finder` may be null (a light came, the closet broke). Welded
+ * or locked in, they can't get out and stay hidden. Returns TRUE if they came out.
  */
 /mob/living/basic/bounty_criminal/proc/ai_reveal(mob/living/finder, reason)
 	if(!hidden)
 		return FALSE
 	var/mode = ai_hide_mode
 	var/atom/spot = ai_hide_ref?.resolve()
-	ai_unhide()
+	if(!ai_unhide())
+		return FALSE
 	ai_last_hide_ref = spot ? WEAKREF(spot) : null
 	if(stat == DEAD || !isturf(loc))
 		return TRUE
@@ -762,7 +833,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		if(get_dist(src, finder) <= 1 && isturf(finder.loc))
 			ai_shove_away(finder)
 	if(!QDELETED(ai_controller))
-		// Out of the keep-still behaviour at once, so they bolt this tick rather than next second
+		// Out of the keep-still behaviour at once, so they bolt now rather than next second
 		ai_controller.CancelActions()
 	if(ai_can_act())
 		ai_flee_event(isliving(finder) ? finder : ai_threat(), "found")
@@ -829,8 +900,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 /mob/living/basic/bounty_criminal/proc/ai_come_out()
 	var/mode = ai_hide_mode
 	var/atom/spot = ai_hide_ref?.resolve()
-	ai_unhide()
-	if(!isturf(loc))
+	if(!ai_unhide() || !isturf(loc))
 		return
 	if(mode == BOUNTY_HIDE_CONTAINER && spot)
 		visible_message(span_notice("[src] climbs out of [spot]."))

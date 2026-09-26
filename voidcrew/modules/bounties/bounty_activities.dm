@@ -37,8 +37,10 @@
 	var/datum/weakref/ai_seat_ref
 	/// Sitting on the floor
 	var/ai_crouching = FALSE
-	/// Weakrefs to the camp they made (fire or lantern first), so it is made once
+	/// Weakrefs to the camp they made: the fire or lantern, the mattress, the crate
 	var/list/ai_camp
+	/// The mattress and crate were made; only the fire is ever made again
+	var/ai_camp_made = FALSE
 
 /**
  * Sets what they are doing until a hunter turns up: `kind` is a BOUNTY_ACTIVITY_*, `anchor` the
@@ -260,9 +262,12 @@
 			return table
 	return null
 
-/// Whether they could sit on `seat`: loose on the floor, nobody on it, on their site
+/**
+ * Whether they could sit on `seat`: loose on the floor, nobody on it, on their site. Stools (bar
+ * stools too) have can_buckle off for people; they are sat on with a forced buckle all the same.
+ */
 /mob/living/basic/bounty_criminal/proc/ai_seat_usable(obj/structure/chair/seat)
-	if(QDELETED(seat) || !isturf(seat.loc) || !seat.can_buckle || istype(seat, /obj/structure/chair/e_chair))
+	if(QDELETED(seat) || !isturf(seat.loc) || istype(seat, /obj/structure/chair/e_chair))
 		return FALSE
 	if(seat.has_buckled_mobs() && !(src in seat.buckled_mobs))
 		return FALSE
@@ -439,14 +444,17 @@
 		visible_message(span_notice("[src] shuts [box]."), vision_distance = 7)
 
 /**
- * The camp, made once: a fire in the middle (a lantern where there isn't the air for one), a
- * mattress and an empty crate around it. Returns the fire or lantern, or null.
+ * The camp: a fire in the middle (a lantern where there isn't the air for one), a mattress and an
+ * empty crate around it. The mattress and crate are made once; a fire that went out is lit again,
+ * and one that is gone is replaced. Returns the fire or lantern, or null.
  */
 /mob/living/basic/bounty_criminal/proc/ai_make_camp(turf/center)
-	for(var/datum/weakref/ref as anything in ai_camp)
-		var/atom/piece = ref?.resolve()
-		if(!QDELETED(piece) && (istype(piece, /obj/structure/bonfire) || istype(piece, /obj/item/flashlight/lantern)))
-			return piece
+	var/atom/fire = ai_camp_fire()
+	if(fire)
+		var/obj/structure/bonfire/bonfire = fire
+		if(istype(bonfire) && !bonfire.burning)
+			bonfire.start_burning()
+		return fire
 	if(!center)
 		return null
 	var/list/tiles = list()
@@ -457,8 +465,6 @@
 		return null
 	var/turf/fire_turf = (center in tiles) ? center : pick(tiles)
 	tiles -= fire_turf
-	ai_camp = list()
-	var/atom/fire
 	var/obj/structure/bonfire/bonfire = new(fire_turf)
 	bonfire.start_burning()
 	if(bonfire.burning)
@@ -466,7 +472,10 @@
 	else
 		qdel(bonfire)
 		fire = new /obj/item/flashlight/lantern/on(fire_turf)
-	ai_camp += WEAKREF(fire)
+	LAZYADD(ai_camp, WEAKREF(fire))
+	if(ai_camp_made)
+		return fire
+	ai_camp_made = TRUE
 	// The fire's neighbours stay free to sit at
 	for(var/turf/beside as anything in tiles.Copy())
 		if(get_dist(beside, fire_turf) <= 1)
@@ -476,6 +485,16 @@
 	if(length(tiles))
 		ai_camp += WEAKREF(new /obj/structure/closet/crate(pick_n_take(tiles)))
 	return fire
+
+/// Their camp's fire or lantern, if it is still there
+/mob/living/basic/bounty_criminal/proc/ai_camp_fire()
+	return ai_camp_piece(/obj/structure/bonfire) || ai_camp_piece(/obj/item/flashlight/lantern)
+
+/// They are gone: the camp stays as it is, but the fire burns down
+/mob/living/basic/bounty_criminal/proc/ai_put_out_camp()
+	var/obj/structure/bonfire/bonfire = ai_camp_piece(/obj/structure/bonfire)
+	if(bonfire?.burning)
+		bonfire.extinguish()
 
 /// A piece of their camp of `piece_type`, if it is still there
 /mob/living/basic/bounty_criminal/proc/ai_camp_piece(piece_type)
@@ -964,7 +983,11 @@
 		return BOUNTY_STEP_DONE
 	return BOUNTY_STEP_MOVE
 
+/// A container they can't get to is struck off the list
 /datum/bounty_activity/loot/spot_unreachable()
+	if(index && index <= length(containers))
+		containers.Cut(index, index + 1)
+		index = max(0, index - 1)
 	. = ..()
 	arrived = TRUE
 	stage = 2
@@ -1212,8 +1235,9 @@
 
 /**
  * A decoy's AI: it blends in exactly like the fugitive (the blend activity, set by P6 with
- * start_activity(BOUNTY_ACTIVITY_BLEND)), and gets out of the way when hit. It never stops being a
- * patron. What it says and does when accused is P6's.
+ * start_activity(BOUNTY_ACTIVITY_BLEND)). While blended it shows no reaction of its own to
+ * anything: what it says and does when accused or hit is P6's, which can move it out of the way
+ * with ai_flee_from(). It never stops being a patron.
  */
 /mob/living/basic/bounty_criminal/decoy
 	ai_controller = /datum/ai_controller/basic_controller/bounty/criminal/decoy
@@ -1229,12 +1253,13 @@
 /mob/living/basic/bounty_criminal/decoy/ai_expose()
 	return
 
-/// Hit: they back away from whoever did it, then go back to their evening
+/// A blow does not give a decoy away: no reaction of its own (P6 decides)
+/mob/living/basic/bounty_criminal/decoy/ai_exposed_by_blows()
+	return FALSE
+
+/// Made to react (P6, or a decoy no longer blending in): they back away, then go back to their evening
 /mob/living/basic/bounty_criminal/decoy/ai_react(mob/living/threat, bark)
-	if(!threat)
-		return
-	ai_flee_event(threat, bark, seek_hiding = FALSE, quiet = TRUE)
-	ai_set_pace(BOUNTY_NORMAL_SPEED_MELEE)
+	ai_flee_from(threat)
 
 /datum/ai_planning_subtree/bounty_decoy_flee
 

@@ -7,9 +7,15 @@
 
 // ===== TRAITS =====
 
+// P2 declares these two in bounty_criminals.dm with the same values. The guarded copies here let this
+// package build on its own; once both are merged, these can go.
 #ifndef TRAIT_BOUNTY_SPRINTING
 /// A meek criminal running flat out, not winded, cornered or aiming. P2's projectile dodge reads it.
 #define TRAIT_BOUNTY_SPRINTING "bounty_sprinting"
+#endif
+#ifndef TRAIT_BOUNTY_HELD
+/// Restrained or downed (P2): the AI plans nothing
+#define TRAIT_BOUNTY_HELD "bounty_held"
 #endif
 /// Trait source for what the criminal AI puts on a mob (TRAIT_BOUNTY_SPRINTING)
 #define BOUNTY_AI_TRAIT "bounty_ai"
@@ -56,6 +62,8 @@
 #define BB_BOUNTY_WINDUP_UNTIL "bb_bounty_windup_until"
 /// world.time of the last shot
 #define BB_BOUNTY_LAST_SHOT "bb_bounty_last_shot"
+/// world.time a ranged fighter may next step back from someone too close
+#define BB_BOUNTY_BACKSTEP_AT "bb_bounty_backstep_at"
 
 // ===== ACTIVITY STEPS =====
 
@@ -78,6 +86,8 @@
 #define BOUNTY_FLEE_DISTANCE 9
 /// How far they look for their grudge list in a fight
 #define BOUNTY_FIGHT_VISION 9
+/// How often a ranged fighter steps back from someone inside its style's min_range
+#define BOUNTY_BACKSTEP_GAP (0.8 SECONDS)
 /// How many times a walk may fail before they give up on where they were going
 #define BOUNTY_TRAVEL_GIVE_UP 3
 /// How long before trying an activity again after it could not be set up
@@ -127,6 +137,8 @@
 #define BOUNTY_MEEK_CALM_AFTER (20 SECONDS)
 /// Cornered means the hunter is at most this close
 #define BOUNTY_MEEK_CORNER_RANGE 3
+/// Running away failed this recently: still cornered (longer than a failed plan's 1.5 s pause)
+#define BOUNTY_MEEK_RUN_FAIL_WINDOW (2 SECONDS)
 /// Cornered this long before the gun comes out
 #define BOUNTY_MEEK_CORNERED_TIME (1.5 SECONDS)
 /// The aim before the shots: the telegraph

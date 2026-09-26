@@ -419,10 +419,10 @@
 	if(istype(companion))
 		companion.ai_took_damage(damage, damagetype)
 
-/datum/ai_controller/basic_controller/bounty/companion/place_held()
+/datum/ai_controller/basic_controller/bounty/companion/place_held(facing)
 	var/mob/living/basic/bounty_companion/companion = pawn
 	if(istype(companion))
-		bounty_ai_place_held(companion, companion.ai_hand)
+		bounty_ai_place_held(companion, companion.ai_hand, facing)
 
 /datum/ai_controller/basic_controller/bounty/companion/proc/on_stamcrit(mob/living/basic/bounty_companion/source)
 	SIGNAL_HANDLER
@@ -485,11 +485,9 @@
 	var/mob/living/basic/bounty_companion/companion = controller.pawn
 	if(!companion.ai_can_fight())
 		return
-	if(companion.ai_in_fight && !controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET))
-		var/mob/living/basic/bounty_criminal/leader = companion.ai_leader()
-		if(!leader || leader.ai_mode != BOUNTY_AI_FIGHTING)
-			companion.ai_leave_fight()
 	var/mob/living/basic/bounty_criminal/leader = companion.ai_leader()
+	if(companion.ai_in_fight && !controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET) && leader?.ai_mode != BOUNTY_AI_FIGHTING)
+		companion.ai_leave_fight()
 	if(!leader)
 		return
 	if(world.time >= companion.ai_next_idle_think)
@@ -497,6 +495,7 @@
 		companion.ai_idle_spot = companion.ai_pick_idle_spot(leader)
 	var/turf/spot = companion.ai_idle_spot
 	if(spot && companion.loc != spot)
+		companion.ai_stand_up()
 		controller.set_blackboard_key(BB_BOUNTY_DESTINATION, spot)
 		controller.queue_behavior(/datum/ai_behavior/travel_towards/bounty, BB_BOUNTY_DESTINATION)
 		return SUBTREE_RETURN_FINISH_PLANNING

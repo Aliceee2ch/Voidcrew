@@ -147,8 +147,8 @@
 	bounty_ai_place_held(owner, holder)
 	return holder
 
-/// Puts a held thing in the hand on the side they face, or over their head
-/proc/bounty_ai_place_held(mob/living/owner, obj/effect/abstract/bounty_held/holder)
+/// Puts a held thing in the hand on the side they face (`facing`, or the way they face now), or over their head
+/proc/bounty_ai_place_held(mob/living/owner, obj/effect/abstract/bounty_held/holder, facing)
 	if(!holder || !owner)
 		return
 	holder.transform = matrix().Scale(0.6)
@@ -156,8 +156,9 @@
 		holder.pixel_w = 0
 		holder.pixel_z = 22
 		return
+	var/facing_dir = facing || owner.dir
 	// The same hand whichever way they face: to the right facing south or east, the left facing north or west
-	holder.pixel_w = ((owner.dir & WEST) || owner.dir == NORTH) ? -7 : 7
+	holder.pixel_w = ((facing_dir & WEST) || facing_dir == NORTH) ? -7 : 7
 	holder.pixel_z = -4
 
 /// What a fighter holds, by whichever of the two types it is
@@ -223,7 +224,7 @@
 
 /// Whether they can do anything at all: alive, standing, free and not giving up
 /mob/living/basic/bounty_criminal/proc/ai_can_act()
-	if(stat != CONSCIOUS || is_downed() || is_restrained())
+	if(stat != CONSCIOUS || HAS_TRAIT(src, TRAIT_BOUNTY_HELD) || is_downed() || is_restrained())
 		return FALSE
 	return !HAS_TRAIT(src, TRAIT_BOUNTY_SURRENDERED)
 
@@ -288,6 +289,17 @@
 	if(blended)
 		ai_end_blend()
 
+/// Whether a blow while blended in gives them away: the fugitive's does (spec section 7), a decoy's does not
+/mob/living/basic/bounty_criminal/proc/ai_exposed_by_blows()
+	return TRUE
+
+/// Gets out of the way of `threat` without looking for somewhere to hide: for P6 to move a decoy that was hit
+/mob/living/basic/bounty_criminal/proc/ai_flee_from(mob/living/threat)
+	if(!isliving(threat) || !ai_flee_event(threat, null, seek_hiding = FALSE, quiet = TRUE))
+		return FALSE
+	ai_set_pace(BOUNTY_NORMAL_SPEED_MELEE)
+	return TRUE
+
 /**
  * Looks around for hunters, once every BOUNTY_NOTICE_INTERVAL: someone played, in view within
  * ai_notice_range(), holding a weapon, cuffs or the warrant, or running straight at them from
@@ -326,9 +338,15 @@
 	ai_seen_distances = length(seen) ? seen : null
 	return found
 
-/// Someone attacked them. Never from a signal handler's stack: reveal and react can open closets and move things.
+/**
+ * Someone attacked them. Never from a signal handler's stack: reveal and react can open closets
+ * and move things. While blended in, nothing shows unless the blow exposes them (the fugitive; a
+ * decoy stays a patron and P6 decides what it does).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_attacked_by(mob/living/attacker)
 	if(stat == DEAD || !isliving(attacker) || bounty_ai_same_gang(src, attacker))
+		return
+	if(blended && !ai_exposed_by_blows())
 		return
 	ai_add_grudge(attacker)
 	if(hidden)
@@ -361,9 +379,11 @@
 /mob/living/basic/bounty_criminal/proc/ai_took_damage(damage, damagetype)
 	return
 
-/// Down at the downed line (P2's COMSIG_BOUNTY_CRIMINAL_DOWNED): they drop everything
+/// Down at the downed line (P2's COMSIG_BOUNTY_CRIMINAL_DOWNED): they drop everything, a shot or a wind-up included
 /mob/living/basic/bounty_criminal/proc/ai_on_downed()
 	ai_let_go()
+	if(!QDELETED(ai_controller))
+		ai_controller.CancelActions()
 	ai_bark("downed")
 	ai_companions_lose_heart()
 
@@ -377,6 +397,8 @@
 /// Cuffed (P2's COMSIG_BOUNTY_CRIMINAL_RESTRAINED)
 /mob/living/basic/bounty_criminal/proc/ai_on_restrained(mob/living/user)
 	ai_let_go()
+	if(!QDELETED(ai_controller))
+		ai_controller.CancelActions()
 	ai_add_grudge(user)
 	ai_bark("cuffed")
 	ai_companions_lose_heart()
@@ -611,7 +633,11 @@
 	var/stuck = !succeeded && controller.consecutive_pathing_attempts > 0 && target && controller.current_movement_target == target
 	. = ..()
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
-	if(stuck && istype(criminal))
+	if(!istype(criminal))
+		return
+	if(succeeded)
+		criminal.ai_travel_failures = 0
+	else if(stuck)
 		criminal.ai_travel_failed()
 
 /// The same, stopping beside the target: a closet, a table, a stall, a container to go through
@@ -629,12 +655,17 @@
  * Attacks are read from the attack signals themselves (items, hands, mobs, shots that landed,
  * thrown things) rather than relay_attackers, whose projectile hook fires even for a shot that
  * passes through a blended patron.
+ *
+ * Who they fight comes from their grudge list and retaliation only, filtered by the body's
+ * may_attack() and their own gang, so faction is ignored in targeting: a criminal shares
+ * FACTION_NEUTRAL with players until the placement sets otherwise, and would never hit back.
  */
 /datum/ai_controller/basic_controller/bounty
 	blackboard = list(
 		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic/bounty,
 		BB_TARGET_MINIMUM_STAT = CONSCIOUS,
 		BB_BASIC_MOB_FLEE_DISTANCE = BOUNTY_FLEE_DISTANCE,
+		BB_ALWAYS_IGNORE_FACTION = TRUE,
 	)
 	ai_movement = /datum/ai_movement/jps/bounty
 	idle_behavior = /datum/idle_behavior/bounty_wander
@@ -655,7 +686,8 @@
 	RegisterSignal(fighter, COMSIG_ATOM_DIR_CHANGE, PROC_REF(on_turned))
 	RegisterSignal(fighter, COMSIG_ATOM_AFTER_ATTACKEDBY, PROC_REF(on_attacked_by_item))
 	RegisterSignal(fighter, COMSIG_ATOM_ATTACK_HAND, PROC_REF(on_touched))
-	RegisterSignals(fighter, list(COMSIG_ATOM_ATTACK_BASIC_MOB, COMSIG_ATOM_ATTACK_ANIMAL), PROC_REF(on_attacked_by_mob))
+	// A basic mob's blow reaches attack_animal() too, so this one signal covers both kinds of mob
+	RegisterSignal(fighter, COMSIG_ATOM_ATTACK_ANIMAL, PROC_REF(on_attacked_by_mob))
 	RegisterSignal(fighter, COMSIG_ATOM_BULLET_ACT, PROC_REF(on_shot))
 	RegisterSignal(fighter, COMSIG_ATOM_HITBY, PROC_REF(on_hit_by_thrown))
 	RegisterSignal(fighter, COMSIG_MOB_APPLY_DAMAGE, PROC_REF(on_damage))
@@ -672,7 +704,6 @@
 			COMSIG_ATOM_DIR_CHANGE,
 			COMSIG_ATOM_AFTER_ATTACKEDBY,
 			COMSIG_ATOM_ATTACK_HAND,
-			COMSIG_ATOM_ATTACK_BASIC_MOB,
 			COMSIG_ATOM_ATTACK_ANIMAL,
 			COMSIG_ATOM_BULLET_ACT,
 			COMSIG_ATOM_HITBY,
@@ -703,8 +734,8 @@
 /datum/ai_controller/basic_controller/bounty/proc/pawn_damaged(damage, damagetype)
 	return
 
-/// Moves what the pawn holds to the hand on the side it faces
-/datum/ai_controller/basic_controller/bounty/proc/place_held()
+/// Moves what the pawn holds to the hand on the side it is turning to (`facing`)
+/datum/ai_controller/basic_controller/bounty/proc/place_held(facing)
 	return
 
 /datum/ai_controller/basic_controller/bounty/proc/on_pre_melee(mob/living/basic/source, atom/target, proximity, list/modifiers)
@@ -733,10 +764,11 @@
 	var/datum/bounty_style/style = bounty_ai_style(source)
 	style?.prepare_projectile(source, shot)
 
+/// Sent before the turn lands, so the new direction is passed on rather than read off the mob
 /datum/ai_controller/basic_controller/bounty/proc/on_turned(atom/source, old_dir, new_dir)
 	SIGNAL_HANDLER
 	if(old_dir != new_dir)
-		place_held()
+		place_held(new_dir)
 
 /datum/ai_controller/basic_controller/bounty/proc/on_attacked_by_item(atom/source, obj/item/weapon, mob/living/attacker, list/modifiers)
 	SIGNAL_HANDLER
@@ -808,6 +840,12 @@
 	RegisterSignal(criminal, COMSIG_BOUNTY_CRIMINAL_RESTRAINED, PROC_REF(on_restrained))
 	RegisterSignal(criminal, COMSIG_BOUNTY_CRIMINAL_UNRESTRAINED, PROC_REF(on_unrestrained))
 	criminal.ai_set_pace(BOUNTY_CALM_SPEED)
+	// Spec section 3: they don't fight the hostiles native to their site. The placement adds the
+	// site's own factions (pirates) on top.
+	var/list/sides = criminal.faction.Copy()
+	sides -= FACTION_NEUTRAL
+	sides |= FACTION_HOSTILE
+	criminal.faction = sides
 	return ..()
 
 /datum/ai_controller/basic_controller/bounty/criminal/UnpossessPawn(destroy)
@@ -825,6 +863,8 @@
 		// Anything they hold goes, and a disguise comes off: this runs before the mob's contents are deleted.
 		criminal.ai_let_go()
 		criminal.ai_over_head = bounty_ai_update_held(criminal, criminal.ai_over_head, null)
+		// Their camp stays as it is, but the fire burns down
+		criminal.ai_put_out_camp()
 	return ..()
 
 /datum/ai_controller/basic_controller/bounty/criminal/on_stat_changed(mob/living/source, new_stat)
@@ -861,10 +901,10 @@
 	if(istype(criminal))
 		criminal.ai_took_damage(damage, damagetype)
 
-/datum/ai_controller/basic_controller/bounty/criminal/place_held()
+/datum/ai_controller/basic_controller/bounty/criminal/place_held(facing)
 	var/mob/living/basic/bounty_criminal/criminal = pawn
 	if(istype(criminal))
-		bounty_ai_place_held(criminal, criminal.ai_hand)
+		bounty_ai_place_held(criminal, criminal.ai_hand, facing)
 
 /// A shot passes through a blended patron (the fugitive or a decoy) it was not aimed at (AR-C7)
 /datum/ai_controller/basic_controller/bounty/criminal/proc/on_prehit(mob/living/basic/bounty_criminal/source, obj/projectile/shot)

@@ -57,6 +57,7 @@
 	var/old_desc = criminal.desc
 	var/old_icon = criminal.icon
 	var/old_state = criminal.icon_state
+	var/old_layer = criminal.layer
 
 	TEST_ASSERT(criminal.ai_hide_in(plant), "The meek criminal would not pass as the plant beside them")
 	TEST_ASSERT_EQUAL(criminal.loc, tile(2, 1), "They did not step onto the plant's tile")
@@ -74,6 +75,7 @@
 	TEST_ASSERT_EQUAL(criminal.desc, old_desc, "Their description did not come back")
 	TEST_ASSERT_EQUAL(criminal.icon, old_icon, "Their look did not come back")
 	TEST_ASSERT_EQUAL(criminal.icon_state, old_state, "Their look did not come back")
+	TEST_ASSERT_EQUAL(criminal.layer, old_layer, "Their layer did not come back")
 	TEST_ASSERT_EQUAL(plant.loc, tile(2, 1), "The plant was not put back")
 	TEST_ASSERT(criminal.ai_has_grudge(finder), "The finder is not on their grudge list")
 
@@ -140,10 +142,17 @@
 	TEST_ASSERT(criminal.ai_start_aim(hunter), "They would not aim a second time")
 	criminal.ai_aim_until = world.time
 	TEST_ASSERT(criminal.ai_fire_holdout(), "A clean aim did not fire")
+	TEST_ASSERT_EQUAL(criminal.ai_volley_left, 2, "After the first shot, two of the volley should be left") // BOUNTY_MEEK_PISTOL_SHOTS - 1
 	var/datum/component/ranged_attacks/gun = criminal.GetComponent(/datum/component/ranged_attacks)
 	TEST_ASSERT_NOTNULL(gun, "The meek criminal has no ranged_attacks component")
 	TEST_ASSERT_EQUAL(gun.projectile_type, /obj/projectile/bullet/bounty/holdout, "The holdout fires the wrong thing")
-	TEST_ASSERT_EQUAL(gun.burst_shots, 3, "The holdout's volley is not three shots") // BOUNTY_MEEK_PISTOL_SHOTS
+	TEST_ASSERT(gun.cooldown_time < 5, "The holdout's gun is not ready between the volley's shots") // BOUNTY_MEEK_PISTOL_GAP
+
+	// Cuffed or down mid-volley, the rest of it never comes
+	ADD_TRAIT(criminal, "bounty_held", "test") // TRAIT_BOUNTY_HELD
+	TEST_ASSERT(!criminal.ai_volley_shot(), "A held criminal fired the rest of the volley")
+	TEST_ASSERT(!criminal.ai_volley_left, "The volley was not cut short")
+	REMOVE_TRAIT(criminal, "bounty_held", "test")
 
 /// A normal criminal notices someone armed, fights when they close in, and surrenders
 /datum/unit_test/voidcrew_bounty_ai/normal
@@ -154,12 +163,17 @@
 	var/obj/item/knife/kitchen/knife = allocate(/obj/item/knife/kitchen)
 	hunter.put_in_hands(knife)
 	TEST_ASSERT(bounty_ai_is_armed(hunter, TRUE), "A kitchen knife in hand does not count as armed")
+	TEST_ASSERT("hostile" in criminal.faction, "The criminal is not in the hostile faction") // FACTION_HOSTILE
+	TEST_ASSERT(!("neutral" in criminal.faction), "The criminal still shares the players' neutral faction") // FACTION_NEUTRAL
+	var/datum/targeting_strategy/strategy = GET_TARGETING_STRATEGY(criminal.ai_controller.blackboard[BB_TARGETING_STRATEGY])
+	TEST_ASSERT(strategy.can_attack(criminal, hunter, 9), "The criminal's targeting will not let it fight the hunter") // BOUNTY_FIGHT_VISION
 
 	criminal.ai_notice(hunter)
 	TEST_ASSERT_EQUAL(criminal.ai_mode, "fighting", "Someone armed two tiles off did not start the fight") // BOUNTY_AI_FIGHTING
 	TEST_ASSERT(criminal.ai_has_grudge(hunter), "The armed hunter is not on their grudge list")
 	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_style"], "brawler", "With no record, they did not fight as a brawler") // BB_BOUNTY_STYLE, BOUNTY_STYLE_BRAWLER
 	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET], hunter, "They are not targeting the hunter")
+	TEST_ASSERT_EQUAL(criminal.ai_pick_fight_target(), hunter, "In the fight, they do not pick the hunter from their grudge list")
 
 	// One companion standing: less chance to give up
 	var/list/buddies = criminal.spawn_companions(1)
@@ -312,8 +326,8 @@
 	TEST_ASSERT_EQUAL(fugitive.ai_pace, decoy.ai_pace, "The fugitive and the decoy move at different paces")
 	TEST_ASSERT_EQUAL(fugitive.speed, decoy.speed, "The fugitive and the decoy move at different speeds")
 
-	TEST_ASSERT(!fugitive.can_be_pulled(hunter), "A blended fugitive can be pulled")
-	TEST_ASSERT(!decoy.can_be_pulled(hunter), "A decoy can be pulled")
+	TEST_ASSERT(!fugitive.can_be_pulled(hunter, MOVE_FORCE_EXTREMELY_STRONG), "A blended fugitive can be pulled")
+	TEST_ASSERT(!decoy.can_be_pulled(hunter, MOVE_FORCE_EXTREMELY_STRONG), "A decoy can be pulled")
 
 	var/obj/projectile/bullet/shot = allocate(/obj/projectile/bullet, tile(2, 2))
 	shot.original = hunter
@@ -322,13 +336,17 @@
 	shot.original = decoy
 	TEST_ASSERT(!(SEND_SIGNAL(decoy, COMSIG_PROJECTILE_PREHIT, shot) & PROJECTILE_INTERRUPT_HIT_PHASE), "A shot aimed at the decoy passed through it")
 
-	// A blow exposes the fugitive; a decoy stays a patron and gets out of the way
+	// A blow exposes the fugitive; a decoy shows nothing of its own and stays a patron
 	fugitive.ai_attacked_by(hunter)
 	TEST_ASSERT(!fugitive.blended, "A blow did not expose the fugitive")
 	TEST_ASSERT_EQUAL(fugitive.ai_mode, "fleeing", "The exposed meek fugitive did not bolt") // BOUNTY_AI_FLEEING
 	decoy.ai_attacked_by(hunter)
 	TEST_ASSERT(decoy.blended, "A blow made the decoy stop being a patron")
+	TEST_ASSERT_EQUAL(decoy.ai_mode, "calm", "A blended decoy reacted to a blow on its own") // BOUNTY_AI_CALM
+	// P6 can move it out of the way
+	TEST_ASSERT(decoy.ai_flee_from(hunter), "The decoy would not get out of the way")
 	TEST_ASSERT_EQUAL(decoy.ai_mode, "fleeing", "The decoy did not get out of the way") // BOUNTY_AI_FLEEING
+	TEST_ASSERT(decoy.blended, "Getting out of the way made the decoy stop being a patron")
 	decoy.ai_calm_down()
 	TEST_ASSERT(istype(decoy.ai_resume_activity(), /datum/bounty_activity/blend), "Calm again, the decoy did not go back to blending in")
 	QDEL_NULL(shot)

@@ -72,6 +72,7 @@
 		var/mob/living/threat = ai_threat()
 		if(!threat || get_dist(src, attacker) < get_dist(src, threat))
 			ai_set_threat(attacker)
+			ai_controller?.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, attacker)
 		if(prob(30))
 			ai_bark("hurt")
 		return
@@ -213,10 +214,13 @@
 
 /**
  * tg's ranged attack, with the style doing the shooting: its wind-up telegraph, its magazine and
- * reload, through the mob's ranged_attacks component. The pistol keeps BOUNTY_PISTOL_RANGE off.
+ * reload, through the mob's ranged_attacks component. The pistol keeps BOUNTY_PISTOL_RANGE off and
+ * backs off a step when someone gets inside its style's min_range. Planning carries on meanwhile,
+ * so a new target, a retreat or a call for help is picked up mid-fight.
  */
 /datum/ai_behavior/basic_ranged_attack/bounty
 	action_cooldown = 0.2 SECONDS
+	behavior_flags = AI_BEHAVIOR_REQUIRE_MOVEMENT | AI_BEHAVIOR_MOVE_AND_PERFORM | AI_BEHAVIOR_CAN_PLAN_DURING_EXECUTION
 	required_distance = BOUNTY_PISTOL_RANGE
 	chase_range = BOUNTY_FIGHT_VISION
 	avoid_friendly_fire = TRUE
@@ -232,10 +236,32 @@
 		return AI_BEHAVIOR_INSTANT | AI_BEHAVIOR_FAILED
 	if(!can_see(fighter, target, required_distance))
 		return AI_BEHAVIOR_INSTANT
+	if(style.min_range && get_dist(fighter, target) < style.min_range && !controller.blackboard[BB_BOUNTY_WINDUP_UNTIL])
+		back_off(controller, fighter, target)
 	if(avoid_friendly_fire && check_friendly_in_path(fighter, target, strategy))
 		adjust_position(fighter, target)
 		return AI_BEHAVIOR_DELAY
 	return style.ranged_tick(fighter, target)
+
+/// A wind-up cut short never carries over: the next shot telegraphs again
+/datum/ai_behavior/basic_ranged_attack/bounty/finish_action(datum/ai_controller/controller, succeeded, target_key, targeting_strategy_key, hiding_location_key)
+	. = ..()
+	controller.clear_blackboard_key(BB_BOUNTY_WINDUP_UNTIL)
+
+/// A step back from `target`, now and then, never off the leash
+/datum/ai_behavior/basic_ranged_attack/bounty/proc/back_off(datum/ai_controller/controller, mob/living/basic/fighter, atom/target)
+	if(world.time < controller.blackboard[BB_BOUNTY_BACKSTEP_AT] || !isturf(fighter.loc))
+		return
+	controller.set_blackboard_key(BB_BOUNTY_BACKSTEP_AT, world.time + BOUNTY_BACKSTEP_GAP)
+	var/away_dir = get_dir(target, fighter)
+	var/turf/away = get_step(fighter, away_dir)
+	if(!away_dir || !away || away.is_blocked_turf(source_atom = fighter) || islava(away) || ischasm(away))
+		return
+	var/mob/living/basic/bounty_criminal/leash_holder = bounty_ai_side_of(fighter)
+	if(leash_holder && !leash_holder.leash_ok(away))
+		return
+	fighter.Move(away, away_dir)
+	fighter.face_atom(target)
 
 /// The shotgun closes in to BOUNTY_SHOTGUN_RANGE
 /datum/ai_behavior/basic_ranged_attack/bounty/close
@@ -255,7 +281,7 @@
  * can see TRAIT_BOUNTY_SURRENDERED on that same hit. Must not sleep: it runs in a signal handler.
  */
 /mob/living/basic/bounty_criminal/proc/ai_check_surrender(damage, damagetype)
-	if(damage <= 0 || !(damagetype in list(BRUTE, BURN)) || !ai_can_act())
+	if(damage <= 0 || blended || !(damagetype in list(BRUTE, BURN)) || !ai_can_act())
 		return FALSE
 	var/line = maxHealth * BOUNTY_SURRENDER_BELOW
 	var/coeff = damage_coeff?[damagetype]
@@ -451,6 +477,8 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	var/split_damage = FALSE
 	/// The ranged behavior that keeps this style's distance
 	var/ranged_behavior = /datum/ai_behavior/basic_ranged_attack/bounty
+	/// Anyone closer than this and they step back (0: never)
+	var/min_range = 0
 	/// The telegraph before a shot or throw, and what it says and sounds like
 	var/windup = 0
 	var/windup_message
@@ -521,6 +549,10 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	if(!gun)
 		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
 	var/windup_until = controller.blackboard[BB_BOUNTY_WINDUP_UNTIL]
+	if(windup_until && now > windup_until + 1 SECONDS)
+		// A wind-up left over from an interrupted fight: it has to be done again
+		controller.clear_blackboard_key(BB_BOUNTY_WINDUP_UNTIL)
+		windup_until = null
 	if(!windup_until)
 		if(gun.fire_cooldown > now + windup)
 			return AI_BEHAVIOR_DELAY
@@ -620,6 +652,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	windup = BOUNTY_PISTOL_WINDUP
 	windup_message = "%USER raises a pistol."
 	windup_sound = 'sound/items/weapons/gun/pistol/rack_small.ogg'
+	min_range = BOUNTY_PISTOL_MIN_RANGE
 	magazine = BOUNTY_PISTOL_MAGAZINE
 	reload_time = BOUNTY_PISTOL_RELOAD
 	reload_sound = 'sound/items/weapons/gun/pistol/mag_insert.ogg'
@@ -667,22 +700,25 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	projectile_type = /obj/projectile/bounty_bottle
 	projectile_sound = 'sound/items/weapons/punchmiss.ogg'
 	ranged_behavior = /datum/ai_behavior/basic_ranged_attack/bounty/throw
+	min_range = BOUNTY_BOTTLE_MIN_RANGE
 	windup = BOUNTY_BOTTLE_WINDUP
 	windup_message = "%USER winds up to throw a bottle."
 
-/// The meek's little gun: three weak shots when cornered, once per cornering
+/**
+ * The meek's little gun: three weak shots when cornered, once per cornering. The volley is fired
+ * one shot at a time by the meek AI (bounty_ai_meek.dm), each shot checking they can still shoot,
+ * so the gun here only has to be ready again between shots.
+ */
 /datum/bounty_style/holdout
 	key = BOUNTY_STYLE_HOLDOUT
 	ranged = TRUE
 	damage_low = BOUNTY_MEEK_PISTOL_DAMAGE
 	damage_high = BOUNTY_MEEK_PISTOL_DAMAGE
-	interval = BOUNTY_MEEK_PISTOL_COOLDOWN
+	interval = BOUNTY_MEEK_PISTOL_GAP * 0.8
 	speed = BOUNTY_MEEK_SPRINT_SPEED
 	held_look = /obj/item/gun/ballistic/automatic/pistol
 	projectile_type = /obj/projectile/bullet/bounty/holdout
 	projectile_sound = 'sound/items/weapons/gun/pistol/shot.ogg'
-	shots = BOUNTY_MEEK_PISTOL_SHOTS
-	shot_gap = BOUNTY_MEEK_PISTOL_GAP
 
 // ===== WHAT THEY FIRE =====
 

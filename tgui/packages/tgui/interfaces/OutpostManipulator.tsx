@@ -29,6 +29,14 @@ type Resident = {
   is_self: BooleanLike;
   steward: BooleanLike;
   treasurer: BooleanLike;
+  pricer?: BooleanLike;
+};
+
+/** One service room's admin rows (admin_ui_data()); a row with an action gets a button. */
+type ServiceAdminRoom = {
+  id: string;
+  name: string;
+  rows?: { label: string; action: string | null; ref: string | null }[] | null;
 };
 
 type ShipBayData = {
@@ -92,6 +100,9 @@ type SelectedOutpost = {
   residents: Resident[];
   ship_bays: ShipBayData;
   checkpoints: CheckpointAdminData;
+  /** Ckey billed as a visitor here, or null. */
+  playtest_visitor?: string | null;
+  services?: ServiceAdminRoom[] | null;
 };
 
 export type Data = {
@@ -116,6 +127,9 @@ const residentModes: SelectedOutpost['resident_mode'][] = [
 
 const modeLabel = (mode: string) =>
   mode.charAt(0).toUpperCase() + mode.slice(1);
+
+/** "release_locker" -> "Release locker". */
+const actionLabel = (action: string) => modeLabel(action.replace(/_/g, ' '));
 
 export const OutpostManipulator = () => {
   const { act, data } = useBackend<Data>();
@@ -276,6 +290,17 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
               Adjust Balance
             </Button>
             <Button
+              icon="user-secret"
+              selected={!!selected.playtest_visitor}
+              disabled={busy}
+              tooltip="Bill yourself as a visitor here: services charge you and staff doors stay shut. Management rights are unchanged."
+              onClick={() => mutate('playtest_visitor')}
+            >
+              {selected.playtest_visitor
+                ? 'Stop Visitor Billing'
+                : 'Bill Me as a Visitor'}
+            </Button>
+            <Button
               icon="person-circle-minus"
               color="caution"
               disabled={busy}
@@ -292,6 +317,11 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
               Delete
             </Button>
           </Stack>
+          {selected.playtest_visitor ? (
+            <NoticeBox mt={1}>
+              Billing {selected.playtest_visitor} as a visitor.
+            </NoticeBox>
+          ) : null}
         </Section>
       </Stack.Item>
 
@@ -299,7 +329,11 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
         <ShipBays data={selected.ship_bays} busy={busy} act={mutate} />
       </Stack.Item>
 
-      {!!selected.checkpoints.enabled && (
+      <Stack.Item>
+        <ServiceRooms rooms={selected.services} busy={busy} act={mutate} />
+      </Stack.Item>
+
+      {!!selected.checkpoints?.enabled && (
         <Stack.Item>
           <CheckpointTools
             data={selected.checkpoints}
@@ -434,7 +468,14 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
                         Treasurer
                       </Box>
                     )}
-                    {!resident.steward && !resident.treasurer ? (
+                    {!!resident.pricer && (
+                      <Box inline color="teal" ml={1}>
+                        Pricer
+                      </Box>
+                    )}
+                    {!resident.steward &&
+                    !resident.treasurer &&
+                    !resident.pricer ? (
                       <Box color="label">Resident</Box>
                     ) : null}
                   </Table.Cell>
@@ -467,6 +508,20 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
                     </Button>
                     <Button
                       compact
+                      icon="tags"
+                      disabled={busy}
+                      tooltip="Pricing: sets service prices and takes shop stock free"
+                      onClick={() =>
+                        mutate('delegate', {
+                          ref: resident.ref,
+                          role: 'pricer',
+                        })
+                      }
+                    >
+                      {resident.pricer ? 'Unmake Pricer' : 'Pricer'}
+                    </Button>
+                    <Button
+                      compact
                       color="bad"
                       icon="user-minus"
                       disabled={busy || !!resident.is_self}
@@ -493,6 +548,60 @@ const OutpostDetails = ({ selected, busy, act }: DetailsProps) => {
     </Stack>
   );
 };
+
+const ServiceRooms = ({
+  rooms,
+  busy,
+  act,
+}: {
+  rooms?: ServiceAdminRoom[] | null;
+  busy: boolean;
+  act: DetailsProps['act'];
+}) => (
+  <Section title="Service Rooms">
+    {!rooms?.length ? (
+      <Box color="label">No service rooms installed.</Box>
+    ) : (
+      rooms.map((room) => (
+        <Box key={room.id} mb={1}>
+          <Box bold mb={0.5}>
+            {room.name || room.id}
+          </Box>
+          {!room.rows?.length ? (
+            <Box color="label">Nothing to manage.</Box>
+          ) : (
+            <Table>
+              {room.rows.map((row, index) => (
+                <Table.Row key={`${row.ref ?? ''}:${row.label}:${index}`}>
+                  <Table.Cell style={{ overflowWrap: 'anywhere' }}>
+                    {row.label}
+                  </Table.Cell>
+                  <Table.Cell collapsing>
+                    {row.action ? (
+                      <Button
+                        compact
+                        disabled={busy}
+                        onClick={() =>
+                          act('service_admin', {
+                            id: room.id,
+                            service_action: row.action,
+                            ref: row.ref,
+                          })
+                        }
+                      >
+                        {actionLabel(row.action)}
+                      </Button>
+                    ) : null}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table>
+          )}
+        </Box>
+      ))
+    )}
+  </Section>
+);
 
 const ShipBays = ({
   data,

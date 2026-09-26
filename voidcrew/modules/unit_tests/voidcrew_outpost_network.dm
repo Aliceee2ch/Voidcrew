@@ -138,6 +138,8 @@
 	visitor.set_stat(UNCONSCIOUS)
 	TEST_ASSERT(!pad_a.is_charging(), "Passing out did not cancel the charge")
 	visitor.set_stat(CONSCIOUS)
+	// Passing out knocked them down, and lying down blocks pulling later on
+	visitor.get_up(instant = TRUE)
 	TEST_ASSERT_EQUAL(account.account_balance, 1000, "A cancelled trip charged the traveller")
 	TEST_ASSERT_EQUAL(home_b.treasury.account_balance, treasury_before, "A cancelled trip paid the destination")
 
@@ -169,6 +171,7 @@
 	TEST_ASSERT_EQUAL(pad_a.departure_denial(attacker), "Stand on the pad.", "Someone off the pad could leave")
 	var/obj/structure/closet/crate/crate = allocate(/obj/structure/closet/crate, beside)
 	visitor.start_pulling(crate)
+	TEST_ASSERT_EQUAL(visitor.pulling, crate, "The traveller could not pull the crate")
 	TEST_ASSERT_EQUAL(pad_a.departure_denial(visitor), "Let go first.", "A traveller could pull a crate along")
 	visitor.stop_pulling()
 	var/obj/item/storage/box/box = allocate(/obj/item/storage/box)

@@ -193,7 +193,7 @@
 	home.ship_act(pilot, ship, dock_variant = "ship_bay")
 	TEST_ASSERT(bay.is_available(), "A refused escrow left the bay reserved")
 	TEST_ASSERT_NULL(bay.ship, "A refused escrow left the ship assigned to the bay")
-	TEST_ASSERT_EQUAL(ship.dock_index, 0, "A refused escrow left a pad index")
+	TEST_ASSERT(!ship.dock_index, "A refused escrow left a pad index: [ship.dock_index]")
 	TEST_ASSERT_EQUAL(ship.state, previous_state, "A refused escrow did not restore the ship's state")
 	TEST_ASSERT(!home.concerned, "A refused escrow left the outpost busy")
 	TEST_ASSERT_EQUAL(ship.ship_account.account_balance, 100, "A refused escrow moved money")

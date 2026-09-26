@@ -140,7 +140,17 @@
 		for(var/i in 1 to 4)
 			cell.process(2)
 		TEST_ASSERT(patient.reagents.has_reagent(/datum/reagent/medicine/cryoxadone), "The cryo cell gave no cryoxadone at [rotation]")
+		// Opening a running cell switches it off; the switch-off used to eject again, recursing until the server crashed
 		cell.open_machine()
+		TEST_ASSERT(cell.state_open && !cell.on, "Opening the cryo cell left it closed or running at [rotation]")
+		TEST_ASSERT_NULL(cell.occupant, "Opening the cryo cell kept its patient at [rotation]")
+		TEST_ASSERT(patient.loc != cell, "The patient stayed inside the opened cryo cell at [rotation]")
+		// A power cut with a patient inside lets them out once
+		cell.close_machine(patient)
+		TEST_ASSERT(cell.on && cell.occupant == patient, "The cryo cell would not close on the patient again at [rotation]")
+		cell.set_machine_stat(cell.machine_stat | NOPOWER)
+		TEST_ASSERT(cell.state_open && !cell.on && isnull(cell.occupant), "A power cut did not let the patient out at [rotation]")
+		cell.set_machine_stat(cell.machine_stat & ~NOPOWER)
 		settle_room_air(lab.room_turfs())
 
 // ===== PASSES =====
@@ -230,7 +240,10 @@
 	var/mob/living/carbon/human/owner = make_player(beside, "medlabslabowner")
 	var/mob/living/carbon/human/patient = make_market_visitor(beside, "medlabslabpatient", 0)
 	var/mob/living/carbon/human/bystander = make_market_visitor(beside, "medlabslabbystander", 0)
-	patient.adjustBruteLoss(50)
+	// All on one limb: a tend cycle, like tg's, heals one damaged limb, so spread damage heals less than the formula
+	var/obj/item/bodypart/hurt_chest = patient.get_bodypart(BODY_ZONE_CHEST)
+	hurt_chest.receive_damage(50, wound_bonus = CANT_WOUND)
+	TEST_ASSERT_EQUAL(patient.getBruteLoss(), 50, "The patient did not take 50 brute on the chest")
 
 	// No pass: refused, and anyone may take a no-pass occupant off (F-31)
 	medlab_lie_down(slab, patient)
@@ -350,7 +363,8 @@
 	patient.apply_damage(20, BRUTE, BODY_ZONE_L_ARM, wound_bonus = CANT_WOUND)
 	arm.drop_limb()
 	TEST_ASSERT(arm.brute_dam > 0, "The loose test arm carries no damage")
-	patient.put_in_hands(arm)
+	// put_in_hands() tries the missing left hand and gives up, so hold it in the right one
+	TEST_ASSERT(patient.put_in_r_hand(arm), "The patient could not hold the loose arm")
 	var/health_before = patient.health
 	var/tox_before = patient.getToxLoss()
 	TEST_ASSERT_NULL(slab.start_procedure(patient, "limb"), "Reattach limb did not start")
@@ -361,9 +375,10 @@
 	arm.drop_limb()
 	var/obj/item/organ/implant = allocate(/obj/item/organ/heart)
 	implant.forceMove(arm)
-	patient.put_in_hands(arm)
+	TEST_ASSERT(patient.put_in_r_hand(arm), "The patient could not hold the implanted arm")
 	var/datum/autosurgeon_procedure/limb_procedure = GLOB.outpost_autosurgeon_procedures["limb"]
-	TEST_ASSERT_NOTNULL(limb_procedure.unavailable_reason(patient), "A limb with an implant inside was offered")
+	var/implant_refusal = limb_procedure.unavailable_reason(patient)
+	TEST_ASSERT(findtext(implant_refusal, "implants"), "A limb with an implant inside was offered: [implant_refusal]")
 	TEST_ASSERT_NOTNULL(slab.start_procedure(patient, "limb"), "A limb with an implant inside was attached")
 
 	// No procedure ever leaves a tg surgery open

@@ -5,7 +5,14 @@
  * treasury and leaves an unplaced blueprint on the outpost; cancelling the purchase refunds it.
  * The same tab opens a schematic placement map (OutpostManagement.tsx) that stamps the blueprint
  * onto the main level at any of four rotations, within OUTPOST_UPGRADE_MAX_GAP tiles of the rest
- * of the outpost. Placement is permanent: no relocation, no refund. One of each per outpost.
+ * of the outpost. Placement is permanent: no relocation, no refund. One of each per outpost, unless
+ * the upgrade allows more (max_owned); only one of each may be bought and waiting at a time.
+ *
+ * A snap upgrade (snap_group) is never placed freely: it joins a wall of another upgrade at a joint
+ * that wall's map marks (/obj/effect/landmark/outpost_upgrade_snap, in outpost_prison_extension.dm).
+ * Its map's first column lies over that wall as template_noop, so loading never touches the wall;
+ * the upgrade opens it itself once it is built. Placement offers every free joint, one position
+ * and rotation each (snap_offers()), and a joined room may carry joints of its own on its far wall.
  *
  * The map is drawn from a survey the server takes once per view (and caches briefly): one
  * character per tile, made by the same rules placement enforces, so the client's green and red
@@ -49,8 +56,13 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	return catalog
 
 /datum/outpost_upgrade
-	/// Catalog key. Also the purchase limit: one of each per outpost.
+	/// Catalog key
 	var/id
+	/// How many of this upgrade one outpost may own. The first's key in outpost_upgrades is its id,
+	/// the next ones' "[id]_2" and on, so code that looks an upgrade up by its id finds the first.
+	var/max_owned = 1
+	/// This one's key in its outpost's outpost_upgrades
+	var/key
 	var/name = "Outpost Upgrade"
 	var/desc = ""
 	var/price = 0
@@ -79,21 +91,47 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	/// The area instance the placement created
 	var/area/installed_area
 
+	// Snap upgrades
+	/// Set for an upgrade that is only placed against a joint of this group (snap_offers())
+	var/snap_group
+	/// The room for a joint on a left wall, when it differs from template_type (a right wall's)
+	var/datum/map_template/left_template_type
+	/// Placement refusals of a snap upgrade: off every joint, and the wall at the joint not whole
+	var/snap_refusal = "Must join a matching wall."
+	var/seam_refusal = "Repair the wall first."
+	/// The side of the joint this one was placed against, "right" or "left"
+	var/snap_side
+	/// The offer this one was placed from (snap_offer()), for on_installed()
+	var/list/placed_offer
+	/// Joints on this upgrade's walls, and on the walls of the snap upgrades joined to it
+	var/list/datum/outpost_upgrade_snap/snap_points
+
 /datum/outpost_upgrade/New(obj/structure/overmap/dynamic/player_outpost/owner)
 	. = ..()
 	outpost = owner
+	key = id
 
 /datum/outpost_upgrade/Destroy()
 	// Deleted on its own (by an admin), it leaves the outpost's list, so it can be bought again.
-	if(id && !QDELETED(outpost) && outpost.outpost_upgrades[id] == src)
-		outpost.outpost_upgrades -= id
+	if(key && !QDELETED(outpost) && outpost.outpost_upgrades[key] == src)
+		outpost.outpost_upgrades -= key
 	outpost = null
 	installed_area = null
+	placed_offer = null
+	snap_points = null
 	return ..()
 
 /// Called once the room is stamped and initialized. Upgrades wire their own systems in here.
 /datum/outpost_upgrade/proc/on_installed(mob/user)
 	return
+
+/// Why `home` may not buy this now beyond the shop's own rules, or null. Called on the catalog prototype.
+/datum/outpost_upgrade/proc/purchase_requirement(obj/structure/overmap/dynamic/player_outpost/home)
+	return null
+
+/// Why this blueprint may not be placed now, wherever it goes, or null
+/datum/outpost_upgrade/proc/placement_denial()
+	return null
 
 /**
  * A placement that crashed mid-load never comes back to release its blueprint, which would then
@@ -112,19 +150,25 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	placing = FALSE
 	footprint_bounds = null
 	rotation = 0
+	snap_side = null
+	placed_offer = null
 	if(!QDELETED(outpost))
 		outpost.upgrade_survey = null
 	log_game("PLAYER OUTPOST: the [name] placement at '[outpost?.name]' never finished; its blueprint was released")
 
-/// One shared, uncached template per upgrade type. Null when the map file is missing.
-/datum/outpost_upgrade/proc/get_template()
+/**
+ * One shared, uncached template per upgrade type: the room for a joint on `side`'s wall when that
+ * differs (left_template_type), else template_type. Null when the map file is missing.
+ */
+/datum/outpost_upgrade/proc/get_template(side)
 	var/static/list/templates = list()
-	if(!template_type)
+	var/datum/map_template/wanted = (side == "left" && left_template_type) ? left_template_type : template_type
+	if(!wanted)
 		return null
-	if(!(template_type in templates))
-		var/map_path = initial(template_type.mappath)
-		templates[template_type] = (map_path && fexists(map_path)) ? new template_type : null
-	var/datum/map_template/template = templates[template_type]
+	if(!(wanted in templates))
+		var/map_path = initial(wanted.mappath)
+		templates[wanted] = (map_path && fexists(map_path)) ? new wanted : null
+	var/datum/map_template/template = templates[wanted]
 	return template?.width ? template : null
 
 /// The baked preview's asset name, or null until it exists
@@ -133,24 +177,30 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		return null
 	return "[preview_name].png"
 
-/// Which edge of the placed footprint the entrance faces for a clockwise rotation
-/datum/outpost_upgrade/proc/rotated_entrance(rotation)
-	return angle2dir(rotation + dir2angle(entrance_side))
+/**
+ * Which edge of the placed footprint the entrance faces for a clockwise rotation. A left wall's room
+ * is the right wall's mirrored, so its entrance on an east or west edge is on the other one.
+ */
+/datum/outpost_upgrade/proc/rotated_entrance(rotation, side = snap_side)
+	var/authored = entrance_side
+	if(side == "left" && (authored == EAST || authored == WEST))
+		authored = REVERSE_DIR(authored)
+	return angle2dir(rotation + dir2angle(authored))
 
 /**
- * The footprint for a placement with its bottom-left on `bottom_left`:
+ * The footprint for a placement with its bottom-left on `bottom_left`, of the room for `side`:
  * list("bottom_left", "top_right", "turfs", "entrance" = edge turfs, "entrance_dir").
  * Null when the template is missing or the footprint runs off the map.
  */
-/datum/outpost_upgrade/proc/footprint_at(turf/bottom_left, rotation)
-	var/datum/map_template/template = get_template()
+/datum/outpost_upgrade/proc/footprint_at(turf/bottom_left, rotation, side = snap_side)
+	var/datum/map_template/template = get_template(side)
 	if(!bottom_left || !template)
 		return null
 	var/turned = (rotation == 90 || rotation == 270)
 	var/turf/top_right = locate(bottom_left.x + (turned ? template.height : template.width) - 1, bottom_left.y + (turned ? template.width : template.height) - 1, bottom_left.z)
 	if(!top_right)
 		return null
-	var/entrance_dir = rotated_entrance(rotation)
+	var/entrance_dir = rotated_entrance(rotation, side)
 	var/list/entrance
 	switch(entrance_dir)
 		if(NORTH)
@@ -184,7 +234,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 // ===== OUTPOST STATE =====
 
 /obj/structure/overmap/dynamic/player_outpost
-	/// Bought upgrades by id, unplaced blueprints and installed rooms alike
+	/// Bought upgrades by key (the id, then "[id]_2" and on), unplaced blueprints and installed rooms alike
 	var/list/datum/outpost_upgrade/outpost_upgrades = list()
 	/// The latest placement-map survey (see build_upgrade_survey())
 	var/list/upgrade_survey
@@ -204,10 +254,42 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 /obj/structure/overmap/dynamic/player_outpost/proc/upgrade_blueprints()
 	var/list/blueprints = list()
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
-		var/datum/outpost_upgrade/upgrade = outpost_upgrades[upgrade_id]
-		if(upgrade && !upgrade.installed && !upgrade.placing)
+		var/datum/outpost_upgrade/upgrade = pending_upgrade(upgrade_id)
+		if(upgrade && !upgrade.placing)
 			blueprints += upgrade
 	return blueprints
+
+/// Every upgrade of this id the outpost owns, bought or installed, in the order they were bought
+/obj/structure/overmap/dynamic/player_outpost/proc/owned_upgrades(upgrade_id)
+	var/list/found = list()
+	for(var/upgrade_key in outpost_upgrades)
+		var/datum/outpost_upgrade/upgrade = outpost_upgrades[upgrade_key]
+		if(upgrade?.id == upgrade_id)
+			found += upgrade
+	return found
+
+/// How many upgrades of this id the outpost has built
+/obj/structure/overmap/dynamic/player_outpost/proc/installed_upgrade_count(upgrade_id)
+	var/count = 0
+	for(var/datum/outpost_upgrade/upgrade as anything in owned_upgrades(upgrade_id))
+		if(upgrade.installed)
+			count++
+	return count
+
+/// The one upgrade of this id bought and not yet built (placing or waiting), if any: there is never more than one
+/obj/structure/overmap/dynamic/player_outpost/proc/pending_upgrade(upgrade_id)
+	for(var/datum/outpost_upgrade/upgrade as anything in owned_upgrades(upgrade_id))
+		if(!upgrade.installed)
+			return upgrade
+	return null
+
+/// The key a new upgrade of this id takes: its id, else "[id]_2" and on, up to `most`; null when none is free
+/obj/structure/overmap/dynamic/player_outpost/proc/free_upgrade_key(upgrade_id, most)
+	for(var/number in 1 to most)
+		var/upgrade_key = number == 1 ? upgrade_id : "[upgrade_id]_[number]"
+		if(!outpost_upgrades[upgrade_key])
+			return upgrade_key
+	return null
 
 /// The placed (or currently placing) upgrade covering a turf, if any
 /obj/structure/overmap/dynamic/player_outpost/proc/upgrade_at_turf(turf/tile)
@@ -217,13 +299,13 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			return upgrade
 	return null
 
-/// The blueprint a UI action names, when it is bought and not yet placed
+/// The blueprint a UI action names by its id, when it is bought and not yet placed
 /obj/structure/overmap/dynamic/player_outpost/proc/unplaced_upgrade(upgrade_id)
 	// UI params are decoded JSON: a number here would index the list by position
 	if(!istext(upgrade_id))
 		return null
-	var/datum/outpost_upgrade/blueprint = outpost_upgrades[upgrade_id]
-	if(!blueprint || blueprint.installed || blueprint.placing)
+	var/datum/outpost_upgrade/blueprint = pending_upgrade(upgrade_id)
+	if(!blueprint || blueprint.placing)
 		return null
 	return blueprint
 
@@ -244,14 +326,18 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/datum/outpost_upgrade/prototype = GLOB.outpost_upgrade_catalog[upgrade_id]
 	if(!prototype)
 		return "Unknown upgrade."
-	var/datum/outpost_upgrade/owned = outpost_upgrades[upgrade_id]
-	if(owned)
-		return owned.installed ? "Already installed." : "Blueprint already bought."
+	if(pending_upgrade(upgrade_id))
+		return "Blueprint already bought."
+	if(length(owned_upgrades(upgrade_id)) >= prototype.max_owned)
+		return prototype.max_owned == 1 ? "Already installed." : "All [prototype.max_owned] built."
 	var/denial = upgrade_access_denial(user)
 	if(denial)
 		return denial
 	if(!prototype.get_template())
 		return "Upgrade unavailable."
+	denial = prototype.purchase_requirement(src)
+	if(denial)
+		return denial
 	if(prototype.price && !treasury.has_money(prototype.price))
 		return "Insufficient outpost funds."
 	return null
@@ -262,33 +348,37 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	if(denial)
 		return denial
 	var/datum/outpost_upgrade/prototype = GLOB.outpost_upgrade_catalog[upgrade_id]
+	var/upgrade_key = free_upgrade_key(upgrade_id, prototype.max_owned)
+	if(!upgrade_key)
+		return "Already installed."
 	// adjust_money() refuses a zero amount, so a free upgrade skips the treasury.
 	if(prototype.price && !treasury.adjust_money(-prototype.price, "Outpost upgrade: [prototype.name], bought by [user.ckey]"))
 		return "Insufficient outpost funds."
 	var/datum/outpost_upgrade/blueprint = new prototype.type(src)
 	blueprint.paid = prototype.price
-	outpost_upgrades[upgrade_id] = blueprint
+	blueprint.key = upgrade_key
+	outpost_upgrades[upgrade_key] = blueprint
 	log_game("PLAYER OUTPOST: [key_name(user)] bought the [prototype.name] upgrade for [prototype.price] cr at '[name]'")
 	return null
 
-/// Whether the user may place or cancel this blueprint now. Null when they may.
+/// Whether the user may place or cancel the blueprint of this id now. Null when they may.
 /obj/structure/overmap/dynamic/player_outpost/proc/upgrade_blueprint_denial(mob/user, upgrade_id)
-	var/datum/outpost_upgrade/owned = istext(upgrade_id) ? outpost_upgrades[upgrade_id] : null
-	if(!owned)
+	if(!istext(upgrade_id) || !length(owned_upgrades(upgrade_id)))
 		return "No blueprint bought."
-	if(owned.installed)
+	var/datum/outpost_upgrade/pending = pending_upgrade(upgrade_id)
+	if(!pending)
 		return "Already installed."
-	if(owned.placing)
+	if(pending.placing)
 		return "Placement in progress."
 	return upgrade_access_denial(user)
 
-/// Refunds exactly what was paid and removes the unplaced blueprint. Null on success.
+/// Refunds exactly what was paid and removes the unplaced blueprint of this id. Null on success.
 /obj/structure/overmap/dynamic/player_outpost/proc/cancel_outpost_upgrade(mob/user, upgrade_id)
 	var/denial = upgrade_blueprint_denial(user, upgrade_id)
 	if(denial)
 		return denial
-	var/datum/outpost_upgrade/blueprint = outpost_upgrades[upgrade_id]
-	outpost_upgrades -= upgrade_id
+	var/datum/outpost_upgrade/blueprint = pending_upgrade(upgrade_id)
+	outpost_upgrades -= blueprint.key
 	if(blueprint.paid)
 		treasury.adjust_money(blueprint.paid, "Outpost upgrade refund: [blueprint.name], cancelled by [user.ckey]")
 	log_game("PLAYER OUTPOST: [key_name(user)] cancelled the [blueprint.name] upgrade at '[name]', refunding [blueprint.paid] cr")
@@ -362,20 +452,25 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 
 /**
  * Turfs that count as the outpost for the distance rule: the outpost's own area and every
- * installed upgrade's area on the main level. A claim that never got an outpost area falls back
- * to its arrival point and its shell's footprint.
+ * installed upgrade's area on the main level, each area once (a snap upgrade can join another's
+ * area). A claim that never got an outpost area falls back to its arrival point and its shell's
+ * footprint.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/outpost_owned_turfs()
 	var/list/owned = list()
 	var/z = upgrade_level_z()
 	if(!z)
 		return owned
+	var/list/counted = list()
 	if(outpost_area)
 		owned += outpost_area.get_turfs_by_zlevel(z)
-	for(var/upgrade_id in outpost_upgrades)
-		var/datum/outpost_upgrade/upgrade = outpost_upgrades[upgrade_id]
-		if(upgrade?.installed && upgrade.installed_area)
-			owned += upgrade.installed_area.get_turfs_by_zlevel(z)
+		counted[outpost_area] = TRUE
+	for(var/upgrade_key in outpost_upgrades)
+		var/datum/outpost_upgrade/upgrade = outpost_upgrades[upgrade_key]
+		if(!upgrade?.installed || !upgrade.installed_area || counted[upgrade.installed_area])
+			continue
+		counted[upgrade.installed_area] = TRUE
+		owned += upgrade.installed_area.get_turfs_by_zlevel(z)
 	if(length(owned))
 		return owned
 	if(arrival_turf)
@@ -397,48 +492,69 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 
 /**
  * Stamps a bought blueprint with its footprint's bottom-left on `bottom_left`, turned `rotation`
- * degrees clockwise. Returns null on success, else the reason. Permanent.
+ * degrees clockwise. Returns null on success, else the reason. Permanent. A snap upgrade goes only
+ * where one of its offers puts it (snap_offers()); the wall it joins is left to it to open.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/place_outpost_upgrade(datum/outpost_upgrade/blueprint, turf/bottom_left, rotation, mob/user)
-	if(QDELETED(blueprint) || outpost_upgrades[blueprint.id] != blueprint || blueprint.installed || blueprint.placing)
+	if(QDELETED(blueprint) || outpost_upgrades[blueprint.key] != blueprint || blueprint.installed || blueprint.placing)
 		return "No upgrade blueprint to place."
 	rotation = SIMPLIFY_DEGREES(rotation)
 	if(rotation % 90)
 		return "Invalid rotation."
-	var/datum/map_template/template = blueprint.get_template()
+	var/list/offer
+	if(blueprint.snap_group)
+		offer = blueprint.snap_offer_at(bottom_left, rotation)
+		if(!offer)
+			return blueprint.get_template() ? blueprint.snap_refusal : "Upgrade unavailable."
+	var/side = offer?["side"]
+	var/datum/map_template/template = blueprint.get_template(side)
 	if(!template)
 		return "Upgrade unavailable."
-	var/list/footprint = blueprint.footprint_at(bottom_left, rotation)
+	var/list/footprint = offer ? offer["footprint"] : blueprint.footprint_at(bottom_left, rotation)
 	if(!footprint)
 		return "Invalid position."
 	var/list/footprint_turfs = footprint["turfs"]
-	var/list/protected_rects = upgrade_protected_rects(bottom_left.z)
-	for(var/turf/tile as anything in footprint_turfs)
-		if(!is_upgrade_turf_clear(tile, protected_rects))
-			return "Position obstructed."
+	var/list/seam = offer?["seam"] || list()
 	var/turf/top_right = footprint["top_right"]
-	if(!upgrade_footprint_near_outpost(bottom_left, top_right))
-		return "Too far from the outpost."
+	if(offer)
+		var/denial = snap_offer_denial(blueprint, offer)
+		if(denial)
+			return denial
+	else
+		var/denial = blueprint.placement_denial()
+		if(denial)
+			return denial
+		var/list/protected_rects = upgrade_protected_rects(bottom_left.z)
+		for(var/turf/tile as anything in footprint_turfs)
+			if(!is_upgrade_turf_clear(tile, protected_rects))
+				return "Position obstructed."
+		if(!upgrade_footprint_near_outpost(bottom_left, top_right))
+			return "Too far from the outpost."
 	// Claim the blueprint and its ground before the load can yield, so a second Build or an
 	// elevator placement finds nothing to work with.
 	blueprint.placing = TRUE
 	var/serial = ++blueprint.placement_serial
 	addtimer(CALLBACK(blueprint, TYPE_PROC_REF(/datum/outpost_upgrade, placement_watchdog), serial), UPGRADE_PLACEMENT_WATCHDOG)
 	blueprint.rotation = rotation
+	blueprint.snap_side = side
 	blueprint.footprint_bounds = list(bottom_left.x, bottom_left.y, top_right.x, top_right.y, bottom_left.z)
+	// The seam is the wall being joined: nothing on it is cleared or moved.
 	for(var/turf/tile as anything in footprint_turfs)
+		if(seam[tile])
+			continue
 		for(var/obj/structure/lattice/lattice in tile) // catwalks included
 			qdel(lattice)
-	sweep_upgrade_footprint(footprint)
+	sweep_upgrade_footprint(footprint, seam)
 	var/list/loaded_bounds = template.load_rotated(bottom_left, rotation)
 	// Gone, or the watchdog gave up on this load and released the blueprint meanwhile
 	if(QDELETED(blueprint) || blueprint.placement_serial != serial)
 		return "The upgrade could not be built."
 	blueprint.placing = FALSE
 	if(!loaded_bounds || QDELETED(src))
-		// Nothing was built: the blueprint goes back on the shelf.
+		// Nothing was built: the blueprint goes back on the shelf, and a joined wall stays shut.
 		blueprint.footprint_bounds = null
 		blueprint.rotation = 0
+		blueprint.snap_side = null
 		return "The upgrade could not be built."
 	blueprint.installed = TRUE
 	for(var/turf/tile as anything in footprint_turfs)
@@ -447,6 +563,11 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			break
 	// The ground changed under the placement map.
 	upgrade_survey = null
+	if(offer)
+		var/datum/outpost_upgrade_snap/joint = offer["snap"]
+		joint.taken_by = blueprint.key
+		blueprint.placed_offer = offer
+	blueprint.collect_snaps(footprint_turfs)
 	blueprint.on_installed(user)
 	var/list/entrance = footprint["entrance"]
 	playsound(entrance[CEILING(length(entrance) / 2, 1)], 'sound/machines/ding.ogg', 60, TRUE)
@@ -455,9 +576,10 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 
 /**
  * Moves loose things off a footprint that is about to be built over, onto the ground outside its
- * entrance, so nothing ends up inside the new walls. Anchored things, effects and decals stay.
+ * entrance, so nothing ends up inside the new walls. Anchored things, effects and decals stay, and
+ * so does everything on `skip` (turf = TRUE: the wall a snap upgrade joins, and whatever is beside it).
  */
-/obj/structure/overmap/dynamic/player_outpost/proc/sweep_upgrade_footprint(list/footprint)
+/obj/structure/overmap/dynamic/player_outpost/proc/sweep_upgrade_footprint(list/footprint, list/skip)
 	var/list/entrance = footprint["entrance"]
 	var/entrance_dir = footprint["entrance_dir"]
 	if(!length(entrance))
@@ -473,10 +595,189 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	if(!outside)
 		return
 	for(var/turf/tile as anything in footprint["turfs"])
+		if(skip?[tile])
+			continue
 		for(var/atom/movable/thing as anything in tile)
 			if(thing.anchored || iseffect(thing) || !(isobj(thing) || isliving(thing)))
 				continue
 			thing.forceMove(outside)
+
+// ===== SNAP UPGRADES =====
+
+/**
+ * A joint on an upgrade's wall where a snap upgrade of its group may be placed, taken from an
+ * /obj/effect/landmark/outpost_upgrade_snap on the wall's map. The joint is the wall tile at the
+ * bottom end of the seam, which runs along the wall the way the wall's room was placed facing north.
+ */
+/datum/outpost_upgrade_snap
+	var/snap_group
+	/// "right" or "left": which wall of its room, as authored
+	var/side
+	/// The wall tile the landmark stood on
+	var/turf/joint
+	/// Degrees clockwise the wall's room was placed at. A room joined here is placed the same way.
+	var/rotation = 0
+	/// Rows along the seam, the joint's row being 1, that open once a room joins here
+	var/list/openings
+	/// The key of the upgrade whose wall this is
+	var/wall_key
+	/// The key of the upgrade joined here, null while the joint is free
+	var/taken_by
+
+/**
+ * Takes the joint landmarks off a room that was just built into a snap registry, and deletes
+ * them: its own registry, or for a snap upgrade its host's, so every joint of a group is in one place.
+ */
+/datum/outpost_upgrade/proc/collect_snaps(list/turfs)
+	var/datum/outpost_upgrade/registry = snap_group ? snap_host() : src
+	for(var/turf/tile as anything in turfs)
+		for(var/obj/effect/landmark/outpost_upgrade_snap/mark in tile)
+			registry?.add_snap(mark, src)
+			qdel(mark)
+
+/// Registers the joint `mark` stands on, on a wall of `wall_owner`'s room. Returns the joint.
+/datum/outpost_upgrade/proc/add_snap(obj/effect/landmark/outpost_upgrade_snap/mark, datum/outpost_upgrade/wall_owner)
+	var/datum/outpost_upgrade_snap/snap = new
+	snap.snap_group = mark.snap_group
+	snap.side = mark.side
+	snap.joint = get_turf(mark)
+	snap.openings = islist(mark.seam_openings) ? mark.seam_openings.Copy() : list()
+	snap.rotation = wall_owner.rotation
+	snap.wall_key = wall_owner.key
+	LAZYADD(snap_points, snap)
+	return snap
+
+/// The built upgrade whose registry holds the joints of this snap upgrade's group, if any
+/datum/outpost_upgrade/proc/snap_host(obj/structure/overmap/dynamic/player_outpost/home = outpost)
+	if(!snap_group || QDELETED(home))
+		return null
+	for(var/upgrade_key in home.outpost_upgrades)
+		var/datum/outpost_upgrade/other = home.outpost_upgrades[upgrade_key]
+		if(!other?.installed || other == src)
+			continue
+		for(var/datum/outpost_upgrade_snap/snap as anything in other.snap_points)
+			if(snap.snap_group == snap_group)
+				return other
+	return null
+
+/// The tile of the room for `side`, as list(column, row) counted from 1, that lands on the joint: its first column's bottom, over the wall
+/datum/outpost_upgrade/proc/snap_anchor(side, datum/map_template/template)
+	return side == "left" ? list(template.width, 1) : list(1, 1)
+
+/// Every place this snap upgrade may go at the free joints of its group: one offer each (snap_offer())
+/datum/outpost_upgrade/proc/snap_offers(obj/structure/overmap/dynamic/player_outpost/home = outpost)
+	var/list/offers = list()
+	var/datum/outpost_upgrade/host = snap_host(home)
+	if(!host)
+		return offers
+	for(var/datum/outpost_upgrade_snap/snap as anything in host.snap_points)
+		if(snap.snap_group != snap_group || snap.taken_by)
+			continue
+		var/list/offer = snap_offer(snap)
+		if(offer)
+			offers += list(offer)
+	return offers
+
+/// The offer that puts this snap upgrade's footprint on `bottom_left` at `rotation`, if any
+/datum/outpost_upgrade/proc/snap_offer_at(turf/bottom_left, rotation)
+	for(var/list/offer as anything in snap_offers())
+		if(offer["bottom_left"] == bottom_left && offer["rotation"] == rotation)
+			return offer
+	return null
+
+/**
+ * Where this snap upgrade goes at a joint. The joint's side picks the room, the room is turned the
+ * way the wall's room was, and its anchor (snap_anchor()) lands on the joint. Returns
+ * list("snap", "side", "bottom_left", "rotation", "footprint" (footprint_at()), "seam" (turf = TRUE:
+ * the room's first column, lying over the wall), "openings" (the seam tiles that open)), or null
+ * when it would run off the map.
+ */
+/datum/outpost_upgrade/proc/snap_offer(datum/outpost_upgrade_snap/snap)
+	var/datum/map_template/template = get_template(snap.side)
+	var/turf/joint = snap.joint
+	if(!template || !joint)
+		return null
+	var/list/anchor = snap_anchor(snap.side, template)
+	var/list/offset = rotated_template_offset(anchor[1] - 1, anchor[2] - 1, snap.rotation, template.width, template.height)
+	var/turf/bottom_left = locate(joint.x - offset[1], joint.y - offset[2], joint.z)
+	if(!bottom_left || template.rotated_template_turf(bottom_left, anchor[1] - 1, anchor[2] - 1, snap.rotation) != joint)
+		return null
+	var/list/footprint = footprint_at(bottom_left, snap.rotation, snap.side)
+	if(!footprint)
+		return null
+	var/list/seam = list()
+	for(var/row in 0 to template.height - 1)
+		var/turf/tile = template.rotated_template_turf(bottom_left, anchor[1] - 1, row, snap.rotation)
+		if(!tile)
+			return null
+		seam[tile] = TRUE
+	var/list/openings = list()
+	for(var/opening in snap.openings)
+		var/turf/tile = template.rotated_template_turf(bottom_left, anchor[1] - 1, anchor[2] - 2 + opening, snap.rotation)
+		if(tile && seam[tile])
+			openings += tile
+	return list(
+		"snap" = snap,
+		"side" = snap.side,
+		"bottom_left" = bottom_left,
+		"rotation" = snap.rotation,
+		"footprint" = footprint,
+		"seam" = seam,
+		"openings" = openings,
+	)
+
+/**
+ * Why a snap upgrade can't be built at `offer` now, or null: its own rules first
+ * (placement_denial()), then ground off the seam that is not clear, then the wall being joined
+ * (snap_seam_denial()). `ignore_mobs` is for the placement map. Tiles off the seam that are not
+ * clear are added to `blocked` when it is given.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/snap_offer_denial(datum/outpost_upgrade/blueprint, list/offer, ignore_mobs = FALSE, list/blocked)
+	var/list/seam = offer["seam"]
+	var/list/footprint = offer["footprint"]
+	var/turf/bottom_left = offer["bottom_left"]
+	var/list/protected_rects = upgrade_protected_rects(bottom_left.z)
+	var/obstructed = FALSE
+	for(var/turf/tile as anything in footprint["turfs"])
+		if(seam[tile] || is_upgrade_turf_clear(tile, protected_rects, ignore_mobs))
+			continue
+		obstructed = TRUE
+		if(isnull(blocked))
+			break
+		blocked += tile
+	var/denial = blueprint.placement_denial()
+	if(denial)
+		return denial
+	if(obstructed)
+		return "Position obstructed."
+	return snap_seam_denial(blueprint, offer)
+
+/**
+ * Whether the wall a snap upgrade joins is whole, so nothing flows through it before the new room
+ * is ready: every seam tile in the host's area; no door, machine or hatch on any of them; every
+ * tile that stays wall a wall; and each tile that opens a wall, or floor holding nothing but
+ * windows, grilles, cables, items and effects. Returns the blueprint's seam_refusal, or null.
+ */
+/obj/structure/overmap/dynamic/player_outpost/proc/snap_seam_denial(datum/outpost_upgrade/blueprint, list/offer)
+	var/datum/outpost_upgrade/host = blueprint.snap_host()
+	var/area/host_area = host?.installed_area
+	if(!host_area)
+		return blueprint.seam_refusal
+	var/list/openings = offer["openings"]
+	for(var/turf/tile as anything in offer["seam"])
+		if(tile.loc != host_area)
+			return blueprint.seam_refusal
+		for(var/obj/thing in tile)
+			if(istype(thing, /obj/machinery) || istype(thing, /obj/structure/table))
+				return blueprint.seam_refusal
+		if(isclosedturf(tile))
+			continue
+		if(!(tile in openings))
+			return blueprint.seam_refusal
+		for(var/obj/thing in tile)
+			if(!istype(thing, /obj/structure/window) && !istype(thing, /obj/structure/grille) && !istype(thing, /obj/structure/cable) && !isitem(thing) && !iseffect(thing))
+				return blueprint.seam_refusal
+	return null
 
 // ===== PLACEMENT MAP SURVEY =====
 
@@ -646,6 +947,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/upgrade_error
 	/// Whether this panel has its placement map open and wants the survey in its static data
 	var/wants_upgrade_survey = FALSE
+	/// The id of the upgrade whose placement map is open, for a snap upgrade's joints
+	var/placing_upgrade_id
 	/// world.time of this panel's last static data push (see push_static_data())
 	var/last_static_push = 0
 
@@ -687,6 +990,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			"height" = template?.height || 0,
 			"entrance" = upgrade.entrance_side,
 			"preview" = upgrade.preview_asset(),
+			"snap" = !!upgrade.snap_group,
+			"max_owned" = upgrade.max_owned,
 		))
 	// The survey can be tens of kilobytes: static data only, and only while a map is open. The key
 	// is always sent, because tgui merges static data into the old state and would keep a stale one.
@@ -694,18 +999,61 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	return list(
 		"upgrade_catalog" = catalog,
 		"upgrade_survey" = show_survey ? outpost.upgrade_survey : null,
+		"upgrade_snaps" = show_survey ? upgrade_snap_payload() : null,
 	)
 
-/// Per-outpost state for each catalog entry: list("id", "state", "denial", "manage_denial")
+/**
+ * The joints a snap upgrade's placement map offers, worked out afresh: list of
+ * {x, y (the footprint's bottom-left), rotation, side, reason (why not, or null), blocked, seam,
+ * openings (lists of [x, y])}. Null while the map open is not a snap upgrade's.
+ */
+/datum/player_outpost_management_ui/proc/upgrade_snap_payload()
+	var/datum/outpost_upgrade/blueprint = outpost.unplaced_upgrade(placing_upgrade_id)
+	if(!blueprint?.snap_group)
+		return null
+	var/list/payload = list()
+	for(var/list/offer as anything in blueprint.snap_offers())
+		var/list/blocked = list()
+		var/reason = outpost.snap_offer_denial(blueprint, offer, TRUE, blocked)
+		var/turf/bottom_left = offer["bottom_left"]
+		payload += list(list(
+			"x" = bottom_left.x,
+			"y" = bottom_left.y,
+			"rotation" = offer["rotation"],
+			"side" = offer["side"],
+			"reason" = reason,
+			"blocked" = outpost_upgrade_coordinates(blocked),
+			"seam" = outpost_upgrade_coordinates(offer["seam"]),
+			"openings" = outpost_upgrade_coordinates(offer["openings"]),
+		))
+	return payload
+
+/// list(list(x, y), ...) for the placement map
+/proc/outpost_upgrade_coordinates(list/turfs)
+	var/list/coordinates = list()
+	for(var/turf/tile as anything in turfs)
+		coordinates += list(list(tile.x, tile.y))
+	return coordinates
+
+/// Per-outpost state for each catalog entry: list("id", "state", "denial", "manage_denial", "owned", "max")
 /datum/player_outpost_management_ui/proc/upgrade_ui_data(mob/user)
 	var/list/states = list()
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
-		var/datum/outpost_upgrade/owned = outpost.outpost_upgrades[upgrade_id]
+		var/datum/outpost_upgrade/prototype = GLOB.outpost_upgrade_catalog[upgrade_id]
+		var/datum/outpost_upgrade/pending = outpost.pending_upgrade(upgrade_id)
+		var/built = outpost.installed_upgrade_count(upgrade_id)
+		var/state = "available"
+		if(pending)
+			state = pending.state_text()
+		else if(built >= prototype.max_owned)
+			state = "installed"
 		states += list(list(
 			"id" = upgrade_id,
-			"state" = owned ? owned.state_text() : "available",
+			"state" = state,
 			"denial" = outpost.upgrade_purchase_denial(user, upgrade_id),
-			"manage_denial" = owned ? outpost.upgrade_blueprint_denial(user, upgrade_id) : null,
+			"manage_denial" = length(outpost.owned_upgrades(upgrade_id)) ? outpost.upgrade_blueprint_denial(user, upgrade_id) : null,
+			"owned" = built,
+			"max" = prototype.max_owned,
 		))
 	return states
 
@@ -723,6 +1071,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			if(upgrade_error)
 				return TRUE
 			wants_upgrade_survey = TRUE
+			placing_upgrade_id = params["id"]
 			outpost.request_upgrade_survey(src, force = (action == "refresh_upgrade_map"))
 		if("close_upgrade_map")
 			upgrade_error = null
@@ -737,6 +1086,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	if(!wants_upgrade_survey)
 		return
 	wants_upgrade_survey = FALSE
+	placing_upgrade_id = null
 	push_static_data()
 
 /// Build from the placement map: world coordinates of the footprint's bottom-left and a rotation.
@@ -754,7 +1104,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/turf/bottom_left = z && locate(round(x), round(y), z)
 	if(!bottom_left)
 		return "Invalid position."
-	var/datum/outpost_upgrade/blueprint = outpost.outpost_upgrades[upgrade_id]
+	var/datum/outpost_upgrade/blueprint = outpost.unplaced_upgrade(upgrade_id)
 	var/error = outpost.place_outpost_upgrade(blueprint, bottom_left, rotation, user)
 	if(!error)
 		to_chat(user, span_notice("[blueprint.name] installed."))

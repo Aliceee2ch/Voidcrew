@@ -213,6 +213,8 @@
 	// Declining clears the quote
 	ship.dock_fee_consent = null
 	TEST_ASSERT_NOTNULL(home.dock_fee_denial(ship, "ship_bay"), "No quote to decline")
+	TEST_ASSERT_NOTNULL(ship.decline_dock_fee(stranger, REF(home)), "Someone who may not approve the fee declined it")
+	TEST_ASSERT_NOTNULL(ship.dock_fee_quote, "A refused decline cleared the quote")
 	TEST_ASSERT_NULL(ship.decline_dock_fee(pilot, REF(home)), "The crew could not decline the quote")
 	TEST_ASSERT_NULL(ship.dock_fee_quote, "Declining left the quote open")
 
@@ -416,6 +418,12 @@
 	TEST_ASSERT_NULL(home.request_bay_eviction(owner, bay), "The owner could not evict a long-docked ship")
 	TEST_ASSERT_EQUAL(ship.ship_account.account_balance, 1000, "A late eviction refunded the fee")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, treasury_start, "A late eviction paid out of the treasury")
+
+	// Handing the outpost over ends the former owner's eviction; nobody could cancel it after
+	TEST_ASSERT(home.transfer_ownership(stranger, owner), "The owner could not hand the outpost over")
+	TEST_ASSERT_EQUAL(length(home.bay_evictions), 0, "An eviction outlived the handover")
+	TEST_ASSERT(home.transfer_ownership(owner, stranger), "The outpost could not be handed back")
+	TEST_ASSERT_NULL(home.request_bay_eviction(owner, bay), "The owner could not evict after the handover")
 
 	// Item 16: with nobody ashore, the timer proc undocks the ship
 	home.enforce_bay_eviction(WEAKREF(ship))

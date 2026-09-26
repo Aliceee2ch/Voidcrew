@@ -211,13 +211,16 @@
 	TEST_ASSERT(stock.listing_of[clean] != stock.listing_of[poisoned], "A poisoned syringe shares a listing with clean ones")
 
 	var/obj/item/stack/sheet/iron/sheets = allocate(__IMPLIED_TYPE__, staff_spot, 30)
-	var/obj/item/stack/sheet/iron/more_sheets = allocate(__IMPLIED_TYPE__, staff_spot, 30)
 	TEST_ASSERT_NULL(stock.stock_item(sheets, owner), "Iron sheets were refused")
+	// Made only once the first stack is in stock, so the two never merge on the floor
+	var/obj/item/stack/sheet/iron/more_sheets = allocate(__IMPLIED_TYPE__, staff_spot, 30)
+	TEST_ASSERT_EQUAL(sheets.amount, 30, "The stocked stack merged with one on the floor")
 	TEST_ASSERT_NULL(stock.stock_item(more_sheets, owner), "More iron sheets were refused")
 	var/datum/outpost_shop_listing/iron = stock.listing_of[sheets]
 	TEST_ASSERT_NOTNULL(iron, "The iron sheets have no listing")
 	TEST_ASSERT_EQUAL(iron.unit_count(), 60, "Stocking lost or made sheets")
 	TEST_ASSERT_EQUAL(sheets.amount, 50, "The first stack was not topped up to its maximum")
+	TEST_ASSERT_EQUAL(more_sheets.amount, 10, "The second stack did not keep what was left after the top-up")
 	TEST_ASSERT_EQUAL(length(iron.units), 2, "The sheets did not fill one stack before starting another")
 	TEST_ASSERT(iron.is_stack, "The iron listing is not priced per unit")
 
@@ -300,7 +303,9 @@
 	TEST_ASSERT_EQUAL(stock.sell(iron, 1, 7, visitor, register), "Insufficient credits.", "A short account paid")
 	visitor_account.account_balance = balance_before
 	var/obj/item/card/id/card = visitor.get_idcard(TRUE)
-	card.moveToNullspace()
+	// Take it out of the ID slot; moving it to nullspace alone leaves wear_id pointing at it
+	visitor.temporarilyRemoveItemFromInventory(card, force = TRUE)
+	TEST_ASSERT_NULL(visitor.get_idcard(TRUE), "The buyer still has an ID after taking it off")
 	TEST_ASSERT_EQUAL(stock.sell(iron, 1, 7, visitor, register), "No bank account on your ID.", "A buyer with no ID paid")
 	visitor.equip_to_slot_or_del(card, ITEM_SLOT_ID)
 	shop.visitors_allowed = FALSE

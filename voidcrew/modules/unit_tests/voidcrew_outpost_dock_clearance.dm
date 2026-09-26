@@ -80,8 +80,15 @@
 	/// The pad this test shrank, and the home level it hid from reset_reserve_dock_to_home()
 	var/obj/docking_port/stationary/shrunk_dock
 	var/saved_home_z
+	/// The claim whose hangar elevator this test hid, and its elevator panels
+	var/obj/structure/overmap/dynamic/player_outpost/test_home
+	var/list/saved_elevator_panels
 
 /datum/unit_test/voidcrew_outpost_reserve_pad_release/Destroy()
+	if(test_home && saved_elevator_panels)
+		test_home.lobby_panels = saved_elevator_panels
+	test_home = null
+	saved_elevator_panels = null
 	if(visitor_ship)
 		visitor_ship.shuttle = null
 		visitor_ship.dock_index = 0
@@ -93,7 +100,12 @@
 /datum/unit_test/voidcrew_outpost_reserve_pad_release/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("reservepadowner")
 	TEST_ASSERT_NOTNULL(home, "The reserve pad outpost did not load")
-	TEST_ASSERT(!home.has_hangar_elevator(), "The fresh claim already has a hangar elevator; the reserve pads are not in use")
+	// The small shell loads with a working hangar elevator, which would send the ship to a hangar
+	// berth. Hide its panels so the dock falls back to the reserve pads under test.
+	test_home = home
+	saved_elevator_panels = home.lobby_panels
+	home.lobby_panels = list()
+	TEST_ASSERT(!home.has_hangar_elevator(), "The claim still has a working hangar elevator; the reserve pads are not in use")
 	shrunk_dock = home.reserve_dock
 	TEST_ASSERT_NOTNULL(shrunk_dock, "The claim has no reserve dock")
 	saved_home_z = shrunk_dock.reserve_home_z

@@ -197,10 +197,18 @@
 	var/leftover = pad_a.departure_denial(visitor)
 	TEST_ASSERT_NULL(leftover, "The cleared traveller still could not leave: [leftover]")
 
-	// A clientless body on the pad is stepped off for someone waiting (F-37)
+	// A clientless body on the pad is stepped off for someone waiting (F-37). The traveller above
+	// has no client either, so take them off first: the sleeper must be the only body on the pad.
+	visitor.forceMove(beside)
 	var/mob/living/carbon/human/sleeper = make_market_visitor(pad_turf, null, 0)
+	var/list/on_pad = list()
+	for(var/mob/living/occupant in pad_turf)
+		on_pad += occupant
+	TEST_ASSERT_EQUAL(length(on_pad), 1, "Someone besides the idle body is on the pad")
+	var/turf/aside = pad_a.pad_step_off_turf()
+	TEST_ASSERT_NOTNULL(aside, "No free tile to step the idle body onto")
 	TEST_ASSERT_EQUAL(pad_a.clear_idle_occupant(attacker), sleeper, "An idle body was not cleared off the pad")
-	TEST_ASSERT(get_turf(sleeper) != pad_turf, "The idle body is still on the pad")
+	TEST_ASSERT_EQUAL(get_turf(sleeper), aside, "The idle body was not stepped off beside the pad")
 	network_test_cleanup(rig)
 
 // ===== WHO MAY ARRIVE =====

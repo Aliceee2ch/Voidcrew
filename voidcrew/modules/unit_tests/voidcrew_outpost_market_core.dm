@@ -163,6 +163,8 @@
 	act(steward_panel, steward, "set_price", null, list("key" = "medlab_pass", "value" = 450))
 	TEST_ASSERT_EQUAL(home.get_price("medlab_pass"), 300, "A steward set a price")
 	TEST_ASSERT_EQUAL(steward_panel.market_error, "Pricing access required.", "A steward's refused price change gave no reason")
+	act(steward_panel, steward, "dismiss_market_error")
+	TEST_ASSERT_NULL(steward_panel.market_error, "Dismissing the market error kept it")
 	act(treasurer_panel, treasurer, "set_price", null, list("key" = "medlab_pass", "value" = 450))
 	TEST_ASSERT_EQUAL(home.get_price("medlab_pass"), 450, "A treasurer could not set a price through the console")
 	act(pricer_panel, pricer, "set_price", null, list("key" = "storage_rent", "value" = 250))

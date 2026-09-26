@@ -299,6 +299,10 @@
 /obj/effect/decal/cleanable/ash,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/trader_outpost)
+"ba" = (
+/obj/structure/bounty_wanted_board/directional/north,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/trader_outpost)
 "bg" = (
 /obj/structure/sink/directional/north,
 /turf/open/indestructible/white/textured,
@@ -1744,7 +1748,7 @@ aj
 ci
 Fe
 aa
-ar
+ba
 au
 ar
 aM

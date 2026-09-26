@@ -114,7 +114,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	var/list/outpost_clue_pool
 	/// The clue each trader gives: REF of the trader -> list(BOUNTY_CLUE_*, index)
 	var/list/outpost_trader_clues = list()
-	/// What each trader told each ship: "trader REF|ship REF" -> the words
+	/// What each trader told each ship: "trader REF|ship REF" -> list(the clue kind, the place it named then or null). Facts, never words: the words are made on each ask.
 	var/list/outpost_clues_told = list()
 	/// How many of the fugitive's features each decoy was made to share, in spawn order
 	var/list/outpost_decoy_shares = list()
@@ -152,9 +152,10 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	outpost_decoy_shares = list()
 	outpost_warrant_ready_at = list()
 
-	// The listing's mugshot shows them before they changed their hair or clothes (AR-C1).
-	if(!record.old_look && make_old_look(record))
-		record.mugshot = null
+	// The listing's mugshot shows them before they changed their hair or clothes (AR-C1), but only
+	// for a face nobody has seen yet. A record whose mugshot is already out (relisted here from
+	// somewhere else) keeps the face everyone has seen: no past face is invented for it.
+	if(!record.old_look && !record.mugshot && make_old_look(record))
 		static_data_serial++
 
 	var/display_name = bounty_outpost_display_name(outpost)
@@ -169,21 +170,37 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	fugitive.companions.Cut()
 	companions.Cut()
 
+	// Only where customers walk (M5): a fugitive placed behind glass, a counter or a staff door
+	// moves to the concourse before anyone sees it, and the decoys come from the same floor.
+	var/list/spots = bounty_outpost_spawn_spots(outpost, BOUNTY_DECOY_COUNT + 1)
+	var/list/public_floor = bounty_outpost_public_floor(outpost)
+	if(!(get_turf(fugitive) in public_floor) && length(spots))
+		fugitive.forceMove(spots[1])
+	spots -= get_turf(fugitive)
+
 	if(!fugitive.site_bounds)
 		fugitive.site_bounds = bounty_outpost_bounds(outpost)
-	fugitive.AddComponent(/datum/component/bounty_outpost_blend, src, FALSE, display_name, display_desc)
-	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(apply_bounty_look), fugitive, record, outfit)
-	fugitive.start_activity(BOUNTY_ACTIVITY_BLEND, null)
+	fugitive.AddComponent(/datum/component/bounty_outpost_blend, src, FALSE, display_name, display_desc, outfit)
+	// Everyone blending in has the same even chance of heading for a bar stool, the fugitive included
+	var/list/free_stools = bounty_outpost_free_stools(public_floor)
+	fugitive.start_activity(BOUNTY_ACTIVITY_BLEND, (length(free_stools) && prob(50)) ? pick_n_take(free_stools) : null)
 
 	var/feature_count = length(record.features)
-	for(var/turf/spot as anything in bounty_outpost_spawn_spots(outpost, BOUNTY_DECOY_COUNT, fugitive))
+	for(var/turf/spot as anything in spots)
+		if(length(decoys) >= BOUNTY_DECOY_COUNT)
+			break
 		// One or two of its features each, and never all of them (make_decoy_record() holds to that too)
 		var/shared = rand(1, 2)
 		if(feature_count)
 			shared = clamp(shared, 1, max(1, feature_count - 1))
 		outpost_decoy_shares += shared
+		var/datum/bounty_record/decoy_record = make_decoy_record(record, shared)
+		// If a line ever names a crime, it names the same one for everybody
+		if(decoy_record)
+			decoy_record.crime = record.crime
 		var/mob/living/basic/bounty_criminal/decoy/decoy = new(spot)
-		decoy.outpost_become(fugitive, make_decoy_record(record, shared), src, outpost, display_name, display_desc, outfit)
+		var/atom/anchor = (length(free_stools) && prob(50)) ? pick_n_take(free_stools) : null
+		decoy.outpost_become(fugitive, decoy_record, src, outpost, display_name, display_desc, outfit, anchor)
 		decoys += WEAKREF(decoy)
 
 	RegisterSignal(src, COMSIG_BOUNTY_POSTING_CLOSED, PROC_REF(outpost_on_closed), override = TRUE)
@@ -224,12 +241,14 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	return TRUE
 
 /// The decoys at the current site leave and fade out, and the posting forgets them
-/datum/criminal_bounty/proc/outpost_dismiss_decoys()
+/datum/criminal_bounty/proc/outpost_dismiss_decoys(list/floor)
 	var/obj/structure/overmap/trader_outpost/outpost = outpost_site?.resolve()
+	if(length(decoys) && outpost && isnull(floor))
+		floor = bounty_outpost_public_floor(outpost)
 	for(var/datum/weakref/decoy_ref as anything in decoys)
 		var/mob/living/basic/bounty_criminal/decoy = decoy_ref?.resolve()
 		if(!QDELETED(decoy))
-			bounty_outpost_walk_out(decoy, outpost)
+			bounty_outpost_walk_out(decoy, outpost, floor)
 	decoys.Cut()
 
 /**
@@ -241,13 +260,15 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
  */
 /datum/criminal_bounty/proc/outpost_release_site()
 	var/obj/structure/overmap/trader_outpost/outpost = outpost_site?.resolve()
-	outpost_dismiss_decoys()
+	var/list/floor = outpost ? bounty_outpost_public_floor(outpost) : null
+	outpost_dismiss_decoys(floor)
 	var/mob/living/basic/bounty_criminal/fugitive = criminal()
 	if(!fugitive || !outpost || get_trader_outpost_for_turf(get_turf(fugitive)) != outpost)
 		return
-	criminal_ref = null
+	// P5's own detach, so its deletion watch comes off too and the fade isn't read as a loss
+	board_detach_criminal()
 	fugitive.posting_ref = null
-	bounty_outpost_walk_out(fugitive, outpost)
+	bounty_outpost_walk_out(fugitive, outpost, floor)
 
 /// The posting closed (P5's close()): the decoys and an uncaught fugitive walk out
 /datum/criminal_bounty/proc/outpost_on_closed(datum/source, reason, obj/structure/overmap/ship/winner)
@@ -286,20 +307,23 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	)
 
 /**
- * Up to `count` free floor tiles where customers go, for decoys: out of every player's sight if
- * possible, so nobody watches a patron appear (AR-C10). Never behind a counter, in a staff room
- * or on the hangar lift.
+ * THE spawn picker for anyone blending in at `outpost` (P5 places its fugitive with it, P6 its
+ * decoys): up to `count` different free tiles of the public concourse floor
+ * (bounty_outpost_public_floor(): never behind glass, a counter or a staff door, never on the hangar
+ * lift), out of every player's view, so nobody watches a patron appear (AR-C10). When too few are
+ * out of view, the rest are the free tiles nearest the lift, as if they had just come up from the
+ * hangar. Never the tile `near` stands on, if given. Doesn't sleep. P5 calls it as
+ * bounty_outpost_spawn_spots(outpost, 1, null).
  */
-/proc/bounty_outpost_spawn_spots(obj/structure/overmap/trader_outpost/outpost, count, atom/near)
+/proc/bounty_outpost_spawn_spots(obj/structure/overmap/trader_outpost/outpost, count = 1, atom/near)
 	var/list/bounds = bounty_outpost_bounds(outpost)
-	if(!bounds)
+	if(!bounds || count <= 0)
 		return list()
-	var/list/seeds = outpost.lobby_alcove_turfs.Copy()
+	var/list/floor = bounty_outpost_public_floor(outpost)
+	floor -= outpost.lobby_alcove_turfs
 	var/turf/near_turf = get_turf(near)
 	if(near_turf)
-		seeds += near_turf
-	var/list/floor = bounty_outpost_public_floor(outpost, seeds)
-	floor -= outpost.lobby_alcove_turfs
+		floor -= near_turf
 	var/list/watched = list()
 	for(var/mob/player as anything in GLOB.player_list)
 		var/turf/player_turf = get_turf(player)
@@ -317,24 +341,49 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 		else
 			unseen += candidate
 	var/list/spots = list()
-	while(length(spots) < count && (length(unseen) || length(seen)))
-		spots += pick_n_take(length(unseen) ? unseen : seen)
+	while(length(spots) < count && length(unseen))
+		spots += pick_n_take(unseen)
+	// The floor is in reach order from the lift, so the first seen tiles are the ones by the lift
+	for(var/turf/arriving as anything in seen)
+		if(length(spots) >= count)
+			break
+		spots += arriving
 	return spots
 
+/// The one spawn tile P5 asks for: bounty_outpost_spawn_spots() with a count of one, or null
+/proc/bounty_outpost_spawn_spot(obj/structure/overmap/trader_outpost/outpost)
+	var/list/spots = bounty_outpost_spawn_spots(outpost, 1)
+	return length(spots) ? spots[1] : null
+
+/// The bar stools on `floor` nobody is sitting on
+/proc/bounty_outpost_free_stools(list/floor)
+	. = list()
+	for(var/turf/spot as anything in floor)
+		for(var/obj/structure/chair/stool/bar/stool in spot)
+			if(!stool.has_buckled_mobs() && !(locate(/mob/living) in spot))
+				. += stool
+
 /**
- * The concourse floor customers can walk: every open tile reachable from `seeds` (the hangar lift,
- * where the fugitive stands) without climbing a counter or passing a door that wants an ID.
+ * The concourse floor customers can walk, in reach order from the hangar lift: every open tile
+ * reachable from the lift's alcove without climbing a counter or passing a door that wants an ID.
+ * An outpost with no lift (a broken load) starts from `fallback_seeds` instead.
  */
-/proc/bounty_outpost_public_floor(obj/structure/overmap/trader_outpost/outpost, list/seeds)
+/proc/bounty_outpost_public_floor(obj/structure/overmap/trader_outpost/outpost, list/fallback_seeds)
 	var/list/bounds = bounty_outpost_bounds(outpost)
 	if(!bounds)
 		return list()
+	var/list/seeds = length(outpost.lobby_alcove_turfs) ? outpost.lobby_alcove_turfs : fallback_seeds
 	var/list/reached = list()
 	var/list/floor = list()
 	for(var/turf/seed as anything in seeds)
 		if(!reached[seed] && bounty_outpost_turf_in_bounds(seed, bounds))
 			reached[seed] = TRUE
 			floor += seed
+	// A customer on foot with no ID: the pathfinder's own step check, so railings block only across
+	// their edge, counters and glass block, and a door that wants an ID is a wall.
+	var/datum/can_pass_info/customer = new(null, list())
+	customer.is_living = TRUE
+	customer.mob_size = MOB_SIZE_HUMAN
 	var/index = 1
 	while(index <= length(floor))
 		var/turf/current = floor[index++]
@@ -342,18 +391,17 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 			var/turf/next = get_step(current, direction)
 			if(!next || reached[next] || !bounty_outpost_turf_in_bounds(next, bounds))
 				continue
-			reached[next] = TRUE
-			if(!isopenturf(next) || isspaceturf(next))
+			if(!isopenturf(next) || isspaceturf(next) || next.density)
+				reached[next] = TRUE
 				continue
 			var/area/place = next.loc
 			if(istype(place, /area/space) || istype(place, /area/template_noop))
+				reached[next] = TRUE
 				continue
-			var/obj/machinery/door/airlock/airlock = locate() in next
-			if(airlock)
-				if(!airlock.check_access(null)) // staff only
-					continue
-			else if(next.is_blocked_turf(exclude_mobs = TRUE))
+			// Blocked from this side only: another side may still reach it (a railing's open end)
+			if(current.LinkBlockedWithAccess(next, customer))
 				continue
+			reached[next] = TRUE
 			floor += next
 	return floor
 
@@ -383,7 +431,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
  * reacts as its kind does (P3's on_confronted(): a meek one bolts, a normal one fights).
  */
 /datum/criminal_bounty/proc/outpost_confront(mob/living/basic/bounty_criminal/fugitive, mob/living/user)
-	fugitive.grudge |= WEAKREF(user)
+	fugitive.body_add_grudge(user)
 	var/datum/component/bounty_outpost_blend/blend = fugitive.GetComponent(/datum/component/bounty_outpost_blend)
 	blend?.stop_blending()
 	fugitive.blended = FALSE
@@ -431,14 +479,19 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	health = BOUNTY_MEEK_HEALTH
 	/// Barks when hit are rate-limited on their own, beside bounty_say()'s cooldown
 	COOLDOWN_DECLARE(outpost_bark_cooldown)
+	/// How long its fugitive stays down (P2's body_recovery_time()), so they get up together; null before it is made one
+	var/outpost_recovery_time
+	/// Its fugitive's stamina pool (P2's body_stamina_pool()); null before it is made one
+	var/outpost_stamina_pool
 
 /**
  * Makes this decoy a look-alike of `fugitive` wanted on `posting` at `outpost`: `decoy_record`'s
- * face in the zone's `outfit`, the fugitive's body and routine, the zone's generic name. The
- * decoy is NOT linked to the posting through posting_ref: it is not the criminal, and nothing the
- * pad, the proof of death or the board does may treat it as one.
+ * face in the zone's `outfit`, the fugitive's body and routine, the zone's generic name, doing
+ * what the fugitive does (at `anchor`, a bar stool, or nothing). The decoy is NOT linked to the
+ * posting through posting_ref: it is not the criminal, and nothing the pad, the proof of death or
+ * the board does may treat it as one. The admin panel's decoys should come through here too.
  */
-/mob/living/basic/bounty_criminal/decoy/proc/outpost_become(mob/living/basic/bounty_criminal/fugitive, datum/bounty_record/decoy_record, datum/criminal_bounty/posting, obj/structure/overmap/trader_outpost/outpost, display_name, display_desc, outfit)
+/mob/living/basic/bounty_criminal/decoy/proc/outpost_become(mob/living/basic/bounty_criminal/fugitive, datum/bounty_record/decoy_record, datum/criminal_bounty/posting, obj/structure/overmap/trader_outpost/outpost, display_name, display_desc, outfit, atom/anchor)
 	record = decoy_record
 	if(decoy_record?.gender)
 		gender = decoy_record.gender
@@ -454,22 +507,22 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 				QDEL_NULL(ai_controller)
 			var/controller_type = fugitive_controller.type
 			new controller_type(src)
-	AddComponent(/datum/component/bounty_outpost_blend, posting, TRUE, display_name, display_desc)
-	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(apply_bounty_look), src, decoy_record, outfit)
-	start_activity(BOUNTY_ACTIVITY_BLEND, null)
+	AddComponent(/datum/component/bounty_outpost_blend, posting, TRUE, display_name, display_desc, outfit)
+	start_activity(BOUNTY_ACTIVITY_BLEND, anchor)
 
 /**
- * Copies everything about `fugitive`'s body that a player could compare (AR-C6): health, stamina,
- * damage taken, speed, size, how it breathes and talks, and how it reacts to a touch.
+ * Copies everything about `fugitive`'s body that a player could compare (AR-C6): P2's body_match()
+ * (health, pace, stamina and how it slows), how long it stays down, its size, how it breathes and
+ * talks, and how it reacts to a touch.
  */
 /mob/living/basic/bounty_criminal/decoy/proc/outpost_match_body(mob/living/basic/bounty_criminal/fugitive)
-	maxHealth = fugitive.maxHealth
-	health = fugitive.maxHealth
+	outpost_recovery_time = fugitive.body_recovery_time()
+	outpost_stamina_pool = fugitive.body_stamina_pool()
+	body_match(fugitive)
+	damage_coeff = fugitive.damage_coeff.Copy()
 	max_stamina = fugitive.max_stamina
 	stamina_crit_threshold = fugitive.stamina_crit_threshold
 	stamina_recovery = fugitive.stamina_recovery
-	max_stamina_slowdown = fugitive.max_stamina_slowdown
-	damage_coeff = fugitive.damage_coeff?.Copy()
 	status_flags = fugitive.status_flags
 	mob_size = fugitive.mob_size
 	faction = LAZYCOPY(fugitive.faction)
@@ -493,16 +546,29 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	response_harm_continuous = fugitive.response_harm_continuous
 	response_harm_simple = fugitive.response_harm_simple
 	attacked_sound = fugitive.attacked_sound
-	set_varspeed(fugitive.speed)
-	updatehealth()
+
+// Down as long as its fugitive would be (M2): a meek fugitive can't give itself away by getting up first.
+/mob/living/basic/bounty_criminal/decoy/body_recovery_time()
+	return isnull(outpost_recovery_time) ? ..() : outpost_recovery_time
+
+/mob/living/basic/bounty_criminal/decoy/body_stamina_pool()
+	return isnull(outpost_stamina_pool) ? ..() : outpost_stamina_pool
 
 /// A decoy never fights anyone (P2's gate on attacks)
 /mob/living/basic/bounty_criminal/decoy/may_attack(atom/target)
 	return FALSE
 
-/// Confronting a decoy, from anywhere: it protests. Nothing else happens.
+/**
+ * Confronting a decoy, whoever does it (a wrong warrant, cuffs reached for, any other package): a
+ * wrong accusation, with its cost. It protests, and at its outpost the posting's alert rises (C1).
+ */
 /mob/living/basic/bounty_criminal/decoy/on_confronted(mob/user)
-	outpost_protest(user)
+	var/datum/component/bounty_outpost_blend/blend = GetComponent(/datum/component/bounty_outpost_blend)
+	var/datum/criminal_bounty/posting = blend?.posting_ref?.resolve()
+	if(blend?.leaving || QDELETED(posting) || !isliving(user) || !user.mind)
+		outpost_protest(user)
+		return
+	posting.outpost_wrong_accusation(src, user)
 
 /// Someone hit it on purpose: a bark, then it backs off from them for a few seconds
 /mob/living/basic/bounty_criminal/decoy/proc/outpost_react_to_hit(mob/living/attacker)
@@ -538,24 +604,31 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 /datum/component/bounty_outpost_blend
 	/// The posting they are part of, as a weakref (/datum/criminal_bounty)
 	var/datum/weakref/posting_ref
+	/// The trader outpost they are at, as a weakref, for its hangar lift
+	var/datum/weakref/outpost_ref
 	/// A decoy, not the fugitive
 	var/decoy = FALSE
 	/// Still blending in
 	var/blending = TRUE
 	/// Walking out to the hangar (/datum/component/bounty_outpost_exit): hits and warrants no longer count
 	var/leaving = FALSE
-	/// move_resist before they blended in
-	var/saved_move_resist
+	/// The zone's clothes they wear while blending in
+	var/outfit
 	/// Whether blending in added FACTION_TURRET
 	var/added_turret_faction = FALSE
+	/// Exposed, the fugitive hurt someone not on its grudge list here: the turrets' leave to fight it is over (AR-C8)
+	var/hurt_bystander = FALSE
 	/// Blows closer together than BOUNTY_OUTPOST_HIT_GRACE are one scuffle
 	COOLDOWN_DECLARE(hit_grace)
 
-/datum/component/bounty_outpost_blend/Initialize(datum/criminal_bounty/posting, decoy = FALSE, display_name, display_desc)
+/datum/component/bounty_outpost_blend/Initialize(datum/criminal_bounty/posting, decoy = FALSE, display_name, display_desc, outfit)
 	if(!istype(parent, /mob/living/basic/bounty_criminal))
 		return COMPONENT_INCOMPATIBLE
 	posting_ref = posting ? WEAKREF(posting) : null
+	var/atom/outpost = posting?.outpost_site?.resolve() || posting?.site_ref?.resolve()
+	outpost_ref = outpost ? WEAKREF(outpost) : null
 	src.decoy = decoy
+	src.outfit = outfit
 	var/mob/living/basic/bounty_criminal/owner = parent
 	owner.blended = TRUE
 	if(display_name)
@@ -563,17 +636,22 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 		owner.real_name = display_name
 	if(display_desc)
 		owner.desc = display_desc
-	saved_move_resist = owner.move_resist
 	owner.move_resist = MOVE_FORCE_VERY_STRONG
 	ADD_TRAIT(owner, TRAIT_NO_CONTAINMENT, BOUNTY_OUTPOST_TRAIT)
 	ADD_TRAIT(owner, TRAIT_NO_STORAGE_INSERT, BOUNTY_OUTPOST_TRAIT)
-	// The turrets skip faction-mates before anything else: a patron minding their own business is
-	// never a target, whatever P2's rule for criminals says.
+	// Belt and braces beside P2's turret rule for criminals: turrets skip faction-mates before
+	// anything else, so a patron minding their own business is never a target.
 	if(!(FACTION_TURRET in owner.faction))
 		var/list/new_faction = LAZYCOPY(owner.faction)
 		new_faction += FACTION_TURRET
 		owner.faction = new_faction
 		added_turret_faction = TRUE
+	if(outfit)
+		redress()
+		// P2 dresses a new criminal in its own clothes in the background; whichever look lands
+		// last would stick, so the zone's is put back on after it (from the cache: cheap).
+		addtimer(CALLBACK(src, PROC_REF(redress)), 3 SECONDS, TIMER_DELETE_ME)
+		addtimer(CALLBACK(src, PROC_REF(redress)), 10 SECONDS, TIMER_DELETE_ME)
 
 /datum/component/bounty_outpost_blend/Destroy(force)
 	stop_blending()
@@ -582,31 +660,48 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 /datum/component/bounty_outpost_blend/RegisterWithParent()
 	RegisterSignal(parent, COMSIG_ATOM_CAN_BE_PULLED, PROC_REF(on_pull_attempt))
 	RegisterSignal(parent, COMSIG_MOUSEDROP_ONTO, PROC_REF(on_dragged))
+	RegisterSignal(parent, COMSIG_MOVABLE_PRE_MOVE, PROC_REF(on_pre_move))
 	RegisterSignal(parent, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_projectile_prehit))
+	RegisterSignal(parent, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interaction))
 	RegisterSignal(parent, COMSIG_ATOM_AFTER_ATTACKEDBY, PROC_REF(on_item_attack))
 	RegisterSignal(parent, COMSIG_ATOM_ATTACK_HAND, PROC_REF(on_hand_attack))
 	RegisterSignal(parent, COMSIG_ATOM_ATTACK_HAND_SECONDARY, PROC_REF(on_shoved))
 	RegisterSignal(parent, COMSIG_MOB_BATONED, PROC_REF(on_batoned))
 	RegisterSignal(parent, COMSIG_ATOM_HULK_ATTACK, PROC_REF(on_hulk_attack))
+	RegisterSignal(parent, COMSIG_ATOM_ATTACK_MECH, PROC_REF(on_mech_attack))
+	RegisterSignal(parent, COMSIG_ATOM_PREHITBY, PROC_REF(on_thrown_hit))
 	RegisterSignals(parent, list(COMSIG_ATOM_ATTACK_BASIC_MOB, COMSIG_ATOM_ATTACK_ANIMAL), PROC_REF(on_creature_attack))
 	RegisterSignal(parent, COMSIG_PROJECTILE_FIRER_BEFORE_FIRE, PROC_REF(on_firing))
+	RegisterSignal(parent, COMSIG_HOSTILE_POST_ATTACKINGTARGET, PROC_REF(on_melee_attack))
 
 /datum/component/bounty_outpost_blend/UnregisterFromParent()
 	UnregisterSignal(parent, list(
 		COMSIG_ATOM_CAN_BE_PULLED,
 		COMSIG_MOUSEDROP_ONTO,
+		COMSIG_MOVABLE_PRE_MOVE,
 		COMSIG_PROJECTILE_PREHIT,
+		COMSIG_ATOM_ITEM_INTERACTION,
 		COMSIG_ATOM_AFTER_ATTACKEDBY,
 		COMSIG_ATOM_ATTACK_HAND,
 		COMSIG_ATOM_ATTACK_HAND_SECONDARY,
 		COMSIG_MOB_BATONED,
 		COMSIG_ATOM_HULK_ATTACK,
+		COMSIG_ATOM_ATTACK_MECH,
+		COMSIG_ATOM_PREHITBY,
 		COMSIG_ATOM_ATTACK_BASIC_MOB,
 		COMSIG_ATOM_ATTACK_ANIMAL,
 		COMSIG_PROJECTILE_FIRER_BEFORE_FIRE,
+		COMSIG_HOSTILE_POST_ATTACKINGTARGET,
 	))
 
-/// Ends the act: pullable and containable again, and fair game for P2's turret rule. The name stays.
+/// Puts the zone's clothes back on, while still blending in and not hiding (a meek one's disguise stays)
+/datum/component/bounty_outpost_blend/proc/redress()
+	var/mob/living/basic/bounty_criminal/owner = parent
+	if(!blending || leaving || !outfit || !owner.record || owner.hidden)
+		return
+	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(apply_bounty_look), owner, owner.record, outfit)
+
+/// Ends the act: pullable (by P2's rules) and containable again, and no longer in the turrets' faction. The name stays.
 /datum/component/bounty_outpost_blend/proc/stop_blending()
 	if(!blending)
 		return
@@ -616,7 +711,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 		return
 	owner.blended = FALSE
 	if(!leaving)
-		owner.move_resist = saved_move_resist
+		owner.body_update_drag()
 	REMOVE_TRAIT(owner, TRAIT_NO_CONTAINMENT, BOUNTY_OUTPOST_TRAIT)
 	REMOVE_TRAIT(owner, TRAIT_NO_STORAGE_INSERT, BOUNTY_OUTPOST_TRAIT)
 	if(added_turret_faction)
@@ -639,6 +734,21 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	return NONE
 
 /**
+ * They never step onto the hangar lift by themselves: the lift carries everyone standing on it, and
+ * a patron riding it down would leave the outpost. Dragged or thrown, they go where they are taken
+ * (hunters bring a caught fugitive home that way); walking out, they head for the lift on purpose.
+ */
+/datum/component/bounty_outpost_blend/proc/on_pre_move(atom/movable/source, atom/new_loc)
+	SIGNAL_HANDLER
+	var/mob/living/owner = parent
+	if(leaving || owner.pulledby || owner.throwing || owner.buckled || !isturf(new_loc))
+		return NONE
+	var/obj/structure/overmap/trader_outpost/outpost = outpost_ref?.resolve()
+	if(outpost && (new_loc in outpost.lobby_alcove_turfs))
+		return COMPONENT_MOVABLE_BLOCK_PRE_MOVE
+	return NONE
+
+/**
  * A shot not aimed at someone blending in passes through them (AR-C7): nobody can use a decoy as a
  * shield, or shoot "past" one to make a rival hit it. A shot aimed at them is a deliberate hit.
  */
@@ -653,6 +763,23 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	if(projectile.is_hostile_projectile() && isliving(projectile.firer))
 		deliberate_hit(projectile.firer)
 	return NONE
+
+/**
+ * Restraints reached for (C1): exactly the cost of a punch, on anyone blending in. A decoy's wrists
+ * are an outpost strike and the alert; the fugitive's end its act. Standing and free, they pull
+ * away, so P2's own refusal (and the confrontation it starts) never runs as a free test. Down or
+ * stunned, the cuffs go on as P2 puts them on anyone.
+ */
+/datum/component/bounty_outpost_blend/proc/on_item_interaction(datum/source, mob/living/user, obj/item/tool, list/modifiers)
+	SIGNAL_HANDLER
+	if(!blending || leaving || !istype(tool, /obj/item/restraints/handcuffs))
+		return NONE
+	var/mob/living/basic/bounty_criminal/owner = parent
+	deliberate_hit(user)
+	if(owner.capture_state() != BOUNTY_STATE_FREE)
+		return NONE
+	owner.balloon_alert(user, "put [owner.p_them()] down first")
+	return ITEM_INTERACT_BLOCKING
 
 /datum/component/bounty_outpost_blend/proc/on_item_attack(datum/source, obj/item/weapon, mob/living/attacker, list/modifiers, list/attack_modifiers)
 	SIGNAL_HANDLER
@@ -676,12 +803,30 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	SIGNAL_HANDLER
 	deliberate_hit(user)
 
+/// A mech's fist is its pilot's
+/datum/component/bounty_outpost_blend/proc/on_mech_attack(datum/source, obj/vehicle/sealed/mecha/mecha_attacker, mob/living/pilot)
+	SIGNAL_HANDLER
+	deliberate_hit(pilot)
+
+/**
+ * Something thrown at them on purpose (H1): an item with some heft, thrown at them by a person.
+ * One thrown at someone else that lands on them does not count, so nobody can be framed with it.
+ */
+/datum/component/bounty_outpost_blend/proc/on_thrown_hit(datum/source, atom/movable/thrown, datum/thrownthing/throwingdatum)
+	SIGNAL_HANDLER
+	if(!isitem(thrown) || !throwingdatum)
+		return
+	var/obj/item/thrown_item = thrown
+	if(!thrown_item.throwforce || throwingdatum.initial_target?.resolve() != parent)
+		return
+	deliberate_hit(throwingdatum.get_thrower())
+
 /datum/component/bounty_outpost_blend/proc/on_creature_attack(datum/source, mob/living/user)
 	SIGNAL_HANDLER
 	if(isliving(user) && user.melee_damage_upper > 0)
 		deliberate_hit(user)
 
-/// Someone hit them on purpose. Only a person counts: thrown things, explosions and NPCs never do.
+/// Someone hit them on purpose. Only a person counts: stray shots, stray throws, explosions and NPCs never do.
 /datum/component/bounty_outpost_blend/proc/deliberate_hit(mob/living/attacker)
 	if(leaving || !istype(attacker) || !attacker.mind || attacker == parent)
 		return
@@ -700,7 +845,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	if(!decoy)
 		if(!blending)
 			return
-		owner.grudge |= WEAKREF(attacker)
+		owner.body_add_grudge(attacker)
 		stop_blending()
 		owner.on_confronted(attacker)
 		return
@@ -717,6 +862,38 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	if(!leaving && istype(decoy_mob))
 		decoy_mob.outpost_react_to_hit(attacker)
 
+/// Its own fists landed on `target`
+/datum/component/bounty_outpost_blend/proc/on_melee_attack(datum/source, atom/target, result)
+	SIGNAL_HANDLER
+	note_victim(target)
+
+/**
+ * The fugitive hurt `victim`. At a trader outpost, anyone not on its grudge list is a bystander, and
+ * hurting one ends the turrets' leave to let the hunters handle it (AR-C8). P2's may_attack() and
+ * the grudge-only shots below keep that from happening; a thrown attack that gets round them should
+ * call this too.
+ */
+/datum/component/bounty_outpost_blend/proc/note_victim(atom/victim)
+	if(decoy || !isliving(victim) || victim == parent)
+		return
+	var/mob/living/basic/bounty_criminal/owner = parent
+	if(owner.body_has_grudge(victim) || istype(victim, /mob/living/basic/bounty_criminal) || istype(victim, /mob/living/basic/bounty_companion))
+		return
+	if(!is_trader_outpost_protected(owner))
+		return
+	if(!hurt_bystander)
+		log_game("BOUNTY: [owner.record?.name] hurt a bystander ([key_name(victim)]) at [AREACOORD(owner)]; the outpost turrets may fire on it now.")
+	hurt_bystander = TRUE
+
+/**
+ * Whether a trader outpost's turrets may fire on them (AR-C8): only a fugitive, exposed, that has
+ * hurt someone who never crossed it. Blending in, or fighting only those who came for it, never.
+ * P2's line in is_hostile_creature() asks this for bounty criminals.
+ */
+/mob/living/basic/bounty_criminal/proc/outpost_turret_target()
+	var/datum/component/bounty_outpost_blend/blend = GetComponent(/datum/component/bounty_outpost_blend)
+	return !!blend && !blend.blending && !blend.leaving && blend.hurt_bystander
+
 /// The fugitive fired: at a trader outpost its shot passes through anyone not on its grudge list (AR-C8)
 /datum/component/bounty_outpost_blend/proc/on_firing(datum/source, obj/projectile/projectile, atom/fired_from, atom/original)
 	SIGNAL_HANDLER
@@ -729,7 +906,7 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	if(!isliving(target) || target == parent)
 		return NONE
 	var/mob/living/basic/bounty_criminal/owner = parent
-	if(WEAKREF(target) in owner.grudge)
+	if(owner.body_has_grudge(target))
 		return NONE
 	return PROJECTILE_INTERRUPT_HIT_PHASE
 
@@ -737,11 +914,22 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 // WALKING OUT
 // =========================================================================
 
-/// `walker` leaves `outpost`: walks to the nearest hangar lift and fades out, or fades where they are if they can't walk there
-/proc/bounty_outpost_walk_out(mob/living/walker, obj/structure/overmap/trader_outpost/outpost)
+/**
+ * `walker` leaves `outpost`: walks to the nearest hangar lift and fades out, or fades where they
+ * are if they can't walk there. `floor` is the outpost's public floor if the caller has it (one
+ * flood for everyone leaving at once); the lift is only walked to from a tile on it, so an
+ * unreachable lift is never pathed to.
+ */
+/proc/bounty_outpost_walk_out(mob/living/walker, obj/structure/overmap/trader_outpost/outpost, list/floor)
 	if(QDELETED(walker) || walker.GetComponent(/datum/component/bounty_outpost_exit))
 		return
-	walker.AddComponent(/datum/component/bounty_outpost_exit, bounty_outpost_exit_turf(walker, outpost))
+	var/turf/exit_turf = bounty_outpost_exit_turf(walker, outpost)
+	if(exit_turf)
+		if(isnull(floor))
+			floor = bounty_outpost_public_floor(outpost)
+		if(!isturf(walker.loc) || !(walker.loc in floor) || !(exit_turf in floor))
+			exit_turf = null
+	walker.AddComponent(/datum/component/bounty_outpost_exit, exit_turf)
 
 /// The hangar lift alcove tile nearest `from`, on its level, or null
 /proc/bounty_outpost_exit_turf(atom/from, obj/structure/overmap/trader_outpost/outpost)
@@ -763,12 +951,15 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
  * # Walking out
  *
  * Someone P6 put at an outpost is done there: their AI stops, nobody can hurt or pull them, and
- * they walk to the hangar lift and fade out. Anyone who can't walk (down, cuffed, hidden, dead)
- * or still walking after BOUNTY_OUTPOST_EXIT_TIMEOUT fades where they are.
+ * they walk to the hangar lift and fade out. Anyone who can't walk (down, cuffed, hidden, dead),
+ * can't reach the lift, is taken off their feet on the way, or is still walking after
+ * BOUNTY_OUTPOST_EXIT_TIMEOUT fades where they are. The walk's move loop never outlives them.
  */
 /datum/component/bounty_outpost_exit
 	/// The hangar lift tile they are walking to, or null
 	var/turf/destination
+	/// The walk to the lift, while it runs
+	var/datum/move_loop/walk_loop
 	/// Fading out now
 	var/fading = FALSE
 
@@ -786,20 +977,26 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	walker.pulledby?.stop_pulling()
 	walker.stop_pulling()
 	addtimer(CALLBACK(src, PROC_REF(fade_out)), BOUNTY_OUTPOST_EXIT_TIMEOUT, TIMER_DELETE_ME)
-	if(!destination || !can_walk())
+	if(!destination || !can_walk() || destination.z != walker.z)
 		fade_out()
 		return
 	RegisterSignal(walker, COMSIG_MOVABLE_MOVED, PROC_REF(on_moved))
-	GLOB.move_manager.jps_move(walker, destination, delay = BOUNTY_OUTPOST_EXIT_DELAY, timeout = BOUNTY_OUTPOST_EXIT_TIMEOUT, repath_delay = 2 SECONDS, max_path_length = 150, simulated_only = TRUE, priority = MOVEMENT_ABOVE_SPACE_PRIORITY)
+	walk_loop = GLOB.move_manager.jps_move(walker, destination, delay = BOUNTY_OUTPOST_EXIT_DELAY, timeout = BOUNTY_OUTPOST_EXIT_TIMEOUT, repath_delay = 2 SECONDS, max_path_length = 150, simulated_only = TRUE, priority = MOVEMENT_ABOVE_SPACE_PRIORITY)
+	if(!walk_loop)
+		fade_out()
+		return
+	RegisterSignal(walk_loop, COMSIG_MOVELOOP_PREPROCESS_CHECK, PROC_REF(before_step))
+	RegisterSignals(walk_loop, list(COMSIG_MOVELOOP_STOP, COMSIG_QDELETING), PROC_REF(on_walk_ended))
 
 /datum/component/bounty_outpost_exit/Destroy(force)
+	end_walk()
 	destination = null
 	return ..()
 
 /// Whether they can walk out on their own feet
 /datum/component/bounty_outpost_exit/proc/can_walk()
 	var/mob/living/walker = parent
-	if(walker.stat != CONSCIOUS || !isturf(walker.loc) || walker.buckled)
+	if(QDELETED(walker) || walker.stat != CONSCIOUS || !isturf(walker.loc) || walker.buckled)
 		return FALSE
 	if(HAS_TRAIT(walker, TRAIT_IMMOBILIZED) || HAS_TRAIT(walker, TRAIT_FLOORED) || HAS_TRAIT(walker, TRAIT_RESTRAINED))
 		return FALSE
@@ -809,16 +1006,47 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 			return FALSE
 	return TRUE
 
+/// Before each step: someone off their feet or off the floor (stuffed somewhere, carried off) stops walking and fades, so the pathfinder is never asked to start from nowhere
+/datum/component/bounty_outpost_exit/proc/before_step(datum/move_loop/source)
+	SIGNAL_HANDLER
+	if(can_walk())
+		return NONE
+	addtimer(CALLBACK(src, PROC_REF(fade_out)), 0, TIMER_DELETE_ME)
+	return MOVELOOP_SKIP_STEP
+
+/// The walk stopped (timed out, or ended): whoever hasn't reached the lift fades where they are
+/datum/component/bounty_outpost_exit/proc/on_walk_ended(datum/move_loop/source)
+	SIGNAL_HANDLER
+	UnregisterSignal(source, list(COMSIG_MOVELOOP_PREPROCESS_CHECK, COMSIG_MOVELOOP_STOP, COMSIG_QDELETING))
+	if(walk_loop == source)
+		walk_loop = null
+	if(!fading)
+		addtimer(CALLBACK(src, PROC_REF(fade_out)), 0, TIMER_DELETE_ME)
+
+/// Stops the walk, if it is still going
+/datum/component/bounty_outpost_exit/proc/end_walk()
+	if(!walk_loop)
+		return
+	var/datum/move_loop/ending = walk_loop
+	walk_loop = null
+	UnregisterSignal(ending, list(COMSIG_MOVELOOP_PREPROCESS_CHECK, COMSIG_MOVELOOP_STOP, COMSIG_QDELETING))
+	if(!QDELETED(ending))
+		qdel(ending)
+
 /datum/component/bounty_outpost_exit/proc/on_moved(datum/source, atom/old_loc, dir, forced, list/old_locs)
 	SIGNAL_HANDLER
+	// Faded after the step, never inside the move loop's own step
 	if(destination && get_dist(parent, destination) <= 1)
-		fade_out()
+		addtimer(CALLBACK(src, PROC_REF(fade_out)), 0, TIMER_DELETE_ME)
 
 /datum/component/bounty_outpost_exit/proc/fade_out()
 	if(fading)
 		return
 	fading = TRUE
+	end_walk()
 	var/mob/living/walker = parent
+	if(QDELETED(walker))
+		return
 	UnregisterSignal(walker, COMSIG_MOVABLE_MOVED)
 	GLOB.move_manager.stop_looping(walker)
 	animate(walker, alpha = 0, time = BOUNTY_OUTPOST_FADE_TIME)
@@ -870,36 +1098,41 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	return TRUE
 
 /**
- * What `trader` tells the ship `hunter_key` about this fugitive: one clue per trader per ship,
- * and each trader a different one. Asking again gets the same answer.
+ * What `trader` tells the ship `hunter_key` about this fugitive: one clue per trader per ship, and
+ * each trader a different one. The words are made fresh on every ask, from what the trader knows
+ * (M4): a place is told in the present only if it is true now, and retold in the past
+ * ("earlier") once it may not be.
  */
 /datum/criminal_bounty/proc/outpost_clue_for(mob/living/basic/outpost_trader/trader, hunter_key)
 	var/told_key = "[REF(trader)]|[REF(hunter_key)]"
-	var/told = outpost_clues_told[told_key]
+	var/list/told = outpost_clues_told[told_key]
 	if(told)
-		return told == BOUNTY_OUTPOST_NO_CLUE ? told : "I told you what I know. [told]"
-	var/words = outpost_trader_clue(trader)
-	outpost_clues_told[told_key] = words
-	return words
+		var/again = outpost_clue_words(told[1], told[2])
+		return again ? "I told you what I know. [again]" : "I told you what I know."
+	var/list/kind = outpost_trader_kind(trader)
+	if(!kind)
+		return BOUNTY_OUTPOST_NO_CLUE
+	outpost_clues_told[told_key] = list(kind, outpost_clue_place(kind))
+	return outpost_clue_words(kind)
 
-/// The words of `trader`'s clue now: the kind they were given, or the next kind nobody has given yet
-/datum/criminal_bounty/proc/outpost_trader_clue(mob/living/basic/outpost_trader/trader)
+/**
+ * The clue `trader` gives now (list(BOUNTY_CLUE_*, index)): the kind they were given, if it can be
+ * said truthfully now, or the next kind nobody here has given yet that can. Null if none can.
+ */
+/datum/criminal_bounty/proc/outpost_trader_kind(mob/living/basic/outpost_trader/trader)
 	var/trader_key = REF(trader)
 	var/list/kind = outpost_trader_clues[trader_key]
-	if(kind)
-		var/words = outpost_clue_words(kind)
-		if(words)
-			return words
+	if(kind && outpost_clue_words(kind))
+		return kind
 	if(isnull(outpost_clue_pool))
 		outpost_clue_pool = outpost_build_clue_pool()
 	for(var/list/candidate as anything in outpost_clue_pool)
-		var/words = outpost_clue_words(candidate)
-		if(!words)
+		if(!outpost_clue_words(candidate))
 			continue
 		outpost_clue_pool -= list(candidate)
 		outpost_trader_clues[trader_key] = candidate
-		return words
-	return BOUNTY_OUTPOST_NO_CLUE
+		return candidate
+	return null
 
 /// Every clue the traders here could give, shuffled: where they were seen, their hair, each feature, each decoy ruled out
 /datum/criminal_bounty/proc/outpost_build_clue_pool()
@@ -915,25 +1148,15 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 	return pool
 
 /**
- * The words for clue `kind` (list(BOUNTY_CLUE_*, index)), true now, or null if it can't be said
- * truthfully: the fugitive is gone, the decoy is gone, or where they stand could fit anyone else.
+ * Where clue `kind` puts someone now, or null: where the fugitive is (BOUNTY_CLUE_SEEN), or where
+ * a decoy is, if that place picks out nobody else (BOUNTY_CLUE_RULED_OUT). Other kinds have no place.
  */
-/datum/criminal_bounty/proc/outpost_clue_words(list/kind)
+/datum/criminal_bounty/proc/outpost_clue_place(list/kind)
 	var/obj/structure/overmap/trader_outpost/outpost = outpost_site?.resolve()
 	switch(kind[1])
 		if(BOUNTY_CLUE_SEEN)
 			var/mob/living/basic/bounty_criminal/fugitive = criminal()
-			var/where = fugitive ? bounty_outpost_where(fugitive, outpost) : null
-			return where ? "Saw someone like that [where], not long ago." : null
-		if(BOUNTY_CLUE_HAIR)
-			return bounty_outpost_hair_clue(record)
-		if(BOUNTY_CLUE_FEATURE)
-			var/list/lines = record?.feature_lines()
-			var/index = kind[2]
-			if(index < 1 || index > length(lines))
-				return null
-			var/line = trim(STRIP_HTML_FULL(lines[index], MAX_MESSAGE_LEN))
-			return line ? "I remember one thing about them. [line]" : null
+			return fugitive ? bounty_outpost_where(fugitive, outpost) : null
 		if(BOUNTY_CLUE_RULED_OUT)
 			var/index = kind[2]
 			if(index < 1 || index > length(decoys))
@@ -949,7 +1172,35 @@ GLOBAL_LIST_INIT(bounty_decoy_hurt_lines, list(
 			for(var/mob/living/basic/bounty_criminal/other as anything in outpost_candidates())
 				if(other != decoy && bounty_outpost_where(other, outpost) == where)
 					return null
-			return "The one [where]? Not who you're after."
+			return where
+	return null
+
+/**
+ * The words for clue `kind` (list(BOUNTY_CLUE_*, index)), made now and true now, or null if it
+ * can't be said truthfully. `where_then` is the place it named when first told: given, a place
+ * that may have changed is retold in the past.
+ */
+/datum/criminal_bounty/proc/outpost_clue_words(list/kind, where_then)
+	switch(kind[1])
+		if(BOUNTY_CLUE_SEEN)
+			if(where_then)
+				return "I saw someone like that [where_then] earlier."
+			var/where = outpost_clue_place(kind)
+			return where ? "Saw someone like that [where], not long ago." : null
+		if(BOUNTY_CLUE_HAIR)
+			return bounty_outpost_hair_clue(record)
+		if(BOUNTY_CLUE_FEATURE)
+			var/list/lines = record?.feature_lines()
+			var/index = kind[2]
+			if(index < 1 || index > length(lines))
+				return null
+			var/line = trim(STRIP_HTML_FULL(lines[index], MAX_MESSAGE_LEN))
+			return line ? "I remember one thing about them. [line]" : null
+		if(BOUNTY_CLUE_RULED_OUT)
+			var/where = outpost_clue_place(kind)
+			if(where)
+				return "The one [where]? Not who you're after."
+			return where_then ? "Whoever was [where_then] earlier wasn't who you're after." : null
 	return null
 
 /// The fugitive and its decoys, whoever of them still exists
@@ -1161,27 +1412,38 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/bounty_wanted_board, 32)
 		ui = new(user, src, "WantedBoard", name)
 		ui.open()
 
+// Never builds a picture here (L4): P1's cached getter gives what is ready and queues the rest,
+// and the board sends everyone the pictures again when one is ready.
 /obj/structure/bounty_wanted_board/ui_static_data(mob/user)
 	var/list/mugshots = list()
 	for(var/datum/criminal_bounty/posting as anything in bounty_public_postings())
 		var/datum/bounty_record/record = posting.record
-		var/mugshot = bounty_record_mugshot(record)
+		var/mugshot = bounty_mugshot_cached(record)
 		if(mugshot)
 			mugshots[record.id] = "data:image/png;base64,[mugshot]"
-			continue
-		// P1 may serve mugshots as a registered asset instead
-		var/asset = bounty_mugshot_asset(record)
-		if(asset && SSassets.cache[asset])
-			SSassets.transport.send_assets(user, asset)
-			mugshots[record.id] = SSassets.transport.get_asset_url(asset)
-	outpost_static_signature = bounty_public_board_signature()
+		else
+			RegisterSignal(record, COMSIG_BOUNTY_RECORD_MUGSHOT_READY, PROC_REF(outpost_on_mugshot_ready), override = TRUE)
 	return list("mugshots" = mugshots)
 
 /obj/structure/bounty_wanted_board/ui_data(mob/user)
-	// A posting came or went, or its picture changed: send the pictures again, next tick
-	if(bounty_public_board_signature() != outpost_static_signature)
-		addtimer(CALLBACK(src, TYPE_PROC_REF(/datum, update_static_data_for_all_viewers)), 1, TIMER_UNIQUE)
+	// A posting came or went, or its picture changed: every viewer gets the pictures again, next
+	// tick (L7). Only this check moves the signature, so one viewer opening the board can't hide
+	// the change from another.
+	var/signature = bounty_public_board_signature()
+	if(signature != outpost_static_signature)
+		outpost_static_signature = signature
+		outpost_refresh_viewers()
 	return list("entries" = outpost_board_entries())
+
+/// Sends every viewer the board's pictures again, next tick
+/obj/structure/bounty_wanted_board/proc/outpost_refresh_viewers()
+	addtimer(CALLBACK(src, TYPE_PROC_REF(/datum, update_static_data_for_all_viewers)), 1, TIMER_UNIQUE | TIMER_DELETE_ME)
+
+/// A mugshot the board was waiting for is ready
+/obj/structure/bounty_wanted_board/proc/outpost_on_mugshot_ready(datum/bounty_record/source)
+	SIGNAL_HANDLER
+	UnregisterSignal(source, COMSIG_BOUNTY_RECORD_MUGSHOT_READY)
+	outpost_refresh_viewers()
 
 /// The public postings as the board lists them
 /obj/structure/bounty_wanted_board/proc/outpost_board_entries()

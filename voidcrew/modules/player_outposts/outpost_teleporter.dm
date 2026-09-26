@@ -26,6 +26,7 @@
 	price = OUTPOST_TELEPORTER_COST
 	template_type = /datum/map_template/outpost_upgrade/teleporter
 	preview_name = "outpost_upgrade_teleporter"
+	visitors_toggleable = FALSE
 	/// Who may arrive by pad: OUTPOST_NETWORK_ARRIVALS_*
 	var/arrival_policy = OUTPOST_NETWORK_ARRIVALS_OPEN
 	/// Network ids of source pads admitted under the allow list policy

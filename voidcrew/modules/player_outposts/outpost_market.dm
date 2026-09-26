@@ -326,7 +326,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 			"name" = room.name,
 			"kind" = detail ? detail["kind"] : null,
 			"visitors_allowed" = room.visitors_allowed,
-			"can_toggle_visitors" = can_manage,
+			"can_toggle_visitors" = can_manage && room.visitors_toggleable,
 			"detail" = detail,
 		))
 	return services

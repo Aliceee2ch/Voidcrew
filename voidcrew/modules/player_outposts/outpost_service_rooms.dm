@@ -22,6 +22,8 @@
 	entrance_side = SOUTH
 	/// FALSE makes the room's public doors member-only. Exits stay open.
 	var/visitors_allowed = TRUE
+	/// FALSE when the room must stay open to visitors, so the console offers no toggle
+	var/visitors_toggleable = TRUE
 	/// Turf -> the area it had before prepare_ground() moved it into the outpost area
 	var/list/prepared_areas
 	/// The room's service airlocks, found at install

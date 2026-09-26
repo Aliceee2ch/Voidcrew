@@ -12,9 +12,16 @@
  * How a look is built: a throwaway human dummy gets the look's species features first (a species'
  * visible organs take their shape from dna.features as they go in), then its species, body, skin,
  * hair and eyes, then the outfit (visuals only), then the glasses or scarf a record's features name
- * when the outfit leaves the eyes or neck free (no scarf with a prisoner's outfit). Its appearance is cached under "[record id]|[outfit]"
- * and copied onto the mob the way set_outpost_npc_look() does. A dummy is built once per record and
- * outfit, and once per record for the mugshot.
+ * when the outfit leaves the eyes or neck free (no scarf with a prisoner's outfit). Its appearance
+ * is cached under "[record id]|[outfit]" and copied onto the mob the way set_outpost_npc_look()
+ * does. A dummy is built once per record and outfit, and once per record for the mugshot.
+ *
+ * The proc that makes a dummy is always the one that deletes it, and the risky work (species,
+ * outfit, flattening) happens in procs it calls: a runtime there ends only that proc, so the dummy
+ * is still deleted and nothing half-built is cached.
+ *
+ * Mugshots are built from a queue, at most one per tick (each costs a dummy and a flat icon). UI
+ * code asks with bounty_mugshot_cached(), which never builds or sleeps.
  *
  * The shared vars are declared in bounty_types.dm and nowhere else; a var only P1 uses goes in
  * bounty_identity.dm with an `identity_` prefix.
@@ -24,8 +31,12 @@
 GLOBAL_LIST_EMPTY(bounty_looks)
 /// Whose each built look is: the same key -> weakref to the record, so a closed or deleted record's looks can go
 GLOBAL_LIST_EMPTY(bounty_look_owners)
+/// Looks built this round, one per record and outfit (the tests check a cached look isn't built again)
+GLOBAL_VAR_INIT(bounty_look_builds, 0)
 /// Mugshots built this round; each record's is built once
 GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
+/// Weakrefs to records waiting for their mugshot, oldest first; one is built per tick
+GLOBAL_LIST_EMPTY(bounty_mugshot_queue)
 
 // ===== DRESSING A MOB =====
 
@@ -49,7 +60,8 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 
 /**
  * The appearance of `record`'s person in `outfit`, built the first time it's asked for and cached
- * per record and outfit (an outfit passed as a datum is built every time). Can sleep.
+ * per record and outfit (an outfit passed as a datum is built every time). Null if the build
+ * failed. Can sleep.
  */
 /proc/get_bounty_look(datum/bounty_record/record, outfit)
 	var/datum/bounty_look/look = bounty_ensure_look(record)
@@ -58,9 +70,13 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 		return GLOB.bounty_looks[key]
 	// Glasses are theirs anywhere; a scarf stays with their things when they go to prison.
 	var/neckwear = !ispath(outfit, /datum/outfit/outpost_prisoner)
-	var/mob/living/carbon/human/dummy/dummy = bounty_look_dummy(look, outfit, record.features, neckwear)
-	var/built = dummy.appearance
+	var/mob/living/carbon/human/dummy/dummy = new
+	var/dressed = bounty_dress_dummy(dummy, look, outfit, record.features, neckwear)
+	var/built = dressed ? dummy.appearance : null
 	qdel(dummy)
+	if(!built)
+		return null
+	GLOB.bounty_look_builds++
 	if(!key)
 		return built
 	// Two mobs can build the same look at once; the first one built is kept.
@@ -71,11 +87,24 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 	return GLOB.bounty_looks[key]
 
 /**
- * A new human dummy looking like `look` in `outfit`, wearing the glasses and (when `neckwear`) the
- * scarf that `features` name, where the outfit leaves room. The caller deletes it. Can sleep.
+ * A new human dummy looking like `look` in `outfit`, or null if dressing it failed (the dummy is
+ * deleted then). For tests and tools; the caller deletes the dummy. Can sleep.
  */
 /proc/bounty_look_dummy(datum/bounty_look/look, outfit, list/features, neckwear = TRUE)
 	var/mob/living/carbon/human/dummy/dummy = new
+	if(bounty_dress_dummy(dummy, look, outfit, features, neckwear))
+		return dummy
+	qdel(dummy)
+	return null
+
+/**
+ * Makes `dummy` look like `look` in `outfit`, wearing the glasses and (when `neckwear`) the scarf
+ * that `features` name where the outfit leaves room. Returns TRUE when done; a runtime part way
+ * returns null to the caller, which still deletes the dummy. Can sleep.
+ */
+/proc/bounty_dress_dummy(mob/living/carbon/human/dummy/dummy, datum/bounty_look/look, outfit, list/features, neckwear = TRUE)
+	if(QDELETED(dummy) || !look)
+		return FALSE
 	// Before the species: its visible organs take their shape from dna.features as they go in.
 	for(var/feature in look.features)
 		dummy.dna.features[feature] = look.features[feature]
@@ -101,7 +130,7 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 	if(outfit)
 		dummy.equipOutfit(outfit, visuals_only = TRUE)
 	bounty_wear_features(dummy, features, neckwear)
-	return dummy
+	return !QDELETED(dummy)
 
 /// Puts on the glasses and (when `neckwear`) the scarf that `features` name, where `dummy`'s outfit left the eyes or neck free
 /proc/bounty_wear_features(mob/living/carbon/human/dummy/dummy, list/features, neckwear = TRUE)
@@ -143,10 +172,13 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 // ===== THE OLD LOOK (AR-C1) =====
 
 /**
- * Gives `record` an older look (record.old_look) whose hair reads differently from their current
- * hair: another style, another colour, or both, and sometimes the beard. Species, skin, eyes and
- * body features stay. The clothes differ because the mugshot is taken in plain civilian clothes. A
- * species without hair keeps its look; only the clothes differ. Returns the old look.
+ * Gives `record` an older look (record.old_look) for a trader-outpost fugitive's mugshot. The hair
+ * (style, colour and beard) is re-rolled from scratch, independently of the current hair, until
+ * nothing about it matches the current hair (bounty_hair_nothing_alike()). Decoys are held to the
+ * same rule against the old look (bounty_reroll_decoy_hair()), so the mugshot's hair matches none
+ * of the patrons and tells them apart by nothing. Species, skin, eyes and body features stay: they
+ * are the face every patron shares. The mugshot also leaves out their eyewear and is taken in
+ * plain civilian clothes. A species without hair keeps its look.
  *
  * Idempotent: a record that has an old look keeps it. Clears a mugshot built before, so the next
  * one shows the old look. Doesn't sleep.
@@ -159,19 +191,10 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 	var/datum/bounty_look/current = bounty_ensure_look(record)
 	var/datum/bounty_look/old = bounty_copy_look(current)
 	if(bounty_species_has_hair(old.species))
-		var/current_hair = bounty_hair_key(current)
-		var/own_colour = bounty_species_own_hair_colour(old.species)
-		for(var/attempt in 1 to 12)
-			var/change = own_colour ? rand(1, 3) : 1
-			if(change != 2)
-				old.hairstyle = outpost_npc_hairstyle(old.physique) || "Bald"
-			if(change != 1)
-				old.hair_color = random_hair_color()
-				old.facial_hair_color = old.hair_color
-			if(bounty_hair_key(old) != current_hair)
+		for(var/attempt in 1 to BOUNTY_HAIR_ROLL_ATTEMPTS)
+			bounty_roll_hair(old)
+			if(bounty_hair_nothing_alike(old, current))
 				break
-		if(old.physique == MALE && bounty_species_has_facial_hair(old.species) && prob(50))
-			old.facial_hairstyle = old.facial_hairstyle == "Shaved" ? (outpost_npc_facial_hairstyle() || "Shaved") : "Shaved"
 	record.old_look = old
 	record.mugshot = null
 	return old
@@ -197,10 +220,21 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 	suit = /obj/item/clothing/suit/toggle/jacket/sweater
 
 /**
+ * The features a record's mugshot is drawn with: their own, or with no eyewear when the mugshot
+ * shows their old look (worn things are what a fugitive changes, AR-C1).
+ */
+/proc/bounty_mugshot_features(datum/bounty_record/record)
+	var/list/features = record.features?.Copy() || list()
+	if(record.old_look)
+		features -= BOUNTY_FEATURE_GLASSES
+	return features
+
+/**
  * Their mugshot as a base64 PNG (no "data:" prefix), built once and cached on record.mugshot:
  * head and shoulders against a height-lined wall, in plain civilian clothes, showing
  * record.old_look when they have one. Sends COMSIG_BOUNTY_RECORD_MUGSHOT_READY on the record when
- * built. Builds a dummy the first time, so call it async, or use bounty_mugshot_asset() from UI code.
+ * built. Builds a dummy on the spot the first time: UI code uses bounty_mugshot_cached() instead.
+ * Returns "" if the build failed; it can be asked for again.
  */
 /proc/bounty_record_mugshot(datum/bounty_record/record)
 	if(!record)
@@ -209,39 +243,77 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 		return record.mugshot
 	bounty_ensure_look(record)
 	var/static/list/outfits = list(/datum/outfit/bounty_mugshot, /datum/outfit/bounty_mugshot/bomber, /datum/outfit/bounty_mugshot/sweater)
-	var/icon/portrait = bounty_mugshot_icon(record.old_look || record.look, record.features, pick(outfits))
+	var/icon/portrait = bounty_mugshot_icon(record.old_look || record.look, bounty_mugshot_features(record), pick(outfits))
 	// Another build may have finished while this one waited on the dummy.
 	if(record.mugshot)
 		return record.mugshot
+	if(!portrait)
+		return ""
 	GLOB.bounty_mugshot_builds++
 	var/encoded = icon2base64(portrait)
-	record.mugshot = istext(encoded) ? encoded : ""
-	record.identity_mugshot_queued = FALSE
+	if(!istext(encoded) || !length(encoded))
+		return ""
+	record.mugshot = encoded
 	SEND_SIGNAL(record, COMSIG_BOUNTY_RECORD_MUGSHOT_READY)
 	return record.mugshot
 
 /**
- * What UI code sends for `record`'s mugshot, through ui_static_data() and never ui_data() (AR-G1):
- * the base64 PNG, shown as `data:image/png;base64,<value>`, or "" until it's built. Never sleeps or
- * builds in the caller: the first ask queues the build for the next tick, and the record sends
+ * THE getter for UI code (ui_static_data(), boards, cards): `record`'s mugshot as base64, shown as
+ * `data:image/png;base64,<value>`, or "" until it's built. Never builds, never sleeps: the first ask
+ * puts the record in the mugshot queue (one build per tick), and the record sends
  * COMSIG_BOUNTY_RECORD_MUGSHOT_READY when it's ready, so the UI can resend its static data.
  */
-/proc/bounty_mugshot_asset(datum/bounty_record/record)
+/proc/bounty_mugshot_cached(datum/bounty_record/record)
 	if(!record)
 		return ""
 	if(record.mugshot)
 		return record.mugshot
-	if(!record.identity_mugshot_queued)
-		record.identity_mugshot_queued = TRUE
-		addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(bounty_record_mugshot), record), 1)
+	bounty_queue_mugshot(record)
 	return ""
 
-/// The mugshot image of `look` in `outfit`: head and shoulders, cropped and scaled up, against a wall. Builds a dummy; can sleep.
+/// The same as bounty_mugshot_cached() (the name P0 gave it): base64 or "", never builds or sleeps
+/proc/bounty_mugshot_asset(datum/bounty_record/record)
+	return bounty_mugshot_cached(record)
+
+/// Puts `record` in the mugshot queue, once, and makes sure the queue is being worked through
+/proc/bounty_queue_mugshot(datum/bounty_record/record)
+	if(!record || record.mugshot || record.identity_mugshot_queued)
+		return
+	record.identity_mugshot_queued = TRUE
+	GLOB.bounty_mugshot_queue += WEAKREF(record)
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(bounty_build_next_mugshot)), 1, TIMER_UNIQUE)
+
+/**
+ * Builds the next queued mugshot, one per call; the queue calls it once per tick until it's empty.
+ * The next call is set up before building, and the record's queued mark is cleared first, so a
+ * build that fails neither stalls the queue nor stops the record being asked for again.
+ */
+/proc/bounty_build_next_mugshot()
+	var/datum/bounty_record/record
+	while(!record && length(GLOB.bounty_mugshot_queue))
+		var/datum/weakref/next_ref = GLOB.bounty_mugshot_queue[1]
+		GLOB.bounty_mugshot_queue.Cut(1, 2)
+		record = next_ref?.resolve()
+		if(record?.mugshot)
+			record.identity_mugshot_queued = FALSE
+			record = null
+	if(length(GLOB.bounty_mugshot_queue))
+		addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(bounty_build_next_mugshot)), 1, TIMER_UNIQUE)
+	if(!record)
+		return
+	record.identity_mugshot_queued = FALSE
+	bounty_record_mugshot(record)
+
+/**
+ * The mugshot image of `look` in `outfit`: head and shoulders, cropped and scaled up, against a
+ * wall. Null if building the dummy failed. Can sleep.
+ */
 /proc/bounty_mugshot_icon(datum/bounty_look/look, list/features, outfit = /datum/outfit/bounty_mugshot)
-	var/mob/living/carbon/human/dummy/dummy = bounty_look_dummy(look, outfit, features, neckwear = FALSE)
-	dummy.setDir(SOUTH)
-	var/icon/body = getFlatIcon(dummy, SOUTH, no_anim = TRUE)
+	var/mob/living/carbon/human/dummy/dummy = new
+	var/icon/body = bounty_mugshot_body(dummy, look, outfit, features)
 	qdel(dummy)
+	if(!body)
+		return null
 	var/icon/portrait = icon('icons/blanks/32x32.dmi', "nothing")
 	portrait.DrawBox(BOUNTY_MUGSHOT_BACKDROP, 1, 1, 32, 32)
 	for(var/line_y in list(22, 27, 32))
@@ -250,3 +322,10 @@ GLOBAL_VAR_INIT(bounty_mugshot_builds, 0)
 	portrait.Crop(BOUNTY_MUGSHOT_X1, BOUNTY_MUGSHOT_Y1, BOUNTY_MUGSHOT_X2, BOUNTY_MUGSHOT_Y2)
 	portrait.Scale((BOUNTY_MUGSHOT_X2 - BOUNTY_MUGSHOT_X1 + 1) * BOUNTY_MUGSHOT_SCALE, (BOUNTY_MUGSHOT_Y2 - BOUNTY_MUGSHOT_Y1 + 1) * BOUNTY_MUGSHOT_SCALE)
 	return portrait
+
+/// Dresses `dummy` (no scarf) and flattens it facing forward; null if dressing failed. The caller deletes the dummy.
+/proc/bounty_mugshot_body(mob/living/carbon/human/dummy/dummy, datum/bounty_look/look, outfit, list/features)
+	if(!bounty_dress_dummy(dummy, look, outfit, features, neckwear = FALSE))
+		return null
+	dummy.setDir(SOUTH)
+	return getFlatIcon(dummy, SOUTH, no_anim = TRUE)

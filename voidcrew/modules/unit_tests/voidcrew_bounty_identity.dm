@@ -45,7 +45,6 @@
 				TEST_ASSERT_EQUAL(look.species, record.species, "[label]: the look is another species")
 				TEST_ASSERT_EQUAL(look.physique, record.gender, "[label]: the look's body is the other sex")
 				TEST_ASSERT(istext(look.hairstyle) && istext(look.eye_color), "[label]: no hair or eyes")
-				TEST_ASSERT(length(look.features), "[label]: no species features")
 				// BOUNTY_FEATURES_MIN, BOUNTY_FEATURES_MAX
 				TEST_ASSERT(length(record.features) >= 2 && length(record.features) <= 3, "[label]: [length(record.features)] features")
 				for(var/kind in record.features)
@@ -57,11 +56,19 @@
 				else
 					TEST_ASSERT_NULL(record.old_look, "[label]: an old look away from a trader outpost")
 
-	// Every species in the pool: its own name, a skin tone only if it uses one, features it can have.
+	// Every species in the pool: a value for each of its visible organs, a skin tone only if it uses
+	// one, features it can have, and a plain name.
 	for(var/species in GLOB.bounty_species_weights)
+		var/datum/species/prototype = GLOB.species_prototypes[species]
 		for(var/attempt in 1 to 5)
 			var/datum/bounty_record/record = generate_bounty_record(1, "normal", "planet", species)
 			TEST_ASSERT_EQUAL(record.species, species, "A forced species was not kept")
+			for(var/obj/item/organ/organ_type as anything in prototype.mutant_organs)
+				var/datum/bodypart_overlay/mutant/overlay_type = initial(organ_type.bodypart_overlay)
+				if(!ispath(overlay_type))
+					continue
+				var/feature_key = initial(overlay_type.feature_key)
+				TEST_ASSERT(istext(record.look.features[feature_key]), "[species]: no [feature_key] in its look")
 			if(bounty_species_uses_skin_tones(species))
 				TEST_ASSERT(record.look.skin_tone in GLOB.skin_tones, "[species] has skin tone [record.look.skin_tone]")
 			else
@@ -93,6 +100,35 @@
 	TEST_ASSERT_EQUAL(bare_look.physique, FEMALE, "A bare record's look is the other sex")
 	TEST_ASSERT_EQUAL(bounty_ensure_look(bare), bare_look, "A bare record's look changed")
 
+/// Hair reads as the shape the sprite has
+/datum/unit_test/voidcrew_bounty_identity_hair_words
+
+/datum/unit_test/voidcrew_bounty_identity_hair_words/Run()
+	var/list/expected = list(
+		"Pigtails" = "pigtails",
+		"Pigtails 3" = "pigtails",
+		"Twintails" = "pigtails",
+		"Ponytail 3" = "ponytail",
+		"Ponytail (Side)" = "ponytail",
+		"Braided Tail" = "braided",
+		"Short Bangs" = "short",
+		"Short Bangs 2" = "short",
+		"Very Short Over Eye" = "short",
+		"Hime Cut (Short)" = "short",
+		"Long Over Eye" = "long",
+		"Very Long Hair" = "long",
+		"Emo Fringe" = "long fringe",
+		"Mohawk (Shaved)" = "mohawk",
+		"Balding Hair" = "thinning",
+		"Buzzcut" = "cropped short",
+		"Afro (Large)" = "afro",
+		"Bob Hair 2" = "bob cut",
+	)
+	for(var/style in expected)
+		TEST_ASSERT_EQUAL(bounty_hair_shape(style), expected[style], "The hairstyle [style] reads wrong")
+	for(var/style in list("Bald", "Shaved", "Skinhead"))
+		TEST_ASSERT_NULL(bounty_hair_shape(style), "The hairstyle [style] reads as hair")
+
 /// The same record looks like the same person in any outfit, and each record and outfit is built once
 /datum/unit_test/voidcrew_bounty_identity_same_face
 
@@ -102,6 +138,7 @@
 		var/datum/bounty_look/look = record.look
 		var/mob/living/carbon/human/dummy/first = bounty_look_dummy(look, /datum/outfit/bounty_mugshot, record.features)
 		var/mob/living/carbon/human/dummy/second = bounty_look_dummy(look, /datum/outfit/outpost_prisoner, record.features)
+		TEST_ASSERT(first && second, "A [species] look couldn't be built")
 		for(var/mob/living/carbon/human/dummy/dummy as anything in list(first, second))
 			TEST_ASSERT_EQUAL(dummy.dna.species.type, species, "A [species] look was built as [dummy.dna.species.type]")
 			TEST_ASSERT_EQUAL(dummy.hairstyle, look.hairstyle, "[species]: hairstyle changed with the outfit")
@@ -116,25 +153,29 @@
 		qdel(first)
 		qdel(second)
 
-	// apply_bounty_look dresses a mob and caches one look per record and outfit.
+	// apply_bounty_look dresses a mob and builds one look per record and outfit, leaving no dummy behind.
 	var/datum/bounty_record/record = generate_bounty_record(1, "meek", "planet")
+	var/humans = length(GLOB.human_list)
+	var/builds = GLOB.bounty_look_builds
 	var/mob/living/basic/mouse/one = allocate(/mob/living/basic/mouse)
 	var/mob/living/basic/mouse/two = allocate(/mob/living/basic/mouse)
+	var/mob/living/basic/mouse/three = allocate(/mob/living/basic/mouse)
 	apply_bounty_look(one, record, /datum/outfit/bounty_mugshot)
 	apply_bounty_look(two, record, /datum/outfit/bounty_mugshot/bomber)
+	apply_bounty_look(three, record, /datum/outfit/bounty_mugshot)
+	TEST_ASSERT_EQUAL(GLOB.bounty_look_builds, builds + 2, "Three mobs in two outfits took [GLOB.bounty_look_builds - builds] builds")
+	TEST_ASSERT_EQUAL(length(GLOB.human_list), humans, "Building looks left dummies behind")
 	var/first_key = "[record.id]|[/datum/outfit/bounty_mugshot]"
 	var/second_key = "[record.id]|[/datum/outfit/bounty_mugshot/bomber]"
-	var/cached = GLOB.bounty_looks[first_key]
-	TEST_ASSERT(cached, "The first outfit's look wasn't cached")
+	TEST_ASSERT(GLOB.bounty_looks[first_key], "The first outfit's look wasn't cached")
 	TEST_ASSERT(GLOB.bounty_looks[second_key], "The second outfit's look wasn't cached")
 	TEST_ASSERT_EQUAL(one.icon, 'icons/mob/human/human.dmi', "The dressed mob isn't drawn as a person")
 	TEST_ASSERT(length(one.overlays), "The dressed mob has no overlays")
-	var/mob/living/basic/mouse/three = allocate(/mob/living/basic/mouse)
-	apply_bounty_look(three, record, /datum/outfit/bounty_mugshot)
-	TEST_ASSERT(GLOB.bounty_looks[first_key] == cached, "The same record and outfit were built twice")
 	bounty_forget_looks(record)
 	TEST_ASSERT_NULL(GLOB.bounty_looks[first_key], "A forgotten record's look is still cached")
 	TEST_ASSERT_NULL(GLOB.bounty_looks[second_key], "A forgotten record's look is still cached")
+	apply_bounty_look(one, record, /datum/outfit/bounty_mugshot)
+	TEST_ASSERT_EQUAL(GLOB.bounty_look_builds, builds + 3, "A forgotten look wasn't built again")
 
 /// A decoy shares exactly the features asked for, never all of them, and differs in the rest
 /datum/unit_test/voidcrew_bounty_identity_decoys
@@ -162,44 +203,132 @@
 			for(var/feature in wanted.look.features)
 				TEST_ASSERT_EQUAL(decoy.look.features[feature], wanted.look.features[feature], "A decoy's [feature] differs from the fugitive's")
 			var/hair_shared = wanted.features["hair"] && decoy.features["hair"] == wanted.features["hair"] // BOUNTY_FEATURE_HAIR
-			if(bounty_species_has_hair(wanted.species) && !hair_shared)
+			if(hair_shared)
+				TEST_ASSERT_EQUAL(decoy.look.hairstyle, wanted.look.hairstyle, "A decoy sharing the hair has another hairstyle")
+				TEST_ASSERT_EQUAL(decoy.look.hair_color, wanted.look.hair_color, "A decoy sharing the hair has another colour")
+			else if(bounty_species_has_hair(wanted.species))
 				TEST_ASSERT(bounty_hair_key(decoy.look) != bounty_hair_key(wanted.look), "A decoy's hair reads like the fugitive's without sharing it")
-				if(wanted.old_look)
-					TEST_ASSERT(bounty_hair_key(decoy.look) != bounty_hair_key(wanted.old_look), "A decoy's hair reads like the fugitive's mugshot")
+			// Nobody's hair has anything in common with the mugshot's.
+			TEST_ASSERT(bounty_hair_nothing_alike(decoy.look, wanted.old_look), "A decoy's hair has something in common with the mugshot's")
 
-/// A mugshot is built once per record; an old look differs in hair and clears it
+/**
+ * The trader-outpost lineup (AR-C1): over many bounties, nothing the mugshot shows (face, hair,
+ * beard, eyewear) matches the fugitive's current look while matching none of the decoys. The face
+ * everyone shares matches all of them; the hair and beard match nobody.
+ */
+/datum/unit_test/voidcrew_bounty_identity_lineup
+
+/// What someone looks like on a mugshot or across a bar: trait -> value, null for a trait not shown
+/datum/unit_test/voidcrew_bounty_identity_lineup/proc/visible_traits(datum/bounty_look/look, list/features)
+	var/list/traits = list()
+	traits["species"] = look.species
+	traits["body"] = look.physique
+	traits["skin"] = look.skin_tone
+	traits["eyes"] = look.eye_color
+	traits["species features"] = json_encode(look.features)
+	if(bounty_species_has_hair(look.species))
+		traits["hairstyle"] = look.hairstyle
+		traits["hair shape"] = bounty_hair_shape(look.hairstyle) || "none"
+		if(bounty_species_own_hair_colour(look.species))
+			traits["hair colour"] = bounty_hair_colour_name(look.hair_color)
+	if(look.physique == MALE && bounty_species_has_facial_hair(look.species))
+		traits["beard"] = look.facial_hairstyle || "Shaved"
+	traits["eyewear"] = features?["glasses"] // BOUNTY_FEATURE_GLASSES
+	return traits
+
+/datum/unit_test/voidcrew_bounty_identity_lineup/Run()
+	var/list/pool = list()
+	for(var/species in GLOB.bounty_species_weights)
+		pool += species
+	var/fugitive_hair_matches = 0
+	for(var/bounty in 1 to 150)
+		// Humans and felinids, whose hair has its own colour, every other time
+		var/species = (bounty % 2) ? pick(/datum/species/human, /datum/species/human/felinid) : pick(pool)
+		var/datum/bounty_record/wanted = generate_bounty_record(pick(1, 2), null, "trader_outpost", species)
+		TEST_ASSERT(wanted.old_look, "Bounty [bounty]: no old look")
+		var/list/mugshot_features = bounty_mugshot_features(wanted)
+		TEST_ASSERT_NULL(mugshot_features["glasses"], "Bounty [bounty]: the old-look mugshot wears the fugitive's eyewear")
+		var/list/mugshot = visible_traits(wanted.old_look, mugshot_features)
+		var/list/fugitive = visible_traits(wanted.look, wanted.features)
+		var/list/decoys = list()
+		var/count = length(wanted.features)
+		for(var/decoy_number in 1 to 3) // BOUNTY_DECOY_COUNT
+			var/datum/bounty_record/decoy = make_decoy_record(wanted, clamp(rand(1, 2), 1, max(1, count - 1)))
+			decoys += list(visible_traits(decoy.look, decoy.features))
+		for(var/trait in mugshot)
+			var/shown = mugshot[trait]
+			if(isnull(shown) || shown != fugitive[trait])
+				continue
+			if(trait == "hairstyle" || trait == "hair shape" || trait == "hair colour")
+				fugitive_hair_matches++
+			var/matches_a_decoy = FALSE
+			for(var/list/decoy_traits as anything in decoys)
+				if(decoy_traits[trait] == shown)
+					matches_a_decoy = TRUE
+					break
+			TEST_ASSERT(matches_a_decoy, "Bounty [bounty] ([species]): the mugshot's [trait] ([shown]) matches the fugitive and no decoy")
+	TEST_ASSERT_EQUAL(fugitive_hair_matches, 0, "The mugshot's hair matched the fugitive's current hair [fugitive_hair_matches] times")
+
+	// A planet bounty's mugshot is the true one, eyewear and all.
+	var/datum/bounty_record/planet = generate_bounty_record(1, "normal", "planet")
+	planet.features = list("glasses" = "round glasses", "scar" = "on the chin")
+	TEST_ASSERT_EQUAL(bounty_mugshot_features(planet)["glasses"], "round glasses", "A true mugshot lost its eyewear")
+
+/// A mugshot is built once per record, from a queue that builds one at a time, and every species shows up in it
 /datum/unit_test/voidcrew_bounty_identity_mugshot
 
 /datum/unit_test/voidcrew_bounty_identity_mugshot/Run()
 	var/datum/bounty_record/record = generate_bounty_record(1, "meek", "planet", /datum/species/human)
 	var/builds = GLOB.bounty_mugshot_builds
+	var/humans = length(GLOB.human_list)
 	var/first = bounty_record_mugshot(record)
 	TEST_ASSERT(istext(first) && length(first) > 100, "No mugshot was built")
 	TEST_ASSERT_EQUAL(GLOB.bounty_mugshot_builds, builds + 1, "Building one mugshot took [GLOB.bounty_mugshot_builds - builds] builds")
 	TEST_ASSERT_EQUAL(bounty_record_mugshot(record), first, "The second call returned another mugshot")
-	TEST_ASSERT_EQUAL(bounty_mugshot_asset(record), first, "The UI gets something other than the cached mugshot")
+	TEST_ASSERT_EQUAL(bounty_mugshot_cached(record), first, "The UI getter gives something other than the cached mugshot")
+	TEST_ASSERT_EQUAL(bounty_mugshot_asset(record), first, "The old UI getter gives something other than the cached mugshot")
 	TEST_ASSERT_EQUAL(GLOB.bounty_mugshot_builds, builds + 1, "The mugshot was built again")
+	TEST_ASSERT_EQUAL(length(GLOB.human_list), humans, "Building a mugshot left its dummy behind")
 
-	// The UI never builds in its own call: it gets "" and the build is queued.
-	var/datum/bounty_record/unbuilt = generate_bounty_record(1, "meek", "planet")
-	TEST_ASSERT_EQUAL(bounty_mugshot_asset(unbuilt), "", "The UI call built a mugshot itself")
-	TEST_ASSERT(unbuilt.identity_mugshot_queued, "The UI call didn't queue the build")
+	// The UI getter never builds: it answers "" and queues. The queue builds one per call.
+	var/list/waiting = list()
+	for(var/count in 1 to 3)
+		var/datum/bounty_record/unbuilt = generate_bounty_record(1, "meek", "planet")
+		TEST_ASSERT_EQUAL(bounty_mugshot_cached(unbuilt), "", "The UI getter built a mugshot itself")
+		TEST_ASSERT(unbuilt.identity_mugshot_queued, "The UI getter didn't queue the build")
+		bounty_mugshot_cached(unbuilt)
+		waiting += unbuilt
+	var/queued_before = length(GLOB.bounty_mugshot_queue)
+	TEST_ASSERT(queued_before >= 3, "Asking twice queued a record twice, or not at all")
+	builds = GLOB.bounty_mugshot_builds
+	bounty_build_next_mugshot()
+	TEST_ASSERT_EQUAL(GLOB.bounty_mugshot_builds, builds + 1, "One turn of the queue built [GLOB.bounty_mugshot_builds - builds] mugshots")
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_mugshot_queue), queued_before - 1, "One turn of the queue took more than one record")
+	for(var/turn in 1 to queued_before + 2)
+		if(!length(GLOB.bounty_mugshot_queue))
+			break
+		bounty_build_next_mugshot()
+	for(var/datum/bounty_record/unbuilt as anything in waiting)
+		TEST_ASSERT(length(unbuilt.mugshot), "A queued mugshot was never built")
+		TEST_ASSERT(!unbuilt.identity_mugshot_queued, "A built record is still marked as queued")
 
-	// An old look (AR-C1) keeps the face and changes the hair, and the next mugshot shows it.
+	// An old look (AR-C1) keeps the face, has nothing of the hair in common, and the next mugshot shows it.
 	var/datum/bounty_look/current = record.look
 	var/datum/bounty_look/old = make_old_look(record)
 	TEST_ASSERT(old && record.old_look == old, "No old look was made")
-	TEST_ASSERT(bounty_hair_key(old) != bounty_hair_key(current), "The old look's hair reads like the current one")
+	TEST_ASSERT(bounty_hair_nothing_alike(old, current), "The old look's hair has something in common with the current hair")
 	TEST_ASSERT_EQUAL(old.species, current.species, "The old look is another species")
 	TEST_ASSERT_EQUAL(old.skin_tone, current.skin_tone, "The old look has other skin")
 	TEST_ASSERT_EQUAL(old.eye_color, current.eye_color, "The old look has other eyes")
 	TEST_ASSERT_NULL(record.mugshot, "The mugshot built before the old look was kept")
 	TEST_ASSERT_EQUAL(make_old_look(record), old, "A second call made another old look")
+	TEST_ASSERT_EQUAL(bounty_mugshot_cached(record), "", "The old look's mugshot wasn't queued again")
 
 	// Every species in the pool renders someone in the frame.
 	for(var/species in GLOB.bounty_species_weights)
 		var/datum/bounty_record/sitter = generate_bounty_record(1, "normal", "planet", species)
 		var/icon/portrait = bounty_mugshot_icon(sitter.look, sitter.features)
+		TEST_ASSERT(portrait, "A [species] mugshot couldn't be built")
 		TEST_ASSERT_EQUAL(portrait.Width(), 64, "A [species] mugshot is [portrait.Width()] wide") // (BOUNTY_MUGSHOT_X2 - X1 + 1) * BOUNTY_MUGSHOT_SCALE
 		TEST_ASSERT_EQUAL(portrait.Height(), 64, "A [species] mugshot is [portrait.Height()] high")
 		var/person = 0
@@ -234,8 +363,33 @@
 	var/datum/bounty_record/plain = new
 	TEST_ASSERT_EQUAL(length(plain.feature_lines()), 0, "A record without features has examine lines")
 
-/// bounty_say(): every context has lines, and the cooldown and no-repeat window hold
+/// bounty_say(): every context has lines, the cooldown and no-repeat window hold, and each voice speaks its own lines
 /datum/unit_test/voidcrew_bounty_identity_say
+	/// Lines heard through COMSIG_MOB_SAY
+	var/list/heard = list()
+
+/datum/unit_test/voidcrew_bounty_identity_say/proc/on_say(datum/source, list/speech_args)
+	SIGNAL_HANDLER
+	heard += speech_args[SPEECH_MESSAGE]
+
+/// The lines `voice` can pick for `context`: its own pool and the shared one
+/datum/unit_test/voidcrew_bounty_identity_say/proc/pool_of(list/lines, context, voice)
+	var/list/pool = list()
+	pool += lines[context]["any"]
+	if(voice && lines[context][voice])
+		pool += lines[context][voice]
+	return pool
+
+/// Says `context` through `speaker` `times` times with a fresh memory each time; returns the lines said
+/datum/unit_test/voidcrew_bounty_identity_say/proc/sample(mob/living/speaker, context, times, list/values)
+	var/datum/component/bounty_identity_voice/voice = speaker.LoadComponent(/datum/component/bounty_identity_voice)
+	var/list/said = list()
+	for(var/attempt in 1 to times)
+		voice.line_cooldown = 0
+		voice.recent_lines.Cut()
+		if(speaker.bounty_say(context, values))
+			said += voice.last_line
+	return said
 
 /datum/unit_test/voidcrew_bounty_identity_say/Run()
 	var/list/lines = bounty_identity_strings("lines")
@@ -254,14 +408,33 @@
 	for(var/voice in list("meek", "normal", "boss")) // BOUNTY_ARCHETYPE_*
 		TEST_ASSERT(length(lines["idle_chat"][voice]) >= 3, "Too few [voice] small-talk lines")
 		TEST_ASSERT(length(lines["bar"][voice]) >= 3, "Too few [voice] bar lines")
+	// The shared pools are what decoys and blended fugitives say: no taunts, no crime.
+	for(var/context in list("hurt", "recover", "cuffed"))
+		for(var/line in lines[context]["any"])
+			TEST_ASSERT(!findtext(line, "{crime}"), "The shared [context] line \"[line]\" names a crime")
+		for(var/taunt in lines[context]["normal"])
+			TEST_ASSERT(!(taunt in lines[context]["any"]), "The taunt \"[taunt]\" is in the shared [context] pool")
 
 	var/mob/living/basic/mouse/speaker = allocate(/mob/living/basic/mouse)
+	RegisterSignal(speaker, COMSIG_MOB_SAY, PROC_REF(on_say))
 	TEST_ASSERT(speaker.bounty_say("flee"), "The first line wasn't said")
+	TEST_ASSERT_EQUAL(length(heard), 1, "bounty_say() returned TRUE but nothing was said aloud")
 	TEST_ASSERT(!speaker.bounty_say("flee"), "A second line was said inside the cooldown")
+	TEST_ASSERT_EQUAL(length(heard), 1, "Something was said inside the cooldown")
 	TEST_ASSERT(speaker.bounty_say("flee", force = TRUE), "A forced line was held back by the cooldown")
-	var/datum/component/bounty_identity_voice/voice = speaker.GetComponent(/datum/component/bounty_identity_voice)
-	TEST_ASSERT(voice, "Speaking left no memory of it")
+	TEST_ASSERT_EQUAL(length(heard), 2, "A forced line wasn't said aloud")
 	TEST_ASSERT(!speaker.bounty_say("no_such_context", force = TRUE), "A line was said for a context the file doesn't have")
+
+	// Someone who can't speak says nothing, uses no line, and starts no cooldown.
+	var/datum/component/bounty_identity_voice/voice = speaker.GetComponent(/datum/component/bounty_identity_voice)
+	voice.line_cooldown = 0
+	var/remembered = length(voice.recent_lines)
+	ADD_TRAIT(speaker, TRAIT_MUTE, "p1_test")
+	TEST_ASSERT(!speaker.bounty_say("flee", force = TRUE), "A mute speaker was said to speak")
+	TEST_ASSERT(COOLDOWN_FINISHED(voice, line_cooldown), "A mute speaker's silence started the cooldown")
+	TEST_ASSERT_EQUAL(length(voice.recent_lines), remembered, "A mute speaker's silence used up a line")
+	REMOVE_TRAIT(speaker, TRAIT_MUTE, "p1_test")
+	TEST_ASSERT_EQUAL(length(heard), 2, "A mute speaker was heard")
 
 	// "flee" has 6 lines: all of them come up before any repeats.
 	var/mob/living/basic/mouse/runner = allocate(/mob/living/basic/mouse)
@@ -281,26 +454,45 @@
 	runner_voice.line_cooldown = 0
 	TEST_ASSERT(runner.bounty_say("flee"), "Lines didn't come back after the no-repeat window")
 
-	// A line naming a placeholder is said only with a value for it.
-	for(var/attempt in 1 to 12)
-		runner_voice.line_cooldown = 0
-		runner.bounty_say("cuffed", force = TRUE)
-		TEST_ASSERT(!findtext(runner_voice.last_line, "{"), "A line was said with an empty placeholder: [runner_voice.last_line]")
-	runner_voice.recent_lines.Cut()
+	// A line naming a placeholder is said only with a value for it, and the value gets in.
+	for(var/line in sample(runner, "accused_rightly", 30))
+		TEST_ASSERT(!findtext(line, "{"), "A line was said with an empty placeholder: [line]")
 	var/filled = FALSE
-	for(var/attempt in 1 to 80)
-		runner_voice.line_cooldown = 0
-		runner_voice.recent_lines.Cut()
-		runner.bounty_say("cuffed", list("{crime}" = "stealing a mop"))
-		if(findtext(runner_voice.last_line, "stealing a mop"))
+	for(var/line in sample(runner, "accused_rightly", 80, list("{crime}" = "stealing a mop")))
+		if(findtext(line, "stealing a mop"))
 			filled = TRUE
 			break
 	TEST_ASSERT(filled, "A placeholder value never reached a line")
 
-	// Criminals speak in their archetype's voice, except blended in, where they sound like their decoys.
-	var/mob/living/basic/bounty_criminal/criminal = allocate(/mob/living/basic/bounty_criminal/meek)
-	criminal.record = generate_bounty_record(1, "meek", "trader_outpost")
-	TEST_ASSERT_EQUAL(criminal.identity_voice(), "meek", "A meek criminal doesn't talk like one")
-	criminal.blended = TRUE
-	TEST_ASSERT_NULL(criminal.identity_voice(), "A blended fugitive talks differently from its decoys")
-	TEST_ASSERT_EQUAL(criminal.identity_line_values()?["{crime}"], criminal.record.crime, "A criminal doesn't know its own crime")
+	// Each archetype speaks its own lines and the shared ones, never another's.
+	for(var/archetype in list("meek", "normal", "boss")) // BOUNTY_ARCHETYPE_*
+		var/mob/living/basic/bounty_criminal/criminal = allocate(/mob/living/basic/bounty_criminal/normal)
+		criminal.record = generate_bounty_record(archetype == "boss" ? 3 : 2, archetype, "planet")
+		TEST_ASSERT_EQUAL(criminal.identity_voice(), archetype, "A [archetype] criminal doesn't talk like one")
+		var/list/allowed = pool_of(lines, "hurt", archetype)
+		var/own_heard = FALSE
+		for(var/line in sample(criminal, "hurt", 40))
+			TEST_ASSERT(line in allowed, "A [archetype] criminal said another voice's line: [line]")
+			if(line in lines["hurt"][archetype])
+				own_heard = TRUE
+		TEST_ASSERT(own_heard, "A [archetype] criminal never used its own lines")
+
+	// Blended in, a fugitive talks like its decoys; a decoy never names a crime, blended or not.
+	var/mob/living/basic/bounty_criminal/fugitive = allocate(/mob/living/basic/bounty_criminal/meek)
+	fugitive.record = generate_bounty_record(1, "meek", "trader_outpost")
+	fugitive.blended = TRUE
+	TEST_ASSERT_NULL(fugitive.identity_voice(), "A blended fugitive talks differently from its decoys")
+	TEST_ASSERT_EQUAL(fugitive.identity_line_values()?["{crime}"], fugitive.record.crime, "A fugitive doesn't know its own crime")
+	for(var/line in sample(fugitive, "hurt", 20))
+		TEST_ASSERT(line in lines["hurt"]["any"], "A blended fugitive said a voiced line: [line]")
+	var/mob/living/basic/bounty_criminal/decoy/decoy = allocate(/mob/living/basic/bounty_criminal/decoy)
+	decoy.record = make_decoy_record(fugitive.record, 1)
+	TEST_ASSERT_NULL(decoy.identity_voice(), "A decoy speaks in an archetype's voice")
+	TEST_ASSERT_NULL(decoy.identity_line_values(), "A decoy fills in a crime")
+	for(var/line in sample(decoy, "cuffed", 30) + sample(decoy, "accused_rightly", 30))
+		TEST_ASSERT(!findtext(line, decoy.record.crime) && !findtext(line, fugitive.record.crime), "A decoy owned up to a crime: [line]")
+
+	// A Most Wanted criminal never tosses off its crime.
+	var/mob/living/basic/bounty_criminal/boss = allocate(/mob/living/basic/bounty_criminal/normal)
+	boss.record = generate_bounty_record(3, "boss", "planet")
+	TEST_ASSERT_NULL(boss.identity_line_values(), "A Most Wanted criminal fills in its crime")

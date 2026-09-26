@@ -451,9 +451,7 @@
 	RegisterSignal(criminal, COMSIG_QDELETING, PROC_REF(board_on_criminal_deleted))
 	board_spawn_failures = 0
 	// Whatever an earlier body of theirs went through still counts (12.1). Only ever made worse.
-	// INTEGRATION: P2's body_restore_worst_state(state) replaces these two lines at merge.
-	if(bounty_state_rank(board_worst_state) < bounty_state_rank(criminal.worst_state))
-		criminal.worst_state = board_worst_state
+	criminal.body_restore_worst_state(board_worst_state)
 	if(where)
 		criminal.site_bounds = board_site_bounds(where)
 		board_add_site_factions(criminal, where)

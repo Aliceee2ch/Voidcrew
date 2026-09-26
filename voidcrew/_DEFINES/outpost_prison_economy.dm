@@ -17,7 +17,9 @@
 // One cell turns over every ~13 minutes: an 11.5 minute average sentence and a 60-120 second
 // refill. On top of that, arrivals are 30-180 seconds apart in each arrival lane, which an empty wing
 // feels (filling it takes 1.5-9 minutes) but four staggered cells rarely do. A wing has one lane,
-// and one more for each cell block extension, so a ten-cell wing takes three prisoners in parallel. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
+// and one more for each cell block extension, so a ten-cell wing takes three prisoners in parallel;
+// the extensions' lanes only while a member of the wing is home, so a wing left alone runs on its
+// own lane. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
 // 4 x 60 / 13 = ~18.5 releases/h x 200 = ~3,700 cr/h in bonuses. Ceiling ~6,250 cr/h before
 // supplies; a well-kept wing nets 5,300-5,400 cr/h and pays back its 10,000 cr in about 2 hours.
 //

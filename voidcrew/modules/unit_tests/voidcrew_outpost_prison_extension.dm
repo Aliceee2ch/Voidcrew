@@ -241,7 +241,9 @@
 	fix_wing(prison)
 	TEST_ASSERT(prison.lit_score >= lit_before, "The wing is lit [prison.lit_score] with two extensions, [lit_before] before")
 
-	// Three arrival lanes: three prisoners at once, then each lane waits its own gap.
+	// Three arrival lanes: three prisoners at once, then each lane waits its own gap. With the crew
+	// home; voidcrew_outpost_prison_extension_lanes tests them away.
+	prison.crew_home_override = TRUE
 	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
 		if(!cell.occupant)
 			cell.ready_at = world.time
@@ -260,6 +262,62 @@
 	prison.intake_tick(1)
 	TEST_ASSERT_EQUAL(length(prison.prisoners) - before, 3, "A lane brought another prisoner before its gap was up")
 	TEST_ASSERT_EQUAL(prison.arrival_countdown, soonest - 1, "The console does not count down to the soonest lane")
+	prison.set_intake(FALSE)
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_economy_kit, all_present), prison), 8 SECONDS), "The arrivals never finished beaming in")
+	for(var/mob/living/basic/outpost_prisoner/arrival as anything in prison.prisoners)
+		ADD_TRAIT(arrival, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	settle_prison_air(home)
+
+/**
+ * The extensions' arrival lanes need the crew home to process the extra intake, so a wing left
+ * alone earns next to nothing however big it is. With nobody home only the wing's own lane brings
+ * prisoners, while the others' gaps keep counting down; back home, each ready lane brings one at
+ * once, and no more than one however long the crew was away. The console counts down to the lanes
+ * that are open.
+ */
+/datum/unit_test/voidcrew_outpost_prison_extension_lanes
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_extension_kit
+
+/datum/unit_test/voidcrew_outpost_prison_extension_lanes/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("extlanesowner")
+	TEST_ASSERT_NOTNULL(home, "The extension lanes test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "extlanesowner")
+	for(var/i in 1 to 2)
+		var/placed = place_extension(home, "right", owner)
+		TEST_ASSERT(istype(placed, /datum/outpost_upgrade/prison_extension), "Extension [i] was not placed: [placed]")
+	TEST_ASSERT_EQUAL(length(prison.cells), 10, "The lanes test wing has [length(prison.cells)] cells, not 10")
+	TEST_ASSERT_EQUAL(prison.arrival_lanes(), 3, "A ten-cell wing has [prison.arrival_lanes()] arrival lanes")
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		cell.ready_at = world.time
+	TEST_ASSERT(prison.set_intake(TRUE), "Intake would not open")
+
+	// Nobody home: every lane is due, and only the wing's own brings anyone.
+	prison.crew_home_override = FALSE
+	prison.arrival_gap = 0
+	prison.lane_gaps = list(0, 0)
+	prison.intake_tick(0)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 1, "With nobody home [length(prison.prisoners)] prisoners arrived at once, not the wing's lane's one")
+	TEST_ASSERT(prison.arrival_gap >= 30, "The wing's lane did not start its gap")
+	TEST_ASSERT(prison.lane_gap(2) == 0 && prison.lane_gap(3) == 0, "An extension's lane used its turn with nobody home")
+	// Its gap up again, the wing's lane brings the next; the extensions' lanes still wait.
+	prison.intake_tick(prison.arrival_gap)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 2, "The wing's lane did not bring its next prisoner with nobody home")
+	TEST_ASSERT_EQUAL(prison.arrival_countdown, prison.arrival_gap, "With nobody home the console counts down to a closed lane")
+	// The extensions' gaps count down while nobody is home.
+	prison.lane_gaps = list(50, 120)
+	prison.intake_tick(20)
+	TEST_ASSERT(prison.lane_gap(2) == 30 && prison.lane_gap(3) == 100, "The extensions' lanes stopped counting down with nobody home ([prison.lane_gap(2)], [prison.lane_gap(3)])")
+	// A long time away brings nobody through them, and back home each brings one, not a crowd.
+	prison.arrival_gap = 3600
+	prison.intake_tick(30 * 60)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 2, "The extensions' lanes brought prisoners over half an hour with nobody home")
+	prison.crew_home_override = TRUE
+	prison.intake_tick(0)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 4, "Back home, the two ready extension lanes brought [length(prison.prisoners) - 2] prisoners, not one each")
+	TEST_ASSERT(prison.lane_gap(2) >= 30 && prison.lane_gap(3) >= 30, "The extensions' lanes did not start their gaps")
+	prison.intake_tick(1)
+	TEST_ASSERT_EQUAL(length(prison.prisoners), 4, "A lane brought a second prisoner before its gap was up")
 	prison.set_intake(FALSE)
 	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_economy_kit, all_present), prison), 8 SECONDS), "The arrivals never finished beaming in")
 	for(var/mob/living/basic/outpost_prisoner/arrival as anything in prison.prisoners)

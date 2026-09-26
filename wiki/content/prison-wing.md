@@ -19,7 +19,7 @@ Once the wing is built, the **Cell Block Extension** in the Upgrades tab adds th
 
 An extension joins the wing's east or west wall, or the far wall of an extension already there. The placement map only offers those spots, each already turned the right way. The wall there has to be whole and the ground beside it clear. You can't place one during a riot or a breakout, while prisoners are loose, or during an experiment.
 
-Once it is built, the wall opens into the office and the yard, and the new cells take the next numbers. Each extension lets one more prisoner arrive at a time and adds one more guard post. It runs off the wing's APC and has no door of its own; staff get to it through the wing's office.
+Once it is built, the wall opens into the office and the yard, and the new cells take the next numbers. While someone from the outpost is home, each extension lets one more prisoner arrive at a time. It also adds one more guard post. It runs off the wing's APC and has no door of its own; staff get to it through the wing's office.
 
 ## The warden's console
 

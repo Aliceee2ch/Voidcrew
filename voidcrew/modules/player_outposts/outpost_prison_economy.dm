@@ -15,7 +15,10 @@
  *
  * Arrivals come in lanes: one for the wing and one more for each cell block extension
  * (outpost_prison_extension.dm). Each lane brings one prisoner at a time and then waits its own
- * gap, so a ten-cell wing fills three cells in parallel rather than one after another.
+ * gap, so a ten-cell wing fills three cells in parallel rather than one after another. The
+ * extensions' lanes only bring prisoners while a member of the wing is home (crew_home()): the
+ * extra intake needs the crew there to process it, and a wing left alone should earn next to
+ * nothing, however big. Their gaps still count down meanwhile.
  */
 
 /datum/outpost_prison
@@ -30,7 +33,8 @@
 	var/arrival_countdown
 	/// Seconds before the first arrival lane may bring another prisoner after its last one. Counts down while intake is shut too.
 	var/arrival_gap = 0
-	/// The same for each further lane, one per extension (arrival_lanes()), in lane order from the second
+	/// The same for each further lane, one per extension (arrival_lanes()), in lane order from the second.
+	/// These lanes bring nobody while the crew is away (lane_open()), though their gaps count down.
 	var/list/lane_gaps = list()
 	/// Seconds into the current deposit interval
 	var/pay_clock = 0
@@ -338,18 +342,26 @@
 		return arrival_gap
 	return lane - 1 <= length(lane_gaps) ? lane_gaps[lane - 1] : 0
 
-/// The lane due soonest, the first on a tie
+/**
+ * Whether lane `lane` may bring prisoners now. The wing's own lane always may; an extension's only
+ * while a member of the wing is home, who has to process the extra intake.
+ */
+/datum/outpost_prison/proc/lane_open(lane)
+	return lane <= 1 || crew_home()
+
+/// The open lane due soonest, the first on a tie
 /datum/outpost_prison/proc/soonest_lane()
 	var/soonest = 1
 	for(var/lane in 2 to arrival_lanes())
-		if(lane_gap(lane) < lane_gap(soonest))
+		if(lane_open(lane) && lane_gap(lane) < lane_gap(soonest))
 			soonest = lane
 	return soonest
 
 /**
- * Advances arrivals by `seconds`: while arrivals are allowed, each lane whose gap is up beams the
- * next prisoner into a ready cell. One per lane, however long the step: several ready cells never
- * fill back to back through one lane.
+ * Advances arrivals by `seconds`: while arrivals are allowed, each open lane (lane_open()) whose gap
+ * is up beams the next prisoner into a ready cell. One per lane, however long the step: several
+ * ready cells never fill back to back through one lane. Every lane's gap counts down, open or not,
+ * so the crew coming home finds the extensions' lanes ready, one prisoner each.
  */
 /datum/outpost_prison/proc/intake_tick(seconds)
 	arrival_gap = max(arrival_gap - seconds, 0)
@@ -357,7 +369,7 @@
 		lane_gaps[lane] = max(lane_gaps[lane] - seconds, 0)
 	if(arrivals_allowed())
 		for(var/lane in 1 to arrival_lanes())
-			if(lane_gap(lane) <= 0 && free_slots())
+			if(lane_open(lane) && lane_gap(lane) <= 0 && free_slots())
 				admit_next(lane = lane)
 	arrival_countdown = next_arrival_in()
 

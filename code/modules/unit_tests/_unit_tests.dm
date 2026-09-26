@@ -495,6 +495,7 @@
 #include "../../../voidcrew/modules/unit_tests/voidcrew_bounty_bosses.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_bounty_criminal.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_bounty_identity.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/voidcrew_bounty_kingpin.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_bounty_lair_mafia.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_bounty_lair_maps.dm" // VOIDCREW EDIT ADDITION
 #include "../../../voidcrew/modules/unit_tests/voidcrew_bounty_lairs.dm" // VOIDCREW EDIT ADDITION

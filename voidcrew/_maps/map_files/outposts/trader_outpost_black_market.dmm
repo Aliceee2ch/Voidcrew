@@ -303,9 +303,47 @@
 /obj/structure/bounty_wanted_board/directional/north,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/trader_outpost)
+"bb" = (
+/obj/structure/table/wood,
+/turf/open/indestructible/hotelwood,
+/area/voidcrew/trader_outpost)
+"bc" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/spawner/random/trash/cigbutt,
+/obj/structure/table/wood,
+/turf/open/indestructible/hotelwood,
+/area/voidcrew/trader_outpost)
+"bd" = (
+/obj/effect/landmark/bounty_kingpin/seat,
+/obj/structure/chair/sofa/corp{
+	dir = 1
+	},
+/turf/open/indestructible/hotelwood,
+/area/voidcrew/trader_outpost)
+"be" = (
+/obj/effect/landmark/bounty_kingpin/goon/shotgun,
+/obj/effect/spawner/random/trash/grime,
+/turf/open/indestructible/hotelwood,
+/area/voidcrew/trader_outpost)
+"bf" = (
+/obj/effect/landmark/bounty_kingpin/goon/pistol,
+/turf/open/indestructible/hotelwood,
+/area/voidcrew/trader_outpost)
 "bg" = (
 /obj/structure/sink/directional/north,
 /turf/open/indestructible/white/textured,
+/area/voidcrew/trader_outpost)
+"bh" = (
+/obj/effect/landmark/bounty_kingpin/goon/smg,
+/obj/structure/chair/wood{
+	dir = 8
+	},
+/turf/open/indestructible/hotelwood,
+/area/voidcrew/trader_outpost)
+"bi" = (
+/obj/effect/landmark/bounty_kingpin/goon/shotgun,
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/hotelwood,
 /area/voidcrew/trader_outpost)
 "bn" = (
 /obj/effect/turf_decal/bot,
@@ -2034,7 +2072,7 @@ aO
 RM
 aO
 fL
-wK
+be
 aa
 ay
 ay
@@ -2059,7 +2097,7 @@ aO
 hH
 aO
 aO
-aO
+bb
 TM
 aa
 ay
@@ -2081,12 +2119,12 @@ kF
 tP
 we
 nG
-aO
+bf
 Gn
 My
 Pi
-aO
-CO
+bb
+bd
 aa
 aa
 ag
@@ -2111,7 +2149,7 @@ Pi
 aO
 aO
 aO
-Pi
+bc
 ut
 Zf
 au
@@ -2164,7 +2202,7 @@ Pn
 aO
 aO
 RM
-aO
+bf
 aV
 au
 SI
@@ -2185,7 +2223,7 @@ RM
 aO
 aO
 aO
-aO
+bf
 aO
 aO
 hH
@@ -2209,7 +2247,7 @@ aD
 DU
 aO
 RM
-RM
+bi
 RM
 RM
 aO
@@ -2240,7 +2278,7 @@ aO
 aO
 RM
 Pi
-dW
+bh
 aO
 Pi
 aa

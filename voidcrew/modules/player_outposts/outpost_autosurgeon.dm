@@ -844,12 +844,13 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 			return slab
 	return null
 
-/obj/machinery/computer/outpost_autosurgeon/ui_interact(mob/user, datum/tgui/ui)
-	. = ..()
+// Opens the slab's window; the console has none of its own
+/obj/machinery/computer/outpost_autosurgeon/interact(mob/user)
 	var/obj/machinery/outpost_autosurgeon/slab = find_slab()
 	if(!slab)
 		balloon_alert(user, "no slab!")
-		return
+		return TRUE
 	slab.ui_interact(user)
+	return TRUE
 
 #undef AUTOSURGEON_TRAIT

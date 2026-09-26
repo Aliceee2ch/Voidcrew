@@ -124,6 +124,9 @@
 	if(!beaker)
 		beaker = new /obj/item/reagent_containers/cup/beaker/cryoxadone(src)
 	RegisterSignal(src, COMSIG_CRYO_SET_ON, PROC_REF(on_cryo_set_on))
+	// Open and waiting: visitors cannot work the door, so an empty cell must be ready to climb into
+	if(!occupant)
+		open_machine()
 
 /obj/machinery/cryo_cell/outpost_lab/singularity_act()
 	return 0

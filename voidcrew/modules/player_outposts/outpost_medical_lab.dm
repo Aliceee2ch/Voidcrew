@@ -309,10 +309,11 @@
 	if(seconds_left)
 		. += span_notice("Your pass has [DisplayTimeText(seconds_left * (1 SECONDS))] left.")
 
-/obj/machinery/computer/outpost_medlab_terminal/ui_interact(mob/user, datum/tgui/ui)
-	. = ..()
+// A prompt, not a window: skip the computer's ui_interact, which would leave it on active power
+/obj/machinery/computer/outpost_medlab_terminal/interact(mob/user)
 	if(isliving(user))
 		INVOKE_ASYNC(src, PROC_REF(offer_pass), user)
+	return TRUE
 
 /// The patient `user` is pulling, when that patient could get a pass
 /obj/machinery/computer/outpost_medlab_terminal/proc/pulled_patient(mob/living/user, datum/outpost_upgrade/service/medical_lab/lab)

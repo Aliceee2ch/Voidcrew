@@ -6,10 +6,1163 @@
  * outside P4.
  *
  * What it owns: /mob/living/basic/bounty_criminal/boss (its body, built-in values and AI tree), the
- * bounty ability base with its wind-up, telegraph and stale-serial guard (a port of the horror's,
- * not a reuse of its type), scaling for extra hunters, exhaustion below 30% health, the cap on
- * damage to player ships, and on_confronted() for bosses (spec section 5).
+ * bounty ability base with its wind-up, telegraph and stale-serial guard (a port of the prison
+ * horror's pattern, not a reuse of its type), health that grows with the posse, tiredness below
+ * BOUNTY_BOSS_TIRED_BELOW percent, the limits on what it may break, and on_confronted() for bosses
+ * (spec section 5, 12.3 C8).
  *
  * The shared vars are declared in bounty_types.dm and nowhere else; a var only P4 uses goes here
  * with a `boss_` prefix, or on the /boss subtypes.
+ *
+ * How a fight goes:
+ * - A boss waits (its activity, if P3 gives it one) until it spots a hunter, is attacked or is
+ *   confronted. Then it turns hostile: every player within BOUNTY_BOSS_POSSE_RANGE who can see it
+ *   joins its posse, and its health is set from the kit's table for that many hunters. Anyone who
+ *   hurts it later joins too, raising its health again (never lowering it).
+ * - Its AI: nothing while busy or disabled; a target; an ability, never the same one twice in a
+ *   row; the kit's way of closing in or keeping away; its melee attack; and with nobody in sight,
+ *   the hunt for the nearest hunter still on its site. It calms down after BOUNTY_BOSS_CALM_TIME
+ *   with nobody around.
+ * - Every ability winds up first, where everyone can see and hear it (telegraph()), and does its
+ *   harm only when the wind-up is over (effect()). Downed, restrained, stunned or dead in between,
+ *   and nothing happens.
+ * - Below BOUNTY_BOSS_TIRED_BELOW percent health it tires: slower, longer cooldowns, and stamina
+ *   weapons work fully, so it can be stunned and cuffed. That is the capture window.
+ * - What it breaks is scripted, never a real explosion or atmos fire: tables, chairs, windows and
+ *   grilles, and at most BOUNTY_BOSS_WALL_BUDGET walls or doors a fight, only indoors on its own
+ *   site, never anything with space, the outdoors or another place on its far side.
  */
+
+/// Trait source for standing still while busy with an ability
+#define BOUNTY_BOSS_BUSY_TRAIT "bounty_boss_busy"
+
+/// Fire pools the bosses have burning (/obj/effect/bounty_boss_fire_pool), for the cap
+GLOBAL_LIST_EMPTY(bounty_boss_fire_pools)
+/// Grenades and breaching charges live (/obj/effect/bounty_boss_explosive), for the cap
+GLOBAL_LIST_EMPTY(bounty_boss_explosives)
+/// Heavy barricades standing (/obj/structure/barricade/security/bounty_boss), for the cap
+GLOBAL_LIST_EMPTY(bounty_boss_barricades)
+
+/// Whether `candidate` is a hunter: a living player (a mob with a mind or a client), not a criminal or one of their friends
+/proc/bounty_boss_is_hunter(mob/living/candidate)
+	if(!isliving(candidate) || QDELETED(candidate) || candidate.stat == DEAD)
+		return FALSE
+	if(istype(candidate, /mob/living/basic/bounty_criminal) || istype(candidate, /mob/living/basic/bounty_companion))
+		return FALSE
+	return !isnull(candidate.mind) || !isnull(candidate.client)
+
+// ===== THE BOSS =====
+
+/mob/living/basic/bounty_criminal/boss
+	name = "wanted criminal"
+	desc = "Someone with a big price on their head, and the gear to keep it."
+	maxHealth = BOUNTY_JUGGERNAUT_HEALTH_1
+	health = BOUNTY_JUGGERNAUT_HEALTH_1
+	// Fresh, it shrugs off stuns and knockdowns; boss_update_tired() adds them back once it tires.
+	status_flags = CANPUSH
+	move_resist = MOVE_FORCE_STRONG
+	mob_size = MOB_SIZE_HUMAN
+	combat_mode = TRUE
+	// The placement adds the site's own factions (spec section 3), so the site's hostiles leave it be.
+	faction = list(FACTION_HOSTILE)
+	environment_smash = ENVIRONMENT_SMASH_NONE
+	// max_stamina stays 100: basic mobs leave stamina crit comparing raw points with a percentage.
+	max_stamina = 100
+	stamina_crit_threshold = 100
+	damage_coeff = list(BRUTE = 1, BURN = 1, TOX = 1, STAMINA = BOUNTY_BOSS_STAMINA_FRESH * 100 / BOUNTY_BOSS_STAMINA, OXY = 1)
+	melee_damage_lower = 10
+	melee_damage_upper = 14
+	melee_attack_cooldown = 1.5 SECONDS
+	attack_verb_continuous = "hits"
+	attack_verb_simple = "hit"
+	attack_sound = 'sound/items/weapons/punch4.ogg'
+	attack_vis_effect = ATTACK_EFFECT_PUNCH
+	ai_controller = /datum/ai_controller/basic_controller/bounty_boss
+	/// BOUNTY_KIT_*: which kit it is, and the prefix of its dialogue contexts
+	var/boss_kit
+	/// The ability types it is given
+	var/list/boss_ability_types = list()
+	/// Its abilities (/datum/action/cooldown/mob_cooldown/bounty_boss), granted at Initialize
+	var/list/boss_abilities = list()
+	/// Type of the last ability it started: the rotation never picks it again straight away
+	var/boss_last_ability
+	/// Never the same ability twice in a row even when it is the only one ready (BOUNTY_BOSS_STRICT_ROTATION)
+	var/boss_strict_rotation = BOUNTY_BOSS_STRICT_ROTATION
+	/// world.time the next ability may start
+	var/boss_next_ability_at = 0
+	/// What keeps it still with its AI quiet ("windup", "charge", "dash", "burst", "stagger"), or null
+	var/boss_busy
+	/// Goes up each time it becomes busy, so a stale timer knows to do nothing
+	var/boss_busy_serial = 0
+	var/boss_busy_timer
+	/// The ability winding up now, whose telegraph goes if it is interrupted
+	var/datum/weakref/boss_winding_ref
+	/// Stamina damage it takes to crit it once tired, and its coefficient while fresh
+	var/boss_stamina_pool = BOUNTY_BOSS_STAMINA
+	var/boss_stamina_fresh = BOUNTY_BOSS_STAMINA_FRESH
+	/// At or below BOUNTY_BOSS_TIRED_BELOW percent health
+	var/boss_tired = FALSE
+	/// Its speed while fresh, and its brute and burn coefficients (a stagger's weakness puts them back)
+	var/boss_base_speed
+	var/boss_brute_coeff = 1
+	var/boss_burn_coeff = 1
+	/// Turned hostile: it spotted a hunter, or someone attacked or confronted it
+	var/boss_hostile = FALSE
+	/// REF() of each hunter in its posse -> TRUE; its health follows how many
+	var/list/boss_engaged = list()
+	/// Walls and doors it may still break this fight
+	var/boss_walls_left = BOUNTY_BOSS_WALL_BUDGET
+	/// Whoever hurt it last, and when
+	var/datum/weakref/boss_last_attacker
+	var/boss_last_attacked_at = 0
+	/// world.time it calms down if it still finds no hunter on its site
+	var/boss_calm_at = 0
+
+/mob/living/basic/bounty_criminal/boss/Initialize(mapload)
+	. = ..()
+	damage_coeff = damage_coeff.Copy()
+	boss_brute_coeff = damage_coeff[BRUTE]
+	boss_burn_coeff = damage_coeff[BURN]
+	boss_base_speed = speed
+	for(var/ability_type in boss_ability_types)
+		var/datum/action/cooldown/mob_cooldown/bounty_boss/ability = new ability_type(src)
+		ability.Grant(src)
+		boss_abilities += ability
+	AddElement(/datum/element/relay_attackers)
+	AddComponent(/datum/component/bounty_boss_signals)
+	boss_update_tired(silent = TRUE, force = TRUE)
+	// Dressed by the spawner when it has a record; an admin spawn with none gets the kit's look.
+	addtimer(CALLBACK(src, PROC_REF(boss_dress_fallback)), 1, TIMER_DELETE_ME)
+
+/mob/living/basic/bounty_criminal/boss/Destroy()
+	boss_interrupt()
+	QDEL_LIST(boss_abilities)
+	deltimer(boss_busy_timer)
+	boss_busy_timer = null
+	boss_winding_ref = null
+	boss_last_attacker = null
+	return ..()
+
+/mob/living/basic/bounty_criminal/boss/death(gibbed)
+	boss_interrupt()
+	. = ..()
+	boss_update_hold()
+
+/mob/living/basic/bounty_criminal/boss/examine(mob/user)
+	. = ..()
+	if(stat == DEAD)
+		return
+	var/gear = boss_gear_text()
+	if(gear)
+		. += span_warning(gear)
+	if(boss_tired)
+		. += span_notice("[p_They()] look[p_s()] worn out.")
+
+/**
+ * `user` confronted them: showed the warrant, or accused them. A boss doesn't run or argue. It
+ * starts its fight, with `user` first on its list.
+ */
+/mob/living/basic/bounty_criminal/boss/on_confronted(mob/user)
+	if(stat != CONSCIOUS || !isliving(user))
+		return
+	grudge |= WEAKREF(user)
+	boss_turn_hostile(user)
+	if(boss_valid_target(user))
+		ai_controller?.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, user)
+
+// ----- its kit -----
+
+/// Health for 1, 2, 3 and 4+ engaged hunters. Each kit has its own.
+/mob/living/basic/bounty_criminal/boss/proc/boss_health_table()
+	return list(initial(maxHealth))
+
+/**
+ * The outfit its look is built in: each kit has one, so the five read differently at a glance.
+ *
+ * TODO(P2 integration): spawn_bounty_criminal() should dress a boss with
+ * apply_bounty_look(boss, record, boss.boss_kit_outfit()), or call this from P2's own outfit hook.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_kit_outfit()
+	return /datum/outfit/bounty_boss
+
+/// With no record to dress it from (an admin spawn), the kit's look on a stock face
+/mob/living/basic/bounty_criminal/boss/proc/boss_dress_fallback()
+	if(QDELETED(src) || record)
+		return
+	apply_dynamic_human_appearance(src, boss_kit_outfit(), /datum/species/human)
+
+/// A line on examine about its gear, if the kit has one
+/mob/living/basic/bounty_criminal/boss/proc/boss_gear_text()
+	return null
+
+/**
+ * Says a line for "<kit>_<suffix>", or for "<kit>_<fallback>" if there is none for it. Async, so a
+ * signal handler can call it.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_bark(suffix, fallback)
+	if(!boss_kit || stat != CONSCIOUS)
+		return
+	INVOKE_ASYNC(src, PROC_REF(boss_bark_now), suffix, fallback)
+
+/mob/living/basic/bounty_criminal/boss/proc/boss_bark_now(suffix, fallback)
+	if(QDELETED(src) || stat != CONSCIOUS)
+		return FALSE
+	if(bounty_say("[boss_kit]_[suffix]"))
+		return TRUE
+	return fallback ? bounty_say("[boss_kit]_[fallback]") : FALSE
+
+// ----- state -----
+
+/// Downed: P2's state, read from the shared var too so a test can set it
+/mob/living/basic/bounty_criminal/boss/proc/boss_is_downed()
+	return downed || is_downed()
+
+/// Restrained: P2's state, read from the shared var too so a test can set it
+/mob/living/basic/bounty_criminal/boss/proc/boss_is_restrained()
+	return !isnull(restraints) || is_restrained()
+
+/// Whether it can act at all: alive and awake, not downed, restrained, given up, stunned or knocked down
+/mob/living/basic/bounty_criminal/boss/proc/boss_can_act()
+	if(QDELETED(src) || stat != CONSCIOUS || !isturf(loc))
+		return FALSE
+	if(boss_is_downed() || boss_is_restrained() || HAS_TRAIT(src, TRAIT_BOUNTY_SURRENDERED))
+		return FALSE
+	return !HAS_TRAIT(src, TRAIT_INCAPACITATED) && !HAS_TRAIT(src, TRAIT_FLOORED)
+
+/// Whether it may start an ability now: able, not busy, and past the gap since the last one
+/mob/living/basic/bounty_criminal/boss/proc/boss_can_use_ability()
+	return boss_can_act() && !boss_busy && world.time >= boss_next_ability_at
+
+/// Its cooldowns stretch once it tires
+/mob/living/basic/bounty_criminal/boss/proc/boss_cooldown_mult()
+	return boss_tired ? BOUNTY_BOSS_TIRED_COOLDOWN_MULT : 1
+
+/// Pulled by anyone once it is dead, downed or cuffed; hard to shift otherwise
+/mob/living/basic/bounty_criminal/boss/proc/boss_update_hold()
+	move_resist = (stat == DEAD || boss_is_downed() || boss_is_restrained()) ? MOVE_RESIST_DEFAULT : initial(move_resist)
+
+/**
+ * Tired at or below BOUNTY_BOSS_TIRED_BELOW percent health: stamina weapons work fully, stuns and
+ * knockdowns land, it moves slower and its cooldowns stretch. Healed back above the line, it is
+ * fresh again. Returns TRUE if that changed.
+ *
+ * NOTE(P2 integration): P2's rally (no stamina damage for a while after getting up) should not
+ * write damage_coeff[STAMINA] back to its own value on a boss; call boss_update_tired(force = TRUE)
+ * when the rally ends instead.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_update_tired(silent = FALSE, force = FALSE)
+	var/now_tired = stat != DEAD && maxHealth > 0 && health <= maxHealth * BOUNTY_BOSS_TIRED_BELOW / 100
+	if(now_tired == boss_tired && !force)
+		return FALSE
+	boss_tired = now_tired
+	damage_coeff[STAMINA] = boss_stamina_coefficient()
+	status_flags &= ~(CANSTUN | CANKNOCKDOWN)
+	if(boss_tired)
+		status_flags |= CANSTUN | CANKNOCKDOWN
+	set_varspeed(boss_base_speed + (boss_tired ? BOUNTY_BOSS_TIRED_SLOWDOWN : 0))
+	if(boss_tired && !silent)
+		visible_message(span_warning("[src] is breathing hard and slowing down. [p_They()] look[p_s()] worn out."))
+		boss_bark("exhausted")
+	return TRUE
+
+/// Stamina damage coefficient now: the fresh or tired one, folded against its pool, as max_stamina is 100
+/mob/living/basic/bounty_criminal/boss/proc/boss_stamina_coefficient()
+	var/coefficient = boss_tired ? BOUNTY_BOSS_STAMINA_TIRED : boss_stamina_fresh
+	return coefficient * 100 / max(boss_stamina_pool, 1)
+
+// ----- busy -----
+
+/**
+ * Busy with `state`, its AI quiet. `immobile` keeps it standing still (a wind-up, a stagger); a
+ * charge or dash moves it itself. With a `duration` it ends on its own. Returns the serial a timer
+ * checks against, so a stale one does nothing.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_set_busy(state, duration, immobile = TRUE)
+	boss_busy = state
+	boss_busy_serial++
+	deltimer(boss_busy_timer)
+	boss_busy_timer = null
+	if(immobile)
+		ADD_TRAIT(src, TRAIT_IMMOBILIZED, BOUNTY_BOSS_BUSY_TRAIT)
+	else
+		REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, BOUNTY_BOSS_BUSY_TRAIT)
+	ai_controller?.CancelActions()
+	if(duration)
+		boss_busy_timer = addtimer(CALLBACK(src, PROC_REF(boss_clear_busy), boss_busy_serial), duration, TIMER_STOPPABLE | TIMER_DELETE_ME)
+	return boss_busy_serial
+
+/// Free again, unless `serial` is stale
+/mob/living/basic/bounty_criminal/boss/proc/boss_clear_busy(serial)
+	if(serial && serial != boss_busy_serial)
+		return FALSE
+	boss_busy = null
+	deltimer(boss_busy_timer)
+	boss_busy_timer = null
+	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, BOUNTY_BOSS_BUSY_TRAIT)
+	return TRUE
+
+/// Whether it is still busy with `state` under `serial`: what a charge or burst checks before each step
+/mob/living/basic/bounty_criminal/boss/proc/boss_still(state, serial)
+	return !QDELETED(src) && boss_busy == state && boss_busy_serial == serial && boss_can_act()
+
+/// Knocked out of whatever it was doing: a wind-up's telegraph goes, and nothing lands
+/mob/living/basic/bounty_criminal/boss/proc/boss_interrupt()
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/winding = boss_winding_ref?.resolve()
+	boss_winding_ref = null
+	winding?.cancel_windup()
+	if(boss_busy)
+		boss_clear_busy()
+	boss_on_interrupted()
+
+/// A kit's own clean-up when it is interrupted, downed or killed
+/mob/living/basic/bounty_criminal/boss/proc/boss_on_interrupted()
+	return
+
+/// Reeling for `duration` (charged into a wall): still, quiet, and taking `vulnerable` times the damage. Not a stun, so it can't be cuffed for it.
+/mob/living/basic/bounty_criminal/boss/proc/boss_stagger(duration, vulnerable = 1)
+	if(stat != CONSCIOUS)
+		return
+	boss_set_busy("stagger", duration)
+	Shake(2, 1, duration)
+	if(vulnerable != 1)
+		damage_coeff[BRUTE] = boss_brute_coeff * vulnerable
+		damage_coeff[BURN] = boss_burn_coeff * vulnerable
+		addtimer(CALLBACK(src, PROC_REF(boss_end_vulnerable)), duration, TIMER_UNIQUE | TIMER_OVERRIDE | TIMER_DELETE_ME)
+
+/mob/living/basic/bounty_criminal/boss/proc/boss_end_vulnerable()
+	damage_coeff[BRUTE] = boss_brute_coeff
+	damage_coeff[BURN] = boss_burn_coeff
+
+// ----- abilities -----
+
+/**
+ * The ability to use on `target` now, or null: ready, worth it, and never the one it used last
+ * (the hoarfrost rotation; BOUNTY_BOSS_STRICT_ROTATION).
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_choose_ability(atom/target)
+	if(QDELETED(target) || !boss_can_use_ability())
+		return null
+	var/list/options = list()
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/last_one
+	for(var/datum/action/cooldown/mob_cooldown/bounty_boss/ability as anything in boss_abilities)
+		if(QDELETED(ability) || !ability.IsAvailable() || !ability.worth_using(target))
+			continue
+		if(ability.type == boss_last_ability)
+			last_one = ability
+			continue
+		options += ability
+	if(length(options))
+		return pick(options)
+	return boss_strict_rotation ? null : last_one
+
+/// Starts `ability`'s wind-up. Returns the serial its timer checks, or 0 if it can't start now.
+/mob/living/basic/bounty_criminal/boss/proc/boss_begin_ability(datum/action/cooldown/mob_cooldown/bounty_boss/ability)
+	if(!boss_can_use_ability())
+		return 0
+	boss_last_ability = ability.type
+	boss_next_ability_at = world.time + ability.windup + ability.effect_time + rand(BOUNTY_BOSS_ABILITY_GAP_MIN, BOUNTY_BOSS_ABILITY_GAP_MAX)
+	boss_winding_ref = WEAKREF(ability)
+	return boss_set_busy("windup", ability.windup + 1 SECONDS)
+
+/// The kit's way of fighting after abilities: keep range, break off. Returns TRUE if it queued something.
+/mob/living/basic/bounty_criminal/boss/proc/boss_engage_plan(datum/ai_controller/controller, atom/target)
+	return FALSE
+
+// ----- the posse and turning hostile -----
+
+/**
+ * Turns hostile, with `instigator` (who attacked, confronted or was spotted) in its posse. The
+ * first time, every hunter within BOUNTY_BOSS_POSSE_RANGE who can see it joins too, and it says
+ * its intro line.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_turn_hostile(mob/living/instigator)
+	if(stat == DEAD)
+		return FALSE
+	boss_calm_at = world.time + BOUNTY_BOSS_CALM_TIME
+	if(boss_hostile)
+		if(instigator)
+			boss_engage(instigator)
+		return FALSE
+	boss_hostile = TRUE
+	if(instigator)
+		boss_engage(instigator, announce = FALSE)
+	for(var/mob/living/watcher in viewers(BOUNTY_BOSS_POSSE_RANGE, src))
+		boss_engage(watcher, announce = FALSE)
+	boss_apply_posse_health(announce = FALSE)
+	boss_bark("intro")
+	return TRUE
+
+/// With no hunter left on its site, it stops hunting and waits again. Its posse and health stay.
+/mob/living/basic/bounty_criminal/boss/proc/boss_calm_down()
+	boss_hostile = FALSE
+	ai_controller?.clear_blackboard_key(BB_BOUNTY_BOSS_PREY)
+
+/// Adds `hunter` to its posse, raising its health for the bigger posse. Returns TRUE if they are new.
+/mob/living/basic/bounty_criminal/boss/proc/boss_engage(mob/living/hunter, announce = TRUE)
+	if(stat == DEAD || !bounty_boss_is_hunter(hunter))
+		return FALSE
+	var/key = REF(hunter)
+	if(boss_engaged[key])
+		return FALSE
+	boss_engaged[key] = TRUE
+	boss_apply_posse_health(announce)
+	return TRUE
+
+/**
+ * Health for the posse it has: the kit's table entry for that many hunters, raised and never
+ * lowered. Basic mobs keep damage apart from max health, so current health rises by the same
+ * amount. Not while it is downed or cuffed. Returns TRUE if it rose.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_apply_posse_health(announce = TRUE)
+	if(stat == DEAD || boss_is_downed() || boss_is_restrained())
+		return FALSE
+	var/list/table = boss_health_table()
+	var/count = length(boss_engaged)
+	if(!length(table) || !count)
+		return FALSE
+	var/wanted = table[clamp(count, 1, length(table))]
+	if(wanted <= maxHealth)
+		return FALSE
+	setMaxHealth(wanted)
+	updatehealth()
+	boss_update_tired(silent = TRUE)
+	if(announce && count > 1)
+		visible_message(span_warning("[src] looks over the [count] of you and squares up."))
+		boss_bark("posse", "intro")
+	return TRUE
+
+// ----- targets -----
+
+/// Whether it goes after `target`: a hunter it may hurt
+/mob/living/basic/bounty_criminal/boss/proc/boss_valid_target(atom/target)
+	var/mob/living/victim = target
+	return isliving(victim) && bounty_boss_is_hunter(victim) && boss_can_hurt(victim)
+
+/**
+ * Whether its abilities may hurt `victim`: awake (never someone already down), not a criminal or
+ * one of their friends, not on its side, and someone it may attack where it is (P2's may_attack()).
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_can_hurt(mob/living/victim)
+	if(!isliving(victim) || victim == src || QDELETED(victim) || victim.stat != CONSCIOUS)
+		return FALSE
+	if(istype(victim, /mob/living/basic/bounty_criminal) || istype(victim, /mob/living/basic/bounty_companion))
+		return FALSE
+	if(HAS_TRAIT(victim, TRAIT_GODMODE) || faction_check_atom(victim))
+		return FALSE
+	return may_attack(victim)
+
+/// Everyone on `turfs` its abilities may hurt
+/mob/living/basic/bounty_criminal/boss/proc/boss_victims_on(list/turfs)
+	. = list()
+	for(var/turf/spot as anything in turfs)
+		for(var/mob/living/victim in spot)
+			if(boss_can_hurt(victim))
+				. += victim
+
+/// Whoever hurt it within BOUNTY_BOSS_REVENGE_TIME, if it may still go after them
+/mob/living/basic/bounty_criminal/boss/proc/boss_revenge_target()
+	if(world.time > boss_last_attacked_at + BOUNTY_BOSS_REVENGE_TIME)
+		return null
+	var/mob/living/attacker = boss_last_attacker?.resolve()
+	return boss_valid_target(attacker) ? attacker : null
+
+/// The nearest hunter still on its site within BOUNTY_BOSS_HUNT_RANGE, for the hunt. Only players with a client count, from SSmobs' list for its level.
+/mob/living/basic/bounty_criminal/boss/proc/boss_nearest_hunter()
+	var/turf/here = get_turf(src)
+	if(!here || here.z > length(SSmobs.clients_by_zlevel))
+		return null
+	var/mob/living/best
+	var/best_distance = BOUNTY_BOSS_HUNT_RANGE + 1
+	for(var/mob/living/person as anything in SSmobs.clients_by_zlevel[here.z])
+		if(!boss_valid_target(person))
+			continue
+		var/turf/spot = get_turf(person)
+		if(!spot || !boss_in_site_bounds(spot) || !leash_ok(spot))
+			continue
+		var/distance = get_dist(here, spot)
+		if(distance < best_distance)
+			best = person
+			best_distance = distance
+	return best
+
+// ----- what it may break -----
+
+/// Whether `spot` is inside its site_bounds (anywhere, with no leash)
+/mob/living/basic/bounty_criminal/boss/proc/boss_in_site_bounds(turf/spot)
+	if(!spot)
+		return FALSE
+	if(length(site_bounds) != 5)
+		return TRUE
+	return spot.z == site_bounds[5] && ISINRANGE(spot.x, site_bounds[1], site_bounds[3]) && ISINRANGE(spot.y, site_bounds[2], site_bounds[4])
+
+/**
+ * Whether its abilities may damage anything on `spot`: on its site and its level, where it may go.
+ *
+ * TODO(P2 integration): AND P2's environment_damage_allowed(spot) here (never within 7 tiles of a
+ * player ship's turf or dock strip, spec 12.2 AR-D2). Until it exists this uses leash_ok() and the
+ * site bounds.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_environment_allowed(turf/spot)
+	if(!isturf(spot) || spot.z != z)
+		return FALSE
+	return leash_ok(spot) && boss_in_site_bounds(spot)
+
+/// An indoor tile of its site: solid ground, not outdoors, not space, and not a docked ship's area unless it stands aboard one itself
+/mob/living/basic/bounty_criminal/boss/proc/boss_indoor_turf(turf/spot)
+	if(!spot || isspaceturf(spot) || isgroundlessturf(spot) || islava(spot) || ischasm(spot))
+		return FALSE
+	var/area/spot_area = get_area(spot)
+	if(!spot_area || spot_area.outdoors)
+		return FALSE
+	if(istype(spot_area, /area/shuttle) && !istype(get_area(src), /area/shuttle))
+		return FALSE
+	return boss_in_site_bounds(spot)
+
+/**
+ * Whether breaking what is on `spot` (a wall, or the tile a window or door stands on) keeps it
+ * indoors: `spot` and every open tile beside it must be indoor tiles of its site. Never a hull,
+ * never an outside wall, never a window onto space or the outdoors.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_interior_spot(turf/spot)
+	if(!spot)
+		return FALSE
+	if(isopenturf(spot) && !boss_indoor_turf(spot))
+		return FALSE
+	for(var/direction in GLOB.cardinals)
+		var/turf/beside = get_step(spot, direction)
+		if(!beside)
+			return FALSE
+		if(isclosedturf(beside))
+			continue
+		if(!boss_indoor_turf(beside))
+			return FALSE
+	return TRUE
+
+/**
+ * Whether its abilities may damage `thing`: allowed there (boss_environment_allowed(), and P2's
+ * may_attack(), which refuses structures off its site), indoors on both sides, and a kind it breaks
+ * (tables, chairs, windows, grilles, barricades; plain walls and doors only while its
+ * BOUNTY_BOSS_WALL_BUDGET lasts). Never anything indestructible or outpost property.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_may_break(atom/thing)
+	if(QDELETED(thing))
+		return FALSE
+	var/turf/spot = get_turf(thing)
+	if(!boss_environment_allowed(spot) || !may_attack(thing) || !boss_interior_spot(spot))
+		return FALSE
+	if(isturf(thing))
+		if(!iswallturf(thing) || istype(thing, /turf/closed/wall/r_wall) || isindestructiblewall(thing))
+			return FALSE
+		return boss_walls_left > 0
+	var/obj/object = thing
+	if(!istype(object) || (object.resistance_flags & INDESTRUCTIBLE) || HAS_TRAIT(object, TRAIT_OUTPOST_PROPERTY))
+		return FALSE
+	if(istype(object, /obj/machinery/door))
+		return boss_walls_left > 0
+	return istype(object, /obj/structure/window) || istype(object, /obj/structure/grille) || istype(object, /obj/structure/table) \
+		|| istype(object, /obj/structure/chair) || istype(object, /obj/structure/barricade)
+
+/**
+ * Damages `thing` for one use of an ability: `damage` against `damage_flag` armour, or null to break
+ * it outright. `tally` is that use's one-item count of structures left (BOUNTY_BOSS_ABILITY_STRUCTURE_CAP).
+ * A wall is dismantled to a girder; a wall or a door that breaks spends the fight's budget.
+ * Returns TRUE if it did damage.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_damage_structure(atom/thing, damage, list/tally, damage_flag = MELEE)
+	if(length(tally) && tally[1] <= 0)
+		return FALSE
+	if(!boss_may_break(thing))
+		return FALSE
+	if(length(tally))
+		tally[1]--
+	if(iswallturf(thing))
+		var/turf/closed/wall/wall = thing
+		boss_walls_left--
+		wall.visible_message(span_danger("[wall] caves in!"))
+		playsound(wall, 'sound/effects/meteorimpact.ogg', 70, TRUE)
+		wall.dismantle_wall()
+		return TRUE
+	var/obj/object = thing
+	var/amount = isnull(damage) ? object.get_integrity() : damage
+	var/is_door = istype(object, /obj/machinery/door)
+	object.take_damage(amount, BRUTE, damage_flag, TRUE, get_dir(object, src))
+	if(is_door && (QDELETED(object) || object.get_integrity() <= 0))
+		boss_walls_left--
+	return TRUE
+
+// ===== SIGNALS =====
+
+/**
+ * The boss's signal hooks, on a component of their own so they never replace a handler P2 or P3
+ * registers on the same mob for the same signal. Each one hands over to a boss proc.
+ */
+/datum/component/bounty_boss_signals
+
+/datum/component/bounty_boss_signals/Initialize()
+	if(!istype(parent, /mob/living/basic/bounty_criminal/boss))
+		return COMPONENT_INCOMPATIBLE
+
+/datum/component/bounty_boss_signals/RegisterWithParent()
+	RegisterSignal(parent, COMSIG_LIVING_HEALTH_UPDATE, PROC_REF(on_health))
+	RegisterSignal(parent, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(on_attacked))
+	RegisterSignal(parent, COMSIG_AI_BLACKBOARD_KEY_SET(BB_BASIC_MOB_CURRENT_TARGET), PROC_REF(on_target))
+	RegisterSignals(parent, list(
+		COMSIG_BOUNTY_CRIMINAL_DOWNED,
+		COMSIG_BOUNTY_CRIMINAL_RESTRAINED,
+		COMSIG_LIVING_ENTER_STAMCRIT,
+		SIGNAL_ADDTRAIT(TRAIT_INCAPACITATED),
+		SIGNAL_ADDTRAIT(TRAIT_FLOORED),
+		SIGNAL_ADDTRAIT(TRAIT_BOUNTY_SURRENDERED),
+	), PROC_REF(on_disabled))
+	RegisterSignals(parent, list(COMSIG_BOUNTY_CRIMINAL_RECOVERED, COMSIG_BOUNTY_CRIMINAL_UNRESTRAINED), PROC_REF(on_freed))
+	RegisterSignal(parent, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_prehit))
+	RegisterSignal(parent, COMSIG_LIVING_CHECK_BLOCK, PROC_REF(on_check_block))
+	RegisterSignal(parent, COMSIG_MOB_AFTER_APPLY_DAMAGE, PROC_REF(on_damaged))
+	RegisterSignal(parent, COMSIG_ATOM_ATTACKBY, PROC_REF(on_attackby))
+	RegisterSignal(parent, COMSIG_MOB_FLASHED, PROC_REF(on_flashed))
+	RegisterSignal(parent, COMSIG_MOVABLE_MOVED, PROC_REF(on_moved))
+
+/datum/component/bounty_boss_signals/UnregisterFromParent()
+	UnregisterSignal(parent, list(
+		COMSIG_LIVING_HEALTH_UPDATE,
+		COMSIG_ATOM_WAS_ATTACKED,
+		COMSIG_AI_BLACKBOARD_KEY_SET(BB_BASIC_MOB_CURRENT_TARGET),
+		COMSIG_BOUNTY_CRIMINAL_DOWNED,
+		COMSIG_BOUNTY_CRIMINAL_RESTRAINED,
+		COMSIG_LIVING_ENTER_STAMCRIT,
+		SIGNAL_ADDTRAIT(TRAIT_INCAPACITATED),
+		SIGNAL_ADDTRAIT(TRAIT_FLOORED),
+		SIGNAL_ADDTRAIT(TRAIT_BOUNTY_SURRENDERED),
+		COMSIG_BOUNTY_CRIMINAL_RECOVERED,
+		COMSIG_BOUNTY_CRIMINAL_UNRESTRAINED,
+		COMSIG_PROJECTILE_PREHIT,
+		COMSIG_LIVING_CHECK_BLOCK,
+		COMSIG_MOB_AFTER_APPLY_DAMAGE,
+		COMSIG_ATOM_ATTACKBY,
+		COMSIG_MOB_FLASHED,
+		COMSIG_MOVABLE_MOVED,
+	))
+
+/datum/component/bounty_boss_signals/proc/on_health(mob/living/basic/bounty_criminal/boss/source)
+	SIGNAL_HANDLER
+	source.boss_update_tired()
+
+/datum/component/bounty_boss_signals/proc/on_attacked(mob/living/basic/bounty_criminal/boss/source, atom/attacker, attack_flags)
+	SIGNAL_HANDLER
+	if(!isliving(attacker) || attacker == source || !(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
+		return
+	if(!bounty_boss_is_hunter(attacker) || source.stat == DEAD)
+		return
+	source.boss_last_attacker = WEAKREF(attacker)
+	source.boss_last_attacked_at = world.time
+	source.boss_turn_hostile(attacker)
+
+/datum/component/bounty_boss_signals/proc/on_target(mob/living/basic/bounty_criminal/boss/source)
+	SIGNAL_HANDLER
+	var/mob/living/target = source.ai_controller?.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
+	if(bounty_boss_is_hunter(target))
+		source.boss_turn_hostile(target)
+
+/datum/component/bounty_boss_signals/proc/on_disabled(mob/living/basic/bounty_criminal/boss/source)
+	SIGNAL_HANDLER
+	source.boss_interrupt()
+	source.boss_update_hold()
+
+/datum/component/bounty_boss_signals/proc/on_freed(mob/living/basic/bounty_criminal/boss/source)
+	SIGNAL_HANDLER
+	source.boss_update_hold()
+	// Not forced: P2's rally may have just set the stamina coefficient for itself.
+	source.boss_update_tired(silent = TRUE)
+
+/datum/component/bounty_boss_signals/proc/on_prehit(mob/living/basic/bounty_criminal/boss/source, obj/projectile/shot)
+	SIGNAL_HANDLER
+	return source.boss_projectile_prehit(shot)
+
+/datum/component/bounty_boss_signals/proc/on_check_block(mob/living/basic/bounty_criminal/boss/source, atom/hit_by, damage, attack_text, attack_type, armour_penetration, damage_type)
+	SIGNAL_HANDLER
+	return source.boss_check_block(hit_by, attack_text, attack_type)
+
+/datum/component/bounty_boss_signals/proc/on_damaged(mob/living/basic/bounty_criminal/boss/source, damage, damagetype)
+	SIGNAL_HANDLER
+	if(damage > 0)
+		source.boss_took_damage(damage, damagetype)
+
+/datum/component/bounty_boss_signals/proc/on_attackby(mob/living/basic/bounty_criminal/boss/source, obj/item/attacking_item, mob/living/user)
+	SIGNAL_HANDLER
+	var/obj/item/assembly/flash/flash = attacking_item
+	if(istype(flash) && !flash.burnt_out && isliving(user))
+		source.boss_flashed(user)
+	return NONE
+
+/datum/component/bounty_boss_signals/proc/on_flashed(mob/living/basic/bounty_criminal/boss/source)
+	SIGNAL_HANDLER
+	source.boss_flashed()
+
+/datum/component/bounty_boss_signals/proc/on_moved(mob/living/basic/bounty_criminal/boss/source)
+	SIGNAL_HANDLER
+	source.boss_moved()
+
+// Kit hooks for those signals. None of them may sleep.
+
+/// A projectile is about to hit it: return PROJECTILE_INTERRUPT_HIT_PHASE to dodge it
+/mob/living/basic/bounty_criminal/boss/proc/boss_projectile_prehit(obj/projectile/shot)
+	SHOULD_NOT_SLEEP(TRUE)
+	return NONE
+
+/// A blow or a thrown thing is about to land: return SUCCESSFUL_BLOCK to make it miss
+/mob/living/basic/bounty_criminal/boss/proc/boss_check_block(atom/hit_by, attack_text, attack_type)
+	SHOULD_NOT_SLEEP(TRUE)
+	return NONE
+
+/// Damage landed on it
+/mob/living/basic/bounty_criminal/boss/proc/boss_took_damage(damage, damagetype)
+	SHOULD_NOT_SLEEP(TRUE)
+	return
+
+/// Flashed, by a handheld flash (`user`) or a flash going off near it
+/mob/living/basic/bounty_criminal/boss/proc/boss_flashed(mob/living/user)
+	SHOULD_NOT_SLEEP(TRUE)
+	return
+
+/// It took a step
+/mob/living/basic/bounty_criminal/boss/proc/boss_moved()
+	SHOULD_NOT_SLEEP(TRUE)
+	return
+
+// ===== THE ABILITY BASE =====
+
+/**
+ * A boss's ability. Activate() starts a wind-up of `windup`: the boss stands still and telegraph()
+ * shows everyone where it will land, with a sound. When the wind-up is over, effect() does the harm,
+ * unless the boss was downed, restrained, stunned, knocked down or killed meanwhile (a stale serial,
+ * or boss_can_act() failing). Tests call finish_windup(pending_serial) instead of waiting.
+ */
+/datum/action/cooldown/mob_cooldown/bounty_boss
+	name = "Criminal trick"
+	desc = "Something a wanted criminal can do."
+	button_icon = 'icons/mob/actions/actions_items.dmi'
+	button_icon_state = "sniper_zoom"
+	cooldown_time = 10 SECONDS
+	shared_cooldown = NONE
+	melee_cooldown_time = 0
+	click_to_activate = TRUE
+	/// How long it winds up, telegraphing, before anything lands
+	var/windup = 1 SECONDS
+	/// How long the effect itself keeps the boss busy after the wind-up (a charge, a burst), so the next ability waits for it
+	var/effect_time = 0
+	/// The serial of the wind-up under way, checked when it ends; 0 when none
+	var/pending_serial = 0
+	/// What the wind-up is aimed at
+	var/datum/weakref/pending_target
+	/// Weakrefs to telegraph visuals and beams still showing, removed if the wind-up is cancelled
+	var/list/telegraphs
+	/// Structures this use may still damage: a one-item list a helper counts down
+	var/list/structure_tally
+
+/datum/action/cooldown/mob_cooldown/bounty_boss/Destroy()
+	clear_telegraphs()
+	pending_target = null
+	structure_tally = null
+	return ..()
+
+/datum/action/cooldown/mob_cooldown/bounty_boss/IsAvailable(feedback = FALSE)
+	. = ..()
+	if(!.)
+		return FALSE
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
+	return istype(boss) && boss.boss_can_use_ability()
+
+/// Whether it is worth using on `target` now: in range, in sight, and so on
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/worth_using(atom/target)
+	return !QDELETED(target)
+
+/datum/action/cooldown/mob_cooldown/bounty_boss/Activate(atom/target)
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
+	if(!istype(boss) || QDELETED(target))
+		return FALSE
+	var/serial = boss.boss_begin_ability(src)
+	if(!serial)
+		return FALSE
+	StartCooldown(cooldown_time * boss.boss_cooldown_mult())
+	pending_serial = serial
+	pending_target = WEAKREF(target)
+	boss.face_atom(target)
+	boss.boss_bark("ability")
+	telegraph(target)
+	addtimer(CALLBACK(src, PROC_REF(finish_windup), serial), windup, TIMER_DELETE_ME)
+	return TRUE
+
+/**
+ * The wind-up under `serial` is over: effect(), if the boss is still winding up under that serial
+ * and can act. Returns TRUE if the effect ran.
+ */
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/finish_windup(serial)
+	if(!serial || serial != pending_serial)
+		return FALSE
+	var/atom/target = pending_target?.resolve()
+	pending_serial = 0
+	pending_target = null
+	clear_telegraphs()
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
+	if(!istype(boss) || boss.boss_busy != "windup" || boss.boss_busy_serial != serial || !boss.boss_can_act())
+		return FALSE
+	boss.boss_winding_ref = null
+	boss.boss_clear_busy(serial)
+	structure_tally = list(BOUNTY_BOSS_ABILITY_STRUCTURE_CAP)
+	effect(target)
+	return TRUE
+
+/// The wind-up was cut short: its telegraph goes and nothing lands
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/cancel_windup()
+	pending_serial = 0
+	pending_target = null
+	clear_telegraphs()
+
+/// Shows where it will land and how, with a sound, for the wind-up
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/telegraph(atom/target)
+	return
+
+/// What it does once the wind-up is over. `target` may be gone by then.
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/effect(atom/target)
+	return
+
+/// Keeps track of a telegraph visual or beam, removed if the wind-up is cancelled
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/add_telegraph(datum/thing)
+	if(thing)
+		LAZYADD(telegraphs, WEAKREF(thing))
+	return thing
+
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/clear_telegraphs()
+	for(var/datum/weakref/ref as anything in telegraphs)
+		var/datum/thing = ref.resolve()
+		if(!QDELETED(thing))
+			qdel(thing)
+	telegraphs = null
+
+/// Marks `turfs` for the length of the wind-up
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/mark_turfs(list/turfs, mark_color, mark_state = "target_box")
+	for(var/turf/spot as anything in turfs)
+		add_telegraph(new /obj/effect/temp_visual/bounty_boss_mark(spot, windup, mark_color, mark_state))
+
+/// Damages `thing` as part of this use, within its cap and the fight's wall budget
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/break_thing(atom/thing, damage, damage_flag = MELEE)
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
+	if(!istype(boss))
+		return FALSE
+	if(!structure_tally)
+		structure_tally = list(BOUNTY_BOSS_ABILITY_STRUCTURE_CAP)
+	return boss.boss_damage_structure(thing, damage, structure_tally, damage_flag)
+
+/// Turfs up to `range` from the boss within `arc` degrees (full width) of the direction to `target`, and in a clear line from it
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/cone_turfs(atom/target, range, arc)
+	. = list()
+	var/turf/origin = get_turf(owner)
+	var/turf/aim = get_turf(target)
+	if(!origin || !aim || origin == aim)
+		return
+	var/facing = get_angle(origin, aim)
+	for(var/turf/spot in RANGE_TURFS(range, origin))
+		if(spot == origin || get_dist(origin, spot) > range)
+			continue
+		var/difference = abs(get_angle(origin, spot) - facing)
+		if(difference > 180)
+			difference = 360 - difference
+		if(difference > arc / 2)
+			continue
+		if(bounty_boss_clear_line(origin, spot))
+			. += spot
+
+/// Whether nothing solid stands between `start` and `finish`: no walls, and nothing dense but mobs on the tiles between
+/proc/bounty_boss_clear_line(turf/start, turf/finish)
+	if(!start || !finish || start.z != finish.z)
+		return FALSE
+	for(var/turf/spot as anything in get_line(start, finish))
+		if(spot == start)
+			continue
+		if(isclosedturf(spot))
+			return FALSE
+		if(spot != finish && spot.is_blocked_turf(exclude_mobs = TRUE))
+			return FALSE
+	return TRUE
+
+// ===== TELEGRAPH AND FIRE VISUALS =====
+
+/// A mark on the floor for the length of a wind-up or a fuse
+/obj/effect/temp_visual/bounty_boss_mark
+	icon = 'icons/mob/telegraphing/telegraph_holographic.dmi'
+	icon_state = "target_box"
+	layer = BELOW_MOB_LAYER
+	plane = GAME_PLANE
+	duration = 1 SECONDS
+
+/obj/effect/temp_visual/bounty_boss_mark/Initialize(mapload, new_duration, new_color, new_state)
+	if(new_duration)
+		duration = new_duration
+	if(new_color)
+		color = new_color
+	if(new_state)
+		icon_state = new_state
+	return ..()
+
+/// Blinks, for a fuse
+/obj/effect/temp_visual/bounty_boss_mark/proc/blink()
+	animate(src, alpha = 70, time = 2, loop = -1)
+	animate(alpha = 255, time = 2)
+
+/// Flames on the floor, for as long as the fire burns
+/obj/effect/temp_visual/bounty_boss_flames
+	icon = 'icons/effects/fire.dmi'
+	icon_state = "light"
+	layer = ABOVE_OPEN_TURF_LAYER
+	plane = GAME_PLANE
+	duration = 4 SECONDS
+
+/obj/effect/temp_visual/bounty_boss_flames/Initialize(mapload, new_duration)
+	if(new_duration)
+		duration = new_duration
+	icon_state = pick("light", "medium")
+	return ..()
+
+// ===== FIRE =====
+
+/**
+ * A patch of a boss's fire: flames on `turfs` for `lifetime`. Anyone it may hurt who stands in them
+ * is set alight (/datum/status_effect/bounty_boss_burning) every second. Effect-only fire: no gas,
+ * no hotspots, nothing flammable set burning, no fire alarms. Capped at BOUNTY_BOSS_FIRE_POOL_CAP
+ * server-wide.
+ */
+/obj/effect/bounty_boss_fire_pool
+	name = "fire"
+	anchored = TRUE
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	invisibility = INVISIBILITY_ABSTRACT
+	light_range = 3
+	light_power = 1
+	light_color = LIGHT_COLOR_FIRE
+	/// The tiles burning
+	var/list/turfs
+	/// The boss whose fire it is, for who it may hurt
+	var/datum/weakref/boss_ref
+
+/obj/effect/bounty_boss_fire_pool/Initialize(mapload, list/fire_turfs, lifetime, mob/living/basic/bounty_criminal/boss/boss, landing_damage = 0)
+	. = ..()
+	if(length(GLOB.bounty_boss_fire_pools) >= BOUNTY_BOSS_FIRE_POOL_CAP)
+		return INITIALIZE_HINT_QDEL
+	GLOB.bounty_boss_fire_pools += src
+	lifetime = lifetime || 4 SECONDS
+	turfs = list()
+	for(var/turf/spot as anything in fire_turfs)
+		if(isturf(spot) && !isclosedturf(spot))
+			turfs += spot
+	if(!length(turfs))
+		return INITIALIZE_HINT_QDEL
+	boss_ref = boss ? WEAKREF(boss) : null
+	// Invisible, but the light comes from here: sit it where the fire is.
+	var/turf/middle = turfs[round((length(turfs) + 1) / 2)]
+	if(middle != loc)
+		forceMove(middle)
+	for(var/turf/spot as anything in turfs)
+		new /obj/effect/temp_visual/bounty_boss_flames(spot, lifetime)
+	scorch(landing_damage)
+	addtimer(CALLBACK(src, PROC_REF(scorch)), 1 SECONDS, TIMER_LOOP | TIMER_DELETE_ME)
+	addtimer(CALLBACK(src, PROC_REF(burn_out)), lifetime, TIMER_DELETE_ME)
+
+/obj/effect/bounty_boss_fire_pool/Destroy()
+	GLOB.bounty_boss_fire_pools -= src
+	turfs = null
+	boss_ref = null
+	return ..()
+
+/// Whether it may burn `victim`: its boss's rules, or with the boss gone, anyone awake who isn't a criminal
+/obj/effect/bounty_boss_fire_pool/proc/may_burn(mob/living/victim)
+	var/mob/living/basic/bounty_criminal/boss/boss = boss_ref?.resolve()
+	if(!QDELETED(boss))
+		return boss.boss_can_hurt(victim)
+	return isliving(victim) && victim.stat == CONSCIOUS && !istype(victim, /mob/living/basic/bounty_criminal) && !istype(victim, /mob/living/basic/bounty_companion)
+
+/// Sets alight everyone it may burn in the flames, with `damage` burn first if given
+/obj/effect/bounty_boss_fire_pool/proc/scorch(damage = 0)
+	for(var/turf/spot as anything in turfs)
+		for(var/mob/living/victim in spot)
+			if(!may_burn(victim))
+				continue
+			if(damage > 0)
+				victim.apply_damage(damage, BURN, blocked = victim.run_armor_check(null, FIRE, silent = TRUE), spread_damage = TRUE)
+				to_chat(victim, span_userdanger("You're caught in the flames!"))
+			victim.apply_status_effect(/datum/status_effect/bounty_boss_burning)
+
+/obj/effect/bounty_boss_fire_pool/proc/burn_out()
+	qdel(src)
+
+/**
+ * Set alight by a boss's fire: BOUNTY_BOSS_BURNING_DAMAGE burn a second, against fire armour, for
+ * BOUNTY_BOSS_BURNING_TIME, renewed while standing in the flames. Scripted: it never lights the air
+ * or anything else.
+ */
+/datum/status_effect/bounty_boss_burning
+	id = "bounty_boss_burning"
+	duration = BOUNTY_BOSS_BURNING_TIME
+	tick_interval = 1 SECONDS
+	status_type = STATUS_EFFECT_REFRESH
+	alert_type = null
+	/// The flames on them
+	var/mutable_appearance/flames
+
+/datum/status_effect/bounty_boss_burning/on_apply()
+	if(owner.stat == DEAD || HAS_TRAIT(owner, TRAIT_NOFIRE))
+		return FALSE
+	flames = mutable_appearance('icons/mob/effects/onfire.dmi', ishuman(owner) ? "human_small_fire" : "generic_fire", -HIGHEST_LAYER, appearance_flags = RESET_COLOR | KEEP_APART)
+	owner.add_overlay(flames)
+	return TRUE
+
+/datum/status_effect/bounty_boss_burning/tick(seconds_between_ticks)
+	if(owner.stat == DEAD)
+		qdel(src)
+		return
+	owner.apply_damage(BOUNTY_BOSS_BURNING_DAMAGE, BURN, blocked = owner.run_armor_check(null, FIRE, silent = TRUE), spread_damage = TRUE)
+
+/datum/status_effect/bounty_boss_burning/on_remove()
+	if(flames)
+		owner.cut_overlay(flames)
+	flames = null
+
+// ===== THE MIND =====
+
+/**
+ * Its planning: nothing while it is busy or can't act; its target; an ability; the kit's way of
+ * closing in or keeping away; its melee attack; and with nobody in sight, the hunt for the nearest
+ * hunter still on its site.
+ *
+ * TODO(P3 integration): if start_activity() needs a planning subtree to run, add it to the end of
+ * this list, so a boss waiting for hunters does its activity.
+ */
+/datum/ai_controller/basic_controller/bounty_boss
+	blackboard = list(
+		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic/bounty_boss,
+		BB_TARGET_MINIMUM_STAT = CONSCIOUS,
+		BB_AGGRO_RANGE = BOUNTY_BOSS_POSSE_RANGE,
+	)
+	ai_movement = /datum/ai_movement/jps
+	idle_behavior = null
+	planning_subtrees = list(
+		/datum/ai_planning_subtree/bounty_boss_busy,
+		/datum/ai_planning_subtree/bounty_boss_target,
+		/datum/ai_planning_subtree/simple_find_target,
+		/datum/ai_planning_subtree/bounty_boss_abilities,
+		/datum/ai_planning_subtree/bounty_boss_engage,
+		/datum/ai_planning_subtree/basic_melee_attack_subtree,
+		/datum/ai_planning_subtree/bounty_boss_hunt,
+	)
+
+/// Hunters it may hurt, and never anyone already down (C4)
+/datum/targeting_strategy/basic/bounty_boss
+
+/datum/targeting_strategy/basic/bounty_boss/can_attack(mob/living/living_mob, atom/the_target, vision_range)
+	var/mob/living/basic/bounty_criminal/boss/boss = living_mob
+	if(!istype(boss) || !boss.boss_valid_target(the_target))
+		return FALSE
+	return ..()
+
+/// Nothing at all while it winds up, charges or reels, or while it can't act
+/datum/ai_planning_subtree/bounty_boss_busy
+
+/datum/ai_planning_subtree/bounty_boss_busy/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+	var/mob/living/basic/bounty_criminal/boss/boss = controller.pawn
+	if(!istype(boss) || boss.boss_busy || !boss.boss_can_act())
+		return SUBTREE_RETURN_FINISH_PLANNING
+
+/// Drops a target it may no longer go after, and turns on whoever hurt it last when it has none
+/datum/ai_planning_subtree/bounty_boss_target
+
+/datum/ai_planning_subtree/bounty_boss_target/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+	var/mob/living/basic/bounty_criminal/boss/boss = controller.pawn
+	var/datum/targeting_strategy/strategy = GET_TARGETING_STRATEGY(controller.blackboard[BB_TARGETING_STRATEGY])
+	var/atom/current = controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
+	if(current && !strategy?.can_attack(boss, current, BOUNTY_BOSS_POSSE_RANGE))
+		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
+		current = null
+	if(current)
+		return
+	var/mob/living/avenge = boss.boss_revenge_target()
+	if(avenge && strategy?.can_attack(boss, avenge, BOUNTY_BOSS_POSSE_RANGE))
+		controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, avenge)
+
+/// One ability, if one is ready, worth it, and not the one it used last
+/datum/ai_planning_subtree/bounty_boss_abilities
+
+/datum/ai_planning_subtree/bounty_boss_abilities/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+	var/mob/living/basic/bounty_criminal/boss/boss = controller.pawn
+	var/atom/target = controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
+	if(QDELETED(target))
+		return
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/ability = boss.boss_choose_ability(target)
+	if(!ability)
+		return
+	controller.set_blackboard_key(BB_BOUNTY_BOSS_ABILITY, ability)
+	controller.set_blackboard_key(BB_BOUNTY_BOSS_ABILITY_TARGET, target)
+	controller.queue_behavior(/datum/ai_behavior/bounty_boss_ability, BB_BOUNTY_BOSS_ABILITY, BB_BOUNTY_BOSS_ABILITY_TARGET)
+	return SUBTREE_RETURN_FINISH_PLANNING
+
+/datum/ai_behavior/bounty_boss_ability
+
+/datum/ai_behavior/bounty_boss_ability/perform(seconds_per_tick, datum/ai_controller/controller, ability_key, target_key)
+	var/mob/living/basic/bounty_criminal/boss/boss = controller.pawn
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/ability = controller.blackboard[ability_key]
+	var/atom/target = controller.blackboard[target_key]
+	if(QDELETED(ability) || QDELETED(target))
+		return AI_BEHAVIOR_INSTANT | AI_BEHAVIOR_FAILED
+	boss.face_atom(target)
+	return ability.Trigger(target = target) ? (AI_BEHAVIOR_INSTANT | AI_BEHAVIOR_SUCCEEDED) : (AI_BEHAVIOR_INSTANT | AI_BEHAVIOR_FAILED)
+
+/datum/ai_behavior/bounty_boss_ability/finish_action(datum/ai_controller/controller, succeeded, ability_key, target_key)
+	. = ..()
+	controller.clear_blackboard_key(ability_key)
+	controller.clear_blackboard_key(target_key)
+
+/// The kit's own way of fighting: keeping its distance, breaking off
+/datum/ai_planning_subtree/bounty_boss_engage
+
+/datum/ai_planning_subtree/bounty_boss_engage/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+	var/mob/living/basic/bounty_criminal/boss/boss = controller.pawn
+	var/atom/target = controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
+	if(QDELETED(target))
+		return
+	if(boss.boss_engage_plan(controller, target))
+		return SUBTREE_RETURN_FINISH_PLANNING
+
+/**
+ * Nobody in sight while hostile: it goes after the nearest hunter still on its site, looking again
+ * every BOUNTY_BOSS_HUNT_INTERVAL. With nobody on the site for BOUNTY_BOSS_CALM_TIME it calms down.
+ */
+/datum/ai_planning_subtree/bounty_boss_hunt
+
+/datum/ai_planning_subtree/bounty_boss_hunt/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+	var/mob/living/basic/bounty_criminal/boss/boss = controller.pawn
+	if(!boss.boss_hostile || controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET))
+		return
+	var/mob/living/prey = controller.blackboard[BB_BOUNTY_BOSS_PREY]
+	if(world.time >= controller.blackboard[BB_BOUNTY_BOSS_HUNT_AT] || QDELETED(prey) || !boss.boss_valid_target(prey))
+		controller.set_blackboard_key(BB_BOUNTY_BOSS_HUNT_AT, world.time + BOUNTY_BOSS_HUNT_INTERVAL)
+		prey = boss.boss_nearest_hunter()
+		if(prey)
+			controller.set_blackboard_key(BB_BOUNTY_BOSS_PREY, prey)
+			boss.boss_calm_at = world.time + BOUNTY_BOSS_CALM_TIME
+		else
+			controller.clear_blackboard_key(BB_BOUNTY_BOSS_PREY)
+			if(world.time >= boss.boss_calm_at)
+				boss.boss_calm_down()
+	if(QDELETED(prey))
+		return
+	controller.queue_behavior(/datum/ai_behavior/travel_towards/adjacent, BB_BOUNTY_BOSS_PREY)
+	return SUBTREE_RETURN_FINISH_PLANNING
+
+// ===== LOOKS =====
+
+/// A mini-boss's look before its kit's: plain dark clothes
+/datum/outfit/bounty_boss
+	name = "Bounty mini-boss"
+	uniform = /obj/item/clothing/under/color/black
+	shoes = /obj/item/clothing/shoes/jackboots
+	gloves = /obj/item/clothing/gloves/color/black
+
+#undef BOUNTY_BOSS_BUSY_TRAIT

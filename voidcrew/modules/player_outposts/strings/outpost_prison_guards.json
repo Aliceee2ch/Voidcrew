@@ -602,6 +602,26 @@
 				"{place}! Don't let them get away!"
 			]
 		},
+		"loose_nearly": {
+			"any": [
+				"We're about to lose {prisoner}!",
+				"Someone stop {prisoner}, they're nearly gone!",
+				"{place}! We're about to lose {prisoner}!",
+				"Don't let {prisoner} get away! Last seen in {place}!"
+			],
+			"by_the_book": [
+				"All staff, {prisoner} about to get away!",
+				"Runner nearly clear! Stop {prisoner}, last seen in {place}!"
+			],
+			"hard_nosed": [
+				"We're losing {prisoner}. Somebody move!",
+				"{place}, now, or we lose {prisoner}!"
+			],
+			"tired": [
+				"Pretty sure we're about to lose {prisoner}.",
+				"Someone should really go get {prisoner}. They're nearly gone."
+			]
+		},
 		"creature_flee": {
 			"any": [
 				"Not my job. I'm staying in the office.",

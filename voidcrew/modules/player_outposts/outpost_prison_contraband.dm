@@ -365,12 +365,9 @@
 		source.balloon_alert(user, "members only")
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(source.has_buckled_mobs())
-		// A prisoner lying on it can be told to get up from the talk menu, or shaken awake.
+		// A prisoner lying on it can be told to get up from the talk menu, or shaken awake; the balloon only says who is in the way.
 		var/mob/living/basic/outpost_prisoner/lying = locate() in source.buckled_mobs
-		var/why = "someone's lying on it"
-		if(lying)
-			why = lying.activity?.sleeping ? "shake them awake" : "tell them to get up"
-		source.balloon_alert(user, why)
+		source.balloon_alert(user, lying?.activity?.sleeping ? "someone's asleep on it" : "someone's lying on it")
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	INVOKE_ASYNC(src, PROC_REF(contraband_search_mattress), user, source)
 	return COMPONENT_CANCEL_ATTACK_CHAIN
@@ -420,8 +417,7 @@
 		source.balloon_alert(user, "members only")
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(source.has_buckled_mobs())
-		var/mob/living/basic/outpost_prisoner/sitting = locate() in source.buckled_mobs
-		source.balloon_alert(user, sitting ? "tell them to get up" : "someone's sitting on it")
+		source.balloon_alert(user, "someone's sitting on it")
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	INVOKE_ASYNC(src, PROC_REF(contraband_search_cistern), user, source)
 	return COMPONENT_CANCEL_ATTACK_CHAIN

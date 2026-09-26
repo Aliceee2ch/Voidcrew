@@ -84,7 +84,7 @@
 	var/list/used = list("arrival", "post", "rounds_start", "rounds_clear", "yard_comment", "coffee", "check_on",
 		"check_on_hungry", "check_on_dirty", "check_on_hurt", "report_hatch", "report_restless", "report_hurt",
 		"report_dark", "report_all_good", "greet_owner", "greet_member", "spat_stop", "argue_stop", "fight_stop",
-		"threat_stop", "climb_stop", "riot_call", "riot_hold", "follow_member", "fallback", "loose_call",
+		"threat_stop", "climb_stop", "riot_call", "riot_hold", "follow_member", "fallback", "loose_call", "loose_nearly",
 		"creature_flee", "downed", "recalled", "unpaid", "dismissed", "attacked_by_player")
 	for(var/context in used)
 		TEST_ASSERT(islist(guard_lines[context]), "The guards have no [context] lines")
@@ -166,6 +166,13 @@
 	var/mob/living/basic/outpost_prisoner/prisoner = test_prisoner(prison, prison_spot(home, 8, 8))
 	TEST_ASSERT(!may_use_outpost_prison_staff_door(door, prisoner), "A staff door let a prisoner through")
 
+	// A runner about to get away: the guard on duty calls it out by name, with no clock, and the log and the crew get their words.
+	TEST_ASSERT(prison.call_out_nearly_away(list(prisoner)), "Nobody called out a runner about to get away")
+	TEST_ASSERT(guard_test_is_line(officer.last_line, "loose_nearly"), "The guard's call was [officer.last_line]")
+	TEST_ASSERT(findtext(officer.last_line, prisoner.speech_name()), "The guard's call does not name the runner: [officer.last_line]")
+	var/list/called_line = prison.entries[1]
+	TEST_ASSERT(findtext(called_line["text"], officer.last_line), "The guard's call was not logged: [called_line["text"]]")
+
 	// A sergeant next; a third post does not exist, and asking costs nothing.
 	prison.guards_act("guard_hire", list(), owner)
 	TEST_ASSERT_EQUAL(length(prison.guard_records), 2, "A second guard was refused")
@@ -180,8 +187,10 @@
 	TEST_ASSERT(!block["can_hire"], "The hire button was offered with both posts filled")
 	TEST_ASSERT_EQUAL(length(block["list"]), 2, "The console does not list both guards")
 	var/list/row = block["list"][1]
-	for(var/key in list("ref", "name", "rank", "status", "back_in"))
+	for(var/key in list("ref", "name", "rank", "status"))
 		TEST_ASSERT(key in row, "A guard's console row has no [key]")
+	TEST_ASSERT(!("back_in" in row), "A guard's console row still says when they are back")
+	TEST_ASSERT(!("unpaid" in block), "The guards block still counts missed wages")
 
 	// Dismissal: managers only, no refund, and the guard walks out.
 	var/mob/living/basic/outpost_prison_guard/sergeant = second.guard

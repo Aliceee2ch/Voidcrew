@@ -272,21 +272,24 @@
 	var/datum/bounty_record/due = make_record(2, "normal", "Dana Notice")
 	pool(due, prison, 0)
 	TEST_ASSERT_EQUAL(prison.bounty_update_notice(), due, "The wing's next bounty arrival was not named with an arrival 20 s off")
-	TEST_ASSERT(logged(prison, "Bounty transfer due: Dana Notice, Wanted"), "Naming the next bounty arrival left no log line")
+	TEST_ASSERT(logged(prison, "Bounty transfer due: Dana Notice."), "Naming the next bounty arrival left no log line")
+	TEST_ASSERT(!logged(prison, "Dana Notice, Wanted"), "The log names a Wanted arrival's tier")
 	var/list/console = prison.bounty_console_payload(null)
-	var/list/next_block = console["next"]
-	TEST_ASSERT(islist(next_block), "The console does not name the next bounty arrival")
-	TEST_ASSERT_EQUAL(next_block["name"], "Dana Notice", "The console names [next_block["name"]] as the next bounty arrival")
-	TEST_ASSERT_EQUAL(next_block["tier"], "Wanted", "The console gives the next bounty arrival's tier as [next_block["tier"]]")
 	// The arrival 20 s off comes before the minute's notice has run: an ordinary prisoner, then them.
-	TEST_ASSERT_NULL(next_block["in"], "The console counts down to an arrival that isn't theirs")
-	TEST_ASSERT(next_block["after_next"], "The console does not say they come after the next arrival")
+	// The console names nobody until the next arrival is theirs.
+	TEST_ASSERT_NULL(console["next"], "The console names a bounty arrival that isn't the next one")
 	TEST_ASSERT_EQUAL(console["setting"], "all", "The console does not show the bounty setting")
+	for(var/key in list("count", "max"))
+		TEST_ASSERT(!(key in console), "The console's bounty block still sends [key]")
 	// The lane's next arrival once the notice has run is that prisoner.
 	due.prison_notice_at = world.time - 61 SECONDS
-	next_block = prison.bounty_console_payload(null)["next"]
+	var/list/next_block = prison.bounty_console_payload(null)["next"]
+	TEST_ASSERT(islist(next_block), "The console does not name the next bounty arrival once it is theirs")
+	TEST_ASSERT_EQUAL(next_block["name"], "Dana Notice", "The console names [next_block["name"]] as the next bounty arrival")
+	TEST_ASSERT(!next_block["most_wanted"], "The console calls a Wanted arrival Most Wanted")
 	TEST_ASSERT_EQUAL(next_block["in"], 20, "Once the notice has run the console counts [next_block["in"]] s, not the 20 s to the arrival")
-	TEST_ASSERT(!next_block["after_next"], "Once the notice has run the console still puts them after the next arrival")
+	for(var/key in list("tier", "level", "after_next"))
+		TEST_ASSERT(!(key in next_block), "The console's next bounty arrival still sends [key]")
 	var/mob/living/basic/outpost_prisoner/arrival = prison.admit_next(FALSE, 1)
 	TEST_ASSERT_NOTNULL(arrival, "Nobody arrived into a ready cell")
 	TEST_ASSERT_EQUAL(arrival.bounty_record, due, "The named record's prisoner did not arrive")
@@ -305,6 +308,7 @@
 	prison.arrival_gap = 20
 	TEST_ASSERT_EQUAL(prison.bounty_update_notice(), dropped, "The record was not named again")
 	TEST_ASSERT_EQUAL(log_count(prison, "Bounty transfer due: Rhea Twice"), 1, "Naming the same record to the same wing twice logged it [log_count(prison, "Bounty transfer due: Rhea Twice")] times")
+	TEST_ASSERT(logged(prison, "Bounty transfer due: Rhea Twice, Most Wanted."), "The log does not say a Most Wanted arrival is one")
 	prison.set_intake(FALSE)
 	bounty_pool_remove(dropped)
 
@@ -446,15 +450,19 @@
 		var/list/badge = row["bounty"]
 		if(row["name"] == "Vesna Kade")
 			TEST_ASSERT(islist(badge), "A bounty prisoner's roster row has no badge")
-			TEST_ASSERT_EQUAL(badge["tier"], "Wanted", "The badge reads [badge["tier"]]")
-			TEST_ASSERT_EQUAL(badge["mult"], 2, "The badge shows x[badge["mult"]]") // OUTPOST_PRISON_BOUNTY_MULT_WANTED
+			TEST_ASSERT(!badge["most_wanted"], "A Wanted prisoner's badge says Most Wanted")
+			for(var/key in list("tier", "level", "mult"))
+				TEST_ASSERT(!(key in badge), "The badge still sends [key]")
 			TEST_ASSERT_EQUAL(badge["wanted_for"], "wanted for arson", "The badge's line reads [badge["wanted_for"]]")
 			badges++
+		else if(row["name"] == "Oren Vask")
+			TEST_ASSERT(islist(badge) && badge["most_wanted"], "A Most Wanted prisoner's badge does not say so")
 		else if(row["name"] == ordinary.real_name)
 			TEST_ASSERT_NULL(badge, "An ordinary prisoner has a bounty badge")
 	TEST_ASSERT_EQUAL(badges, 1, "The roster showed the Wanted prisoner's badge [badges] times")
-	TEST_ASSERT_EQUAL(prison.bounty_examine(wanted, null), "A Wanted bounty. The crew of the Meridian brought him in.", "The examine line reads [prison.bounty_examine(wanted, null)]")
-	TEST_ASSERT_EQUAL(prison.bounty_examine(boss, null), "A Most Wanted bounty, wanted for smuggling.", "The examine line with no captor reads [prison.bounty_examine(boss, null)]")
+	TEST_ASSERT_EQUAL(prison.bounty_examine(wanted, null), "Brought in on a bounty by the crew of the Meridian.", "The examine line reads [prison.bounty_examine(wanted, null)]")
+	TEST_ASSERT_EQUAL(prison.bounty_examine(boss, null), "Most Wanted, for smuggling.", "The examine line with no captor reads [prison.bounty_examine(boss, null)]")
+	TEST_ASSERT_EQUAL(prison.bounty_examine(meek, null), "Brought in on a bounty.", "A Petty prisoner's examine line with no captor reads [prison.bounty_examine(meek, null)]")
 	TEST_ASSERT_NULL(prison.bounty_examine(ordinary, null), "An ordinary prisoner has a bounty examine line")
 
 	// Bounty transfers from the warden console (extras_act() -> bounty_warden_act()): managers only.
@@ -471,7 +479,7 @@
 	TEST_ASSERT_EQUAL(prison.prison_bounty_intake, "none", "The owner could not change bounty transfers") // BOUNTY_PRISON_INTAKE_NONE
 	prison.set_bounty_intake("all")
 
-	// Pay: x1.5 / x2 / x2.5 on the rate and the release bonus; pay_percent stays a share.
+	// Pay: x1.5 / x2 / x2.5 on the rate and the release bonus; the share of full pay stays a share.
 	TEST_ASSERT_EQUAL(prison.bounty_pay_mult(meek), 1.5, "A Petty prisoner pays x[prison.bounty_pay_mult(meek)]") // OUTPOST_PRISON_BOUNTY_MULT_PETTY
 	TEST_ASSERT_EQUAL(prison.bounty_pay_mult(wanted), 2, "A Wanted prisoner pays x[prison.bounty_pay_mult(wanted)]") // OUTPOST_PRISON_BOUNTY_MULT_WANTED
 	TEST_ASSERT_EQUAL(prison.bounty_pay_mult(boss), 2.5, "A Most Wanted prisoner pays x[prison.bounty_pay_mult(boss)]") // OUTPOST_PRISON_BOUNTY_MULT_MOST_WANTED
@@ -479,7 +487,8 @@
 	var/ordinary_rate = prison.prisoner_pay_rate(ordinary)
 	TEST_ASSERT(ordinary_rate > 0, "A well-kept ordinary prisoner earns nothing")
 	TEST_ASSERT(abs(prison.prisoner_pay_rate(wanted) - 2 * ordinary_rate) < 0.001, "A Wanted prisoner earns [prison.prisoner_pay_rate(wanted)] a minute, not twice [ordinary_rate]")
-	TEST_ASSERT(prison.pay_percent() <= 100, "The wing's share of full pay went past 100%")
+	for(var/mob/living/basic/outpost_prisoner/bounty_payer as anything in list(meek, wanted, boss))
+		TEST_ASSERT(prison.pay_factor(bounty_payer) <= 1, "[bounty_payer]'s share of full pay went past all of it: [prison.pay_factor(bounty_payer)]")
 	wanted.served_seconds = 100
 	wanted.kept_seconds = 50
 	ordinary.served_seconds = 100

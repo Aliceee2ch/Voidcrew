@@ -188,11 +188,10 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 
 // ===== THE PRISON: CONSOLES =====
 
-/// The warden console's "extras" block (section 8 of the build plan)
+/// The warden console's "extras" block: the guards. Mail is on the office floor and in the log, not the console.
 /datum/outpost_prison/proc/extras_payload(mob/user)
 	return list(
 		"guards" = guards_payload(user),
-		"mail" = mail_payload(user),
 	)
 
 /// A warden console action a package handles (guards, bounty transfers); TRUE if one did

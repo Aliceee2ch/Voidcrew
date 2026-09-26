@@ -74,9 +74,9 @@
 
 /// The menu's own choices, as the radial names them
 #define PRISON_TALK_HOW "How are you doing?"
-#define PRISON_TALK_CRIME "Crime"
+#define PRISON_TALK_CRIME "What are you in for?"
 /// Back to their cell; not offered in cuffs
-#define PRISON_TALK_CELL "Home"
+#define PRISON_TALK_CELL "Back to your cell"
 /// Offered only while they lie, sit or crouch
 #define PRISON_TALK_GET_UP "Get up"
 /// A talk-down (talk_down()), offered while they will listen

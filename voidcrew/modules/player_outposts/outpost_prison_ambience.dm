@@ -53,7 +53,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_examine_placeholders, list("{They}", "{they}",
 		for(var/line in prison.examine_extra_lines(src, user))
 			. += span_notice(line)
 
-/// A closer look: what they are in for, their cell, and roughly how long they have left
+/// A closer look: what they are in for, their cell, roughly how long they have left, and their birthday until the yard has had the cake
 /mob/living/basic/outpost_prisoner/examine_more(mob/user)
 	. = ..()
 	if(stat == DEAD || !prison)
@@ -64,6 +64,9 @@ GLOBAL_LIST_INIT(outpost_prisoner_examine_placeholders, list("{They}", "{they}",
 		. += span_notice("Cell [cell.number].")
 	if(phase == PRISONER_PRESENT && sentence_left > 0)
 		. += span_notice("[capitalize(sentence_examine_text())] left on [p_their()] sentence.")
+	// outpost_prison_life.dm
+	if(has_birthday && !party_done)
+		. += span_notice("It's [p_their()] birthday today.")
 
 /// "a few minutes" or "about 25 minutes": their sentence left, rounded to OUTPOST_PRISONER_EXAMINE_ROUND_MINUTES
 /mob/living/basic/outpost_prisoner/proc/sentence_examine_text()

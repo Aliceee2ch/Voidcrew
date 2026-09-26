@@ -364,7 +364,7 @@
 	TEST_ASSERT_NULL(prison.arrival_countdown, "The console shows an arrival due with only the unstaffed extension cells free")
 	var/logged = FALSE
 	for(var/list/entry as anything in prison.entries)
-		if(findtext(entry["text"], "extension cells take no new prisoners"))
+		if(findtext(entry["text"], "Extension cells closed to transfers: no staff on hand."))
 			logged = TRUE
 	TEST_ASSERT(logged, "The warden's log does not say the extension cells wait for staff")
 
@@ -377,7 +377,7 @@
 	TEST_ASSERT_EQUAL(length(prison.prisoners), 6, "Within the grace the extension cells took [length(prison.prisoners) - 4] prisoners, not one per lane")
 	logged = FALSE
 	for(var/list/entry as anything in prison.entries)
-		if(findtext(entry["text"], "extension cells take new prisoners again"))
+		if(findtext(entry["text"], "Extension cells open to transfers again."))
 			logged = TRUE
 	TEST_ASSERT(logged, "The warden's log does not say the extension cells take prisoners again")
 	// With someone home the grace starts again from now.

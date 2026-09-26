@@ -215,7 +215,7 @@
 	prisoner.death_blamed = TRUE
 	note_staff_blamed(prisoner, "killed")
 	if(!prisoner.experiment_subject)
-		add_log("[prisoner.real_name]'s death was put down to staff.")
+		add_log("The yard blames staff for [prisoner.real_name]'s death.")
 	return trouble_event(PRISON_SPIKE_KILLED, "[prisoner.real_name] was killed by staff")
 
 /// Whether a prisoner's mood counts toward the wing's tension: present, alive and not loose
@@ -270,16 +270,19 @@
 	if(riot_hold >= PRISON_RIOT_HOLD)
 		start_riot("tension boiled over")
 
-/// The wing turned restless: the warden's log says so and why, at most every PRISON_RESTLESS_ANNOUNCE_GAP
+/**
+ * The wing turned restless: the warden's log says so, at most every PRISON_RESTLESS_ANNOUNCE_GAP.
+ * Not why: the guards say the worst of it aloud (guard_report()), and prisoners answer "How are
+ * you doing?".
+ */
 /datum/outpost_prison/proc/note_restless()
 	if(!COOLDOWN_FINISHED(src, restless_announce_cooldown))
 		return FALSE
 	COOLDOWN_START(src, restless_announce_cooldown, PRISON_RESTLESS_ANNOUNCE_GAP)
-	var/list/causes = restless_causes()
-	add_log(length(causes) ? "The prisoners are restless: [jointext(causes, ", ")]." : "The prisoners are restless.")
+	add_log("The prisoners are restless.")
 	return TRUE
 
-/// What the wing is unhappy about, in a few words each: "3 hungry", "dirty floor", ...
+/// What the wing is unhappy about, in a few words each: "3 hungry", "dirty floor", ... For the guards' reports.
 /datum/outpost_prison/proc/restless_causes()
 	var/hungry = 0
 	var/dirty = 0
@@ -1169,24 +1172,28 @@
 
 /**
  * The warden console's alarm banner: list(alarm, text). In order: a breakout, an escape, a riot,
- * a riot imminent, a hatch someone is waiting at with nothing on it.
+ * a riot brewing, a hatch someone is waiting at with nothing on it. The loose are named with where
+ * they were last seen: "Loose: Tom Hale (Cargo Bay)".
  */
 /datum/outpost_prison/proc/alarm_state()
-	var/loose = loose_count()
-	var/loose_text = "[loose] prisoner[loose == 1 ? "" : "s"] loose"
-	if(breaking_out || (loose && broke_out))
-		return list("breakout", loose ? loose_text : "Prisoners breaking out")
-	if(loose)
+	var/list/sightings = list()
+	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
+		if(prisoner.trouble == PRISONER_TROUBLE_LOOSE && prisoner.phase == PRISONER_PRESENT && prisoner.stat != DEAD)
+			sightings += "[prisoner.real_name] ([get_area_name(prisoner)])"
+	var/loose_text = length(sightings) ? "Loose: [jointext(sightings, ", ")]" : null
+	if(breaking_out || (loose_text && broke_out))
+		return list("breakout", loose_text || "Prisoners breaking out")
+	if(loose_text)
 		return list("escape", loose_text)
 	if(riot_active)
 		return list("riot", "Riot in the yard")
 	if(riot_imminent)
-		return list("riot_imminent", "Riot imminent")
+		return list("riot_imminent", "Riot brewing")
 	if(hatch_shortage())
 		return list("hatch_empty", "Hatch empty")
 	return list(null, null)
 
-/// The warden console's trouble block: the stage, tension, the riot's clocks and who is on a loose clock where
+/// The trouble block for the admin panel and tests: the stage, tension, the riot's clocks and who is on a loose clock where
 /datum/outpost_prison/proc/trouble_payload()
 	var/list/loose = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
@@ -1237,13 +1244,16 @@
 /**
  * The loose clocks of breakout rioters and loose prisoners. Once started they run whatever the
  * crew does and wherever the prisoner is, except that a caught prisoner's clock waits: a loose
- * one's while cuffed, a breakout rioter's while not free (down, cuffed or shut in a cell). The
- * crew is told where each one is with PRISON_LOOSE_PING_1 and PRISON_LOOSE_PING_2 seconds left,
- * and at 0 they are gone for good. An experiment's subject (held_for_experiment()) is not: their
- * clock stops just short of 0 and they stay, loose, until the experiment is over.
+ * one's while cuffed, a breakout rioter's while not free (down, cuffed or shut in a cell). With
+ * PRISON_LOOSE_PING_1 seconds left the crew is told who is still loose and where; with
+ * PRISON_LOOSE_PING_2 left a guard, or the wing's announcement, calls out that they are about to
+ * get away (call_out_nearly_away()). Neither says how long. At 0 they are gone for good. An
+ * experiment's subject (held_for_experiment()) is not: their clock stops just short of 0 and they
+ * stay, loose, until the experiment is over.
  */
 /datum/outpost_prison/proc/loose_tick(seconds)
-	var/list/pings = list()
+	var/list/still_loose = list()
+	var/list/nearly_away = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners.Copy())
 		if(QDELETED(prisoner) || prisoner.phase != PRISONER_PRESENT || prisoner.stat == DEAD || prisoner.loose_left <= 0)
 			continue
@@ -1259,15 +1269,13 @@
 		if(prisoner.loose_left <= 0)
 			escaped_for_good(prisoner)
 			continue
-		for(var/mark in list(PRISON_LOOSE_PING_2, PRISON_LOOSE_PING_1))
-			if(before > mark && prisoner.loose_left <= mark)
-				var/key = "[mark]"
-				var/list/names = pings[key] || list()
-				names += "[prisoner.real_name] ([get_area_name(prisoner)])"
-				pings[key] = names
-				break
-	for(var/key in pings)
-		announce("Prison wing: [english_list(pings[key])] will get away in [DisplayTimeText(text2num(key) SECONDS)].", SHIP_NOTIFY_DANGER)
+		if(before > PRISON_LOOSE_PING_2 && prisoner.loose_left <= PRISON_LOOSE_PING_2)
+			nearly_away += prisoner
+		else if(before > PRISON_LOOSE_PING_1 && prisoner.loose_left <= PRISON_LOOSE_PING_1)
+			still_loose += "[prisoner.real_name] ([get_area_name(prisoner)])"
+	if(length(still_loose))
+		announce("Prison wing: [english_list(still_loose)] still loose.", SHIP_NOTIFY_DANGER)
+	call_out_nearly_away(nearly_away)
 
 /**
  * Out of the cell block: loose on the outpost patrol AI, with their clock running. `breakout`

@@ -91,7 +91,8 @@
 	set_health_percent(other, 46)
 	TEST_ASSERT(abs(other.care() - 82) < 0.01, "Fed, clean and at 46% health came to care [other.care()], not 82")
 	TEST_ASSERT(abs(prison.pay_factor(other) - 0.48 * conditions) < 0.001, "Care 82 paid [prison.pay_factor(other)], not 0.48 of full")
-	TEST_ASSERT_EQUAL(prison.pay_percent(), round(100 * (conditions + 0.48 * conditions) / 2), "The console pay percent is [prison.pay_percent()]")
+	var/mean_share = (prison.pay_factor(kept) + prison.pay_factor(other)) / 2
+	TEST_ASSERT(abs(mean_share - (conditions + 0.48 * conditions) / 2) < 0.001, "The wing's mean share of full pay is [mean_share]")
 	set_health_percent(other, 100)
 
 	// A stained arrival pays short until they change; about 0.67 once uniforms go filthy at 80.
@@ -133,11 +134,21 @@
 	TEST_ASSERT_EQUAL(prison.pay_factor(other), 0, "A prisoner in the beam earned pay")
 	other.phase = "present"
 
-	// The roster names the new states.
+	// The roster names the new states. Shut in a cell is "confined" (Locked in) whatever the
+	// reason, not only once it stops their pay; a long lock-in alone is not.
 	var/list/statuses = list()
 	kept.locked_in_seconds = 121
-	statuses["confined"] = prison.roster_status(kept)
+	TEST_ASSERT_EQUAL(prison.roster_status(kept), "present", "A prisoner in the yard with a long lock-in behind them is listed as [prison.roster_status(kept)]")
 	kept.locked_in_seconds = 0
+	var/turf/kept_spot = kept.loc
+	var/datum/outpost_prison_cell/kept_cell = kept.cell
+	kept.forceMove(kept_cell.arrival_turf())
+	capture_bolt(prison, kept_cell)
+	TEST_ASSERT(kept.is_confined(), "The prisoner is not shut in their bolted cell")
+	statuses["confined"] = prison.roster_status(kept)
+	capture_bolt(prison, kept_cell, FALSE)
+	kept.forceMove(kept_spot)
+	prison.refresh_reach()
 	kept.experiment_subject = TRUE
 	statuses["subject"] = prison.roster_status(kept)
 	kept.experiment_subject = FALSE
@@ -254,7 +265,6 @@
 	TEST_ASSERT(!prison.intake_open, "The console opened intake with the treasury in debt")
 	var/list/data = console.ui_data(owner)
 	TEST_ASSERT_EQUAL(data["intake_state"], "debt", "Intake in debt shows as [data["intake_state"]]")
-	TEST_ASSERT(findtext(data["intake_note"], "325"), "The intake note does not give the debt: [data["intake_note"]]")
 	TEST_ASSERT_EQUAL(data["debt"], 325, "The console shows [data["debt"]] cr of debt")
 	// Open intake stops taking arrivals as soon as a debt appears, and goes on once it is paid.
 	treasury.account_debt = 0
@@ -315,7 +325,6 @@
 	TEST_ASSERT(!prison.intake_open && prison.intake_suspended, "Two lost prisoners did not suspend transfers")
 	data = console.ui_data(owner)
 	TEST_ASSERT_EQUAL(data["intake_state"], "suspended", "Suspended intake shows as [data["intake_state"]]")
-	TEST_ASSERT(findtext(data["intake_note"], "2 prisoners"), "The suspension note does not say why: [data["intake_note"]]")
 	var/list/newest = prison.entries[1]
 	TEST_ASSERT(findtext(newest["text"], "suspended"), "The suspension was not logged: [newest["text"]]")
 	console_act(console, visitor, "toggle_intake")
@@ -337,16 +346,11 @@
 	TEST_ASSERT_EQUAL(prison.visitors_allowed, !visitors_before, "The owner could not change the visitor setting")
 	TEST_ASSERT_EQUAL(console.ui_data(owner)["visitors_allowed"], prison.visitors_allowed, "The console shows the wrong visitor setting")
 
-	// The money block adds it up: paid in, spent, fined, and what is left.
-	prison.note_spending(25, "Prison ration")
-	prison.note_spending(-5, "Nonsense")
-	TEST_ASSERT_EQUAL(prison.spent_total, 25, "Spending came to [prison.spent_total], not 25")
-	var/list/money = console.ui_data(owner)["money"]
-	TEST_ASSERT_EQUAL(money["paid"], prison.paid_total, "The console's paid total is wrong")
-	TEST_ASSERT_EQUAL(money["spent"], 25, "The console's spent total is wrong")
-	TEST_ASSERT_EQUAL(money["fined"], prison.fined_total, "The console's fined total is wrong")
-	TEST_ASSERT_EQUAL(money["net"], prison.paid_total - 25 - prison.fined_total, "The console's net is wrong")
+	// Every fine is counted, and none of the money shows on the console but the debt.
 	TEST_ASSERT_EQUAL(prison.fined_total, 1000 + 1000 + 2500 + 1000 + 1000, "The fined total is [prison.fined_total]")
+	var/list/owner_data = console.ui_data(owner)
+	for(var/key in list("money", "pay_rate", "pay_percent", "paid_total"))
+		TEST_ASSERT(!(key in owner_data), "The warden console still sends [key]")
 	settle_prison_air(home)
 
 // ===== CELLS, ARRIVALS, RELEASES AND THE CONSOLE =====
@@ -378,24 +382,21 @@
 		TEST_ASSERT_EQUAL(cell.arrival_turf(), get_turf(cell.bed()), "Cell [number] does not deliver to its bed")
 	TEST_ASSERT_NOTNULL(locate(/obj/item/toy/basketball) in prison_spot(home, 9, 9), "The ball is not where the intake pad was")
 
-	// The console sends every key OutpostPrison.tsx reads (consolidated.md section 7).
+	// The console sends every key OutpostPrison.tsx reads, and none of the rules behind them: no
+	// pay, conditions, hatch stock, tension or clocks (a player works those out on the wing).
 	var/list/data = console.ui_data(visitor)
-	for(var/key in list("linked", "powered", "intake_open", "intake_state", "intake_note", "next_arrival", "capacity", "pay_rate", "pay_percent", "paid_total", "money", "debt", "visitors_allowed", "can_manage", "can_pay_debt", "conditions", "hatch", "trouble", "prisoners", "log", "alarm", "alarm_text"))
+	for(var/key in list("linked", "powered", "on_battery", "intake_open", "intake_state", "next_arrival", "capacity", "debt", "visitors_allowed", "can_manage", "can_pay_debt", "trouble", "prisoners", "log", "alarm", "alarm_text"))
 		TEST_ASSERT(key in data, "The warden console sends no [key]")
-	for(var/key in list("paid", "spent", "fined", "net"))
-		TEST_ASSERT(key in data["money"], "The console's money has no [key]")
-	for(var/key in list("clean", "lit", "powered", "score", "mess_spots", "dark_cells", "battery"))
-		TEST_ASSERT(key in data["conditions"], "The console's conditions have no [key]")
-	for(var/key in list("meals", "clean_suits", "dirty_suits", "capacity", "lasts_minutes"))
-		TEST_ASSERT(key in data["hatch"], "The console's hatch stock has no [key]")
-	for(var/key in list("stage", "tension", "subdued_left", "riot_imminent", "breakout_in", "loose"))
-		TEST_ASSERT(key in data["trouble"], "The console's trouble block has no [key]")
+	for(var/key in list("intake_note", "pay_rate", "pay_percent", "paid_total", "money", "conditions", "hatch"))
+		TEST_ASSERT(!(key in data), "The warden console still sends [key]")
+	var/list/trouble = data["trouble"]
+	TEST_ASSERT_EQUAL(length(trouble), 1, "The console's trouble block sends [length(trouble)] fields, not the stage alone")
+	TEST_ASSERT_EQUAL(trouble["stage"], prison.stage, "The console's trouble block shows the stage as [trouble["stage"]]")
 	TEST_ASSERT(data["linked"], "The warden console is not linked to its prison")
 	TEST_ASSERT(!data["can_manage"], "A visitor could manage the prison")
 	TEST_ASSERT_EQUAL(data["capacity"], 4, "The prison does not hold 4") // OUTPOST_PRISON_CAPACITY
 	TEST_ASSERT_NULL(data["next_arrival"], "An arrival was due with intake closed")
 	TEST_ASSERT_EQUAL(data["intake_state"], "closed", "Closed intake shows as [data["intake_state"]]")
-	TEST_ASSERT_NULL(data["intake_note"], "Closed intake has a note: [data["intake_note"]]")
 	TEST_ASSERT_EQUAL(data["debt"], 0, "A new treasury shows a debt")
 
 	// Only managers open intake; the first prisoner is due in 5 seconds (OUTPOST_PRISON_FIRST_ARRIVAL).
@@ -443,13 +444,13 @@
 	// (voidcrew_outpost_prison_arrival_gap tests the gap between arrivals).
 	prison.arrival_gap = 0
 
-	// The roster: name, cell, crime, time left, a birthday mark and a bounty badge, in cell order, and nothing about their needs.
+	// The roster: name, cell, crime, time left and a bounty badge, in cell order, and nothing about their needs or birthdays.
 	var/list/roster = console.ui_data(owner)["prisoners"]
 	TEST_ASSERT_EQUAL(length(roster), 4, "The console roster does not list every prisoner")
 	for(var/i in 1 to 4)
 		var/list/row = roster[i]
-		TEST_ASSERT_EQUAL(length(row), 8, "A roster row sends [length(row)] fields, not 8")
-		for(var/key in list("ref", "name", "cell", "crime", "sentence_left", "status", "birthday", "bounty"))
+		TEST_ASSERT_EQUAL(length(row), 7, "A roster row sends [length(row)] fields, not 7")
+		for(var/key in list("ref", "name", "cell", "crime", "sentence_left", "status", "bounty"))
 			TEST_ASSERT(key in row, "The console roster sends no [key]")
 		TEST_ASSERT_NULL(row["bounty"], "An ordinary prisoner has a bounty badge")
 		TEST_ASSERT_EQUAL(row["cell"], i, "The roster is not in cell order")

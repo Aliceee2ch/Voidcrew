@@ -728,10 +728,6 @@ GLOBAL_LIST_INIT(outpost_prison_mail_kinds, list(
 		return list("mail_waiting", null, staff_name ? list("{staff}" = staff_name) : null)
 	return null
 
-/// The warden console's "mail" block: {waiting}
-/datum/outpost_prison/proc/mail_payload(mob/user)
-	return list("waiting" = length(mail_waiting_letters()))
-
 /// A prisoner is leaving: their undelivered letters go
 /datum/outpost_prison/proc/mail_prisoner_leaving(mob/living/basic/outpost_prisoner/prisoner)
 	for(var/obj/item/paper/outpost_prison_letter/letter in mail_waiting_letters())

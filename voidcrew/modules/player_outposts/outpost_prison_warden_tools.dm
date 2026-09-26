@@ -9,12 +9,12 @@
  *
  * - "Calm down", offered while they will listen (will_listen()): the talk-down in
  *   outpost_prison_trouble.dm, which ends a threat or an argument and lifts mood.
- * - "How are you doing?", "Crime" and "Home" are a short talk face to face
+ * - "How are you doing?", "What are you in for?" and "Back to your cell" are a short talk face to face
  *   (PRISON_TALK_MENU_TIME), which holds their routine and any threat as a talk-down does, and
  *   nobody in trouble or below PRISONER_TALK_MIN_MOOD will have it.
  * - "How are you doing?": their biggest complaint, or that they're fine. No mood change.
- * - "Crime": what they're in for, and a small lift the first time in a stay.
- * - "Home": back to their cell, a request, not an order they must obey. At or above their line (by
+ * - "What are you in for?": what they're in for, and a small lift the first time in a stay.
+ * - "Back to your cell": a request, not an order they must obey. At or above their line (by
  *   personality, lower for a fair member, higher for a brute) they go and sit in their cell's chair
  *   (or on its bed) for a minute or so; below it they refuse. Asking a third time inside PRISON_TALK_ORDER_SPAM_WINDOW
  *   costs mood and is refused. Forcing someone back is still the baton, the drag and the bolts.
@@ -40,7 +40,7 @@
 #define ACTIVITY_DONE 1
 
 /mob/living/basic/outpost_prisoner
-	/// Between answers to "How are you doing?" and "Crime"
+	/// Between answers to "How are you doing?" and "What are you in for?"
 	COOLDOWN_DECLARE(ask_how_cooldown)
 	COOLDOWN_DECLARE(ask_crime_cooldown)
 	/// Between orders back to the cell

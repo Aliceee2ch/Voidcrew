@@ -479,6 +479,8 @@
 	// Handed to the birthday prisoner, it is theirs for the party and the eat is called off.
 	// Handing takes arm's reach, as it does in play, so the warden steps up beside them.
 	prison.give_birthday(host)
+	// A closer look says it is their birthday (the warden's roster no longer does)
+	TEST_ASSERT(findtext(jointext(host.examine_more(warden), " "), "birthday today"), "A closer look at the birthday prisoner does not say so")
 	warden.forceMove(prison_spot(home, 6, 7))
 	var/obj/item/food/cake/birthday/handed = allocate(/obj/item/food/cake/birthday)
 	warden.put_in_active_hand(handed)
@@ -541,6 +543,7 @@
 	TEST_ASSERT_NULL(prison.party_stage, "The party did not end")
 	TEST_ASSERT(!prison.scene_active(), "The party kept the floor after it ended")
 	TEST_ASSERT(host.party_done, "The birthday prisoner could have another party")
+	TEST_ASSERT(!findtext(jointext(host.examine_more(warden), " "), "birthday today"), "A closer look still gives the birthday after the party")
 	for(var/mob/living/basic/outpost_prisoner/diner as anything in diners)
 		TEST_ASSERT(abs(diner.hunger - 90) < 0.01, "[diner] was fed to [diner.hunger], not 90")
 		TEST_ASSERT(diner.well_fed_left > 0, "[diner]'s slice did not count as a cooked meal")

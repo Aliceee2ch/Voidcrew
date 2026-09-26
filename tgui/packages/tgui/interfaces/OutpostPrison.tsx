@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { Button, Icon, ProgressBar } from 'tgui-core/components';
+import { Button, Icon } from 'tgui-core/components';
 import { formatMoney } from 'tgui-core/format';
-import { keyOfMatchingRange } from 'tgui-core/math';
 import type { BooleanLike } from 'tgui-core/react';
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
@@ -24,13 +23,7 @@ type PrisonAlarm =
   | 'riot_imminent'
   | 'hatch_empty';
 
-type IntakeState =
-  | 'open'
-  | 'closed'
-  | 'suspended'
-  | 'debt'
-  | 'experiment'
-  | 'no_power';
+type IntakeState = 'open' | 'closed' | 'suspended' | 'debt' | 'no_power';
 
 type PrisonStage = 'calm' | 'grumbling' | 'restless' | 'riot';
 
@@ -43,22 +36,15 @@ type Prisoner = {
   /** seconds */
   sentence_left: number;
   status: PrisonerStatus;
-  /** their birthday is today, until the yard has had the cake */
-  birthday?: boolean;
   /** brought in on a bounty (outpost_prison_bounty.dm); null for an ordinary prisoner */
   bounty?: BountyBadge | null;
 };
 
-/** A bounty prisoner's roster badge */
+/** A bounty prisoner's roster line */
 type BountyBadge = {
-  /** "Petty", "Wanted" or "Most Wanted" */
-  tier?: string;
-  /** 1 Petty, 2 Wanted, 3 Most Wanted */
-  level?: number;
-  /** what they earn the treasury against an ordinary prisoner: 1.5, 2 or 2.5 */
-  mult?: number;
   /** "wanted for smuggling" */
   wanted_for?: string | null;
+  most_wanted?: BooleanLike;
 };
 
 type BountyIntakeSetting = 'all' | 'no_most_wanted' | 'none';
@@ -67,57 +53,13 @@ type BountyIntakeSetting = 'all' | 'no_most_wanted' | 'none';
 type BountyIntake = {
   setting?: BountyIntakeSetting;
   can_manage?: BooleanLike;
-  /** bounty prisoners in the wing now, and at most */
-  count?: number;
-  max?: number;
-  /** the next bounty arrival once it is named, at least a minute ahead */
+  /** the next arrival, once it is a bounty prisoner */
   next?: {
     name?: string;
-    tier?: string;
-    level?: number;
-    /** seconds until it beams in, once its notice has run by the next arrival; null otherwise */
+    most_wanted?: BooleanLike;
+    /** seconds until they beam in */
     in?: number | null;
-    /** an ordinary prisoner comes first; it arrives after that */
-    after_next?: BooleanLike;
   } | null;
-};
-
-type Conditions = {
-  /** 0-100 each; powered is graded */
-  clean: number;
-  lit: number;
-  powered: number;
-  score: number;
-  /** tiles with mess */
-  mess_spots?: number;
-  /** cell numbers */
-  dark_cells?: number[];
-  /** APC cell percent while not charging, null otherwise */
-  battery?: number | null;
-};
-
-type Money = { paid: number; spent: number; fined: number; net: number };
-
-type HatchStock = {
-  meals: number;
-  clean_suits: number;
-  dirty_suits: number;
-  /** items, both hatches together */
-  capacity: number;
-  /** null with nobody to feed */
-  lasts_minutes: number | null;
-};
-
-type Trouble = {
-  stage: PrisonStage;
-  /** 0-100 */
-  tension: number;
-  /** seconds, null when not subdued */
-  subdued_left: number | null;
-  riot_imminent: BooleanLike;
-  /** seconds, null when no riot */
-  breakout_in: number | null;
-  loose: { name: string; area: string; time_left: number }[];
 };
 
 type GuardStatus =
@@ -135,28 +77,22 @@ type Guard = {
   name: string;
   rank: string;
   status: GuardStatus;
-  /** seconds until a down or away guard is back, null otherwise */
-  back_in: number | null;
 };
 
 type Guards = {
   max: number;
   hire_cost: number;
-  /** cr/min per guard, only while a member is home */
+  /** cr/min per guard */
   wage: number;
   can_manage: BooleanLike;
-  /** a manager, a free slot, and the fee in the treasury */
+  /** a manager, a free post, and the fee in the treasury */
   can_hire: BooleanLike;
-  /** wages skipped in a row */
-  unpaid: number;
   list: Guard[];
 };
 
-/** Guards and mail (outpost_prison_extras.dm); null on an unlinked console */
+/** Guards (outpost_prison_extras.dm); null on an unlinked console */
 type Extras = {
   guards?: Guards | null;
-  /** undelivered letters */
-  mail?: { waiting: number } | null;
 };
 
 type ExperimentForm = 'unknown' | 'hulk' | 'fly' | 'nightmare' | 'changeling';
@@ -177,29 +113,20 @@ type Experiment = {
   form: ExperimentForm;
   stage: ExperimentStage;
   subject: string | null;
-  /** seconds; a paused clock keeps its value */
-  time_left: number | null;
-  researcher_present: BooleanLike;
-  fee_paid: number;
-  bonus_paid: number;
-  /** "up" or "regenerating" while the horror is out; time_left is then the time until it gets up */
-  horror?: string | null;
-  /** "subdued" or "down" while a creature that was put down waits for Kessler to collect it */
-  pickup?: string | null;
+  /** a creature that was put down lies waiting for Kessler to collect it */
+  pickup?: BooleanLike;
 };
 
 export type OutpostPrisonData = {
   linked: BooleanLike;
   powered: BooleanLike;
+  /** the wing's APC is running down its cell */
+  on_battery?: BooleanLike;
   intake_open: BooleanLike;
   /** seconds, null when nothing is scheduled */
   next_arrival: number | null;
   capacity: number;
-  /** cr/min for every prisoner right now */
-  pay_rate: number;
-  paid_total: number;
   can_manage: BooleanLike;
-  conditions: Conditions;
   prisoners: Prisoner[];
   log: { time: string; text: string }[];
   /** null when nothing is wrong */
@@ -207,17 +134,13 @@ export type OutpostPrisonData = {
   alarm_text?: string;
   // Everything below may be missing from an older payload; its part of the console is then hidden.
   intake_state?: IntakeState;
-  intake_note?: string | null;
-  /** 0-100: how much of full pay the prisoners serving now earn */
-  pay_percent?: number;
-  money?: Money;
   /** treasury debt, 0 when none */
   debt?: number;
   /** missing means the console leaves it to the server */
   can_pay_debt?: BooleanLike;
   visitors_allowed?: BooleanLike;
-  hatch?: HatchStock;
-  trouble?: Trouble;
+  /** the yard's mood in a word */
+  trouble?: { stage: PrisonStage } | null;
   extras?: Extras | null;
   /** null with no experiment */
   experiment?: Experiment | null;
@@ -227,21 +150,7 @@ export type OutpostPrisonData = {
 
 type Act = (action: string, params?: Record<string, unknown>) => unknown;
 type Props = { data: OutpostPrisonData; act: Act };
-type Ranges = Record<string, [number, number]>;
 type Tone = 'good' | 'average' | 'bad';
-
-const CONDITION_RANGES: Ranges = {
-  good: [80, Infinity],
-  average: [50, 80],
-  bad: [-Infinity, 50],
-};
-
-/** Readouts: green from 90%, red under 50%, amber between. */
-const PAY_RANGES: Ranges = {
-  good: [90, Infinity],
-  average: [50, 90],
-  bad: [-Infinity, 50],
-};
 
 /** Present prisoners get no badge. */
 const STATUSES: Partial<
@@ -250,7 +159,7 @@ const STATUSES: Partial<
   arriving: { label: 'Arriving', icon: 'right-to-bracket', tone: 'good' },
   leaving: { label: 'Leaving', icon: 'right-from-bracket', tone: 'average' },
   dead: { label: 'Dead', icon: 'skull', tone: 'bad' },
-  confined: { label: 'Confined', icon: 'lock', tone: 'average' },
+  confined: { label: 'Locked in', icon: 'lock', tone: 'average' },
   rioting: { label: 'Rioting', icon: 'hand-fist', tone: 'bad' },
   loose: { label: 'Loose', icon: 'person-running', tone: 'bad' },
   subject: { label: 'Subject', icon: 'flask', tone: 'average' },
@@ -264,27 +173,26 @@ const ALARMS: Record<
   riot: { label: 'Riot', icon: 'hand-fist', tone: 'red' },
   escape: { label: 'Escape', icon: 'person-running', tone: 'amber' },
   breakout: { label: 'Breakout', icon: 'burst', tone: 'red' },
-  riot_imminent: { label: 'Riot imminent', icon: 'people-group', tone: 'red' },
+  riot_imminent: { label: 'Riot brewing', icon: 'people-group', tone: 'red' },
   hatch_empty: { label: 'Hatch empty', icon: 'utensils', tone: 'amber' },
 };
 
-/** What the line under the intake switch says; open and closed have their own. */
+/** What the line beside the intake switch says when nobody is coming; open and closed have their own. */
 const INTAKE_LINES: Partial<Record<IntakeState, { text: string; tone: Tone }>> =
   {
     suspended: { text: 'Suspended', tone: 'bad' },
-    debt: { text: 'Held: debt', tone: 'bad' },
-    experiment: { text: 'Paused: experiment', tone: 'average' },
-    no_power: { text: 'Paused: no power', tone: 'bad' },
+    debt: { text: 'On hold: debt', tone: 'bad' },
+    no_power: { text: 'On hold: no power', tone: 'bad' },
   };
 
-const STAGES: Record<PrisonStage, { label: string; color: string }> = {
+const YARD: Record<PrisonStage, { label: string; color: string }> = {
   calm: { label: 'Calm', color: 'good' },
   grumbling: { label: 'Grumbling', color: 'average' },
   restless: { label: 'Restless', color: 'orange' },
   riot: { label: 'Riot', color: 'bad' },
 };
 
-/** What each guard is doing. Down and away add when they are back. */
+/** What each guard is doing. */
 const GUARD_STATUSES: Record<
   GuardStatus,
   { label: string; icon: string; tone?: Tone }
@@ -299,17 +207,17 @@ const GUARD_STATUSES: Record<
     tone: 'average',
   },
   riot: { label: 'Holding the door', icon: 'shield-halved', tone: 'bad' },
-  down: { label: 'Down', icon: 'user-injured', tone: 'bad' },
-  away: { label: 'Away', icon: 'right-from-bracket', tone: 'average' },
+  down: { label: 'Injured', icon: 'user-injured', tone: 'bad' },
+  away: { label: 'Off duty', icon: 'right-from-bracket', tone: 'average' },
 };
 
 /** A blind serum reads Serum until its creature shows. */
 const EXPERIMENT_FORMS: Record<ExperimentForm, string> = {
   unknown: 'Serum',
   hulk: 'Hulk',
-  fly: 'Fly',
+  fly: 'Fly person',
   nightmare: 'Nightmare',
-  changeling: 'Changeling',
+  changeling: 'Specimen',
 };
 
 const EXPERIMENT_STAGES: Record<
@@ -327,26 +235,12 @@ const EXPERIMENT_STAGES: Record<
   failed: { label: 'Failed', tone: 'label' },
 };
 
-/** Only a changeling has these; a serum still unknown reads Dosed instead. */
-const CHANGELING_STAGES: string[] = ['incubating', 'vents', 'horror'];
-
 /** The warden's bounty transfer settings, in button order */
 const BOUNTY_SETTINGS: [BountyIntakeSetting, string][] = [
   ['all', 'All'],
   ['no_most_wanted', 'No Most Wanted'],
   ['none', 'None'],
 ];
-
-/** Bounty tiers by level: Wanted amber, Most Wanted red */
-const BOUNTY_TONES: Record<number, Tone> = {
-  2: 'average',
-  3: 'bad',
-};
-
-/** "x2.5" */
-function multiplier(value: number | null | undefined) {
-  return `x${Math.round((isNumber(value) ? value : 1) * 10) / 10}`;
-}
 
 /** m:ss */
 function clock(seconds: number) {
@@ -359,10 +253,6 @@ function rate(value: number) {
   return `${Math.round((value || 0) * 10) / 10}`;
 }
 
-function percent(value: number | null | undefined) {
-  return `${Math.round(value || 0)}%`;
-}
-
 function credits(value: number | null | undefined) {
   return formatMoney(Math.floor(value || 0));
 }
@@ -371,16 +261,11 @@ function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-/** An extras block the server sent as an object; anything else hides its part. */
+/** A block the server sent as an object; anything else hides its part. */
 function block<T>(value: T | null | undefined): T | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value
     : null;
-}
-
-/** Whole minutes, at least 1 */
-function minutes(seconds: number) {
-  return Math.max(1, Math.ceil(seconds / 60));
 }
 
 function Empty({ icon, children }: { icon: string; children: ReactNode }) {
@@ -392,7 +277,38 @@ function Empty({ icon, children }: { icon: string; children: ReactNode }) {
   );
 }
 
-function Alarm({ data }: Props) {
+/** The head: the yard's mood in a word, and the wing's power as a panel would show it */
+function Head({ data }: { data: OutpostPrisonData }) {
+  const linked = !!data.linked;
+  const trouble = block(data.trouble);
+  const yard = trouble ? YARD[trouble.stage] : null;
+  return (
+    <div className="OutpostPrison__head">
+      <Icon name="handcuffs" />
+      <strong>Prison</strong>
+      <span className="OutpostPrison__head-status">
+        {linked && yard ? (
+          <span className={`OutpostPrison__stage--${yard.color}`}>
+            {`Yard: ${yard.label}`}
+          </span>
+        ) : null}
+        {linked && !data.powered ? (
+          <span className="OutpostPrison__alert" role="alert">
+            <Icon name="plug-circle-xmark" />
+            No power
+          </span>
+        ) : linked && data.on_battery ? (
+          <span className="OutpostPrison__tone--average">
+            <Icon name="car-battery" />
+            On battery
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+function Alarm({ data }: { data: OutpostPrisonData }) {
   if (!data.alarm) {
     return null;
   }
@@ -412,76 +328,51 @@ function Alarm({ data }: Props) {
   );
 }
 
-function Readout({
-  value,
-  label,
-  tone,
-}: {
-  value: string;
-  label: string;
-  tone?: string;
-}) {
-  return (
-    <div className="Outpost__readout">
-      <strong className={tone ? `OutpostPrison__tone--${tone}` : undefined}>
-        {value}
-      </strong>
-      <small>{label}</small>
-    </div>
-  );
-}
-
-/** The line under the intake switch: arrivals when open, or why nobody is coming. */
-function intakeLine(data: OutpostPrisonData, count: number) {
+/** Beside the intake switch: the next transfer when open (naming a bounty prisoner), or why nobody is coming. */
+function intakeLine(
+  data: OutpostPrisonData,
+): { text: string; tone?: Tone } | null {
   const state = data.intake_state;
-  const open = !!data.intake_open;
   if (state && state !== 'open' && state !== 'closed') {
-    return INTAKE_LINES[state] || { text: state, tone: 'average' as Tone };
+    return INTAKE_LINES[state] || { text: state, tone: 'average' };
   }
-  if (!open) {
+  if (!data.intake_open) {
     return null;
   }
   if (isNumber(data.next_arrival)) {
+    const next = block(block(data.bounty)?.next);
+    const mostWanted = !!next?.most_wanted;
+    const who = next?.name
+      ? `: ${next.name}${mostWanted ? ', Most Wanted' : ''}`
+      : '';
     return {
-      text: `Next arrival ${clock(data.next_arrival)}`,
-      tone: undefined,
+      text: `Next transfer ${clock(data.next_arrival)}${who}`,
+      tone: mostWanted ? 'bad' : undefined,
     };
   }
-  return count >= data.capacity ? { text: 'Full', tone: undefined } : null;
+  return (data.prisoners || []).length >= data.capacity
+    ? { text: 'Full' }
+    : null;
 }
 
-function Stats({ data, act }: Props) {
-  const count = (data.prisoners || []).length;
+/** Intake, visitors and the debt: the warden's switches */
+function Controls({ data, act }: Props) {
   const open = !!data.intake_open;
-  const line = intakeLine(data, count);
   // Intake can be closed while the treasury owes, but not opened.
   const held = data.intake_state === 'debt' && !open;
-  const money = data.money;
-  const net = money ? money.net || 0 : 0;
+  const line = intakeLine(data);
   const hasVisitors =
     data.visitors_allowed !== undefined && data.visitors_allowed !== null;
   const visitors = !!data.visitors_allowed;
+  const debt = isNumber(data.debt) && data.debt > 0 ? data.debt : 0;
+  // Debt is paid by managers and treasurers; without a hint the server decides.
+  const canPay =
+    data.can_pay_debt === undefined ||
+    data.can_pay_debt === null ||
+    !!data.can_pay_debt;
   return (
-    <div className="OutpostPrison__stats">
-      <Readout value={`${rate(data.pay_rate)} cr`} label="Pay / min" />
-      {isNumber(data.pay_percent) ? (
-        <Readout
-          value={percent(data.pay_percent)}
-          label="Of full pay"
-          tone={keyOfMatchingRange(data.pay_percent, PAY_RANGES)}
-        />
-      ) : null}
-      {money ? (
-        <Readout
-          value={`${credits(net)} cr`}
-          label="Net"
-          tone={net < 0 ? 'bad' : undefined}
-        />
-      ) : (
-        <Readout value={`${credits(data.paid_total)} cr`} label="Paid" />
-      )}
-      <Readout value={`${count}/${data.capacity || 0}`} label="Prisoners" />
-      <div className="OutpostPrison__intake">
+    <>
+      <div className="OutpostPrison__control-row">
         <Button
           icon={open ? 'door-open' : 'door-closed'}
           selected={open}
@@ -490,341 +381,107 @@ function Stats({ data, act }: Props) {
             !data.can_manage
               ? 'Managers only'
               : held
-                ? 'Pay the debt first'
+                ? 'Debt unpaid'
                 : undefined
           }
           onClick={() => act('toggle_intake')}
         >
           {open ? 'Intake: Open' : 'Intake: Closed'}
         </Button>
-        <small
-          className={
-            line?.tone ? `OutpostPrison__tone--${line.tone}` : undefined
-          }
-        >
-          {line ? line.text : null}
-        </small>
-        {hasVisitors ? (
-          <Button
-            icon={visitors ? 'people-arrows' : 'user-lock'}
-            selected={visitors}
-            disabled={!data.can_manage}
-            tooltip={data.can_manage ? undefined : 'Managers only'}
-            onClick={() => act('toggle_visitors')}
+        {line ? (
+          <span
+            className={`OutpostPrison__intake-line${
+              line.tone ? ` OutpostPrison__tone--${line.tone}` : ''
+            }`}
           >
-            {visitors ? 'Visitors: Yes' : 'Visitors: No'}
-          </Button>
+            {line.text}
+          </span>
         ) : null}
       </div>
-    </div>
+      {hasVisitors || debt > 0 ? (
+        <div className="OutpostPrison__control-row">
+          {hasVisitors ? (
+            <Button
+              icon={visitors ? 'people-arrows' : 'user-lock'}
+              selected={visitors}
+              disabled={!data.can_manage}
+              tooltip={data.can_manage ? undefined : 'Managers only'}
+              onClick={() => act('toggle_visitors')}
+            >
+              {visitors ? 'Visitors: Yes' : 'Visitors: No'}
+            </Button>
+          ) : null}
+          {debt > 0 ? (
+            <span className="OutpostPrison__debt">
+              Debt <b>{`${credits(debt)} cr`}</b>
+              <Button
+                icon="hand-holding-dollar"
+                disabled={!canPay}
+                tooltip={canPay ? undefined : 'Managers and treasurers only'}
+                onClick={() => act('pay_debt')}
+              >
+                Pay debt
+              </Button>
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 }
 
-function Note({ data }: Props) {
-  const note = typeof data.intake_note === 'string' ? data.intake_note : '';
-  if (!note) {
+/** Which bounty prisoners the wing takes */
+function BountyTransfers({ data, act }: Props) {
+  const bounty = block(data.bounty);
+  if (!bounty) {
     return null;
   }
+  const setting = bounty.setting || 'all';
+  const canManage = !!bounty.can_manage;
   return (
-    <div className="OutpostPrison__note">
-      <Icon name="circle-info" />
-      <span>{note}</span>
+    <div className="OutpostPrison__control-row">
+      <span className="OutpostPrison__control-label">Bounty prisoners</span>
+      {BOUNTY_SETTINGS.map(([value, label]) => (
+        <Button
+          key={value}
+          compact
+          selected={setting === value}
+          disabled={!canManage}
+          tooltip={canManage ? undefined : 'Managers only'}
+          onClick={() => act('set_bounty_intake', { setting: value })}
+        >
+          {label}
+        </Button>
+      ))}
     </div>
   );
 }
 
-function MoneyLine({ data, act }: Props) {
-  const money = data.money;
-  const debt = isNumber(data.debt) && data.debt > 0 ? data.debt : 0;
-  if (!money && debt <= 0) {
-    return null;
-  }
-  // Debt is paid by managers and treasurers; without a hint the server decides.
-  const canPay =
-    data.can_pay_debt === undefined ||
-    data.can_pay_debt === null ||
-    !!data.can_pay_debt;
-  return (
-    <div className="OutpostPrison__money">
-      {money ? (
-        <>
-          <span>
-            Paid <b>{credits(money.paid)}</b>
-          </span>
-          <span>
-            Spent <b>{credits(money.spent)}</b>
-          </span>
-          <span>
-            Fined <b>{credits(money.fined)}</b>
-          </span>
-        </>
-      ) : null}
-      {debt > 0 ? (
-        <span className="OutpostPrison__debt">
-          Debt <b>{`${credits(debt)} cr`}</b>
-          <Button
-            icon="hand-holding-dollar"
-            disabled={!canPay}
-            tooltip={canPay ? undefined : 'Managers and treasurers only'}
-            onClick={() => act('pay_debt')}
-          >
-            Pay debt
-          </Button>
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function ExperimentPanel({ data }: Props) {
-  const experiment = data.experiment;
+/** The researcher's experiment in one line: who, what, and how it stands */
+function ExperimentLine({ data }: { data: OutpostPrisonData }) {
+  const experiment = block(data.experiment);
   if (!experiment) {
     return null;
   }
-  const form = experiment.form || 'unknown';
-  // A blind serum's outcome stays hidden until the server names its form.
-  const stageKey =
-    form === 'unknown' && CHANGELING_STAGES.includes(experiment.stage)
-      ? 'dosed'
-      : experiment.stage;
-  const pickup = experiment.pickup || null;
-  // Put down and lying there until Kessler's team beams in for it.
-  const stage = pickup
-    ? { label: pickup === 'subdued' ? 'Subdued' : 'Down', tone: 'good' }
-    : EXPERIMENT_STAGES[stageKey] || {
-        label: stageKey || '?',
+  const form = EXPERIMENT_FORMS[experiment.form] || 'Serum';
+  const stage = experiment.pickup
+    ? { label: 'Awaiting pickup', tone: 'good' }
+    : EXPERIMENT_STAGES[experiment.stage] || {
+        label: experiment.stage || '?',
         tone: 'label',
       };
-  const formLabel = EXPERIMENT_FORMS[form] || form;
-  const present = !!experiment.researcher_present;
-  const fee = isNumber(experiment.fee_paid) ? experiment.fee_paid : 0;
-  const bonus = isNumber(experiment.bonus_paid) ? experiment.bonus_paid : 0;
   return (
-    <>
-      <div className="Outpost__section-label">Experiment</div>
-      <div className="OutpostPrison__experiment">
-        <span
-          className={`OutpostPrison__experiment-stage OutpostPrison__tone--${stage.tone}`}
-        >
-          {stage.label}
-        </span>
-        <div className="Outpost__person">
-          <strong>{experiment.subject || formLabel}</strong>
-          {experiment.subject ? <small>{formLabel}</small> : null}
-        </div>
-        <span className="OutpostPrison__number">
-          {isNumber(experiment.time_left) ? clock(experiment.time_left) : ''}
-        </span>
-      </div>
-      <div className="OutpostPrison__flags OutpostPrison__flags--experiment">
-        <span className={`OutpostPrison__tone--${present ? 'good' : 'label'}`}>
-          <Icon name="user-doctor" />
-          {present ? 'Researcher here' : 'Researcher away'}
-        </span>
-        {experiment.horror === 'regenerating' ? (
-          <span className="OutpostPrison__tone--bad">
-            <Icon name="heart-pulse" />
-            Regenerating
-          </span>
-        ) : null}
-        {pickup ? (
-          <span className="OutpostPrison__tone--average">
-            <Icon name="hourglass-half" />
-            Awaiting pickup
-          </span>
-        ) : null}
-        {fee > 0 ? (
-          <span className="OutpostPrison__tone--good">
-            <Icon name="coins" />
-            {`Fee ${credits(fee)} cr`}
-          </span>
-        ) : null}
-        {bonus > 0 ? (
-          <span className="OutpostPrison__tone--good">
-            <Icon name="award" />
-            {`Bonus ${credits(bonus)} cr`}
-          </span>
-        ) : null}
-      </div>
-    </>
-  );
-}
-
-function Tension({ data }: Props) {
-  const trouble = data.trouble;
-  if (!trouble) {
-    return null;
-  }
-  const stage = STAGES[trouble.stage] || {
-    label: trouble.stage || '?',
-    color: 'label',
-  };
-  const tension = Math.max(0, Math.min(100, Math.round(trouble.tension || 0)));
-  const loose = (trouble.loose || []).filter(Boolean);
-  return (
-    <>
-      <div className="Outpost__section-label">Tension</div>
-      <div className="OutpostPrison__tension">
-        <span
-          className={`OutpostPrison__stage OutpostPrison__stage--${stage.color}`}
-        >
-          {stage.label}
-        </span>
-        <ProgressBar value={tension} maxValue={100} color={stage.color}>
-          {`${tension}`}
-        </ProgressBar>
-      </div>
-      <div className="OutpostPrison__flags OutpostPrison__flags--trouble">
-        {trouble.riot_imminent ? (
-          <span className="OutpostPrison__tone--bad">
-            <Icon name="people-group" />
-            Riot imminent
-          </span>
-        ) : null}
-        {isNumber(trouble.breakout_in) ? (
-          <span className="OutpostPrison__tone--bad">
-            <Icon name="burst" />
-            {`Breakout in ${clock(trouble.breakout_in)}`}
-          </span>
-        ) : null}
-        {isNumber(trouble.subdued_left) && trouble.subdued_left > 0 ? (
-          <span className="OutpostPrison__tone--good">
-            <Icon name="dove" />
-            {`Subdued ${clock(trouble.subdued_left)}`}
-          </span>
-        ) : null}
-      </div>
-      {loose.length > 0 ? (
-        <div className="OutpostPrison__loose">
-          {loose.map((entry, index) => (
-            <div className="OutpostPrison__loose-row" key={index}>
-              <Icon name="person-running" />
-              <strong>{entry.name}</strong>
-              <span>{entry.area || '?'}</span>
-              <span className="OutpostPrison__number">
-                {clock(entry.time_left)}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-function Conditions({ data }: Props) {
-  const conditions = data.conditions || {
-    clean: 0,
-    lit: 0,
-    powered: 0,
-    score: 0,
-  };
-  const bars: [string, number][] = [
-    ['Clean', conditions.clean],
-    ['Lit', conditions.lit],
-    ['Power', conditions.powered],
-  ];
-  const mess = isNumber(conditions.mess_spots) ? conditions.mess_spots : 0;
-  const dark = (conditions.dark_cells || []).filter(isNumber);
-  const battery = isNumber(conditions.battery) ? conditions.battery : null;
-  return (
-    <>
-      <div className="Outpost__section-label">Conditions</div>
-      <div className="OutpostPrison__conditions">
-        {bars.map(([label, value]) => (
-          <div className="OutpostPrison__condition" key={label}>
-            <span>{label}</span>
-            <ProgressBar
-              value={value || 0}
-              maxValue={100}
-              ranges={CONDITION_RANGES}
-            />
-          </div>
-        ))}
-        <div
-          className={`OutpostPrison__score OutpostPrison__tone--${
-            keyOfMatchingRange(conditions.score || 0, CONDITION_RANGES) ||
-            'average'
-          }`}
-        >
-          <strong>{percent(conditions.score)}</strong>
-          <small>Score</small>
-        </div>
-      </div>
-      {mess > 0 || dark.length > 0 || battery !== null ? (
-        <div className="OutpostPrison__flags OutpostPrison__flags--conditions">
-          {mess > 0 ? (
-            <span className="OutpostPrison__tone--average">
-              <Icon name="broom" />
-              {`${mess} mess spot${mess === 1 ? '' : 's'}`}
-            </span>
-          ) : null}
-          {dark.length > 0 ? (
-            <span className="OutpostPrison__tone--average">
-              <Icon name="moon" />
-              {`${dark.length === 1 ? 'Cell' : 'Cells'} ${dark.join(', ')} dark`}
-            </span>
-          ) : null}
-          {battery !== null ? (
-            <span
-              className={`OutpostPrison__tone--${battery < 40 ? 'bad' : 'average'}`}
-            >
-              <Icon name="car-battery" />
-              {`On battery ${percent(battery)}`}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-function Hatch({ data }: Props) {
-  const hatch = data.hatch;
-  if (!hatch) {
-    return null;
-  }
-  const meals = hatch.meals || 0;
-  const clean = hatch.clean_suits || 0;
-  const dirty = hatch.dirty_suits || 0;
-  const capacity = hatch.capacity || 0;
-  const mail = block(block(data.extras)?.mail);
-  const waiting = mail && isNumber(mail.waiting) ? mail.waiting : 0;
-  return (
-    <>
-      <div className="Outpost__section-label">
-        Hatches
-        {capacity > 0 ? (
-          <span>{`${meals + clean + dirty}/${capacity}`}</span>
-        ) : null}
-      </div>
-      <div className="OutpostPrison__hatch">
-        <Readout
-          value={`${meals}`}
-          label="Meals"
-          tone={meals > 0 ? undefined : 'bad'}
-        />
-        <Readout
-          value={`${clean}`}
-          label="Clean suits"
-          tone={clean > 0 ? undefined : 'bad'}
-        />
-        <Readout value={`${dirty}`} label="Dirty suits" />
-        <span className="OutpostPrison__lasts">
-          {isNumber(hatch.lasts_minutes)
-            ? `Lasts about ${Math.max(0, Math.round(hatch.lasts_minutes))} min`
-            : null}
-        </span>
-      </div>
-      {waiting > 0 ? (
-        <div className="OutpostPrison__flags OutpostPrison__flags--mail">
-          <span className="OutpostPrison__tone--average">
-            <Icon name="envelope" />
-            {`Mail: ${waiting} waiting`}
-          </span>
-        </div>
-      ) : null}
-    </>
+    <div className="OutpostPrison__control-row">
+      <span className="OutpostPrison__control-label">Experiment</span>
+      <span className="OutpostPrison__experiment-what">
+        {experiment.subject ? `${experiment.subject} · ${form}` : form}
+      </span>
+      <span
+        className={`OutpostPrison__experiment-stage OutpostPrison__tone--${stage.tone}`}
+      >
+        {stage.label}
+      </span>
+    </div>
   );
 }
 
@@ -842,12 +499,6 @@ function GuardRow({
     icon: 'circle-question',
     tone: 'average' as Tone,
   };
-  const back =
-    (guard.status === 'down' || guard.status === 'away') &&
-    isNumber(guard.back_in) &&
-    guard.back_in > 0
-      ? `, back in ${minutes(guard.back_in)} min`
-      : '';
   // The rank is shown unless the name already starts with it ("Officer Hale").
   const rank = guard.rank || '';
   const showRank =
@@ -865,7 +516,7 @@ function GuardRow({
         }`}
       >
         <Icon name={known.icon} />
-        {`${known.label}${back}`}
+        {known.label}
       </span>
       {canDismiss ? (
         <Button.Confirm
@@ -890,12 +541,11 @@ function GuardsSection({ data, act }: Props) {
   const list = (guards.list || []).filter(Boolean);
   const max = guards.max || 0;
   const manager = !!guards.can_manage;
-  const missed = isNumber(guards.unpaid) ? guards.unpaid : 0;
   const hireBlocked = !manager
     ? 'Managers only'
     : max > 0 && list.length >= max
-      ? `${max} at most`
-      : 'Not enough in the treasury';
+      ? 'No free post'
+      : 'Treasury short';
   return (
     <>
       <div className="Outpost__section-label">
@@ -915,12 +565,7 @@ function GuardsSection({ data, act }: Props) {
         ))
       )}
       <div className="OutpostPrison__staff-foot">
-        <small>{`${rate(guards.wage)} cr/min each while you're home`}</small>
-        {missed > 0 ? (
-          <small className="OutpostPrison__tone--bad">
-            {`Missed ${missed} wage${missed === 1 ? '' : 's'}`}
-          </small>
-        ) : null}
+        <small>{`Wage ${rate(guards.wage)} cr/min each`}</small>
         <Button
           icon="user-plus"
           disabled={!guards.can_hire}
@@ -953,28 +598,13 @@ function Status({ status }: { status: PrisonerStatus }) {
   );
 }
 
-/** A bounty prisoner's badge after the crime: their tier and what they earn against an ordinary prisoner */
-function BountyTag({ badge }: { badge: BountyBadge }) {
-  const tone = isNumber(badge.level) ? BOUNTY_TONES[badge.level] : undefined;
-  return (
-    <span
-      className={tone ? `OutpostPrison__tone--${tone}` : undefined}
-      title="Brought in on a bounty; earns the treasury more"
-    >
-      {' · '}
-      <Icon name="star" />{' '}
-      {`${badge.tier || 'Bounty'} ${multiplier(badge.mult)}`}
-    </span>
-  );
-}
-
 function RosterRow({ prisoner, cell }: { prisoner: Prisoner; cell: string }) {
   const dead = prisoner.status === 'dead';
   const bounty = block(prisoner.bounty);
   return (
     <div
-      className={`OutpostPrison__roster-row ${
-        dead ? 'OutpostPrison__roster-row--dead' : ''
+      className={`OutpostPrison__roster-row${
+        dead ? ' OutpostPrison__roster-row--dead' : ''
       }`}
     >
       <span className="OutpostPrison__cell">{cell}</span>
@@ -982,11 +612,10 @@ function RosterRow({ prisoner, cell }: { prisoner: Prisoner; cell: string }) {
         <strong>{prisoner.name}</strong>
         <small>
           {bounty?.wanted_for || prisoner.crime}
-          {bounty ? <BountyTag badge={bounty} /> : null}
-          {prisoner.birthday ? (
-            <span className="OutpostPrison__tone--good">
+          {bounty?.most_wanted ? (
+            <span className="OutpostPrison__tone--bad">
               {' · '}
-              <Icon name="cake-candles" /> Birthday today
+              <Icon name="star" /> Most Wanted
             </span>
           ) : null}
         </small>
@@ -999,7 +628,7 @@ function RosterRow({ prisoner, cell }: { prisoner: Prisoner; cell: string }) {
   );
 }
 
-function Roster({ data }: Props) {
+function Roster({ data }: { data: OutpostPrisonData }) {
   const prisoners = data.prisoners || [];
   // One row per cell. A prisoner past the last cell still gets a row; one
   // with no cell is listed after the cells.
@@ -1012,12 +641,6 @@ function Roster({ data }: Props) {
   return (
     <>
       <div className="Outpost__section-label">Cells</div>
-      <div className="OutpostPrison__roster-row OutpostPrison__roster-head">
-        <span>Cell</span>
-        <span>Prisoner</span>
-        <span>Left</span>
-        <span />
-      </div>
       {cells.map((cell) => {
         const occupants = prisoners.filter(
           (prisoner) => prisoner.cell === cell,
@@ -1046,61 +669,7 @@ function Roster({ data }: Props) {
   );
 }
 
-/** Which bounty prisoners the wing takes, how many it holds, and the next one named on the way */
-function BountyTransfers({ data, act }: Props) {
-  const bounty = block(data.bounty);
-  if (!bounty) {
-    return null;
-  }
-  const setting = bounty.setting || 'all';
-  const canManage = !!bounty.can_manage;
-  const next = block(bounty.next);
-  const count = isNumber(bounty.count) ? bounty.count : 0;
-  const max = isNumber(bounty.max) ? bounty.max : 0;
-  const nextTone =
-    next && isNumber(next.level) ? BOUNTY_TONES[next.level] : undefined;
-  return (
-    <>
-      <div className="Outpost__section-label">Bounty transfers</div>
-      <div className="OutpostPrison__flags OutpostPrison__flags--bounty">
-        {BOUNTY_SETTINGS.map(([value, label]) => (
-          <Button
-            key={value}
-            compact
-            selected={setting === value}
-            disabled={!canManage}
-            tooltip={canManage ? undefined : 'Managers only'}
-            onClick={() => act('set_bounty_intake', { setting: value })}
-          >
-            {label}
-          </Button>
-        ))}
-        <span>
-          <Icon name="star" />
-          {`${count}/${max} held`}
-        </span>
-        {next ? (
-          <span
-            className={
-              nextTone ? `OutpostPrison__tone--${nextTone}` : undefined
-            }
-          >
-            <Icon name="right-to-bracket" />
-            {`Next: ${next.name || 'unknown'} (${next.tier || 'Bounty'})${
-              isNumber(next.in)
-                ? `, ${clock(next.in)}`
-                : next.after_next
-                  ? ', after the next arrival'
-                  : ''
-            }`}
-          </span>
-        ) : null}
-      </div>
-    </>
-  );
-}
-
-function Log({ data }: Props) {
+function Log({ data }: { data: OutpostPrisonData }) {
   const log = data.log || [];
   return (
     <>
@@ -1124,30 +693,18 @@ function Log({ data }: Props) {
 export function OutpostPrisonPanel({ data, act }: Props) {
   return (
     <div className="Outpost OutpostPrison">
-      <div className="OutpostPrison__head">
-        <Icon name="handcuffs" />
-        <strong>Prison</strong>
-        {!!data.linked && !data.powered && (
-          <span className="OutpostPrison__alert" role="alert">
-            <Icon name="plug-circle-xmark" />
-            No power
-          </span>
-        )}
-      </div>
-      {data.linked ? <Alarm data={data} act={act} /> : null}
+      <Head data={data} />
+      {data.linked ? <Alarm data={data} /> : null}
       {data.linked ? (
         <div className="OutpostPrison__body">
-          <Stats data={data} act={act} />
-          <Note data={data} act={act} />
-          <MoneyLine data={data} act={act} />
-          <BountyTransfers data={data} act={act} />
-          <ExperimentPanel data={data} act={act} />
-          <Tension data={data} act={act} />
-          <Conditions data={data} act={act} />
-          <Hatch data={data} act={act} />
-          <Roster data={data} act={act} />
+          <div className="OutpostPrison__controls">
+            <Controls data={data} act={act} />
+            <BountyTransfers data={data} act={act} />
+            <ExperimentLine data={data} />
+          </div>
+          <Roster data={data} />
           <GuardsSection data={data} act={act} />
-          <Log data={data} act={act} />
+          <Log data={data} />
         </div>
       ) : (
         <Empty icon="link-slash">No prison link</Empty>
@@ -1159,7 +716,7 @@ export function OutpostPrisonPanel({ data, act }: Props) {
 export const OutpostPrison = () => {
   const { data, act } = useBackend<OutpostPrisonData>();
   return (
-    <Window title="Prison Warden" width={600} height={640}>
+    <Window title="Prison Warden" width={480} height={540}>
       <Window.Content fitted>
         <OutpostPrisonPanel data={data} act={act} />
       </Window.Content>

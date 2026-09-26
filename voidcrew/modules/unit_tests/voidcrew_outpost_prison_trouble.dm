@@ -677,7 +677,7 @@
 	TEST_ASSERT(plain.death_blamed, "The death was not put down to staff")
 	TEST_ASSERT_EQUAL(treasury.account_balance, 5000, "A death in custody was fined [5000 - treasury.account_balance]")
 	var/list/newest = prison.entries[1]
-	TEST_ASSERT(findtext(newest["text"], "put down to staff"), "The staff's blame was not logged: [newest["text"]]")
+	TEST_ASSERT(findtext(newest["text"], "The yard blames staff for [plain.real_name]'s death"), "The staff's blame was not logged: [newest["text"]]")
 	// An experiment's subject dies on the experiment's account, not staff's.
 	rival.forceMove(prison_spot(home, 6, 10))
 	rival.experiment_subject = TRUE
@@ -714,9 +714,11 @@
 	var/list/calm_data = console.ui_data(warden)
 	TEST_ASSERT(("alarm" in calm_data) && ("alarm_text" in calm_data), "The warden console sends no alarm keys")
 	TEST_ASSERT_NULL(calm_data["alarm"], "A calm wing has an alarm")
+	// The console shows the yard's mood in a word; the admin panel's block keeps the numbers and clocks.
+	TEST_ASSERT_EQUAL(calm_data["trouble"]?["stage"], prison.stage, "The console's trouble block shows the stage as [calm_data["trouble"]?["stage"]]")
 	var/list/calm_trouble = prison.trouble_payload()
 	for(var/key in list("stage", "tension", "subdued_left", "riot_imminent", "breakout_in", "loose"))
-		TEST_ASSERT(key in calm_trouble, "The console's trouble block has no [key]")
+		TEST_ASSERT(key in calm_trouble, "The trouble block has no [key]")
 
 	// Who joins goes by personality (PRISON_RIOT_JOIN_*): chatty under 50, grumpy under 55,
 	// cheerful under 40, nervous under 30. The rest go back to their cells and sit it out.
@@ -937,7 +939,7 @@
 	TEST_ASSERT_EQUAL(first.trouble, "loose", "A rioter out of the cell block is not loose")
 	TEST_ASSERT(first.loose_left > 290 && first.loose_left <= 297, "Getting out restarted the breakout clock ([first.loose_left] s)")
 	TEST_ASSERT(prison.broke_out, "A rioter getting out did not count as a breakout")
-	TEST_ASSERT_EQUAL(console.ui_data(warden)["alarm_text"], "1 prisoner loose", "The console reads [console.ui_data(warden)["alarm_text"]]")
+	TEST_ASSERT_EQUAL(console.ui_data(warden)["alarm_text"], "Loose: [first.real_name] ([get_area_name(first)])", "The console reads [console.ui_data(warden)["alarm_text"]]")
 	TEST_ASSERT(prison.riot_lights_on, "The lights stopped strobing with a rioter loose")
 	prison.admin_calm()
 	settle_prison_air(home)
@@ -1100,7 +1102,7 @@
 	TEST_ASSERT(is_line_for(runner.last_line, "escape"), "The escaped prisoner said no escape line: [runner.last_line]")
 	var/list/alarm = prison.alarm_state()
 	TEST_ASSERT_EQUAL(alarm[1], "escape", "A single escape shows the [alarm[1]] alarm")
-	TEST_ASSERT_EQUAL(alarm[2], "1 prisoner loose", "The escape alarm reads [alarm[2]]")
+	TEST_ASSERT_EQUAL(alarm[2], "Loose: [runner.real_name] ([get_area_name(runner)])", "The escape alarm reads [alarm[2]]")
 	TEST_ASSERT(!prison.riot_lights_on, "A lone escape set the riot lights off")
 	TEST_ASSERT(prison.incident_open, "An escape opened no incident")
 	TEST_ASSERT(prison.protective_custody(), "Bolting prisoners in with one loose is not protective custody")

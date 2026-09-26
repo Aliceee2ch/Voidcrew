@@ -247,7 +247,7 @@
 	prison.contraband_force_rolls = TRUE
 	TEST_ASSERT(("Search" in prison.contraband_talk_choices(owner, member)), "The talk menu offers members no pat-down") // CONTRABAND_PATDOWN_CHOICE
 	TEST_ASSERT(!length(prison.contraband_talk_choices(owner, visitor)), "The talk menu offers a visitor a pat-down")
-	TEST_ASSERT(!prison.contraband_talk_act(owner, member, "Crime"), "The pat-down took another package's choice") // PRISON_TALK_CRIME
+	TEST_ASSERT(!prison.contraband_talk_act(owner, member, "What are you in for?"), "The pat-down took another package's choice") // PRISON_TALK_CRIME
 	TEST_ASSERT_NULL(prison.contraband_pat_down(owner, visitor), "A visitor patted a prisoner down")
 	// Nothing on them: 3 mood once per five minutes (OUTPOST_CONTRABAND_PATDOWN_MOOD), and someone may speak up for them
 	TEST_ASSERT_EQUAL(prison.contraband_pat_down(owner, member), "empty", "A pat-down of a prisoner carrying nothing found something")
@@ -534,8 +534,6 @@
 	TEST_ASSERT(letters_in_crate >= 1 && letters_in_crate <= 2, "The crate holds [letters_in_crate] letters for four prisoners")
 	TEST_ASSERT_EQUAL(length(prison.mail_waiting_letters()), letters_in_crate, "The crate's letters do not all count as waiting")
 	TEST_ASSERT(findtext(contraband_last_log(prison), "Mail call: a pod dropped [letters_in_crate] letter"), "The mail call was not logged: [contraband_last_log(prison)]")
-	var/list/console_block = prison.mail_payload(null)
-	TEST_ASSERT_EQUAL(console_block["waiting"], letters_in_crate, "The warden console does not count the crate's letters")
 	var/lettered = 0
 	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in everyone)
 		if(prisoner.mail_had_letter)

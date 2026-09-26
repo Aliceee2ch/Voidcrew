@@ -887,7 +887,6 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	var/datum/bank_account/treasury = outpost.treasury
 	if(!treasury || treasury.account_balance < OUTPOST_GUARD_HIRE_COST || !treasury.adjust_money(-OUTPOST_GUARD_HIRE_COST, "Prison guard hired"))
 		return "treasury short"
-	note_spending(OUTPOST_GUARD_HIRE_COST, "Prison guard hired")
 	var/datum/outpost_guard_record/hired = add_guard_record()
 	add_log("[hired.full_name()] was hired for [OUTPOST_GUARD_HIRE_COST] cr.")
 	log_game("PLAYER OUTPOST PRISON: [key_name(user)] hired [hired.full_name()] at '[outpost?.name]' for [OUTPOST_GUARD_HIRE_COST] cr")
@@ -1018,7 +1017,6 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	if(treasury && treasury.account_balance >= whole && treasury.adjust_money(-whole, "Prison guard wages"))
 		guard_wage_owed = max(0, guard_wage_owed - whole)
 		guard_unpaid = 0
-		note_spending(whole, "Prison guard wages")
 		return whole
 	guard_wage_owed = 0
 	guard_unpaid++
@@ -1232,6 +1230,36 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 			if(guard.strike(prisoner))
 				break
 	guard_loose_called = called
+
+/**
+ * Runners about to get away for good (loose_tick() in outpost_prison_riot.dm). A guard on duty calls
+ * it out, noted in the warden's log and put out to the crew in their words; with nobody on duty the
+ * wing's announcement says it. Never how long is left.
+ */
+/datum/outpost_prison/proc/call_out_nearly_away(list/runners)
+	if(!length(runners))
+		return FALSE
+	var/list/first_names = list()
+	var/list/full_names = list()
+	for(var/mob/living/basic/outpost_prisoner/runner as anything in runners)
+		first_names += runner.speech_name()
+		full_names += runner.real_name
+	var/list/values = list("{prisoner}" = english_list(first_names))
+	// Where one runner was last seen; several can be anywhere
+	if(length(runners) == 1)
+		values["{place}"] = get_area_name(runners[1])
+	var/list/on_duty = list()
+	for(var/mob/living/basic/outpost_prison_guard/guard in guard_mobs)
+		if(guard.on_duty())
+			on_duty += guard
+	if(length(on_duty))
+		var/mob/living/basic/outpost_prison_guard/crier = pick(on_duty)
+		if(crier.say_guard("loose_nearly", values))
+			add_log("[crier.real_name]: \"[crier.last_line]\"")
+			announce("[crier.real_name]: \"[crier.last_line]\"", SHIP_NOTIFY_DANGER)
+			return TRUE
+	announce("Prison wing: [english_list(full_names)] [length(runners) == 1 ? "is" : "are"] about to get away.", SHIP_NOTIFY_DANGER)
+	return TRUE
 
 /// The riot hold is called out once a riot: said aloud, and noted in the warden's log
 /datum/outpost_prison/proc/announce_riot_hold(mob/living/basic/outpost_prison_guard/guard)
@@ -1472,7 +1500,7 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 
 // ===== CONSOLES =====
 
-/// The warden console's "guards" block (build plan section 8)
+/// The warden console's "guards" block: who is on the books and what they are doing, the posts, the price and the wage
 /datum/outpost_prison/proc/guards_payload(mob/user)
 	var/can_manage = !!outpost?.can_manage(user)
 	var/list/rows = list()
@@ -1482,7 +1510,6 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 			"name" = record.full_name(),
 			"rank" = record.rank,
 			"status" = record.status(),
-			"back_in" = record.back_in(),
 		))
 	var/balance = outpost?.treasury?.account_balance || 0
 	return list(
@@ -1491,7 +1518,6 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 		"wage" = OUTPOST_GUARD_WAGE,
 		"can_manage" = can_manage,
 		"can_hire" = can_manage && hired_guard_count() < guard_max() && balance >= OUTPOST_GUARD_HIRE_COST,
-		"unpaid" = guard_unpaid,
 		"list" = rows,
 	)
 

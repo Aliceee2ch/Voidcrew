@@ -127,7 +127,7 @@
 	var/form_name = "a creature"
 	/// What everyone sees when it is subdued, after its name
 	var/subdued_message = "collapses, spent."
-	/// A line on examine saying how to put it down, if any
+	/// A tell on examine, if any: something anyone watching it would notice
 	var/win_hint
 	/// Health with one player on the level, and per extra player
 	var/base_health = 100
@@ -659,7 +659,7 @@
 	ai_controller = /datum/ai_controller/basic_controller/outpost_experiment/fly
 	death_message = "drops out of the air and goes still."
 	subdued_message = "drops out of the air, stunned."
-	win_hint = "Knock it out of the air and Kessler Biolabs will collect it."
+	win_hint = "It never lands for long."
 	/// Seconds to its next heave
 	var/vomit_left = OUTPOST_FLY_VOMIT_MIN
 	/// REF() of prisoners who watched it throw up -> world.time

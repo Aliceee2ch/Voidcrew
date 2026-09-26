@@ -5,8 +5,8 @@
  * deposits, release bonuses, fines and the debt they leave, intake (arrivals, suspensions and each
  * cell's wait), releases, deaths and the collection of bodies, and what becomes of the wing when
  * the outpost is abandoned. The pay model and its numbers are in
- * voidcrew/_DEFINES/outpost_prison_economy.dm. The warden console that shows it all is
- * outpost_prison_warden.dm.
+ * voidcrew/_DEFINES/outpost_prison_economy.dm. The warden console is outpost_prison_warden.dm;
+ * it shows none of the money but the debt.
  *
  * A fine never stops at what the treasury holds: the rest becomes the treasury's debt (tg's
  * account_debt, which takes 75% of every later deposit), and no prisoner arrives while it is owed,
@@ -26,8 +26,6 @@
 	var/intake_open = FALSE
 	/// The corrections service suspended transfers after prisoners were lost; a manager reopening intake lifts it
 	var/intake_suspended = FALSE
-	/// How many prisoners had been lost when transfers were suspended, for the console
-	var/suspended_after = 0
 	/// world.time of each prisoner lost (escaped or transferred out) since transfers were last suspended, oldest first
 	var/list/lost_log = list()
 	/// Seconds until the next prisoner is due, or null while none is; see next_arrival_in()
@@ -45,9 +43,8 @@
 	var/pay_clock = 0
 	/// Credits earned and not yet deposited; deposits are whole credits, every OUTPOST_PRISON_DEPOSIT_INTERVAL
 	var/pay_owed = 0
-	/// Since the wing was placed: paid into the treasury (stipends and bonuses), spent from it on supplies, and fined
+	/// Since the wing was placed: paid into the treasury (stipends and bonuses; the admin panel shows it), and fined
 	var/paid_total = 0
-	var/spent_total = 0
 	var/fined_total = 0
 	/// Whether an incident (a riot, its breakout, its escapes and transfers) is open, and its fines so far
 	var/incident_open = FALSE
@@ -128,22 +125,6 @@
 		total += prisoner_pay_rate(prisoner)
 	return total
 
-/// The mean share of full pay the prisoners in the wing earn right now, as a percent; 0 with nobody there
-/datum/outpost_prison/proc/pay_percent()
-	var/total = 0
-	var/count = 0
-	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(prisoner.stat == DEAD || prisoner.phase != PRISONER_PRESENT)
-			continue
-		total += pay_factor(prisoner)
-		count++
-	return count ? round(100 * total / count) : 0
-
-/// Money the wing spent from the treasury (rations, supplies), for the console's totals
-/datum/outpost_prison/proc/note_spending(amount, reason)
-	if(amount > 0)
-		spent_total += amount
-
 // ===== FINES AND DEBT =====
 
 /// What the outpost treasury owes, 0 if nothing
@@ -181,7 +162,7 @@
 	fined_total += amount
 	log_game("PLAYER OUTPOST PRISON: '[outpost.name]' fined [amount] cr ([reason]), [owed] cr of it owed")
 	if(owed > 0 && !had_debt)
-		announce("The outpost treasury could not cover a prison fine and now owes [owed] cr. No prisoners arrive until the debt is paid.", SHIP_NOTIFY_WARNING)
+		announce("Corrections service: the outpost owes [owed] cr in prison fines. Transfers are on hold.", SHIP_NOTIFY_WARNING)
 	return amount
 
 /// Pays what the treasury holds toward its debt. Returns what was paid.
@@ -247,11 +228,10 @@
 /// The corrections service stops sending prisoners until a manager reopens intake
 /datum/outpost_prison/proc/suspend_intake(lost)
 	intake_suspended = TRUE
-	suspended_after = lost
 	intake_open = FALSE
 	arrival_countdown = null
 	add_log("Transfers suspended after [lost] prisoners were lost.")
-	announce("The corrections service has suspended transfers after [lost] prisoners were lost. A manager can reopen intake at the warden's console.", SHIP_NOTIFY_WARNING)
+	announce("Corrections service: transfers suspended after [lost] prisoners were lost.", SHIP_NOTIFY_WARNING)
 
 // ===== INTAKE =====
 
@@ -269,7 +249,6 @@
 	if(open)
 		if(intake_suspended)
 			intake_suspended = FALSE
-			suspended_after = 0
 			lost_log.Cut()
 		arrival_gap = max(arrival_gap, OUTPOST_PRISON_FIRST_ARRIVAL)
 		// The other lanes start on a gap of their own, so a wing with extensions does not fill several cells at once.
@@ -293,17 +272,6 @@
 	if(!is_powered())
 		return "no_power"
 	return "open"
-
-/// A line for the warden console about intake, or null
-/datum/outpost_prison/proc/intake_note()
-	switch(intake_state())
-		if("debt")
-			return "The treasury owes [treasury_debt()] cr. No prisoners arrive until it is paid."
-		if("suspended")
-			return "Suspended after [suspended_after] prisoners were lost. Reopen when ready."
-		if("no_power")
-			return "The wing has no power. Arrivals wait for it."
-	return null
 
 /**
  * Whether a cell could take a new arrival once it is ready: empty, with somewhere to stand, and its
@@ -377,9 +345,9 @@
 	if(!intake_open)
 		return
 	if(open)
-		add_log("Staff are back. The extension cells take new prisoners again.")
+		add_log("Extension cells open to transfers again.")
 	else
-		add_log("Nobody from the outpost has been in for [DisplayTimeText(OUTPOST_PRISON_EXTENSION_STAFFED_GRACE)]. The extension cells take no new prisoners until someone is back.")
+		add_log("Extension cells closed to transfers: no staff on hand.")
 
 /// The open lane due soonest, the first on a tie
 /datum/outpost_prison/proc/soonest_lane()
@@ -552,7 +520,6 @@
 	extras_abandon()
 	set_intake(FALSE)
 	intake_suspended = FALSE
-	suspended_after = 0
 	lost_log.Cut()
 	pay_owed = 0
 	var/transferred = 0

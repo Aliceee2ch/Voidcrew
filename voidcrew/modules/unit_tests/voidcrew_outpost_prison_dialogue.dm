@@ -41,7 +41,7 @@
 
 /// Contexts said by the researcher and the Kessler team, who have no personality or prisoner details
 /datum/unit_test/voidcrew_outpost_prison_dialogue_contexts/proc/visitor_contexts()
-	return list("researcher_offer", "researcher_sweetened", "researcher_accept", "researcher_leave", "researcher_no_data", "researcher_pigsty", "kessler_recovery", "kessler_collect")
+	return list("researcher_offer", "researcher_sweetened", "researcher_accept", "researcher_leave", "researcher_no_data", "researcher_pigsty", "kessler_recovery", "kessler_collect", "kessler_horror_down")
 
 /// A line with the four placeholders taken out
 /datum/unit_test/voidcrew_outpost_prison_dialogue_contexts/proc/without_placeholders(line)

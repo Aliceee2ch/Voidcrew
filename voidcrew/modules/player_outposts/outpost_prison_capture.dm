@@ -55,7 +55,7 @@
 		return "used up"
 	// On their feet only when they are making no trouble; rioters and runners go down first.
 	if(!is_down() && (trouble || threat_ref || swing_ref || climb_ref))
-		return "put [p_them()] down first"
+		return "won't hold still"
 	return null
 
 /// How long cuffing them takes: quicker when they are down
@@ -238,7 +238,7 @@
 /datum/outpost_prison/proc/start_lockdown(mob/living/basic/outpost_prisoner/prisoner, quiet = FALSE)
 	prisoner.lockdown_left = PRISON_RIOT_LOCKDOWN_TIME
 	prisoner.lockdown_out = 0
-	add_log("[prisoner.real_name] owes [PRISON_RIOT_LOCKDOWN_TIME / 60] minutes of lockdown.")
+	add_log("[prisoner.real_name] is on lockdown.")
 	if(!quiet && prisoner.stat == CONSCIOUS)
 		prisoner.say_context("lockdown")
 
@@ -322,8 +322,6 @@
 		var/line = "[prisoner.real_name] is on lockdown for [outpost_prison_lockdown_text(prisoner.lockdown_left)]."
 		if(!inside)
 			line += " [prisoner.p_They()] [prisoner.p_are()] not in the cell."
-		else if(!prisoner.is_confined())
-			line += " It only counts down with the cell bolted."
 		. += span_notice(line)
 
 #undef PRISONER_CUFFS_TRAIT

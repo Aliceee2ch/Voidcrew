@@ -25,7 +25,7 @@ The extension cells need staff around to take new prisoners. If nobody from the 
 
 ## The warden's console
 
-The console in the office lists each cell, who is in it, what for and how long they have left. It also shows the pay rate, the wing's conditions, what is on the hatches, any trouble brewing, and a log. Managers open and close **intake** (nobody arrives while it is closed) and choose whether visitors may use the staff doors.
+The console in the office lists each cell, who is in it, what for and how long they have left. Its header says how the yard feels (calm, grumbling, restless or riot) and whether the wing is on battery or out of power, and an alarm names anyone loose and where they were last seen. It also shows the next transfer, any experiment under way, the guards, and a log. The pay, the wing's conditions and the hatches are not on it: check the wing itself, and listen to the guards and prisoners. Managers open and close **intake** (nobody arrives while it is closed) and choose whether visitors may use the staff doors.
 
 Fines the outpost bank can't cover become debt. Nobody new arrives while the bank owes money; managers and treasurers can pay the debt from the console.
 
@@ -43,7 +43,7 @@ Pay depends on how well each prisoner is looked after and on the conditions. Whe
 
 ## Trouble
 
-Unhappy prisoners argue, fight, threaten staff and climb over the hatches. If the yard stays unhappy it riots: the lights strobe red and every rioter pulls a shiv. Shiv stabs and cuts can bleed, and armour helps. A riot nobody deals with turns into a breakout. A prisoner who stays loose outside the wing for too long escapes, and the outpost is fined.
+Unhappy prisoners argue, fight, threaten staff and climb over the hatches. If the yard stays unhappy it riots: the lights strobe red and every rioter pulls a shiv. Shiv stabs and cuts can bleed, and armour helps. A riot nobody deals with turns into a breakout. A prisoner who stays loose for five minutes gets away, and the outpost is fined. You are told who is still loose and where after two minutes, and a guard on duty (or the wing, with none) calls it out when one is about to get away. A caught runner's time stops while they're cuffed.
 
 Nobody comes for the dead. A body left in the cell block upsets the other prisoners and keeps its cell empty until someone carries it out: to a morgue, out an airlock, anywhere outside the cell block. A death isn't fined, but prisoners take it hard when staff kill one of them.
 
@@ -71,12 +71,12 @@ If you're one of the outpost's members, click a prisoner with an empty hand, out
 
 - **Calm down.** A few quiet words. It cheers them up, and it stops a prisoner squaring up to you or an argument before it comes to blows. Prisoners who are rioting or too miserable won't listen.
 - **How are you doing?** They tell you what's bothering them most.
-- **Crime.** What they're in for.
-- **Home.** Asks them back to their cell. A request, not an order. Unhappy prisoners refuse, and nagging makes it worse.
-- **Uncuff.** Takes their cuffs off. It takes the place of Home while they're cuffed.
+- **What are you in for?** What they're in for.
+- **Back to your cell.** Asks them back to their cell. A request, not an order. Unhappy prisoners refuse, and nagging makes it worse.
+- **Uncuff.** Takes their cuffs off. It takes the place of Back to your cell while they're cuffed.
 - **Get up.** Gets them up when they're lying or sitting down.
 - **Search.** A pat-down for anything they're carrying.
-- **Rumour.** Some prisoners know of a place out on the [overmap](overmap.md). If they tell you, it is marked on your ship's helm. Unhappy prisoners sometimes lie. Watch how they answer, check the spot against your charts, or ask another prisoner who saw it about the **Tip**.
+- **Heard anything?** Some prisoners know of a place out on the [overmap](overmap.md). If they tell you, it is marked on your ship's helm. Unhappy prisoners sometimes lie. Watch how they answer, check the spot against your charts, or ask another prisoner who saw it **About that tip**.
 
 Clicking a prisoner asleep in bed shakes them awake, which they don't like. Clicking one who is knocked down takes their cuffs off, if they have any.
 
@@ -90,10 +90,38 @@ Every so often, while someone from the outpost is home, a **mail pod** drops int
 
 ## Cards, dice and birthdays
 
-Prisoners play cards and dice at the mess tables. Sit on a stool at their table when a hand starts and you'll be dealt in. Now and then a prisoner arrives on their birthday and says so. Give them a whole cake, or put one on a hatch, and the yard throws them a party.
+Prisoners play cards and dice at the mess tables. Sit on a stool at their table when a hand starts and you'll be dealt in. Now and then a prisoner arrives on their birthday and says so, and a closer look at them tells you too. Give them a whole cake, or put one on a hatch, and the yard throws them a party.
 
 ## Bounty prisoners
 
-Some arrivals are criminals that ship crews caught alive for a [bounty](bounty-hunting.md). They earn the outpost 1.5 times what an ordinary prisoner does if they were Petty, twice as much if Wanted, and 2.5 times as much if Most Wanted. The higher tiers are also tougher, hit harder and riot sooner. The roster marks them with their tier, and examining one shows who brought them in. If your crew catches one, your own wing gets first claim on them for 10 minutes.
+Some arrivals are criminals that ship crews caught alive for a [bounty](bounty-hunting.md). They earn the outpost 1.5 times what an ordinary prisoner does if they were Petty, twice as much if Wanted, and 2.5 times as much if Most Wanted. The higher tiers are also tougher, hit harder and riot sooner. The roster shows what they're wanted for and marks a Most Wanted as one, and examining one shows who brought them in. If your crew catches one, your own wing gets first claim on them for 10 minutes.
 
-Managers choose which ones the wing takes under **Bounty transfers** on the warden's console: **All**, **No Most Wanted** or **None**. The console names the next bounty arrival at least a minute before they beam in. See [After the catch](bounty-hunting.md#after-the-catch-prison-wings) for the full numbers.
+Managers choose which ones the wing takes under **Bounty prisoners** on the warden's console: **All**, **No Most Wanted** or **None**. The warden's log names the next one at least a minute before they beam in, and the console shows their name beside the intake switch once they are the next transfer. See [After the catch](bounty-hunting.md#after-the-catch-prison-wings) for the full numbers.
+
+## Kessler Biolabs experiments
+
+Once the wing has prisoners, a researcher from Kessler Biolabs visits now and then, the first time 15 to 25 minutes after the first arrival and then 35 to 50 minutes after each experiment or offer is over. That time only counts while someone from the outpost is home. They only come when intake is open, nobody is rioting or loose, no stranger is in the wing, and the wing is kept well enough; in a filthy or dark wing they look round, complain and leave. The researcher waits in the office for about three minutes. Only managers can take or turn down the offer: click the researcher with an empty hand. Each offer turned down or left to lapse makes the next one pay 10% more, up to 30%.
+
+The offer is a **serum** or, from the second visit on, sometimes a **specimen**. Either lasts 10 minutes, only works in a member's hands on the wing's own prisoners, and is destroyed if it leaves the outpost. Kessler won't take a bounty prisoner.
+
+- **Serum.** Inject a prisoner in the cell block. They twitch for a minute, showing signs of what they are turning into near the end, then change into a hulk, a nightmare or a fly person. You don't know which until it happens.
+- **Specimen.** Slip it into a prisoner's food. Over the next two minutes or so they complain of stomach pain, retch and go to lie on their bunk, then a headslug bursts out and heads for the vents. Wrench the vent it is in to force it out and kill it. Left alone for a minute and a half, it comes out of a vent as a **horror**.
+
+A dosed prisoner earns nothing and isn't released until the experiment is over, and taking them out of the cell block for a minute ruins it. The creatures:
+
+- **Hulk.** Charges, throws people and tears through walls and doors. Worn down far enough it tires, and a baton or disabler can put it down alive, which pays more.
+- **Nightmare.** Breaks the lights first, then hunts in the dark, where it heals and dodges shots. Light burns it, and a flash hurts it.
+- **Fly person.** Fast, and hard to hit while it flies. A flyswatter hits it very hard, and two baton hits drop it.
+- **Horror.** Arm blade, bone shield, shrieks that break lights, and it absorbs people who are down to heal. At 0 health it collapses but keeps moving, and gets back up 45 seconds later with half its health. To finish it, destroy the body while it is down (fire does double damage and keeps it down while it burns), gib or dust it, or drag it off the outpost into open space. A vented room on the outpost doesn't count.
+
+Kessler pays a fee when the creature first shows, and a bonus when it is put down if your crew did at least half the damage. Its team beams in to collect a creature about 10 seconds after it goes down. The fee and the bonus are paid once each per experiment. A creature that leaves the wing sets off the containment breach alarm, and one that gets off the outpost on its own, onto a docked ship say, is taken back by Kessler for a recovery fee, which becomes debt if the bank can't cover it. Prisoners who see someone die take it badly, and every prisoner a creature kills puts the yard on edge.
+
+| Creature | Fee when it shows | Bonus when put down | Recovery fee |
+|---|---|---|---|
+| Fly person | 300 cr | 700 cr | 500 cr |
+| Hulk | 600 cr | 1,900 cr, or 2,400 cr put down alive | 1,500 cr |
+| Nightmare | 600 cr | 2,400 cr | 1,500 cr |
+| Headslug | 600 cr | 900 cr | none |
+| Horror | paid with the headslug | 3,900 cr | 2,500 cr |
+
+Fees and bonuses go up with the offer's extra pay.

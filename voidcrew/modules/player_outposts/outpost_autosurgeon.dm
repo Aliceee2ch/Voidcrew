@@ -520,7 +520,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 	var/datum/outpost_upgrade/service/medical_lab/lab = outpost_medical_lab_at(src)
 	if(lab && !lab.is_exempt(user))
 		var/seconds_left = lab.pass_seconds_left(user)
-		. += span_notice(seconds_left ? "Lab pass: [DisplayTimeText(seconds_left * (1 SECONDS))] left." : "No lab pass.")
+		. += span_notice((seconds_left ? "Lab pass: [DisplayTimeText(seconds_left * (1 SECONDS))] left." : "No lab pass."))
 
 /// Whether a player is controlling this mob. Test subtypes override it: test mobs have no client.
 /obj/machinery/outpost_autosurgeon/proc/has_player(mob/living/patient)

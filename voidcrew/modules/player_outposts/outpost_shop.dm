@@ -130,7 +130,7 @@
 	. = ..()
 	var/obj/machinery/outpost_shop_stock/stock = get_stock()
 	var/closed = stock ? stock.closed_reason() : "Shop not installed."
-	. += span_notice(closed ? "The screen reads: [closed]" : "The shop is open.")
+	. += span_notice((closed ? "The screen reads: [closed]" : "The shop is open."))
 
 /obj/machinery/computer/outpost_shop_register/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)

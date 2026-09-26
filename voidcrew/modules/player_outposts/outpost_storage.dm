@@ -486,7 +486,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 		. += span_notice("Out of service.")
 		return
 	var/fee = home.service_price_for(user, home.get_price(OUTPOST_PRICE_STORAGE_RENT))
-	. += span_notice(fee > 0 ? "Vacant. [fee] cr for the shift." : "Vacant. Free for the shift.")
+	. += span_notice((fee > 0 ? "Vacant. [fee] cr for the shift." : "Vacant. Free for the shift."))
 
 /obj/structure/closet/secure_closet/outpost_storage/add_context(atom/source, list/context, obj/item/held_item, mob/user)
 	. = ..()

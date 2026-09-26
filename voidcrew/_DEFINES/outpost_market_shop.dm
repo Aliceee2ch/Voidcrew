@@ -23,3 +23,6 @@
 /// Stock UI updates are batched this long
 #define OUTPOST_SHOP_UI_FLUSH (0.5 SECONDS)
 #define OUTPOST_SHOP_INSPECT_COOLDOWN (1 SECONDS)
+/// How far from the shop bot a customer may click it (across the counter)
+#define OUTPOST_SHOP_COUNTER_RANGE 2
+

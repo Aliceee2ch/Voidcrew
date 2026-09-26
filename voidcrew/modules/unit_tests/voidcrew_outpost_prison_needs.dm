@@ -536,7 +536,18 @@
 			game.arrive()
 			continue
 		game.tick(1)
-	TEST_ASSERT(shots >= 2, "The prisoner took [shots] shot\s in 40 steps")
+	if(shots < 2)
+		// Seen now and then (about one run in ten); say where everything was, to find out why.
+		var/obj/item/toy/basketball/ball = game.ball_ref?.resolve()
+		var/turf/ball_turf = get_turf(ball)
+		var/list/on_ball_turf = list()
+		for(var/atom/movable/thing as anything in ball_turf?.contents)
+			on_ball_turf += "[thing.type]"
+		TEST_FAIL("The prisoner took [shots] shot\s in 40 steps: prisoner at [talker.x],[talker.y] holding [talker.held_item || "nothing"], \
+			spot [game.spot ? "[game.spot.x],[game.spot.y]" : "none"], ball [ball ? "in [ball.loc] at [ball_turf?.x],[ball_turf?.y] with [jointext(on_ball_turf, ", ")]" : "gone"], \
+			ball walkable [!!talker.walkable?[ball_turf]], reach [ball ? talker.try_reach(ball) : "-"], claimed by other [prison.claimed_by_other(ball, talker)], \
+			game over [world.time >= game.ends_at]")
+		return
 	talker.end_activity(cancel_ai = FALSE)
 	TEST_ASSERT(!istype(talker.held_item, /obj/item/toy/basketball), "The ball stayed in their hands after the game")
 
@@ -563,6 +574,10 @@
 	var/z = talker.z
 	SSmobs.clients_by_zlevel[z] |= watcher
 	talker.end_activity(cancel_ai = FALSE)
+	// Away from the listener: still beside them from the chat, a second chat would start where they
+	// stand (approach_turf() gives their own tile) and they would never need to walk.
+	talker.forceMove(prison_spot(home, 7, 8))
+	prison.refresh_prisoner_reach(talker)
 	talker.ai_controller.reset_ai_status()
 	TEST_ASSERT_EQUAL(talker.ai_controller.ai_status, AI_STATUS_ON, "The prisoner's AI did not wake with someone on the level")
 	var/turf/start_turf = talker.loc

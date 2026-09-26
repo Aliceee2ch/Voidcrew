@@ -156,7 +156,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 /// Extra sentences for a prisoner's examine text, from every package that has one; XB's examine() shows them
 /datum/outpost_prison/proc/examine_extra_lines(mob/living/basic/outpost_prisoner/prisoner, mob/user)
 	var/list/lines = list()
-	for(var/line in list(relationship_examine(prisoner), contraband_examine(prisoner, user), leads_examine(prisoner, user), wildcard_examine(prisoner)))
+	for(var/line in list(relationship_examine(prisoner), contraband_examine(prisoner, user), leads_examine(prisoner, user), wildcard_examine(prisoner), bounty_examine(prisoner, user)))
 		if(istext(line) && length(line))
 			lines += line
 	return lines
@@ -203,6 +203,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 		"contraband" = contraband_admin_payload(),
 		"mail" = mail_admin_payload(),
 		"leads" = leads_admin_payload(),
+		"bounty" = bounty_admin_payload(),
 	)
 
 /// An admin action a package handles: a line for the admin log, or null when no package took it
@@ -222,6 +223,9 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 	. = mail_admin_act(action, params, user)
 	if(.)
 		return
-	return leads_admin_act(action, params, user)
+	. = leads_admin_act(action, params, user)
+	if(.)
+		return
+	return bounty_admin_act(action, params, user)
 
 #undef OUTPOST_PRISONER_EXTRA_DIALOGUE_DIR

@@ -1,0 +1,121 @@
+{
+	"lines": {
+		"idle_chat": {
+			"any": ["Slow day. Can't complain, though."]
+		},
+		"bar": {
+			"any": ["Another one of these when you get a second."]
+		},
+		"trade_haggle": {
+			"any": ["Fifty? It's worth thirty at most."]
+		},
+		"explore": {
+			"any": ["Nobody's been through here in a while."]
+		},
+		"loot": {
+			"any": ["Let's see what they left behind."]
+		},
+		"camp": {
+			"any": ["Fire's getting low. I'll see to it in a minute."]
+		},
+		"noticed": {
+			"any": ["Oh no. Not now."]
+		},
+		"flee": {
+			"any": ["Get away from me!"]
+		},
+		"winded": {
+			"any": ["I need a second. Just a second."]
+		},
+		"hide": {
+			"any": ["Please don't look in here."]
+		},
+		"found": {
+			"any": ["Okay, okay! You found me!"]
+		},
+		"cornered": {
+			"any": ["Back off! I'm warning you!"]
+		},
+		"draw_gun": {
+			"any": ["I've got a gun! Stay back!"]
+		},
+		"fight_start": {
+			"any": ["You picked the wrong guy."]
+		},
+		"hurt": {
+			"any": ["Agh! That hurt!"]
+		},
+		"surrender": {
+			"any": ["Okay! I give up! Don't shoot!"]
+		},
+		"downed": {
+			"any": ["I'm done. I'm done."]
+		},
+		"recover": {
+			"any": ["Right. Where was I?"]
+		},
+		"cuffed": {
+			"any": ["These are too tight."]
+		},
+		"slipping_cuffs": {
+			"any": ["Almost got it..."]
+		},
+		"beamed_out": {
+			"any": ["Where are you sending me?"]
+		},
+		"accused_wrongly": {
+			"any": ["Not me, pal."]
+		},
+		"accused_rightly": {
+			"any": ["How did you find me?"]
+		},
+		"companion_reply": {
+			"any": ["Yeah, I heard."]
+		},
+		"juggernaut_intro": {
+			"any": ["You came all this way to get flattened?"]
+		},
+		"juggernaut_ability": {
+			"any": ["Out of my way!"]
+		},
+		"juggernaut_exhausted": {
+			"any": ["Still standing. Just about."]
+		},
+		"pyromaniac_intro": {
+			"any": ["Hope you brought an extinguisher."]
+		},
+		"pyromaniac_ability": {
+			"any": ["Burn!"]
+		},
+		"pyromaniac_exhausted": {
+			"any": ["Running low on fuel..."]
+		},
+		"demolitionist_intro": {
+			"any": ["I've got enough charges for all of you."]
+		},
+		"demolitionist_ability": {
+			"any": ["Fire in the hole!"]
+		},
+		"demolitionist_exhausted": {
+			"any": ["Last few charges. Better make them count."]
+		},
+		"ghost_intro": {
+			"any": ["You won't even see me coming."]
+		},
+		"ghost_ability": {
+			"any": ["Over here."]
+		},
+		"ghost_exhausted": {
+			"any": ["Can't keep this up much longer."]
+		},
+		"heavy_intro": {
+			"any": ["Find some cover while you still can."]
+		},
+		"heavy_ability": {
+			"any": ["Suppressing fire!"]
+		},
+		"heavy_exhausted": {
+			"any": ["Need to reload. Give me a minute."]
+		}
+	}
+}

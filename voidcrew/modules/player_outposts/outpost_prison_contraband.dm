@@ -640,9 +640,9 @@
 /datum/outpost_prison/proc/contraband_cause()
 	return contraband_tension() > 0 ? "word of a shiv" : null
 
-/// How much higher `prisoner`'s riot line is (a shiv under their mattress)
+/// How much higher `prisoner`'s riot line is (a shiv under their mattress, and some bounty prisoners: outpost_prison_bounty.dm)
 /datum/outpost_prison/proc/riot_join_bonus(mob/living/basic/outpost_prisoner/prisoner)
-	return prisoner?.cell?.stash_shiv ? OUTPOST_CONTRABAND_RIOT_JOIN_BONUS : 0
+	return (prisoner?.cell?.stash_shiv ? OUTPOST_CONTRABAND_RIOT_JOIN_BONUS : 0) + (prisoner ? prisoner.bounty_riot_bonus() : 0)
 
 /**
  * A rioter draws the shiv from their cell's stash instead of a new one; TRUE if they did. Only

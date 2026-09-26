@@ -161,6 +161,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 					record(user, home, "kill prisoner [prisoner.real_name]")
 				if("prison_remove")
 					var/removed_name = prisoner.real_name
+					close_bounty_record(prisoner, BOUNTY_RECORD_CLOSED)
 					prison.forget(prisoner)
 					qdel(prisoner)
 					record(user, home, "remove prisoner [removed_name] without a bonus")

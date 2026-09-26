@@ -123,6 +123,10 @@
 	var/datum/bounty_record/claimed = record
 	var/wanted_name = claimed?.name || "the fugitive"
 	var/live = criminal && state != BOUNTY_STATE_DEAD && criminal.stat != DEAD
+	var/most_wanted = claimed?.tier == BOUNTY_TIER_MOST_WANTED && !private_to
+	// Closing lets go of the record and the hunters, so everything read from them is read now
+	var/poster_text = (live && share >= 100 && claimed?.tier >= BOUNTY_TIER_WANTED) ? board_poster_text(ship) : null
+	var/list/already_told = most_wanted ? hunter_ships() : null
 
 	// Take it: the criminal is frozen for the beam and stops being this bounty's, so closing the bounty doesn't remove it
 	if(criminal)
@@ -136,15 +140,21 @@
 			new /obj/effect/temp_visual/transporter_flash/departure(proof_turf)
 		qdel(proof)
 
-	// The record: a live catch goes on to the prisons, a dead one ends here
+	// The record: a live catch goes on to the prisons, a dead one ends here. The crew's own prison
+	// (P7's lookup) is named only if it would take them now (BUG-3).
 	var/datum/outpost_prison/prison
+	var/datum/outpost_prison/refusing_prison
 	if(claimed)
 		claimed.captor_name = ship.name
 		claimed.captor_ship = WEAKREF(ship)
 		if(live)
 			claimed.hurt_fraction = clamp(1 - criminal.health / max(criminal.maxHealth, 1), 0, 1)
-			prison = bounty_preferred_prison(ship)
-			claimed.preferred_prison = prison ? WEAKREF(prison) : null
+			var/datum/outpost_prison/own = bounty_captor_prison(ship)
+			claimed.preferred_prison = own ? WEAKREF(own) : null
+			if(own?.bounty_accepts(claimed))
+				prison = own
+			else
+				refusing_prison = own
 		else
 			claimed.status = BOUNTY_RECORD_DEAD
 
@@ -154,6 +164,8 @@
 		if(bounty_pool_add(claimed) && claimed.status == BOUNTY_RECORD_WANTED)
 			claimed.status = BOUNTY_RECORD_POOLED
 	bounty_pay_ship(ship, pad, pay[1], pay[2])
+	if(poster_text)
+		bounty_print_captured_poster(get_turf(pad), poster_text, wanted_name)
 
 	var/list/paid = list("[pay[1]] credits")
 	if(pay[2] > 0)
@@ -163,8 +175,17 @@
 		how += " (they were downed earlier, so it pays the downed share)"
 	var/after = ""
 	if(live)
-		after = prison ? " They go to your prison at [prison.outpost?.name || "your outpost"] first." : " They go into the prisoner transfer pool."
-	ship.ship_notify("WANTED: [wanted_name] turned in, [how]. Paid [english_list(paid)].[after]", "BOUNTY COMPLETE", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+		if(prison)
+			after = " They go to your prison at [prison.outpost?.name || "your outpost"] first."
+		else if(refusing_prison)
+			after = " Your prison isn't taking bounty transfers, so they go into the transfer pool."
+		else
+			after = " They go into the prisoner transfer pool."
+	ship.ship_notify("BOUNTY: [wanted_name] turned in, [how]. Paid [english_list(paid)].[after]", "BOUNTY COMPLETE", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+	// A Most Wanted catch is news for every other crew (the hunters already heard from close())
+	if(most_wanted)
+		var/news = live ? "BOUNTY: the crew of the [ship.name] brought in [wanted_name], Most Wanted." : "BOUNTY: the crew of the [ship.name] took down [wanted_name], Most Wanted."
+		SScriminal_bounties.board_announce(news, already_told + ship)
 	log_game("BOUNTY: [ship.name] turned in [wanted_name] ([proof ? "proof" : state], [share]%) at [AREACOORD(pad)] for [pay[1]] cr and [pay[2]] voucher(s)[user ? ", pressed by [key_name(user)]" : ""]")
 	return pay
 
@@ -192,44 +213,121 @@
 		pad.do_teleport_effect()
 
 /**
- * The prison a catch by `ship` goes to first: the capturing crew's own running prison, the oldest
- * first (decision 12, grounding-prison.md). Null without one.
- */
-/proc/bounty_preferred_prison(obj/structure/overmap/ship/ship)
-	if(QDELETED(ship))
-		return null
-	for(var/datum/outpost_prison/prison as anything in GLOB.outpost_prisons)
-		if(QDELETED(prison))
-			continue
-		var/obj/structure/overmap/dynamic/player_outpost/home = prison.outpost
-		if(QDELETED(home) || home.running_prison() != prison)
-			continue
-		if(home.is_owner_crew_ship(ship))
-			return prison
-	return null
-
-/**
- * What the board's card shows about the pad for `ship`: list(can_turn_in, turn_in_state). The
- * state is the capture state of this bounty's criminal on the pad's tile ("proof" for its proof of
- * death), or null with nothing there.
+ * What the board's card shows about the pad for `ship` (BUG-4, P10): list(can_turn_in,
+ * turn_in_state, refusal, pay). The state is the capture state of this bounty's criminal on the
+ * pad's tile ("proof" for its proof of death), or null with nothing there. The refusal is why Turn In
+ * won't work now, in the same words the press would answer with, or null. The pay is what a press
+ * would pay now, as text ("720 cr (downed earlier)"), or null with nothing there. The press itself
+ * still checks everything.
  */
 /datum/criminal_bounty/proc/board_pad_preview(obj/structure/overmap/ship/ship, obj/machinery/mission_pad/pad)
-	if(!pad || QDELETED(pad) || !is_open())
-		return list(FALSE, null)
+	if(!is_open())
+		return list(FALSE, null, "that bounty is closed", null)
+	if(!pad || QDELETED(pad))
+		return list(FALSE, null, "no mission pad linked", null)
 	var/atom/movable/target = board_target_on_pad(pad)
-	if(!target)
-		return list(FALSE, null)
-	var/state = "proof"
-	var/can = TRUE
+	var/state = null
+	if(target)
+		state = "proof"
+		if(istype(target, /mob/living/basic/bounty_criminal))
+			var/mob/living/basic/bounty_criminal/criminal = target
+			state = criminal.capture_state()
+	var/refusal
+	if(private_to && offered_to() != ship)
+		refusal = "that offer is for another crew"
+	else
+		refusal = board_target_refusal(pad, list()) || pad.bounty_turn_in_refusal(ship)
+	return list(!refusal, state, refusal, target ? board_pay_text(target) : null)
+
+/**
+ * Why Turn In is off for `ship`, from its `preview` (board_pad_preview()), or null when it is on. A
+ * subtype that turns it off without saying why (the kingpin's deal) gives its reason through
+ * hunt_refusal().
+ */
+/datum/criminal_bounty/proc/board_preview_refusal(list/preview, obj/structure/overmap/ship/ship)
+	if(preview[1])
+		return null
+	var/refusal = length(preview) >= 3 ? preview[3] : null
+	if(!refusal && preview[2])
+		refusal = hunt_refusal(ship) || "you can't turn this one in"
+	return refusal
+
+/**
+ * What turning in `target` (this bounty's criminal or its proof) would pay now, as the card says it:
+ * "1000 cr + 1 voucher", or "720 cr (downed earlier)" when an earlier downing cut the share. Null
+ * when it would pay nothing (standing free).
+ */
+/datum/criminal_bounty/proc/board_pay_text(atom/movable/target)
+	var/state = BOUNTY_STATE_DEAD
+	var/worst = BOUNTY_STATE_DEAD
 	if(istype(target, /mob/living/basic/bounty_criminal))
 		var/mob/living/basic/bounty_criminal/criminal = target
 		state = criminal.capture_state()
-		can = !!bounty_state_share(state) && !criminal.client && !criminal.mind
-	if(private_to && offered_to() != ship)
-		can = FALSE
-	if(can && pad.bounty_turn_in_refusal(ship))
-		can = FALSE
-	return list(can, state)
+		worst = criminal.worst_state
+	var/share = board_share_for(state, worst)
+	if(!share)
+		return null
+	var/list/pay = board_payout(share)
+	var/text = "[pay[1]] cr"
+	if(pay[2] > 0)
+		text += " + [pay[2]] voucher[pay[2] > 1 ? "s" : ""]"
+	if(state != BOUNTY_STATE_DEAD && share < board_share_for(state, BOUNTY_STATE_FREE))
+		text += " (downed earlier)"
+	return text
+
+// ===== THE PAD SPEAKS UP (P2) =====
+
+/obj/machinery/mission_pad
+	/// Between two things the pad says about a bounty target landing on it
+	COOLDOWN_DECLARE(bounty_announce_cooldown)
+
+/**
+ * `arrived` (a bounty criminal or proof of death) landed on the pad: the pad says what it is and what
+ * Turn In would pay, and the linked console chimes. Nothing for a decoy, a companion, another crew's
+ * offer or a closed bounty. Once every BOUNTY_PAD_ANNOUNCE_COOLDOWN at most. Returns what it said.
+ */
+/obj/machinery/mission_pad/proc/bounty_pad_announce(atom/movable/arrived)
+	if(QDELETED(src) || QDELETED(arrived) || arrived.loc != loc)
+		return null
+	if(!COOLDOWN_FINISHED(src, bounty_announce_cooldown))
+		return null
+	var/line = bounty_pad_line(arrived)
+	if(!line)
+		return null
+	COOLDOWN_START(src, bounty_announce_cooldown, BOUNTY_PAD_ANNOUNCE_COOLDOWN)
+	say(line)
+	playsound(linked_console || src, 'sound/machines/chime.ogg', 40, FALSE)
+	return line
+
+/// What the pad says about `arrived` on it, or null if it says nothing (not a bounty target, or not this ship's to turn in)
+/obj/machinery/mission_pad/proc/bounty_pad_line(atom/movable/arrived)
+	var/datum/criminal_bounty/posting
+	if(istype(arrived, /mob/living/basic/bounty_criminal))
+		var/mob/living/basic/bounty_criminal/criminal = arrived
+		posting = criminal.posting()
+	else if(istype(arrived, /obj/item/bounty_proof))
+		var/obj/item/bounty_proof/proof = arrived
+		posting = proof.posting_ref?.resolve()
+	if(QDELETED(posting) || !posting.is_open() || posting.board_target_on_pad(src) != arrived)
+		return null
+	var/obj/structure/overmap/ship/ship = get_ship_from_atom(src)
+	if(posting.private_to && posting.offered_to() != ship)
+		return null
+	var/list/preview = posting.board_pad_preview(ship, src)
+	var/wanted_name = posting.record?.name || "the fugitive"
+	var/pay = preview[4]
+	var/refusal = posting.board_preview_refusal(preview, ship)
+	var/line
+	if(istype(arrived, /obj/item/bounty_proof))
+		line = "[istype(arrived, /obj/item/bounty_proof/trophy) ? "Trophy" : "Evidence tag"] for [wanted_name] on the pad."
+	else
+		var/state = preview[2]
+		line = "Bounty target on the pad: [wanted_name], [state == BOUNTY_STATE_FREE ? "standing free" : bounty_state_words(state)]."
+		if(state == BOUNTY_STATE_FREE)
+			return "[line] Subdue them first."
+	if(refusal)
+		return "[line] [capitalize(refusal)]."
+	return pay ? "[line] Turn In pays [pay]." : line
 
 // ===== THE BEAM =====
 
@@ -239,6 +337,9 @@
  * they leave behind counts as proof of death.
  */
 /mob/living/basic/bounty_criminal/proc/board_beam_out()
+	// Their last words as the pad takes them (P1's beamed_out lines), said before the beam holds them still
+	if(stat == CONSCIOUS)
+		INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), "beamed_out", null, TRUE)
 	ADD_TRAIT(src, TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT)
 	ADD_TRAIT(src, TRAIT_IMMOBILIZED, BOUNTY_PAD_TRAIT)
 	ADD_TRAIT(src, TRAIT_INCAPACITATED, BOUNTY_PAD_TRAIT)
@@ -263,6 +364,37 @@
 		transporter_sparks(spot)
 		playsound(spot, 'sound/effects/magic/teleport_app.ogg', 50, TRUE)
 	qdel(src)
+
+// ===== THE CAPTURED POSTER (P6) =====
+
+/**
+ * What a full-share catch of a Wanted or Most Wanted leaves on the pad: a plain paper with their
+ * mugshot and a CAPTURED stamp, worth nothing, to pin up. Not a warrant (no posting), so it can never
+ * be shown to anyone as one.
+ */
+/obj/item/paper/bounty_captured
+	name = "captured poster"
+	desc = "A printed notice of a wanted criminal brought in alive. Worth nothing but the bragging rights."
+
+/// Prints the CAPTURED poster (`text`, made before the bounty closed) for `wanted_name` at `where`. Returns the paper.
+/proc/bounty_print_captured_poster(turf/where, text, wanted_name)
+	if(!where || !text)
+		return null
+	var/obj/item/paper/bounty_captured/poster = new(where)
+	poster.name = "captured poster ([wanted_name || "unknown"])"
+	poster.add_raw_text(text, advanced_html = TRUE)
+	poster.update_appearance()
+	// The stamp's class comes from the paper spritesheet, which may have to be made ready first
+	INVOKE_ASYNC(poster, TYPE_PROC_REF(/obj/item/paper/bounty_captured, stamp_captured))
+	return poster
+
+/// The CAPTURED stamp across the poster
+/obj/item/paper/bounty_captured/proc/stamp_captured()
+	var/datum/asset/spritesheet_batched/sheet = get_asset_datum(/datum/asset/spritesheet/simple/paper)
+	if(QDELETED(src) || !sheet)
+		return
+	add_stamp(sheet.icon_class_name("stamp-hos"), rand(170, 250), rand(40, 110), rand(-20, 20), "stamp-hos")
+	update_appearance()
 
 // ===== PROOF OF DEATH =====
 

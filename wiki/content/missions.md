@@ -65,7 +65,7 @@ Not every type is available at once. Several are capped so the galaxy only ever 
 
 ## Bounties and broadcasts
 
-The board carries three things besides contracts. **Pirate bounties** are competitive: a named pirate captain is posted galaxy-wide, several crews can hunt the same one, and it goes to whoever kills them and puts their **ship key** on the mission pad. Paying a fee out of the ship account tracks the target on your chart, deducted from the reward. **Player bounties** let you post a job for other crews yourself, funded from your account and delivered to your pad. **Broadcasts** list any player-founded outpost currently advertising, with coordinates. See [Player Outposts](player-outposts.md).
+The board carries four things besides contracts. The **Wanted** section at the top of the Bounties tab lists wanted criminals to find and bring to your pad, alive for full pay: see [Bounty Hunting](bounty-hunting.md). **Pirate bounties** are competitive: a named pirate captain is posted galaxy-wide, several crews can hunt the same one, and it goes to whoever kills them and puts their **ship key** on the mission pad. Paying a fee out of the ship account tracks the target on your chart, deducted from the reward. **Player bounties** let you post a job for other crews yourself, funded from your account and delivered to your pad. **Broadcasts** list any player-founded outpost currently advertising, with coordinates. See [Player Outposts](player-outposts.md).
 
 Trader outposts also run their own boards, separate from your ship's. You take those by talking to the trader in person, and they pay in **goods off that trader's shelves** rather than money. See [Trader Outposts](trader-outposts.md).
 

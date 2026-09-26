@@ -31,9 +31,21 @@
 	abstract_type = /datum/unit_test/voidcrew_bounty_outpost
 	/// The outpost the test room stands in for
 	var/obj/structure/overmap/trader_outpost/outpost
+	/// The crews make_hunter() made, taken apart before the ships go (a team holds its ship)
+	var/list/outpost_test_teams = list()
+	/// The minds make_hunter() gave a crew, let go of their crew before the teams go
+	var/list/outpost_test_minds = list()
 
 /datum/unit_test/voidcrew_bounty_outpost/Destroy()
 	GLOB.criminal_bounties -= allocated
+	// A mind or a team left pointing at an allocated ship would keep it from being deleted
+	for(var/datum/mind/mind as anything in outpost_test_minds)
+		mind.ship_teams = null
+	for(var/datum/team/voidcrew/team as anything in outpost_test_teams)
+		team.ship = null
+		qdel(team)
+	outpost_test_minds.Cut()
+	outpost_test_teams.Cut()
 	return ..()
 
 /// A trader outpost whose concourse is the test room, with its hangar lift in the top right corner
@@ -61,15 +73,16 @@
 	GLOB.criminal_bounties += posting
 	return posting
 
-/// A person with a mind, crewing `ship` if given
+/// A person with a mind, crewing `ship` if given. The crew is taken apart when the test ends.
 /datum/unit_test/voidcrew_bounty_outpost/proc/make_hunter(obj/structure/overmap/ship/ship)
 	var/mob/living/carbon/human/hunter = allocate(/mob/living/carbon/human/consistent)
 	hunter.mind_initialize()
-	allocated += hunter.mind
 	if(ship)
-		var/datum/team/voidcrew/team = allocate(/datum/team/voidcrew)
+		var/datum/team/voidcrew/team = new
 		team.ship = ship
 		hunter.mind.ship_teams = list(team)
+		outpost_test_teams += team
+		outpost_test_minds += hunter.mind
 	return hunter
 
 /// The posting's decoys, resolved
@@ -482,11 +495,16 @@
 	outpost = make_outpost()
 	var/datum/criminal_bounty/outpost_test/posting = make_posting(run_loc_floor_bottom_left)
 	var/mob/living/basic/bounty_criminal/fugitive = posting.criminal()
-	// A haircut since the mugshot, so the hair clue is in the pool whatever P1 makes
+	// A haircut since the mugshot, so the hair clue is in the pool whatever P1 makes. Both looks keep
+	// the record's species: a look with none can't name a decoy.
 	var/datum/bounty_look/now = new
+	now.species = posting.record.species
+	now.physique = posting.record.gender
 	now.hairstyle = "Mohawk"
 	now.hair_color = "#101010"
 	var/datum/bounty_look/then = new
+	then.species = posting.record.species
+	then.physique = posting.record.gender
 	then.hairstyle = "Bob Hair"
 	then.hair_color = "#e0c060"
 	posting.record.look = now
@@ -552,7 +570,17 @@
 	TEST_ASSERT(findtext(hair, "mohawk") || findtext(hair, "Mohawk"), "The hair clue does not name the new style: [hair]")
 	TEST_ASSERT(findtext(hair, "black"), "The hair clue does not name the new colour: [hair]")
 
-	hunter.mind.ship_teams = null
+	// A feature clue is only ever the one the printed warrant leaves off (its last), never one it already lists (BUG-10)
+	var/list/lines = posting.record.feature_lines()
+	var/list/feature_clues = list()
+	for(var/list/clue as anything in posting.outpost_build_clue_pool())
+		if(clue[1] == "feature") // BOUNTY_CLUE_FEATURE
+			feature_clues += clue[2]
+	if(length(lines))
+		TEST_ASSERT_EQUAL(length(feature_clues), 1, "The traders could give [length(feature_clues)] feature clues, not only the one off the warrant")
+		TEST_ASSERT_EQUAL(feature_clues[1], length(lines), "The traders' feature clue is one the warrant already lists")
+	else
+		TEST_ASSERT(!length(feature_clues), "A fugitive with no features has a feature clue")
 
 /// The wanted board lists the open public postings and nothing else, never builds a picture on the spot, and is outpost property
 /datum/unit_test/voidcrew_bounty_outpost/board
@@ -686,3 +714,84 @@
 		TEST_ASSERT(length(bounty_outpost_public_floor(outpost)) > 50, "[outpost_type] has almost no customers' floor from its lift")
 		TEST_ASSERT_EQUAL(length(bounty_outpost_spawn_spots(outpost, 4)), 4, "[outpost_type] has no room for a fugitive and three decoys")
 		qdel(outpost)
+
+/// P2's drag rule holds while blending in: anyone down or cuffed can be dragged, the fugitive and its decoys alike (AR-C6); standing, nobody can
+/datum/unit_test/voidcrew_bounty_outpost/drag
+
+/datum/unit_test/voidcrew_bounty_outpost/drag/Run()
+	outpost = make_outpost()
+	var/datum/criminal_bounty/outpost_test/posting = make_posting()
+	var/mob/living/basic/bounty_criminal/fugitive = posting.criminal()
+	TEST_ASSERT(posting.setup_outpost_blend(), "The posting could not be set up to blend in")
+	var/list/decoys = decoys_of(posting)
+	TEST_ASSERT(length(decoys), "No decoys to test with")
+	var/mob/living/basic/bounty_criminal/decoy/decoy = decoys[1]
+	var/mob/living/carbon/human/hunter = make_hunter()
+
+	TEST_ASSERT(!fugitive.can_be_pulled(hunter, MOVE_FORCE_OVERPOWERING), "A standing fugitive blending in can be pulled")
+	TEST_ASSERT(!decoy.can_be_pulled(hunter, MOVE_FORCE_OVERPOWERING), "A standing decoy can be pulled")
+	// Down (a blast, say) while still blending in: both drag, so the drag gives nobody away
+	fugitive.downed = TRUE
+	decoy.downed = TRUE
+	TEST_ASSERT(fugitive.blended, "The fugitive stopped blending in without being hit")
+	TEST_ASSERT(fugitive.can_be_pulled(hunter, MOVE_FORCE_OVERPOWERING), "A downed fugitive blending in can't be dragged")
+	TEST_ASSERT(decoy.can_be_pulled(hunter, MOVE_FORCE_OVERPOWERING), "A downed decoy can't be dragged, so the fugitive stands out")
+	fugitive.downed = FALSE
+	decoy.downed = FALSE
+	// Walking out, never
+	var/datum/component/bounty_outpost_blend/blend = fugitive.GetComponent(/datum/component/bounty_outpost_blend)
+	blend.leaving = TRUE
+	fugitive.downed = TRUE
+	TEST_ASSERT(!fugitive.can_be_pulled(hunter, MOVE_FORCE_OVERPOWERING), "Someone walking out can be pulled")
+	fugitive.downed = FALSE
+	blend.leaving = FALSE
+
+/// The right warrant: the nearest trader in sight calls out
+/datum/unit_test/voidcrew_bounty_outpost/room_reacts
+
+/datum/unit_test/voidcrew_bounty_outpost/room_reacts/Run()
+	outpost = make_outpost()
+	var/datum/criminal_bounty/outpost_test/posting = make_posting(run_loc_floor_bottom_left)
+	var/mob/living/basic/bounty_criminal/fugitive = posting.criminal()
+	TEST_ASSERT(posting.setup_outpost_blend(), "The posting could not be set up to blend in")
+	fugitive.forceMove(run_loc_floor_bottom_left)
+	TEST_ASSERT_NULL(posting.outpost_trader_reacts(fugitive), "A trader reacted with no trader there")
+	var/mob/living/basic/outpost_trader/far = allocate(/mob/living/basic/outpost_trader, run_loc_floor_top_right)
+	var/mob/living/basic/outpost_trader/near = allocate(/mob/living/basic/outpost_trader, locate(run_loc_floor_bottom_left.x + 1, run_loc_floor_bottom_left.y + 1, run_loc_floor_bottom_left.z))
+	far.outpost = outpost
+	near.outpost = outpost
+	TEST_ASSERT_EQUAL(posting.outpost_trader_reacts(fugitive), near, "The nearest trader didn't react to the fugitive being exposed")
+
+/// The wanted board: the ship card's own place words (a lair's real name, BUG-5), "seen on this concourse" for a fugitive here (P11), and the vouchers and WANTED: DEAD (BUG-13)
+/datum/unit_test/voidcrew_bounty_outpost/board_card
+
+/datum/unit_test/voidcrew_bounty_outpost/board_card/Run()
+	outpost = make_outpost()
+	var/obj/structure/bounty_wanted_board/board = allocate(/obj/structure/bounty_wanted_board)
+	var/datum/criminal_bounty/outpost_test/here = make_posting()
+	here.board_vouchers = 2
+	var/datum/criminal_bounty/outpost_test/elsewhere = make_posting()
+	elsewhere.site_ref = WEAKREF(allocate(/obj/structure/overmap/trader_outpost/general))
+	var/datum/criminal_bounty/kill_only/lair = new
+	allocated += lair
+	lair.record = bounty_kill_record("Test Don", "running a test club", MALE, 5000, "mugshot")
+	lair.placement_kind = "ruin" // BOUNTY_PLACEMENT_RUIN
+	lair.board_site_name = "Club Test"
+	lair.value = 5000
+	lair.expires_at = world.time + 10 MINUTES
+	GLOB.criminal_bounties += lair
+
+	var/list/entries = list()
+	for(var/list/entry as anything in board.outpost_board_entries())
+		entries[entry["id"]] = entry
+	var/list/here_entry = entries[here.record.id]
+	var/list/elsewhere_entry = entries[elsewhere.record.id]
+	var/list/lair_entry = entries[lair.record.id]
+	TEST_ASSERT(here_entry?["here"], "A fugitive on this concourse isn't marked as seen here")
+	TEST_ASSERT(!elsewhere_entry?["here"], "A fugitive at another outpost is marked as seen here")
+	TEST_ASSERT_EQUAL(here_entry?["vouchers"], 2, "The board doesn't show the vouchers")
+	TEST_ASSERT(!here_entry?["kill_only"], "A live bounty reads as kill only")
+	TEST_ASSERT(lair_entry?["kill_only"], "A kill-only bounty doesn't read WANTED: DEAD")
+	TEST_ASSERT(findtext(lair_entry?["place"], "Club Test"), "The board doesn't name the lair: [lair_entry?["place"]]")
+	TEST_ASSERT(!findtext(lair_entry?["place"], "encrypted signal"), "The board calls a lair an encrypted signal")
+	lair.close("admin") // BOUNTY_CLOSE_ADMIN

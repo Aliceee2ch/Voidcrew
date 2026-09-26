@@ -868,7 +868,27 @@
 		board_push_gps()
 	else
 		marker.forceMove(spot)
+	board_ping_gps()
 	return TRUE
+
+/**
+ * A new sighting is in: whoever holds a GPS unit its beacon was uploaded to (in a hand, a pocket, a
+ * bag, or a MOD suit they wear) hears a soft radar ping and sees a "new sighting" balloon (P9).
+ * A GPS switched off or scrambled stays quiet. Returns how many holders were told.
+ */
+/datum/criminal_bounty/proc/board_ping_gps()
+	var/told = 0
+	for(var/datum/weakref/unit_ref as anything in board_gps_units)
+		var/datum/component/gps/item/unit = unit_ref?.resolve()
+		if(!unit || !unit.tracking || unit.emped || !LAZYACCESS(unit.linked_mission_signals, board_gps_tag))
+			continue
+		var/mob/living/holder = get(unit.parent, /mob/living)
+		if(!holder || holder.stat == DEAD)
+			continue
+		holder.playsound_local(get_turf(holder), 'sound/machines/radar-ping.ogg', 30, FALSE)
+		holder.balloon_alert(holder, "new sighting")
+		told++
+	return told
 
 /// A blurred spot near `center`: up to BOUNTY_SIGHTING_OFFSET tiles off, kept on the site when the criminal is on it
 /datum/criminal_bounty/proc/board_sighting_spot(turf/center)
@@ -943,3 +963,14 @@
 		if(posting.is_open() && posting.is_hunting(ship) && posting.board_link_gps(unit, ship))
 			linked++
 	return linked
+
+/**
+ * Why a GPS tapped on `ship`'s board got no bounty beacon, when that is by design rather than a
+ * fault: the ship hunts a fugitive at a trader outpost, where there is no tracker (BUG-15). Null
+ * otherwise. The board says it in place of "no beacons to upload".
+ */
+/proc/bounty_gps_refusal(obj/structure/overmap/ship/ship)
+	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
+		if(posting.is_open() && posting.is_hunting(ship) && posting.placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST)
+			return "no tracker at a trader outpost"
+	return null

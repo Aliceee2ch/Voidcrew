@@ -6,8 +6,7 @@
 
 /// Decoy patrons that spawn with a trader-outpost bounty
 #define BOUNTY_DECOY_COUNT 3 // BAL: spec section 7
-/// Most fugitives blending in at one trader outpost at once (AR-C9)
-#define BOUNTY_OUTPOST_MAX_FUGITIVES 2
+// The fugitives-per-outpost cap is the board's BOUNTY_MAX_FUGITIVES_PER_OUTPOST (_DEFINES/bounty_board.dm): one number for both checks.
 /// The alert at which the fugitive slips away and the bounty relists at another outpost (D-A6)
 #define BOUNTY_OUTPOST_ALERT_SLIP 2 // BAL: D-A6
 /// How long a ship waits between showing warrants (D-A6)

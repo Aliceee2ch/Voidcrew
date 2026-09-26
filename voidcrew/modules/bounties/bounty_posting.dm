@@ -180,10 +180,27 @@
 		// An offer's mugshot is only built once it is taken (AR-G1): the board resends its static data
 		static_data_serial++
 	board_push_waypoint(ship)
-	ship.ship_notify("WANTED: now hunting [record?.name]. [board_place_text()]. Bring them to the mission pad.", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+	ship.ship_notify("WANTED: now hunting [record?.name]. [board_place_text()]. [board_hunt_tip()]", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 	log_game("BOUNTY: [ship.name] is hunting the [board_log_name()]")
 	board_arm()
 	return TRUE
+
+/**
+ * What the hunt notice tells a crew to do next, by where the criminal is: the GPS on a planet or in
+ * a ruin, boarding a pirate ship, the warrant and the traders at a trader outpost. A bounty that
+ * pays nothing alive (kill-only) asks for the trophy instead.
+ */
+/datum/criminal_bounty/proc/board_hunt_tip()
+	if(!board_share_for(BOUNTY_STATE_RESTRAINED, BOUNTY_STATE_FREE))
+		return "Bring the trophy from the body to your mission pad."
+	switch(placement_kind)
+		if(BOUNTY_PLACEMENT_PLANET, BOUNTY_PLACEMENT_RUIN)
+			return "Tap a GPS on your mission board for their last sighting."
+		if(BOUNTY_PLACEMENT_NPC_SHIP)
+			return "They're aboard a pirate ship: you'll have to board it."
+		if(BOUNTY_PLACEMENT_TRADER_OUTPOST)
+			return "No tracker there. Print a warrant, check faces and features, and ask the traders."
+	return "Bring them to your mission pad."
 
 /**
  * `ship` stops hunting it and may not hunt it again. A private offer dropped this way closes, and
@@ -506,6 +523,37 @@
 	var/list/dead = board_payout(BOUNTY_SHARE_DEAD)
 	return list(full[1], downed[1], dead[1])
 
+/**
+ * The card's reward rows, from this posting's own shares (board_share_for()), so a kingpin or a
+ * kill-only bounty shows its own rules: "Never downed", "Downed" and "Dead" for most; one "Alive"
+ * row when downed pays the same as a clean catch; only "On the trophy" when nothing alive pays.
+ * Each row is list("label", "percent", "credits", "vouchers", "worth"), `worth` counting each voucher
+ * at VOUCHER_CREDIT_VALUE, so the card can show that full pay is the best.
+ */
+/datum/criminal_bounty/proc/board_share_rows()
+	var/list/rows = list()
+	var/full = board_share_for(BOUNTY_STATE_RESTRAINED, BOUNTY_STATE_FREE)
+	var/downed = board_share_for(BOUNTY_STATE_DOWNED, BOUNTY_STATE_DOWNED)
+	var/dead = board_share_for(BOUNTY_STATE_DEAD, BOUNTY_STATE_DEAD)
+	if(full)
+		rows += list(board_share_row(downed == full ? "Alive" : "Never downed", full))
+	if(downed && downed != full)
+		rows += list(board_share_row("Downed", downed))
+	if(dead)
+		rows += list(board_share_row((full || downed) ? "Dead" : "On the trophy", dead))
+	return rows
+
+/// One reward row: what `share` percent pays, labelled `label`
+/datum/criminal_bounty/proc/board_share_row(label, share)
+	var/list/pay = board_payout(share)
+	return list(
+		"label" = label,
+		"percent" = share,
+		"credits" = pay[1],
+		"vouchers" = pay[2],
+		"worth" = pay[1] + pay[2] * VOUCHER_CREDIT_VALUE,
+	)
+
 // ===== THE CARD =====
 
 /// Its zone band's name ("Neutral Zone" ...)
@@ -537,10 +585,61 @@
 			return "Extremely dangerous"
 	return "Armed, fights back"
 
-/// Where it was last seen, as the card says it
+/**
+ * How the criminal fights and how to take them, in a line or two, so a crew can pack for it: where a
+ * meek one hides, a normal one's weapon, a mini-boss's kit and when stuns work on it. Null when there
+ * is nothing useful to say, and for a bounty that pays nothing alive (a kill-only boss is no bounty
+ * criminal: none of this is true of it).
+ */
+/datum/criminal_bounty/proc/board_tactics()
+	if(!board_share_for(BOUNTY_STATE_RESTRAINED, BOUNTY_STATE_FREE))
+		return null
+	switch(record?.archetype)
+		if(BOUNTY_ARCHETYPE_MEEK)
+			return "Runs and hides in lockers, crates, plants and dark corners. A light finds them."
+		if(BOUNTY_ARCHETYPE_NORMAL)
+			var/style_line
+			switch(record.style)
+				if(BOUNTY_STYLE_BRAWLER)
+					style_line = "Fights with fists and shoves."
+				if(BOUNTY_STYLE_KNIFE)
+					style_line = "Carries a knife. Cuts bleed until bandaged."
+				if(BOUNTY_STYLE_PISTOL)
+					style_line = "Carries a pistol."
+				if(BOUNTY_STYLE_SHOTGUN)
+					style_line = "Carries a shotgun. Stay out of close range."
+				if(BOUNTY_STYLE_CLUB)
+					style_line = "Carries a club that wears you out."
+				if(BOUNTY_STYLE_BOTTLE)
+					style_line = "Throws bottles."
+			return "[style_line ? "[style_line] " : ""]May give up to two or more hunters when badly hurt."
+		if(BOUNTY_ARCHETYPE_BOSS)
+			var/kit_line
+			switch(record.kit)
+				if(BOUNTY_KIT_JUGGERNAUT)
+					kit_line = "Armoured. Charges in a straight line, even through walls."
+				if(BOUNTY_KIT_PYROMANIAC)
+					kit_line = "Flamethrower and firebombs. Fire won't hurt them; lasers will."
+				if(BOUNTY_KIT_DEMOLITIONIST)
+					kit_line = "Grenades and breaching charges."
+				if(BOUNTY_KIT_GHOST)
+					kit_line = "Cloaks and dashes in with a knife. A flash breaks the cloak."
+				if(BOUNTY_KIT_HEAVY)
+					kit_line = "Heavy gun, barricades and armour. Lasers work better than bullets."
+			return "[kit_line ? "[kit_line] " : ""]Stuns only work once they're worn out."
+	return null
+
+/**
+ * Where it was last seen, as the card says it. The site's name is read again while the site is
+ * there, so a ruin surveyed after posting shows its real name (BUG-9); an unsurveyed ruin says so
+ * rather than naming "unknown signal".
+ */
 /datum/criminal_bounty/proc/board_place_text()
 	if(board_relisting)
 		return "Last seen: unknown, a new sighting is due"
+	var/obj/structure/overmap/where = site()
+	if(where)
+		board_site_name = board_describe_site(where) || board_site_name
 	var/site_name = board_site_name || "an unknown site"
 	switch(placement_kind)
 		if(BOUNTY_PLACEMENT_NPC_SHIP)
@@ -548,12 +647,15 @@
 		if(BOUNTY_PLACEMENT_TRADER_OUTPOST)
 			return "Seen at [site_name]"
 		if(BOUNTY_PLACEMENT_RUIN)
+			var/obj/structure/overmap/space_ruin/ruin = where
+			if(istype(ruin) && !ruin.surveyed)
+				return "Seen at an unsurveyed signal (marked on your helm once hunted)"
 			return "Seen at the [site_name]"
 	return "Seen on [site_name]"
 
 /// The short line every card carries about how to get full pay (12.3)
 /datum/criminal_bounty/proc/board_pay_note()
-	return "Bring stun weapons: full pay only if never downed."
+	return "Bring a stun weapon and cuffs: full pay only if never downed."
 
 /// "Crew of 2+ recommended" on a Most Wanted card, "3+" in red space (12.1); null on the others
 /datum/criminal_bounty/proc/board_crew_note()
@@ -590,6 +692,7 @@
 /datum/criminal_bounty/proc/board_ui_entry(obj/structure/overmap/ship/ship, obj/machinery/mission_pad/pad)
 	var/list/preview = board_pad_preview(ship, pad)
 	var/crew_note = board_crew_note()
+	var/turn_in_refusal = board_preview_refusal(preview, ship)
 	return list(
 		"ref" = REF(src),
 		"name" = record?.name || "Unknown",
@@ -618,8 +721,13 @@
 		"crew_note" = crew_note,
 		"crew_note_bad" = !!crew_note && board_zone == ZONE_RED,
 		"pay_note" = board_pay_note(),
+		"tactics" = board_tactics(),
+		"photo_old" = !!record?.old_look,
+		"share_rows" = board_share_rows(),
 		"can_turn_in" = preview[1],
 		"turn_in_state" = preview[2],
+		"turn_in_refusal" = turn_in_refusal,
+		"turn_in_pay" = length(preview) >= 4 ? preview[4] : null,
 	)
 
 /// What the log calls it
@@ -647,6 +755,8 @@
 	var/mugshot = record ? bounty_mugshot_asset(record) : ""
 	if(mugshot)
 		lines += "<center><img src='data:image/png;base64,[mugshot]' width='96' height='96'></center>"
+	if(record?.old_look)
+		lines += "<center><i>Old photo: their hair and clothes may have changed.</i></center>"
 	lines += "<b>Name:</b> [record?.name || "Unknown"]<br>"
 	if(record?.alias && record.alias != record.name)
 		lines += "<b>Also known as:</b> [record.alias]<br>"
@@ -654,6 +764,9 @@
 	if(record?.crime)
 		lines += "<b>Wanted for:</b> [record.crime].<br>"
 	lines += "<b>Warning:</b> [board_hint()]. [board_pay_note()]<br>"
+	var/tactics = board_tactics()
+	if(tactics)
+		lines += "<b>Tactics:</b> [tactics]<br>"
 	lines += "<b>[board_place_text()]</b>, [board_zone_name()].<br>"
 	// One feature is left off, so what the traders say about them still tells a hunter something new
 	var/list/features = record?.feature_lines()
@@ -664,8 +777,28 @@
 		for(var/feature in features)
 			lines += "<li>[feature]</li>"
 		lines += "</ul>"
-	var/list/amounts = board_share_amounts()
-	var/voucher_text = board_vouchers ? " and [board_vouchers] trade voucher[board_vouchers > 1 ? "s" : ""]" : ""
-	lines += "<b>Reward:</b> [amounts[1]] cr[voucher_text] if never downed, [amounts[2]] cr if downed, [amounts[3]] cr dead.<br>"
+	// The rows are this posting's own shares, so a kingpin's warrant says what his pays
+	var/list/rewards = list()
+	for(var/list/row as anything in board_share_rows())
+		var/vouchers = row["vouchers"]
+		var/voucher_text = vouchers ? " and [vouchers] trade voucher[vouchers > 1 ? "s" : ""]" : ""
+		rewards += "[lowertext(row["label"])]: [row["credits"]] cr[voucher_text]"
+	lines += "<b>Reward:</b> [rewards.Join("; ")].<br>"
 	lines += "<i>Bring them to your ship's mission pad and press Turn In on the mission board.</i>"
+	return lines.Join("\n")
+
+/**
+ * The CAPTURED poster's text for a full-share catch brought in by `ship`: the mugshot (already
+ * built, never built here), name, crime, a CAPTURED line and who brought them in. Read before the
+ * posting closes, since closing lets go of the record.
+ */
+/datum/criminal_bounty/proc/board_poster_text(obj/structure/overmap/ship/ship)
+	var/list/lines = list()
+	lines += "<center><h2>CAPTURED</h2><b>[bounty_tier_name(record?.tier)]</b></center>"
+	if(record?.mugshot)
+		lines += "<center><img src='data:image/png;base64,[record.mugshot]' width='96' height='96'></center>"
+	lines += "<center><h3>[record?.name || "Unknown"]</h3></center>"
+	if(record?.crime)
+		lines += "<center>Wanted for [record.crime].</center>"
+	lines += "<center>Brought in alive by the crew of the [ship?.name || "unknown ship"].</center>"
 	return lines.Join("\n")

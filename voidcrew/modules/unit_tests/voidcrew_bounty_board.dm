@@ -62,6 +62,30 @@
 	ship.ship_account.account_balance = balance
 	return ship
 
+/// A bare ship record that keeps every notice its crew is sent, in the ships the board tells news to
+/datum/unit_test/proc/board_test_listener()
+	var/obj/structure/overmap/ship/board_test_listener/ship = allocate(/obj/structure/overmap/ship/board_test_listener)
+	ship.ship_account = allocate(/datum/bank_account/ship, "Bounty Test [REF(ship)]", null, 1, FALSE)
+	SSovermap.simulated_ships |= ship
+	return ship
+
+/// A ship that keeps the notices it was sent, for the tests to read
+/obj/structure/overmap/ship/board_test_listener
+	/// Every notice's message, in order
+	var/list/board_test_heard = list()
+
+// Defaults as the parent's (SHIP_NOTIFY_NOTICE is 1)
+/obj/structure/overmap/ship/board_test_listener/ship_notify(message, category = "ALERT", alert_level = 1, sound_file = null, volume = 100)
+	board_test_heard += "[message]"
+	return ..()
+
+/// Whether the ship heard a notice with `words` in it
+/obj/structure/overmap/ship/board_test_listener/proc/board_test_heard(words)
+	for(var/message in board_test_heard)
+		if(findtext(message, words))
+			return TRUE
+	return FALSE
+
 /// Trade vouchers lying on `spot`
 /datum/unit_test/proc/board_test_vouchers(turf/spot)
 	var/count = 0
@@ -430,14 +454,14 @@
 	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 3, 3), "bountyowner")
 	home.founder_mind = WEAKREF(owner.mind)
 
-	var/obj/structure/overmap/ship/ship = board_test_ship()
-	TEST_ASSERT_NULL(bounty_preferred_prison(ship), "A ship with no prison of its own has a preferred prison")
+	var/obj/structure/overmap/ship/board_test_listener/ship = board_test_listener()
+	TEST_ASSERT_NULL(bounty_captor_prison(ship), "A ship with no prison of its own has a preferred prison")
 	var/datum/team/voidcrew/crew = new
 	crew.ship = ship
 	crew.members |= owner.mind
 	LAZYADD(owner.mind.ship_teams, crew)
 	ship.ship_team = crew
-	TEST_ASSERT_EQUAL(bounty_preferred_prison(ship), prison, "The crew's own running prison is not preferred")
+	TEST_ASSERT_EQUAL(bounty_captor_prison(ship), prison, "The crew's own running prison is not preferred")
 
 	var/turf/pad_turf = run_loc_floor_bottom_left
 	var/obj/machinery/mission_pad/pad = allocate(/obj/machinery/mission_pad, pad_turf)
@@ -452,7 +476,20 @@
 	TEST_ASSERT_EQUAL(record.captor_ship?.resolve(), ship, "The record doesn't hold its captor ship")
 	TEST_ASSERT_EQUAL(record.captor_name, ship.name, "The record doesn't name its captor")
 	TEST_ASSERT_EQUAL(record.hurt_fraction, hurt, "The record doesn't carry how hurt they were")
+	TEST_ASSERT(ship.board_test_heard("go to your prison at"), "The notice doesn't send the catch to the crew's own prison")
 	bounty_pool_remove(record)
+
+	// A prison whose warden takes no bounty transfers is never promised (BUG-3)
+	prison.prison_bounty_intake = "none" // BOUNTY_PRISON_INTAKE_NONE
+	ship.board_test_heard.Cut()
+	var/datum/criminal_bounty/refused_posting = board_test_posting()
+	var/datum/bounty_record/refused_record = refused_posting.record
+	var/mob/living/basic/bounty_criminal/refused_criminal = board_test_criminal(refused_posting, pad_turf)
+	TEST_ASSERT(islist(refused_posting.board_claim(ship, pad, refused_criminal, "restrained")), "The second live catch was refused")
+	TEST_ASSERT(!ship.board_test_heard("go to your prison at"), "The notice promised a prison that takes no bounty transfers")
+	TEST_ASSERT(ship.board_test_heard("isn't taking bounty transfers"), "The notice doesn't say why the catch goes to the pool")
+	bounty_pool_remove(refused_record)
+	prison.prison_bounty_intake = "all" // BOUNTY_PRISON_INTAKE_ALL
 
 	LAZYREMOVE(owner.mind.ship_teams, crew)
 	crew.members -= owner.mind
@@ -705,13 +742,14 @@
 	TEST_ASSERT("wanted_hunt" in data, "There is no wanted_hunt")
 	TEST_ASSERT_EQUAL(data["wanted_hunt"], REF(hunted), "wanted_hunt isn't the ship's hunt")
 	var/list/refs = list()
-	var/list/contract = list("ref", "name", "alias", "species", "sex", "tier", "hint", "place", "zone", "mugshot_id", "value", "shares", "time_left", "status", "private", "hunting_by_us", "hunters", "can_turn_in", "turn_in_state")
+	var/list/contract = list("ref", "name", "alias", "species", "sex", "tier", "hint", "tactics", "place", "zone", "mugshot_id", "value", "shares", "share_rows", "time_left", "status", "private", "hunting_by_us", "hunters", "can_turn_in", "turn_in_state", "turn_in_refusal", "turn_in_pay", "photo_old")
 	for(var/list/entry as anything in data["wanted"])
 		refs += entry["ref"]
 		for(var/key in contract)
 			TEST_ASSERT(key in entry, "A wanted entry has no [key]")
 		TEST_ASSERT(!("mugshot" in entry), "A wanted entry carries its mugshot in the live data")
 		TEST_ASSERT(istext(entry["pay_note"]) && findtext(entry["pay_note"], "stun"), "A wanted card has no stun weapon hint")
+		TEST_ASSERT(findtext(entry["pay_note"], "cuffs"), "A wanted card doesn't say to bring cuffs")
 		TEST_ASSERT_EQUAL(length(entry["shares"]), 3, "A wanted entry's shares are not three numbers")
 		for(var/key in entry)
 			var/entry_value = entry[key]
@@ -727,6 +765,7 @@
 		TEST_ASSERT_EQUAL(entry["hunters"], 1, "The hunted bounty doesn't count its hunter")
 		TEST_ASSERT_EQUAL(entry["crew_note"], "Crew of 2+ recommended", "A green most wanted card doesn't recommend a crew of 2")
 		TEST_ASSERT(!entry["can_turn_in"], "A bounty with nothing on a pad can be turned in")
+		TEST_ASSERT(istext(entry["turn_in_refusal"]), "A bounty that can't be turned in doesn't say why")
 
 	// The mugshots are static data, keyed by record id
 	var/list/mugshots = console.board_wanted_mugshots(ship)
@@ -1002,3 +1041,239 @@
 	TEST_ASSERT(findtext(posting.board_hint(), "heavy armour"), "The Heavy's card doesn't warn of its armour")
 	posting.record.kit = "ghost" // BOUNTY_KIT_GHOST
 	TEST_ASSERT(!findtext(posting.board_hint(), "heavy armour"), "Every mini-boss's card warns of heavy armour")
+
+// ===== THE POLISH ROUND =====
+
+/// The card and the warrant: a tactics line for each archetype, cuffs in the pay note, the old photo, the rows from the posting's own shares, and a ruin's real name (P3, P12, BUG-9)
+/datum/unit_test/voidcrew_bounty_board/card_polish
+
+/datum/unit_test/voidcrew_bounty_board/card_polish/Run()
+	var/datum/criminal_bounty/posting = board_test_posting()
+	TEST_ASSERT(findtext(posting.board_pay_note(), "cuffs"), "The pay note doesn't say to bring cuffs")
+
+	// Tactics, by archetype, style and kit
+	posting.record.archetype = "meek" // BOUNTY_ARCHETYPE_MEEK
+	TEST_ASSERT(findtext(posting.board_tactics(), "light"), "A meek card doesn't say a light finds them: [posting.board_tactics()]")
+	posting.record.archetype = "normal" // BOUNTY_ARCHETYPE_NORMAL
+	posting.record.style = "knife" // BOUNTY_STYLE_KNIFE
+	TEST_ASSERT(findtext(posting.board_tactics(), "knife"), "A knife fighter's card doesn't say knife: [posting.board_tactics()]")
+	TEST_ASSERT(findtext(posting.board_tactics(), "give up"), "A normal card doesn't say they may give up")
+	posting.record.archetype = "boss" // BOUNTY_ARCHETYPE_BOSS
+	posting.record.kit = "pyromaniac" // BOUNTY_KIT_PYROMANIAC
+	TEST_ASSERT(findtext(posting.board_tactics(), "lasers will"), "The Pyromaniac's card doesn't say lasers work: [posting.board_tactics()]")
+	TEST_ASSERT(findtext(posting.board_tactics(), "worn out"), "A mini-boss card doesn't say when stuns work")
+	var/text = posting.board_warrant_text()
+	TEST_ASSERT(findtext(text, "Tactics:"), "The warrant has no tactics line")
+
+	// The old photo, on the card and the warrant
+	var/list/entry = posting.board_ui_entry(null, null)
+	TEST_ASSERT(!entry["photo_old"], "A card with a current photo says it is old")
+	posting.record.old_look = new /datum/bounty_look
+	entry = posting.board_ui_entry(null, null)
+	TEST_ASSERT(entry["photo_old"], "A trader-outpost fugitive's card doesn't say the photo is old")
+	TEST_ASSERT(findtext(posting.board_warrant_text(), "Old photo"), "The warrant doesn't say the photo is old")
+	posting.record.old_look = null
+
+	// Reward rows from the posting's own shares: 100 / 60 / 25 of 1000 cr and a voucher (VOUCHER_CREDIT_VALUE 1200)
+	var/list/rows = posting.board_share_rows()
+	TEST_ASSERT_EQUAL(length(rows), 3, "A plain bounty doesn't show three reward rows")
+	var/list/full_row = rows[1]
+	TEST_ASSERT_EQUAL(full_row["label"], "Never downed", "The first row isn't the clean catch")
+	TEST_ASSERT_EQUAL(full_row["vouchers"], 1, "The clean catch row doesn't carry the voucher")
+	TEST_ASSERT_EQUAL(full_row["worth"], 2200, "The clean catch row doesn't count the voucher's worth")
+	var/list/downed_row = rows[2]
+	TEST_ASSERT(full_row["worth"] > downed_row["credits"], "Full pay looks worse than downed pay")
+	TEST_ASSERT(findtext(text, "never downed: 1000 cr and 1 trade voucher"), "The warrant's reward line doesn't come from the rows")
+	var/datum/criminal_bounty/kill_only/kill = new
+	allocated += kill
+	var/list/kill_rows = kill.board_share_rows()
+	TEST_ASSERT_EQUAL(length(kill_rows), 1, "A kill-only bounty shows more than its trophy row")
+	var/list/trophy_row = kill_rows[1]
+	TEST_ASSERT_EQUAL(trophy_row["label"], "On the trophy", "A kill-only bounty's row isn't the trophy")
+
+	// A ruin nobody has surveyed isn't named "unknown signal"; surveyed, it is named for what it is (BUG-9)
+	var/obj/structure/overmap/space_ruin/ruin = allocate(/obj/structure/overmap/space_ruin, outpost_lead_overmap_turf(56, 44))
+	posting.placement_kind = "ruin" // BOUNTY_PLACEMENT_RUIN
+	posting.board_set_site(ruin)
+	ruin.surveyed = FALSE
+	TEST_ASSERT(findtext(posting.board_place_text(), "unsurveyed signal"), "An unsurveyed ruin's card says: [posting.board_place_text()]")
+	ruin.surveyed = TRUE
+	ruin.name = "Test Derelict"
+	TEST_ASSERT_EQUAL(posting.board_place_text(), "Seen at the Test Derelict", "A surveyed ruin's card doesn't name it")
+
+/// The hunt notice says what to do next where they are, a kill-only one asks for the trophy (P5, BUG-6), and a ship notice leads with its category unless it has a tag of its own (BUG-11)
+/datum/unit_test/voidcrew_bounty_board/hunt_notice
+
+/datum/unit_test/voidcrew_bounty_board/hunt_notice/Run()
+	var/obj/structure/overmap/ship/board_test_listener/ship = board_test_listener()
+	var/datum/criminal_bounty/posting = board_test_posting()
+	TEST_ASSERT_EQUAL(posting.hunt(ship), TRUE, "The ship could not hunt the bounty")
+	TEST_ASSERT(ship.board_test_heard("Tap a GPS"), "The planet hunt notice doesn't mention the GPS")
+	posting.placement_kind = "npc_ship" // BOUNTY_PLACEMENT_NPC_SHIP
+	TEST_ASSERT(findtext(posting.board_hunt_tip(), "board it"), "The pirate ship tip doesn't say to board it")
+	posting.placement_kind = "trader_outpost" // BOUNTY_PLACEMENT_TRADER_OUTPOST
+	TEST_ASSERT(findtext(posting.board_hunt_tip(), "warrant"), "The trader outpost tip doesn't mention the warrant")
+	var/datum/criminal_bounty/kill_only/kill = new
+	allocated += kill
+	kill.placement_kind = "ruin" // BOUNTY_PLACEMENT_RUIN
+	TEST_ASSERT(findtext(kill.board_hunt_tip(), "trophy"), "The kill-only hunt notice doesn't ask for the trophy")
+
+	// GPS at a trader outpost: none by design, and the board says so (BUG-15)
+	TEST_ASSERT_EQUAL(bounty_gps_refusal(ship), "no tracker at a trader outpost", "A trader-outpost hunt doesn't explain the missing beacon")
+	posting.placement_kind = "planet" // BOUNTY_PLACEMENT_PLANET
+	TEST_ASSERT_NULL(bounty_gps_refusal(ship), "A planet hunt explains a beacon away")
+
+	TEST_ASSERT_EQUAL(ship_notify_text("Shields are down.", "SHIELDS"), "SHIELDS: Shields are down.", "A ship notice drops its category")
+	TEST_ASSERT_EQUAL(ship_notify_text("WANTED: now hunting someone.", "MISSION CONTROL"), "WANTED: now hunting someone.", "A ship notice with its own tag got a second one")
+
+/// Most Wanted news: every crew hears one posted, and hears one brought in, but never a Wanted (P8)
+/datum/unit_test/voidcrew_bounty_board/news
+
+/datum/unit_test/voidcrew_bounty_board/news/Run()
+	var/obj/structure/overmap/ship/board_test_listener/listener = board_test_listener()
+	var/obj/structure/overmap/ship/board_test_listener/winner = board_test_listener()
+	var/obj/structure/overmap/ship/board_test_listener/hunter = board_test_listener()
+
+	var/obj/structure/overmap/space_ruin/ruin = allocate(/obj/structure/overmap/space_ruin, outpost_lead_overmap_turf(60, 44))
+	var/datum/criminal_bounty/wanted = post_criminal_bounty(2, "ruin", ruin)
+	TEST_ASSERT_NOTNULL(wanted, "No Wanted bounty was posted at a plain ruin")
+	TEST_ASSERT(!listener.board_test_heard("Most Wanted"), "A Wanted bounty went out as news")
+	wanted.close("admin")
+	var/datum/criminal_bounty/most_wanted = post_criminal_bounty(3, "ruin", ruin)
+	TEST_ASSERT_NOTNULL(most_wanted, "No Most Wanted bounty was posted at a plain ruin")
+	TEST_ASSERT(listener.board_test_heard("new Most Wanted"), "A new Most Wanted wasn't news")
+	most_wanted.close("admin")
+
+	// Brought in: news for everyone but the winner (its own notice) and the hunters (told by the close)
+	var/turf/pad_turf = run_loc_floor_bottom_left
+	var/obj/machinery/mission_pad/pad = allocate(/obj/machinery/mission_pad, pad_turf)
+	var/datum/criminal_bounty/posting = board_test_posting(3)
+	TEST_ASSERT_EQUAL(posting.hunt(hunter), TRUE, "The hunter could not hunt the bounty")
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, pad_turf)
+	var/wanted_name = posting.record.name
+	listener.board_test_heard.Cut()
+	hunter.board_test_heard.Cut()
+	TEST_ASSERT(islist(posting.board_claim(winner, pad, criminal, "restrained")), "The Most Wanted catch was refused")
+	TEST_ASSERT(listener.board_test_heard("brought in [wanted_name], Most Wanted"), "A Most Wanted catch wasn't news")
+	TEST_ASSERT(!winner.board_test_heard("brought in"), "The winner heard its own catch as news")
+	TEST_ASSERT(winner.board_test_heard("BOUNTY: [wanted_name] turned in"), "The winner's notice doesn't lead with BOUNTY")
+	TEST_ASSERT(!hunter.board_test_heard("brought in"), "A hunter heard the catch twice")
+	TEST_ASSERT(hunter.board_test_heard("was claimed by"), "A hunter wasn't told the bounty was claimed")
+	for(var/datum/bounty_record/pooled as anything in GLOB.bounty_prisoner_pool.Copy())
+		bounty_pool_remove(pooled)
+
+/// A clean catch of a Wanted leaves a CAPTURED poster on the pad; a downed one doesn't (P6)
+/datum/unit_test/voidcrew_bounty_board/poster
+
+/datum/unit_test/voidcrew_bounty_board/poster/Run()
+	var/turf/pad_turf = run_loc_floor_bottom_left
+	var/obj/machinery/mission_pad/pad = allocate(/obj/machinery/mission_pad, pad_turf)
+	var/obj/structure/overmap/ship/ship = board_test_ship()
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/wanted_name = posting.record.name
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, pad_turf)
+	TEST_ASSERT(islist(posting.board_claim(ship, pad, criminal, "restrained")), "The clean catch was refused")
+	var/obj/item/paper/bounty_captured/poster = locate() in pad_turf
+	TEST_ASSERT_NOTNULL(poster, "A clean Wanted catch left no poster")
+	var/text = ""
+	for(var/datum/paper_input/input as anything in poster.raw_text_inputs)
+		text += input.raw_text
+	TEST_ASSERT(findtext(text, wanted_name), "The poster doesn't name the catch")
+	TEST_ASSERT(findtext(text, ship.name), "The poster doesn't name the crew")
+	TEST_ASSERT(findtext(text, "CAPTURED"), "The poster doesn't say CAPTURED")
+	TEST_ASSERT(!istype(poster, /obj/item/paper/bounty_warrant), "The poster is a warrant")
+	qdel(poster)
+
+	var/datum/criminal_bounty/downed_posting = board_test_posting()
+	var/mob/living/basic/bounty_criminal/downed_criminal = board_test_criminal(downed_posting, pad_turf)
+	downed_criminal.worst_state = "downed" // BOUNTY_STATE_DOWNED
+	TEST_ASSERT(islist(downed_posting.board_claim(ship, pad, downed_criminal, "restrained")), "The downed catch was refused")
+	TEST_ASSERT_NULL(locate(/obj/item/paper/bounty_captured) in pad_turf, "A catch downed earlier left a poster")
+	for(var/datum/bounty_record/pooled as anything in GLOB.bounty_prisoner_pool.Copy())
+		bounty_pool_remove(pooled)
+
+/// The pad says what landed on it and what Turn In pays, the card says why Turn In won't work, and a decoy gets nothing (P2, P10, BUG-4)
+/datum/unit_test/voidcrew_bounty_board/pad_voice
+
+/datum/unit_test/voidcrew_bounty_board/pad_voice/Run()
+	var/obj/structure/overmap/ship/ship = board_test_ship()
+	var/turf/pad_turf = run_loc_floor_bottom_left
+	var/turf/aside = locate(pad_turf.x + 2, pad_turf.y, pad_turf.z)
+	var/obj/machinery/mission_pad/pad = allocate(/obj/machinery/mission_pad, pad_turf)
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/wanted_name = posting.record.name
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, aside)
+
+	// Nothing there: the card says so
+	var/list/preview = posting.board_pad_preview(ship, pad)
+	TEST_ASSERT(!preview[1], "Turn In is offered with nothing on the pad")
+	TEST_ASSERT_EQUAL(preview[3], "nothing on the pad for this bounty", "The card doesn't say the pad is empty")
+
+	// Standing free on the pad: the card and the pad both say to subdue them
+	criminal.forceMove(pad_turf)
+	preview = posting.board_pad_preview(ship, pad)
+	TEST_ASSERT_EQUAL(preview[2], "free", "The card doesn't see them free on the pad") // BOUNTY_STATE_FREE
+	TEST_ASSERT_EQUAL(preview[3], "they're standing free, subdue them first", "The card doesn't say to subdue them")
+	TEST_ASSERT_NULL(preview[4], "The card offers pay for a criminal standing free")
+	var/line = pad.bounty_pad_line(criminal)
+	TEST_ASSERT(findtext(line, wanted_name) && findtext(line, "Subdue them first"), "The pad's line for a free criminal: [line]")
+
+	// Cuffed, but downed earlier: the downed share, and why (the bare pad isn't aboard, so the card says that too)
+	var/obj/item/restraints/handcuffs/cuffs = new(pad_turf)
+	TEST_ASSERT(criminal.body_apply_cuffs(cuffs, null), "The criminal could not be cuffed")
+	criminal.forceMove(pad_turf)
+	criminal.worst_state = "downed" // BOUNTY_STATE_DOWNED
+	preview = posting.board_pad_preview(ship, pad)
+	TEST_ASSERT_EQUAL(preview[4], "1320 cr (downed earlier)", "The card's pay for a catch downed earlier") // 60% of 1000 + 1200
+	TEST_ASSERT_EQUAL(preview[3], "the pad must be aboard your ship", "The card doesn't say the pad isn't aboard")
+	line = pad.bounty_pad_line(criminal)
+	TEST_ASSERT(findtext(line, "restrained") && findtext(line, "The pad must be aboard your ship"), "The pad's line for a cuffed criminal: [line]")
+	var/list/entry = posting.board_ui_entry(ship, pad)
+	TEST_ASSERT_EQUAL(entry["turn_in_refusal"], "the pad must be aboard your ship", "The card entry doesn't carry the refusal")
+	TEST_ASSERT_EQUAL(entry["turn_in_pay"], "1320 cr (downed earlier)", "The card entry doesn't carry the pay")
+
+	// Once per few seconds, however often they're dragged on and off (dragging them on above already spoke)
+	COOLDOWN_RESET(pad, bounty_announce_cooldown)
+	TEST_ASSERT_NOTNULL(pad.bounty_pad_announce(criminal), "The pad said nothing about the catch")
+	TEST_ASSERT_NULL(pad.bounty_pad_announce(criminal), "The pad spoke again inside its cooldown")
+
+	// Another crew's offer, or a decoy: nothing
+	var/datum/criminal_bounty/offer = board_test_posting(1, board_test_ship())
+	var/mob/living/basic/bounty_criminal/offered = board_test_criminal(offer, pad_turf)
+	TEST_ASSERT_NULL(pad.bounty_pad_line(offered), "The pad spoke about another crew's offer")
+	var/mob/living/basic/bounty_criminal/decoy/decoy = allocate(/mob/living/basic/bounty_criminal/decoy, pad_turf)
+	TEST_ASSERT_NULL(pad.bounty_pad_line(decoy), "The pad spoke about a decoy")
+
+	// Its proof of death: the dead share
+	criminal.forceMove(aside)
+	var/obj/item/bounty_proof/proof = bounty_drop_proof(criminal)
+	TEST_ASSERT_NOTNULL(proof, "No proof to test with")
+	proof.forceMove(pad_turf)
+	line = pad.bounty_pad_line(proof)
+	TEST_ASSERT(findtext(line, "Evidence tag for [wanted_name]"), "The pad's line for the proof: [line]")
+	preview = posting.board_pad_preview(ship, pad)
+	TEST_ASSERT_EQUAL(preview[4], "550 cr", "The card's pay for the proof") // 25% of 1000 + 1200
+	// The body the proof stands for is no longer the bounty's, so closing it won't take the body away
+	qdel(criminal)
+
+/// A new sighting pings whoever holds a linked GPS; a GPS switched off, or lying on the floor, stays quiet (P9)
+/datum/unit_test/voidcrew_bounty_board/gps_ping
+
+/datum/unit_test/voidcrew_bounty_board/gps_ping/Run()
+	var/obj/structure/overmap/ship/ship = board_test_ship()
+	var/turf/spot = locate(run_loc_floor_bottom_left.x + 2, run_loc_floor_bottom_left.y + 2, run_loc_floor_bottom_left.z)
+	var/datum/criminal_bounty/posting = board_test_posting()
+	TEST_ASSERT_EQUAL(posting.hunt(ship), TRUE, "The ship could not hunt the bounty")
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, spot)
+	TEST_ASSERT_NOTNULL(criminal, "No criminal to track")
+	var/mob/living/carbon/human/consistent/holder = allocate(/mob/living/carbon/human/consistent, run_loc_floor_bottom_left)
+	var/obj/item/gps/gps = allocate(/obj/item/gps, run_loc_floor_bottom_left)
+	holder.put_in_hands(gps)
+	var/datum/component/gps/item/unit = gps.GetComponent(/datum/component/gps/item)
+	TEST_ASSERT_EQUAL(bounty_link_gps(ship, unit), 1, "The hunter's GPS didn't get the sighting")
+	TEST_ASSERT_EQUAL(posting.board_ping_gps(), 1, "Holding a linked GPS got no ping")
+	unit.tracking = FALSE
+	TEST_ASSERT_EQUAL(posting.board_ping_gps(), 0, "A GPS switched off pinged")
+	unit.tracking = TRUE
+	holder.dropItemToGround(gps)
+	TEST_ASSERT_EQUAL(posting.board_ping_gps(), 0, "A GPS on the floor pinged somebody")

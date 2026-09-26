@@ -115,7 +115,9 @@
 	else if(linked)
 		balloon_alert(user, "linked - no objective marked yet")
 	else
-		balloon_alert(user, "no beacons to upload!")
+		// A hunt at a trader outpost has no tracker by design: say so rather than sound broken
+		var/why_none = bounty_gps_refusal(ship)
+		balloon_alert(user, why_none ? "[why_none]!" : "no beacons to upload!")
 	return ITEM_INTERACT_SUCCESS
 
 /obj/machinery/computer/mission_board/ui_interact(mob/user, datum/tgui/ui)

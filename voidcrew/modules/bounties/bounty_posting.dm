@@ -43,8 +43,10 @@
 	var/board_spawning = FALSE
 	/// Weakref to the proof of death (/obj/item/bounty_proof) left when the body was destroyed
 	var/datum/weakref/board_proof_ref
-	/// Weakrefs to GPS units (/datum/component/gps/item) its sighting beacon was uploaded to
+	/// Weakrefs to GPS units (/datum/component/gps/item) its sighting beacon was uploaded to -> weakref of the ship that linked them
 	var/list/board_gps_units = list()
+	/// The worst capture state (BOUNTY_STATE_*) any body of its criminal reached. A criminal that comes back when its site loads again starts from here: once downed, never full pay; once dead, only proof (12.1).
+	var/board_worst_state = BOUNTY_STATE_FREE
 	/// The sighting beacon's tag on those units
 	var/board_gps_tag
 	/// world.time the sighting marker moves next
@@ -175,6 +177,8 @@
 	if(private_to)
 		board_accepted = TRUE
 		expires_at = world.time + BOUNTY_PRIVATE_DURATION
+		// An offer's mugshot is only built once it is taken (AR-G1): the board resends its static data
+		static_data_serial++
 	board_push_waypoint(ship)
 	ship.ship_notify("WANTED: now hunting [record?.name]. [board_place_text()]. Bring them to the mission pad.", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 	log_game("BOUNTY: [ship.name] is hunting the [board_log_name()]")
@@ -195,6 +199,7 @@
 	board_hunt_started -= ship_ref
 	board_abandoned_by |= ship_ref
 	ship.remove_waypoint(board_waypoint_key())
+	board_unlink_gps(ship)
 	log_game("BOUNTY: [ship.name] abandoned the [board_log_name()]")
 	if(private_to)
 		close(BOUNTY_CLOSE_ABANDONED)
@@ -235,6 +240,9 @@
 		if(world.time >= board_relist_at)
 			board_finish_relist()
 		return
+	// A criminal nobody can reach any more (a chasm's depths, nullspace) must not hold the bounty
+	if(board_check_unreachable())
+		return
 	board_arm()
 	board_move_sighting()
 
@@ -246,9 +254,11 @@
 
 /**
  * Closes the posting for `reason` (BOUNTY_CLOSE_*), won by `winner` when a ship turned it in:
- * tells every hunter, removes the criminal, its companions, its decoys and its sighting marker
- * (their field protection goes with them), frees every hunt, sends COMSIG_BOUNTY_POSTING_CLOSED and
- * deletes the posting. Safe to call twice: the second call does nothing and returns FALSE.
+ * tells every hunter, frees every hunt, sends COMSIG_BOUNTY_POSTING_CLOSED (while its criminal and
+ * decoys are still there, so P6 can walk them out of a trader outpost), then removes whatever of
+ * the criminal, its companions, its decoys and its sighting marker is left (their field protection
+ * goes with them) and deletes the posting. Safe to call twice: the second call does nothing and
+ * returns FALSE.
  */
 /datum/criminal_bounty/proc/close(reason, obj/structure/overmap/ship/winner)
 	if(status == BOUNTY_POSTING_CLOSED)
@@ -267,6 +277,8 @@
 	board_hunt_started.Cut()
 	board_clear_gps()
 
+	// Listeners get the criminal and decoys first: P6 detaches the ones at a trader outpost and walks them out
+	SEND_SIGNAL(src, COMSIG_BOUNTY_POSTING_CLOSED, reason, winner)
 	board_remove_mobs(reason)
 	board_drop_marker()
 	// Proof nobody brought in is proof of nothing now
@@ -277,8 +289,11 @@
 		qdel(proof)
 	board_unhook_site()
 
-	if(record?.status == BOUNTY_RECORD_WANTED && reason != BOUNTY_CLOSE_CLAIMED)
-		record.status = BOUNTY_RECORD_CLOSED
+	if(reason != BOUNTY_CLOSE_CLAIMED && record)
+		if(record.status == BOUNTY_RECORD_WANTED)
+			record.status = BOUNTY_RECORD_CLOSED
+		// Nobody will wear this face again (P1's look cache)
+		bounty_forget_looks(record)
 	// Its ship's next offer waits, so dropping one never rerolls it at once
 	var/obj/structure/overmap/ship/offered = offered_to()
 	if(offered)
@@ -287,8 +302,9 @@
 	GLOB.criminal_bounties -= src
 	SScriminal_bounties.board_changed()
 	log_game("BOUNTY: the [board_log_name()] closed ([reason])[winner ? ", won by [winner.name]" : ""]")
-	SEND_SIGNAL(src, COMSIG_BOUNTY_POSTING_CLOSED, reason, winner)
-	qdel(src)
+	// Called from Destroy() (an admin deleting it) it is already on its way out
+	if(!QDELETED(src))
+		qdel(src)
 	return TRUE
 
 /// The notices a closing sends: "claimed by <ship>" to every other hunter, and why it ended to the rest
@@ -321,11 +337,11 @@
 
 /**
  * Removes the criminal, its companions and its decoys, wherever they are, taking their field
- * protection off first (AR-G3). A ship holding the criminal when the bounty ends is told who
- * collected them. The pad detaches its criminal before it closes the bounty, so this never touches
- * one being beamed out.
+ * protection off first (AR-G3). A ship holding the criminal is told who collected them, and whether
+ * the bounty is closed or `relisting`. The pad detaches its criminal before it closes the bounty,
+ * so this never touches one being beamed out.
  */
-/datum/criminal_bounty/proc/board_remove_mobs(reason)
+/datum/criminal_bounty/proc/board_remove_mobs(reason, relisting = FALSE)
 	var/mob/living/basic/bounty_criminal/criminal = criminal()
 	board_detach_criminal()
 	var/list/extras = list()
@@ -340,7 +356,10 @@
 				extras |= extra
 		var/obj/structure/overmap/ship/holder = get_ship_from_atom(criminal)
 		if(holder && !istype(holder, /obj/structure/overmap/ship/npc) && reason != BOUNTY_CLOSE_CLAIMED)
-			holder.ship_notify("WANTED: the corrections service collected [record?.name || "your prisoner"]. The bounty on them is closed.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
+			if(relisting)
+				holder.ship_notify("WANTED: the corrections service took [record?.name || "your prisoner"] off your ship. The bounty stays open and they will turn up somewhere else.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
+			else
+				holder.ship_notify("WANTED: the corrections service collected [record?.name || "your prisoner"]. The bounty on them is closed.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
 		board_dispose_mob(criminal)
 	companions.Cut()
 	decoys.Cut()
@@ -380,10 +399,15 @@
 		board_lost_timer = null
 	var/obj/structure/overmap/old_site = site()
 	board_left_site = old_site ? WEAKREF(old_site) : null
-	board_remove_mobs()
+	// At a trader outpost, P6 walks the fugitive (if it is still there) and its decoys out first
+	if(placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST)
+		outpost_release_site()
+	board_remove_mobs(null, TRUE)
 	board_drop_marker()
 	board_unhook_site()
 	site_ref = null
+	// Whoever turns up at the next site is a fresh sighting
+	board_worst_state = BOUNTY_STATE_FREE
 	for(var/obj/structure/overmap/ship/hunter as anything in hunter_ships())
 		hunter.remove_waypoint(board_waypoint_key())
 		hunter.ship_notify("WANTED: [record?.name]: [reason || "slipped away"]. A new last-known location should come in within [DisplayTimeText(BOUNTY_RELIST_DELAY)].", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
@@ -391,21 +415,26 @@
 	return TRUE
 
 /**
- * The relist delay is over: a new site of the same kind where it can, another kind the tier allows
- * where it can't, in the zone band its value was fixed for first. With nowhere at all, it closes.
+ * The relist delay is over: a new site in the zone band its value was fixed for first, never the
+ * one it left. A trader-outpost fugitive goes to a different trader outpost, where it blends in
+ * again (the card's mugshot is its old look); a criminal from anywhere else never goes to one (the
+ * hunters have seen its true face, AR-C1), but may go to another kind its tier allows. With nowhere
+ * to go it tries again a minute later, until its clock runs out.
  */
 /datum/criminal_bounty/proc/board_finish_relist()
 	var/obj/structure/overmap/exclude = board_left_site?.resolve()
-	var/list/placement = SScriminal_bounties.board_pick_placement(record?.tier, record?.archetype, placement_kind, board_zone, exclude)
+	var/at_outpost = placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST
+	var/list/placement = SScriminal_bounties.board_pick_placement(record?.tier, record?.archetype, placement_kind, board_zone, exclude, only_kind = at_outpost, avoid_kinds = at_outpost ? null : list(BOUNTY_PLACEMENT_TRADER_OUTPOST))
 	if(!placement)
-		close(BOUNTY_CLOSE_NO_BODY)
+		board_relist_at = world.time + BOUNTY_PUBLIC_POST_RETRY
 		return FALSE
 	board_relisting = FALSE
 	board_left_site = null
 	placement_kind = placement[1]
 	board_set_site(placement[2])
-	if(placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST && record && !record.old_look)
-		make_old_look(record)
+	// Its card is shown again with the new place, and its mugshot rebuilt if the look changed
+	static_data_serial++
+	SScriminal_bounties.board_changed()
 	for(var/obj/structure/overmap/ship/hunter as anything in hunter_ships())
 		board_push_waypoint(hunter)
 		hunter.ship_notify("WANTED: new sighting of [record?.name]. [board_place_text()].", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
@@ -503,6 +532,8 @@
 		if(BOUNTY_ARCHETYPE_MEEK)
 			return "Known to run"
 		if(BOUNTY_ARCHETYPE_BOSS)
+			if(record.kit == BOUNTY_KIT_HEAVY)
+				return "Extremely dangerous, heavy armour"
 			return "Extremely dangerous"
 	return "Armed, fights back"
 
@@ -540,11 +571,7 @@
 
 /// Its species' name, for the card
 /datum/criminal_bounty/proc/board_species_name()
-	var/datum/species/species_type = record?.species
-	if(!ispath(species_type, /datum/species))
-		return "Unknown"
-	// INTEGRATION: P1 has bounty_species_name(species) for this; switch to it at merge
-	return capitalize(trim(replacetext(initial(species_type.name), "\improper", "")))
+	return bounty_species_name(record?.species)
 
 /// Its sex, for the card
 /datum/criminal_bounty/proc/board_sex_name()
@@ -628,7 +655,10 @@
 		lines += "<b>Wanted for:</b> [record.crime].<br>"
 	lines += "<b>Warning:</b> [board_hint()]. [board_pay_note()]<br>"
 	lines += "<b>[board_place_text()]</b>, [board_zone_name()].<br>"
+	// One feature is left off, so what the traders say about them still tells a hunter something new
 	var/list/features = record?.feature_lines()
+	if(length(features))
+		features = features.Copy(1, length(features))
 	if(length(features))
 		lines += "<b>Distinguishing features:</b><ul>"
 		for(var/feature in features)

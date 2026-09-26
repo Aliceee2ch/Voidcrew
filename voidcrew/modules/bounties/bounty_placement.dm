@@ -152,6 +152,9 @@
 			continue
 		if(board_postings_at(outpost) >= BOUNTY_MAX_FUGITIVES_PER_OUTPOST)
 			continue
+		// P6's own count of fugitives set up to blend in there (AR-C9)
+		if(!bounty_outpost_has_room(outpost))
+			continue
 		candidates += outpost
 	return length(candidates) ? pick(candidates) : null
 
@@ -282,9 +285,11 @@
 /**
  * The site's interior went away with the criminal in it (spec 6: unload): the criminal, its
  * companions and the marker go, the posting stays open, and the same record comes back at full
- * health on the next load. Capture progress does not survive.
+ * health on the next load. Cuffs don't survive, but the worst state it reached does (12.1): it
+ * never pays more than it did before, and a dead one comes back as proof of death.
  */
 /datum/criminal_bounty/proc/board_site_took_criminal(mob/living/basic/bounty_criminal/criminal)
+	board_note_worst(criminal)
 	board_detach_criminal()
 	var/list/extras = list()
 	for(var/datum/weakref/ref as anything in companions)
@@ -300,6 +305,14 @@
 	board_drop_marker()
 	board_wait_for_load(site())
 	log_game("BOUNTY: the [board_log_name()] waits for its site to load again")
+
+/// Remembers the worst state `criminal` reached, for whatever body of it comes next (12.1)
+/datum/criminal_bounty/proc/board_note_worst(mob/living/basic/bounty_criminal/criminal)
+	if(!criminal)
+		return
+	var/state = criminal.stat == DEAD ? BOUNTY_STATE_DEAD : criminal.worst_state
+	if(bounty_state_rank(state) < bounty_state_rank(board_worst_state))
+		board_worst_state = state
 
 /// The site is gone (a ruin respawning elsewhere, a pirate ship destroyed or despawned)
 /datum/criminal_bounty/proc/board_on_site_deleted(datum/source)
@@ -319,9 +332,11 @@
 /**
  * Places the criminal if it can now: the posting is open and not relisting, a private offer has
  * been taken, there is no criminal, body or proof already, the site's interior is loaded (else it
- * waits for the load), and the server is under BOUNTY_MAX_LIVE_CRIMINALS (else the board tries
- * again next tick). The spawn runs async, since dressing the look can sleep. Returns TRUE if a
- * spawn started.
+ * waits for the load), and the server has room under BOUNTY_MAX_LIVE_CRIMINALS counting spawns
+ * still under way (else the board tries again next tick). A pirate ship taken, cleared or
+ * abandoned since the posting went up is no place for it any more: the bounty moves on. The spawn
+ * runs async, since picking the spot and dressing the look can yield. Returns TRUE if a spawn
+ * started.
  */
 /datum/criminal_bounty/proc/board_arm()
 	if(!is_open() || board_relisting || board_spawning)
@@ -333,33 +348,90 @@
 	var/obj/structure/overmap/where = site()
 	if(!where)
 		return FALSE
+	if(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP && !board_npc_ship_usable(where))
+		relist("moved on")
+		return FALSE
 	if(!board_site_loaded(where))
 		board_wait_for_load(where)
 		return FALSE
-	if(SScriminal_bounties.board_live_criminals() >= BOUNTY_MAX_LIVE_CRIMINALS)
+	if(SScriminal_bounties.board_criminal_slots_used() >= BOUNTY_MAX_LIVE_CRIMINALS)
 		return FALSE
 	board_spawning = TRUE
 	INVOKE_ASYNC(src, PROC_REF(board_spawn_criminal), where)
 	return TRUE
 
-/// Picks the spot and spawns the criminal there, then sets it up (board_adopt_criminal())
+/// Whether a pirate ship can still hold a criminal: not claimed by players, not abandoned or resolved, its crew still aboard (M3)
+/datum/criminal_bounty/proc/board_npc_ship_usable(obj/structure/overmap/ship/npc/npc_ship)
+	if(!istype(npc_ship) || QDELETED(npc_ship))
+		return FALSE
+	if(npc_ship.player_controlled || npc_ship.abandoned || npc_ship.spawner_resolved)
+		return FALSE
+	return length(npc_ship.tracked_crew) > 0
+
+/// Whether a spawn at `where` that has yielded is still wanted: the posting open at the same loaded site, with nothing placed meanwhile
+/datum/criminal_bounty/proc/board_spawn_still_wanted(obj/structure/overmap/where)
+	if(!is_open() || board_relisting || site() != where || !board_site_loaded(where))
+		return FALSE
+	return !criminal() && !board_proof()
+
+/// Picks the spot at `where` and places the criminal there (board_place_at()). Runs async from board_arm().
 /datum/criminal_bounty/proc/board_spawn_criminal(obj/structure/overmap/where)
 	var/list/spot = board_pick_spawn(where)
-	var/mob/living/basic/bounty_criminal/criminal = spot ? spawn_bounty_criminal(record, spot["turf"], src) : null
-	board_spawning = FALSE
-	if(QDELETED(criminal))
-		board_spawn_failures++
-		// A site that never has room (or a spawn that keeps failing) gives the bounty to another site
-		if(board_spawn_failures >= BOUNTY_SPAWN_ATTEMPTS && is_open() && !board_relisting)
-			log_game("BOUNTY: the [board_log_name()] found no place to spawn in [board_spawn_failures] tries")
+	// The picker can yield: a pirate ship may have been taken meanwhile (M3)
+	if(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP && !board_npc_ship_usable(where))
+		board_spawning = FALSE
+		if(is_open() && !board_relisting)
 			relist("moved on")
 		return null
-	// Spawning can sleep: check the posting and its site again
-	if(!is_open() || board_relisting || site() != where || !board_site_loaded(where) || criminal() || board_proof())
+	if(spot && !board_spawn_still_wanted(where))
+		board_spawning = FALSE
+		return null
+	var/atom/movable/placed = spot ? board_place_at(spot["turf"], spot["activity"], spot["anchor"], where) : null
+	board_spawning = FALSE
+	if(!placed && is_open() && !board_relisting && !criminal() && !board_proof())
+		board_spawn_failures++
+		// A site that never has room (or a spawn that keeps failing) gives the bounty to another site
+		if(board_spawn_failures >= BOUNTY_SPAWN_ATTEMPTS)
+			log_game("BOUNTY: the [board_log_name()] found no place to spawn in [board_spawn_failures] tries")
+			relist("moved on")
+	return placed
+
+/**
+ * Places what the bounty has at `spot`, at site `where` (null for a test or an admin): its criminal,
+ * doing `activity` at `anchor` (board_adopt_criminal()), or, when an earlier body of theirs died,
+ * its proof of death: a dead criminal never comes back alive (12.1). Returns what it placed, or
+ * null. Spawning can sleep; a body spawned for a posting that changed meanwhile is thrown away
+ * unseen, and that is no death.
+ */
+/datum/criminal_bounty/proc/board_place_at(turf/spot, activity, atom/anchor, obj/structure/overmap/where)
+	if(!spot || !is_open() || board_relisting)
+		return null
+	if(board_worst_state == BOUNTY_STATE_DEAD)
+		return board_place_proof(spot)
+	var/mob/living/basic/bounty_criminal/criminal = spawn_bounty_criminal(record, spot, src)
+	board_spawning = FALSE
+	if(QDELETED(criminal))
+		return null
+	var/still_wanted = where ? board_spawn_still_wanted(where) : (is_open() && !board_relisting && !criminal() && !board_proof())
+	if(!still_wanted)
+		ADD_TRAIT(criminal, TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT)
 		qdel(criminal)
 		return null
-	board_adopt_criminal(criminal, where, spot["activity"], spot["anchor"])
+	if(!board_adopt_criminal(criminal, where, activity, anchor))
+		return null
 	return criminal
+
+/// The proof of death of a criminal that died before its site unloaded, laid near where it would have stood
+/datum/criminal_bounty/proc/board_place_proof(turf/spot)
+	if(!is_open() || board_proof() || !spot)
+		return null
+	var/obj/item/bounty_proof/proof = new(bounty_proof_spot(spot))
+	proof.posting_ref = WEAKREF(src)
+	proof.record = record
+	if(record?.name)
+		proof.name = "evidence tag ([record.name])"
+	board_attach_proof(proof)
+	return proof
 
 /**
  * Makes `criminal` this posting's, placed at `where`: tracked by weakref, leashed to the site,
@@ -378,6 +450,10 @@
 		criminal.record = record
 	RegisterSignal(criminal, COMSIG_QDELETING, PROC_REF(board_on_criminal_deleted))
 	board_spawn_failures = 0
+	// Whatever an earlier body of theirs went through still counts (12.1). Only ever made worse.
+	// INTEGRATION: P2's body_restore_worst_state(state) replaces these two lines at merge.
+	if(bounty_state_rank(board_worst_state) < bounty_state_rank(criminal.worst_state))
+		criminal.worst_state = board_worst_state
 	if(where)
 		criminal.site_bounds = board_site_bounds(where)
 		board_add_site_factions(criminal, where)
@@ -385,7 +461,19 @@
 		board_spawn_companions(criminal)
 	criminal.start_activity(activity || board_default_activity(), anchor)
 	if(placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST)
-		setup_outpost_blend()
+		// P6 dresses it as a patron and brings its decoys. Refused (no room, say), it can't stay here.
+		if(!setup_outpost_blend())
+			log_game("BOUNTY: the [board_log_name()] could not blend in at [board_site_name]")
+			board_detach_criminal()
+			ADD_TRAIT(criminal, TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT)
+			qdel(criminal)
+			relist("moved on")
+			return FALSE
+		// Closed or relisted while the setup ran: whoever it placed walks out again
+		if(!is_open() || board_relisting)
+			outpost_release_site()
+			board_remove_mobs(null, board_relisting)
+			return FALSE
 	else
 		board_move_sighting(TRUE)
 	log_game("BOUNTY: the [board_log_name()] placed its criminal at [AREACOORD(criminal)]")
@@ -461,12 +549,34 @@
 	var/obj/structure/overmap/where = site()
 	var/turf/spot = get_turf(source)
 	if(where && board_site_unloading(where) && (!spot || board_site_contains(where, spot)))
+		board_note_worst(source)
 		board_site_took_criminal()
 		return
 	// Destroyed. Its proof may be on the way (bounty_drop_proof()), so look a moment later.
 	if(board_lost_timer)
 		deltimer(board_lost_timer)
 	board_lost_timer = addtimer(CALLBACK(src, PROC_REF(board_check_lost)), 1 SECONDS, TIMER_STOPPABLE | TIMER_DELETE_ME)
+
+/**
+ * The board's backstop for a criminal nobody can reach any more (H1): in a chasm's depths, or with
+ * no turf at all (nullspace). Proof of death at the edge where it can be had; otherwise the body is
+ * let go and the bounty lists at a new site. Returns TRUE if it acted.
+ */
+/datum/criminal_bounty/proc/board_check_unreachable()
+	var/mob/living/basic/bounty_criminal/criminal = criminal()
+	if(!criminal)
+		return FALSE
+	var/in_chasm = istype(criminal.loc, /obj/effect/abstract/chasm_storage)
+	if(!in_chasm && get_turf(criminal))
+		return FALSE
+	if(in_chasm && !board_proof() && bounty_drop_proof(criminal))
+		return TRUE
+	board_detach_criminal()
+	ADD_TRAIT(criminal, TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT)
+	if(board_proof())
+		return TRUE
+	relist("lost, with nothing left to bring in")
+	return TRUE
 
 /// A moment after the criminal was destroyed: with no proof left either, the bounty relists at a new site (AR-A6)
 /datum/criminal_bounty/proc/board_check_lost()
@@ -717,38 +827,18 @@
 			return FALSE
 	return TRUE
 
-/// A trader outpost spawn: on the concourse, out of sight where it can be, blending in; a normal fugitive heads for a free bar stool
+/**
+ * A trader outpost spawn: a free tile of the floor customers walk (never behind a counter, in a
+ * staff room or on the hangar lift), out of every player's sight where it can be (AR-C6, C10).
+ * P6's decoy picker, so the fugitive stands where its decoys stand. It blends in (P6's setup).
+ */
 /datum/criminal_bounty/proc/board_pick_outpost_spawn(obj/structure/overmap/trader_outpost/outpost)
-	var/list/bounds = board_site_bounds(outpost)
-	if(!bounds)
+	if(!outpost.template_bottom_left || !outpost.outpost_template)
 		return null
-	var/turf/low = locate(bounds[1], bounds[2], bounds[5])
-	var/turf/high = locate(bounds[3], bounds[4], bounds[5])
-	if(!low || !high)
+	var/list/spots = bounty_outpost_spawn_spots(outpost, 1, null)
+	if(!length(spots))
 		return null
-	var/list/players = bounty_player_turfs(bounds[5])
-	var/list/concourse = list()
-	var/list/unseen = list()
-	var/list/stools = list()
-	for(var/turf/spot as anything in block(low, high))
-		CHECK_TICK
-		if(!istype(get_area(spot), /area/voidcrew/trader_outpost))
-			continue
-		for(var/obj/structure/chair/stool/bar/stool in spot)
-			if(!stool.has_buckled_mobs() && !(locate(/mob/living) in spot))
-				stools += stool
-		if(!bounty_spawn_turf_ok(spot))
-			continue
-		concourse += spot
-		if(bounty_turf_clear_of_players(spot, 7, players))
-			unseen += spot
-	var/turf/chosen = length(unseen) ? pick(unseen) : (length(concourse) ? pick(concourse) : null)
-	if(!chosen)
-		return null
-	var/atom/anchor = null
-	if(record?.archetype == BOUNTY_ARCHETYPE_NORMAL && length(stools))
-		anchor = pick(stools)
-	return list("turf" = chosen, "activity" = BOUNTY_ACTIVITY_BLEND, "anchor" = anchor)
+	return list("turf" = spots[1], "activity" = BOUNTY_ACTIVITY_BLEND, "anchor" = null)
 
 // ===== SIGHTINGS =====
 
@@ -819,14 +909,24 @@
 			continue
 		unit.add_mission_signal(board_gps_tag, marker)
 
-/// Uploads its sighting beacon to `unit` (the mission gps_link pattern). Returns TRUE if it has a beacon to give: none at trader outposts.
-/datum/criminal_bounty/proc/board_link_gps(datum/component/gps/item/unit)
+/// Uploads its sighting beacon to `unit`, for `ship` (the mission gps_link pattern). Returns TRUE if it has a beacon to give: none at trader outposts.
+/datum/criminal_bounty/proc/board_link_gps(datum/component/gps/item/unit, obj/structure/overmap/ship/ship)
 	if(!is_open() || !unit || !board_gps_tag || placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST)
 		return FALSE
-	board_gps_units |= WEAKREF(unit)
+	board_gps_units[WEAKREF(unit)] = ship ? WEAKREF(ship) : null
 	if(marker && !QDELETED(marker))
 		unit.add_mission_signal(board_gps_tag, marker)
 	return TRUE
+
+/// Takes its beacon off the GPS units `ship` linked, as that ship stops hunting it (L2)
+/datum/criminal_bounty/proc/board_unlink_gps(obj/structure/overmap/ship/ship)
+	for(var/datum/weakref/unit_ref as anything in board_gps_units.Copy())
+		var/datum/weakref/owner_ref = board_gps_units[unit_ref]
+		if(owner_ref?.resolve() != ship)
+			continue
+		var/datum/component/gps/item/unit = unit_ref?.resolve()
+		unit?.remove_mission_signal(board_gps_tag)
+		board_gps_units -= unit_ref
 
 /// Takes its beacon off every GPS unit it was uploaded to
 /datum/criminal_bounty/proc/board_clear_gps()
@@ -842,6 +942,6 @@
 /proc/bounty_link_gps(obj/structure/overmap/ship/ship, datum/component/gps/item/unit)
 	var/linked = 0
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
-		if(posting.is_open() && posting.is_hunting(ship) && posting.board_link_gps(unit))
+		if(posting.is_open() && posting.is_hunting(ship) && posting.board_link_gps(unit, ship))
 			linked++
 	return linked

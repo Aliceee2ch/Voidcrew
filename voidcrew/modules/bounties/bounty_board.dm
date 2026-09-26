@@ -38,7 +38,7 @@ SUBSYSTEM_DEF(criminal_bounties)
 	var/board_last_tick = 0
 	/// world.time the next public bounty may go up
 	var/board_next_public_post = 0
-	/// Goes up whenever a posting goes up or comes down, so open boards resend their mugshots
+	/// Goes up whenever a posting goes up, relists or comes down (a count for the logs and admins; each console watches its own postings' static_data_serial)
 	var/board_static_serial = 0
 	/// Weakref of a ship -> world.time it may be offered its next private bounty
 	var/list/board_private_next = list()
@@ -81,6 +81,20 @@ SUBSYSTEM_DEF(criminal_bounties)
 		return null
 	var/datum/criminal_bounty/posted = post_criminal_bounty(board_roll_public_tier(), null)
 	board_next_public_post = now + (posted ? BOUNTY_PUBLIC_POST_GAP : BOUNTY_PUBLIC_POST_RETRY)
+	return posted
+
+/**
+ * The admin panel's "skip the post gap" (P8): posts a public bounty now, as the board would once
+ * its gap ran out, and starts the next gap from now. Still held to the public cap unless
+ * `ignore_cap`. Returns the posting, or null.
+ */
+/datum/controller/subsystem/criminal_bounties/proc/admin_skip_post_gap(ignore_cap = FALSE)
+	if(!ignore_cap)
+		board_next_public_post = world.time
+		return board_post_public_if_due()
+	var/datum/criminal_bounty/posted = post_criminal_bounty(board_roll_public_tier(), null)
+	if(posted)
+		board_next_public_post = world.time + BOUNTY_PUBLIC_POST_GAP
 	return posted
 
 /**
@@ -168,6 +182,14 @@ SUBSYSTEM_DEF(criminal_bounties)
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
 		var/mob/living/basic/bounty_criminal/criminal = posting.criminal()
 		if(criminal && criminal.stat != DEAD)
+			count++
+	return count
+
+/// Criminals alive plus spawns under way: what BOUNTY_MAX_LIVE_CRIMINALS caps (a spawn can yield, so several may be in flight at once)
+/datum/controller/subsystem/criminal_bounties/proc/board_criminal_slots_used()
+	var/count = board_live_criminals()
+	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
+		if(posting.board_spawning)
 			count++
 	return count
 
@@ -383,12 +405,14 @@ SUBSYSTEM_DEF(criminal_bounties)
 
 /**
  * A kind and a site for a criminal of `tier` (and `archetype`, if already decided): `kind` first
- * if given, then a weighted roll over the other kinds the tier allows unless `only_kind`; zone band
- * `zone` first, then any band if nothing in it will do. Never `exclude`. Returns list(kind, site),
- * or null.
+ * if given, then a weighted roll over the other kinds the tier allows unless `only_kind`, never one
+ * of `avoid_kinds`; zone band `zone` first, then any band if nothing in it will do. Never
+ * `exclude`. Returns list(kind, site), or null.
  */
-/datum/controller/subsystem/criminal_bounties/proc/board_pick_placement(tier, archetype, kind, zone, obj/structure/overmap/exclude, only_kind = FALSE)
+/datum/controller/subsystem/criminal_bounties/proc/board_pick_placement(tier, archetype, kind, zone, obj/structure/overmap/exclude, only_kind = FALSE, list/avoid_kinds)
 	var/list/weights = board_kind_weights(tier, archetype)
+	for(var/avoided in avoid_kinds)
+		weights -= avoided
 	if(kind && !(kind in weights))
 		if(only_kind)
 			return null
@@ -419,16 +443,32 @@ SUBSYSTEM_DEF(criminal_bounties)
 // ui_act() and GPS upload. The mugshots go through ui_static_data(), never ui_data() (AR-G1).
 
 /obj/machinery/computer/mission_board
-	/// SScriminal_bounties.board_static_serial this console's viewers last got static data for
-	var/board_static_serial_sent = -1
+	/// What the Wanted section's static data (the mugshots) was last built from: board_static_signature() for this console's ship
+	var/board_static_sent
 	/// Between two warrants printed here
 	COOLDOWN_DECLARE(board_warrant_cooldown)
 
 /obj/machinery/computer/mission_board/ui_static_data(mob/user)
 	var/list/data = ..()
-	board_static_serial_sent = SScriminal_bounties.board_static_serial
-	data["wanted_mugshots"] = board_wanted_mugshots(get_ship())
+	var/obj/structure/overmap/ship/ship = get_ship()
+	board_static_sent = board_static_signature(ship)
+	data["wanted_mugshots"] = board_wanted_mugshots(ship)
 	return data
+
+/**
+ * What the static data depends on for `ship`: each posting its board lists, with that posting's
+ * static_data_serial (bumped when its mugshot is built, an offer is taken or it relists). Another
+ * ship's offers and other boards' changes leave it alone (L8).
+ */
+/obj/machinery/computer/mission_board/proc/board_static_signature(obj/structure/overmap/ship/ship)
+	if(!ship)
+		return ""
+	var/list/parts = list()
+	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
+		if(!posting.is_open() || !posting.board_visible_to(ship) || !posting.record)
+			continue
+		parts += "[posting.record.id]:[posting.static_data_serial]"
+	return parts.Join(",")
 
 /**
  * Record id -> mugshot (a base64 PNG, or "" while it's being built) of every posting `ship`'s board
@@ -441,6 +481,10 @@ SUBSYSTEM_DEF(criminal_bounties)
 		return mugshots
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
 		if(!posting.is_open() || !posting.board_visible_to(ship) || !posting.record)
+			continue
+		// An offer nobody has taken yet gets no mugshot built for it (AR-G1: lazily, on acceptance)
+		if(posting.private_to && !posting.board_accepted)
+			mugshots[posting.record.id] = ""
 			continue
 		mugshots[posting.record.id] = bounty_mugshot_asset(posting.record) || ""
 	return mugshots
@@ -464,8 +508,9 @@ SUBSYSTEM_DEF(criminal_bounties)
 	data["wanted"] = wanted
 	data["wanted_hunt"] = hunt_ref
 	data["wanted_max_hunts"] = BOUNTY_MAX_HUNTS_PER_SHIP
-	if(board_static_serial_sent != SScriminal_bounties.board_static_serial)
-		board_static_serial_sent = SScriminal_bounties.board_static_serial
+	var/signature = board_static_signature(ship)
+	if(board_static_sent != signature)
+		board_static_sent = signature
 		addtimer(CALLBACK(src, TYPE_PROC_REF(/datum, update_static_data_for_all_viewers)), 1, TIMER_UNIQUE | TIMER_DELETE_ME)
 	return data
 

@@ -18,10 +18,11 @@
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties.Copy())
 		posting.close("admin") // BOUNTY_CLOSE_ADMIN
 
-/// Closes whatever the test left on the board and starts the clock again
+/// Closes whatever the test left on the board, empties the prisoner pool (and stops its clock, P7), and starts the board's clock again
 /datum/unit_test/proc/board_test_end()
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties.Copy())
 		posting.close("admin") // BOUNTY_CLOSE_ADMIN
+	bounty_pool_clear("bounty board test")
 	SScriminal_bounties.can_fire = TRUE
 
 /**
@@ -154,16 +155,22 @@
 	TEST_ASSERT_NULL(SScriminal_bounties.board_post_public_if_due(), "A public bounty went up inside the gap")
 	TEST_ASSERT_EQUAL(SScriminal_bounties.board_public_count(), 0, "Something was posted inside the gap")
 
-	// Past it, one goes up, and the next waits a whole gap; with no site anywhere, it tries again in a minute
+	// Past it, one goes up, and the next waits a whole gap. A plain ruin on the chart means there is always somewhere to post.
+	allocate(/obj/structure/overmap/space_ruin, outpost_lead_overmap_turf(52, 40))
 	SScriminal_bounties.board_next_public_post = 0
 	var/datum/criminal_bounty/posted = SScriminal_bounties.board_post_public_if_due()
-	if(posted)
-		TEST_ASSERT_NULL(posted.private_to, "The board posted a private bounty on its own clock")
-		TEST_ASSERT(posted.record.tier in list(2, 3), "The board posted a petty public bounty")
-		TEST_ASSERT_EQUAL(SScriminal_bounties.board_next_public_post, world.time + 10 MINUTES, "The next public bounty doesn't wait the gap") // BOUNTY_PUBLIC_POST_GAP
-		posted.close("admin")
-	else
-		TEST_ASSERT_EQUAL(SScriminal_bounties.board_next_public_post, world.time + 1 MINUTES, "A failed posting doesn't retry in a minute") // BOUNTY_PUBLIC_POST_RETRY
+	TEST_ASSERT_NOTNULL(posted, "No public bounty went up past the gap with a ruin on the chart")
+	TEST_ASSERT_NULL(posted.private_to, "The board posted a private bounty on its own clock")
+	TEST_ASSERT(posted.record.tier in list(2, 3), "The board posted a petty public bounty")
+	TEST_ASSERT_EQUAL(SScriminal_bounties.board_next_public_post, world.time + 10 MINUTES, "The next public bounty doesn't wait the gap") // BOUNTY_PUBLIC_POST_GAP
+	posted.close("admin")
+
+	// The admin panel's skip (P8): posts now, inside the gap, and starts the next gap from now
+	SScriminal_bounties.board_next_public_post = world.time + 5 MINUTES
+	var/datum/criminal_bounty/skipped = SScriminal_bounties.admin_skip_post_gap()
+	TEST_ASSERT_NOTNULL(skipped, "Skipping the gap posted nothing")
+	TEST_ASSERT_EQUAL(SScriminal_bounties.board_next_public_post, world.time + 10 MINUTES, "Skipping the gap didn't start the next one") // BOUNTY_PUBLIC_POST_GAP
+	skipped.close("admin")
 
 	// At the cap, nothing goes up however long the gap has run
 	var/cap = SScriminal_bounties.board_public_cap()
@@ -192,7 +199,10 @@
 	TEST_ASSERT(QDELETED(offer), "A dropped offer stayed on the board")
 	TEST_ASSERT(SScriminal_bounties.board_private_next[WEAKREF(ship)] > world.time, "A dropped offer doesn't hold back the next")
 	TEST_ASSERT(!length(SScriminal_bounties.board_offer_private(ship)), "A dropped offer was replaced at once")
+	// The gap is what held it back: without it, the ship gets its second offer again at once
 	SScriminal_bounties.board_private_next -= WEAKREF(ship)
+	TEST_ASSERT_EQUAL(length(SScriminal_bounties.board_offer_private(ship)), 1, "With the gap over, the dropped offer was not replaced")
+	TEST_ASSERT_EQUAL(SScriminal_bounties.board_private_count(ship), 2, "The ship doesn't hold two offers again")
 
 // ===== THE CLOCK =====
 
@@ -377,7 +387,7 @@
 			TEST_ASSERT(!(record in GLOB.bounty_prisoner_pool), "A dead catch went to the prisoner pool")
 		else
 			TEST_ASSERT(record in GLOB.bounty_prisoner_pool, "A live catch didn't go to the prisoner pool")
-			GLOB.bounty_prisoner_pool -= record
+			bounty_pool_remove(record)
 
 	// A second press finds it closed: one payment, one record (AR-A7)
 	var/datum/criminal_bounty/posting = board_test_posting()
@@ -387,10 +397,10 @@
 	TEST_ASSERT(istext(posting.board_claim(ship, pad, criminal, "restrained")), "A second press paid again")
 	TEST_ASSERT_EQUAL(ship.ship_account.account_balance - balance_before, 1000, "Two presses paid twice")
 	var/pooled = 0
-	for(var/datum/bounty_record/pooled_record as anything in GLOB.bounty_prisoner_pool)
+	for(var/datum/bounty_record/pooled_record as anything in GLOB.bounty_prisoner_pool.Copy())
 		if(pooled_record.captor_name == ship.name)
 			pooled++
-			GLOB.bounty_prisoner_pool -= pooled_record
+			bounty_pool_remove(pooled_record)
 	TEST_ASSERT_EQUAL(pooled, 1, "One catch made [pooled] records")
 
 	// A free criminal pays nothing
@@ -442,7 +452,7 @@
 	TEST_ASSERT_EQUAL(record.captor_ship?.resolve(), ship, "The record doesn't hold its captor ship")
 	TEST_ASSERT_EQUAL(record.captor_name, ship.name, "The record doesn't name its captor")
 	TEST_ASSERT_EQUAL(record.hurt_fraction, hurt, "The record doesn't carry how hurt they were")
-	GLOB.bounty_prisoner_pool -= record
+	bounty_pool_remove(record)
 
 	LAZYREMOVE(owner.mind.ship_teams, crew)
 	crew.members -= owner.mind
@@ -463,11 +473,25 @@
 	var/obj/structure/overmap/ship/ship = board_test_ship()
 	var/datum/criminal_bounty/posting = board_test_posting()
 	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, aside)
+
+	// Taken away on purpose (the pad, the board): no proof, even with the bounty still open (L9)
+	ADD_TRAIT(criminal, "bounty_removed", "bounty_pad") // TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT
+	TEST_ASSERT(posting.is_open(), "The bounty closed on its own")
+	TEST_ASSERT_NULL(bounty_drop_proof(criminal), "A criminal taken away on purpose left proof of death")
+	REMOVE_TRAIT(criminal, "bounty_removed", "bounty_pad")
+
 	var/obj/item/bounty_proof/proof = bounty_drop_proof(criminal)
 	TEST_ASSERT_NOTNULL(proof, "A destroyed criminal left no proof")
 	TEST_ASSERT_EQUAL(proof.loc, aside, "The proof isn't where the criminal was")
 	TEST_ASSERT_EQUAL(proof.posting_ref?.resolve(), posting, "The proof isn't bound to its bounty")
-	TEST_ASSERT_EQUAL(bounty_drop_proof(criminal), proof, "A second destruction made a second proof")
+	TEST_ASSERT(HAS_TRAIT(proof, TRAIT_CHASM_DESTROYED), "A chasm would keep the proof in its depths")
+	TEST_ASSERT_NULL(posting.criminal(), "The body still holds the bounty once there is proof")
+	var/obj/item/bounty_proof/again = bounty_drop_proof(criminal)
+	TEST_ASSERT(isnull(again) || again == proof, "A second destruction made a second proof")
+	var/proofs = 0
+	for(var/obj/item/bounty_proof/lying in aside)
+		proofs++
+	TEST_ASSERT_EQUAL(proofs, 1, "One death left [proofs] proofs")
 	qdel(criminal)
 	sleep(2 SECONDS)
 	TEST_ASSERT(posting.is_open() && !posting.board_relisting, "The bounty didn't stay up on its proof")
@@ -499,7 +523,11 @@
 	var/turf/aside = locate(run_loc_floor_bottom_left.x + 2, run_loc_floor_bottom_left.y, run_loc_floor_bottom_left.z)
 	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, aside)
 	var/expires_before = posting.expires_at
+	// Deleted, the body leaves proof (P2 asks for it); gone too, nothing is left
 	qdel(criminal)
+	var/obj/item/bounty_proof/proof = posting.board_proof()
+	if(proof)
+		qdel(proof)
 	sleep(2 SECONDS)
 	TEST_ASSERT(posting.is_open(), "A bounty whose criminal was lost failed")
 	TEST_ASSERT(posting.board_relisting, "A bounty whose criminal was lost didn't relist")
@@ -509,16 +537,24 @@
 	TEST_ASSERT(posting.expires_at >= expires_before + 5 MINUTES, "The relist delay ate the clock")
 	TEST_ASSERT(posting.is_hunting(ship), "The hunter lost its hunt to the relist")
 
-	// The delay is over: a new site, never the old one, and the hunter's waypoint back
+	// The delay is over: a new site (the second ruin at least is free), never the old one, never a trader outpost, and the hunter's waypoint back
+	var/serial_before = posting.static_data_serial
 	posting.board_relist_at = world.time
 	posting.board_process(0)
-	if(!posting.is_open())
-		TEST_NOTICE(src, "No site anywhere to relist at; the bounty closed")
-		return
+	TEST_ASSERT(posting.is_open(), "The bounty closed instead of relisting")
 	TEST_ASSERT(!posting.board_relisting, "The bounty didn't list again when the delay was over")
 	TEST_ASSERT_NOTNULL(posting.site(), "The relisted bounty has no site")
 	TEST_ASSERT(posting.site() != old_ruin, "The bounty relisted where it was lost")
+	TEST_ASSERT(posting.placement_kind != "trader_outpost", "A bounty whose true face is known relisted at a trader outpost") // BOUNTY_PLACEMENT_TRADER_OUTPOST
+	TEST_ASSERT(posting.static_data_serial > serial_before, "The boards weren't told the relisted card changed")
 	TEST_ASSERT_NOTNULL(ship.get_waypoint("wanted_[REF(posting)]"), "The hunter didn't get the new waypoint")
+
+	// Kinds a relist may take: a trader outpost fugitive only another trader outpost, anyone else never one (L5)
+	for(var/i in 1 to 10)
+		var/list/elsewhere = SScriminal_bounties.board_pick_placement(1, "meek", "planet", 1, null, avoid_kinds = list("trader_outpost"))
+		TEST_ASSERT(!elsewhere || elsewhere[1] != "trader_outpost", "A relist that must avoid trader outposts picked one")
+		var/list/outpost_only = SScriminal_bounties.board_pick_placement(2, "normal", "trader_outpost", 1, null, only_kind = TRUE)
+		TEST_ASSERT(!outpost_only || outpost_only[1] == "trader_outpost", "A trader outpost relist went somewhere else")
 
 // ===== CLOSING =====
 
@@ -553,11 +589,13 @@
 	TEST_ASSERT_EQUAL(tracked?.resolve(), marker, "The GPS tracks something other than the marker")
 	TEST_ASSERT_EQUAL(bounty_link_gps(board_test_ship(), unit), 0, "A ship not hunting it got the sighting")
 
-	var/received = FALSE
+	board_test_close_watch = list(criminal, decoy)
 	RegisterSignal(posting, "bounty_posting_closed", PROC_REF(board_test_heard_close)) // COMSIG_BOUNTY_POSTING_CLOSED
 	TEST_ASSERT(posting.close("admin"), "The first close didn't close it")
-	received = board_test_close_heard
-	TEST_ASSERT(received, "Closing sent no COMSIG_BOUNTY_POSTING_CLOSED")
+	TEST_ASSERT(board_test_close_heard, "Closing sent no COMSIG_BOUNTY_POSTING_CLOSED")
+	// The signal came while they were still there, so a trader outpost can walk them out (L7)
+	TEST_ASSERT(board_test_close_all_there, "Closing deleted the criminal or a decoy before telling anyone")
+	board_test_close_watch = null
 	TEST_ASSERT(QDELETED(criminal), "Closing left the criminal")
 	TEST_ASSERT(QDELETED(companion), "Closing left a companion")
 	TEST_ASSERT(QDELETED(decoy), "Closing left a decoy")
@@ -571,34 +609,81 @@
 /datum/unit_test/voidcrew_bounty_board/close
 	/// Whether the closing signal was heard
 	var/board_test_close_heard = FALSE
+	/// The mobs that must still be there when the closing signal goes out
+	var/list/board_test_close_watch
+	/// Whether they all were
+	var/board_test_close_all_there = FALSE
 
 /datum/unit_test/voidcrew_bounty_board/close/proc/board_test_heard_close(datum/source, reason, winner)
 	SIGNAL_HANDLER
 	board_test_close_heard = TRUE
+	board_test_close_all_there = TRUE
+	for(var/mob/living/watched as anything in board_test_close_watch)
+		if(QDELETED(watched))
+			board_test_close_all_there = FALSE
+
+/// Deleting an open posting directly (an admin's VV delete) closes it once, with no second qdel (L1)
+/datum/unit_test/voidcrew_bounty_board/direct_delete
+
+/datum/unit_test/voidcrew_bounty_board/direct_delete/Run()
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, run_loc_floor_bottom_left)
+	qdel(posting)
+	TEST_ASSERT(QDELETED(posting), "The posting wasn't deleted")
+	TEST_ASSERT_EQUAL(posting.status, "closed", "Deleting an open posting didn't close it") // BOUNTY_POSTING_CLOSED
+	TEST_ASSERT(!(posting in GLOB.criminal_bounties), "A deleted posting stayed on the board")
+	TEST_ASSERT(QDELETED(criminal), "Deleting the posting left its criminal")
 
 // ===== OLD WAYS OUT =====
 
-/// A bluespace body bag won't fold with a living criminal inside, and a player bounty offer won't send a living mob (AR-E7, H1)
+/**
+ * A bluespace body bag won't fold with a living criminal inside, through its own fold (AR-E7); a
+ * player bounty offer won't send one inside an item, but brains, pAIs and pets still go (AR-H1,
+ * M4); and the transporter won't beam a locker with one inside (D-A10).
+ */
 /datum/unit_test/voidcrew_bounty_board/guards
 
 /datum/unit_test/voidcrew_bounty_board/guards/Run()
 	var/turf/spot = locate(run_loc_floor_bottom_left.x + 1, run_loc_floor_bottom_left.y + 1, run_loc_floor_bottom_left.z)
+	var/mob/living/carbon/human/consistent/folder = allocate(/mob/living/carbon/human/consistent, spot)
 	var/obj/structure/closet/body_bag/bluespace/bag = allocate(/obj/structure/closet/body_bag/bluespace, spot)
-	TEST_ASSERT(!bounty_blocks_bag_fold(bag, null), "An empty bag won't fold")
+	if(bag.opened)
+		bag.close()
+	TEST_ASSERT(bag.attempt_fold(folder), "An empty bag won't fold")
 	var/datum/criminal_bounty/posting = board_test_posting()
 	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, spot)
 	criminal.forceMove(bag)
-	TEST_ASSERT(bounty_blocks_bag_fold(bag, null), "A bag folded with a living criminal inside")
+	TEST_ASSERT(!bag.attempt_fold(folder), "A bag folded with a living criminal inside")
+	TEST_ASSERT(bounty_blocks_bag_fold(bag, null), "The guard doesn't see a living criminal in the bag")
 	criminal.death()
-	TEST_ASSERT(!bounty_blocks_bag_fold(bag, null), "A bag won't fold with a dead criminal inside")
+	TEST_ASSERT(bag.attempt_fold(folder), "A bag won't fold with a dead criminal inside")
 
+	// The escrow: a criminal, a decoy or a companion inside an item is refused; a pet, a brain or an empty item go through
 	var/obj/item/bodybag/bluespace/folded = allocate(/obj/item/bodybag/bluespace, spot)
-	var/mob/living/basic/mouse/mouse = allocate(/mob/living/basic/mouse, spot)
 	TEST_ASSERT_NULL(bounty_offer_refusal(list(folded)), "An empty folded bag was refused")
+	var/mob/living/basic/mouse/mouse = allocate(/mob/living/basic/mouse, spot)
 	mouse.forceMove(folded)
-	TEST_ASSERT(istext(bounty_offer_refusal(list(folded))), "An offer sent a living mob inside an item")
-	mouse.death()
-	TEST_ASSERT_NULL(bounty_offer_refusal(list(folded)), "An offer refused a dead mob")
+	TEST_ASSERT_NULL(bounty_offer_refusal(list(folded)), "An offer refused a held pet")
+	var/obj/item/mmi/posibrain/brain = allocate(/obj/item/mmi/posibrain, spot)
+	TEST_ASSERT_NULL(bounty_offer_refusal(list(brain)), "An offer refused a positronic brain")
+	var/datum/criminal_bounty/other_posting = board_test_posting()
+	var/mob/living/basic/bounty_criminal/bagged = board_test_criminal(other_posting, spot)
+	bagged.forceMove(folded)
+	TEST_ASSERT(istext(bounty_offer_refusal(list(brain, folded))), "An offer sent a living criminal inside an item")
+	bagged.forceMove(spot)
+	var/mob/living/basic/bounty_companion/companion = allocate(/mob/living/basic/bounty_companion, spot)
+	companion.forceMove(folded)
+	TEST_ASSERT(istext(bounty_offer_refusal(list(folded))), "An offer sent a living companion inside an item")
+	companion.forceMove(spot)
+
+	// The transporter: a locker with a living criminal in it stays; an empty one, or one with a body, goes
+	var/obj/structure/closet/locker = allocate(/obj/structure/closet, spot)
+	TEST_ASSERT(!bounty_blocks_transport(locker), "The transporter refused an empty locker")
+	bagged.forceMove(locker)
+	TEST_ASSERT(bounty_blocks_transport(locker), "The transporter would beam a locker with a living criminal in it")
+	TEST_ASSERT(!bounty_blocks_transport(mouse), "The transporter refused a mouse")
+	bagged.death()
+	TEST_ASSERT(!bounty_blocks_transport(locker), "The transporter refused a locker with a body in it")
 
 // ===== THE BOARD'S DATA =====
 
@@ -688,4 +773,232 @@
 	TEST_ASSERT_EQUAL(ship.ship_account.account_balance - balance_before, 550, "The turn-in didn't pay the dead share") // BOUNTY_SHARE_DEAD of 1000 + 1200
 	TEST_ASSERT(QDELETED(posting), "The bounty stayed up after its turn-in")
 	TEST_ASSERT(HAS_TRAIT(criminal, "bounty_removed"), "The pad didn't take the criminal") // TRAIT_BOUNTY_REMOVED
+
+	// A live one, cuffed with its own restraints: full pay and the voucher, and the record goes on to the prisons
+	var/datum/criminal_bounty/live_posting = board_test_posting()
+	var/datum/bounty_record/live_record = live_posting.record
+	var/mob/living/basic/bounty_criminal/cuffed = board_test_criminal(live_posting, deck)
+	var/obj/item/restraints/handcuffs/cuffs = new(deck)
+	TEST_ASSERT(cuffed.body_apply_cuffs(cuffs, null), "The criminal could not be cuffed")
+	cuffed.forceMove(deck)
+	TEST_ASSERT_EQUAL(cuffed.capture_state(), "restrained", "A cuffed criminal doesn't read restrained") // BOUNTY_STATE_RESTRAINED
+	balance_before = ship.ship_account.account_balance
+	var/vouchers_before = board_test_vouchers(deck)
+	paid = live_posting.turn_in(pad, ship)
+	TEST_ASSERT(islist(paid), "The pad aboard refused a cuffed criminal on it: [paid]")
+	TEST_ASSERT_EQUAL(ship.ship_account.account_balance - balance_before, 1000, "A clean catch didn't pay in full")
+	TEST_ASSERT_EQUAL(board_test_vouchers(deck) - vouchers_before, 1, "A clean catch didn't pay its voucher")
+	TEST_ASSERT(live_record in GLOB.bounty_prisoner_pool, "The live catch didn't reach the prisoner pool")
+	TEST_ASSERT_EQUAL(live_record.captor_name, ship.name, "The live catch's record doesn't name the ship")
+	bounty_pool_remove(live_record)
 	qdel(pad)
+
+// ===== SITES UNLOADING =====
+
+/// The worst state a criminal reached outlives its site unloading: it never pays more on the next body, and a dead one comes back as proof (12.1, M2)
+/datum/unit_test/voidcrew_bounty_board/worst_state
+
+/datum/unit_test/voidcrew_bounty_board/worst_state/Run()
+	var/turf/spot = locate(run_loc_floor_bottom_left.x + 2, run_loc_floor_bottom_left.y + 2, run_loc_floor_bottom_left.z)
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, spot)
+	criminal.worst_state = "downed" // BOUNTY_STATE_DOWNED
+	posting.board_site_took_criminal(criminal)
+	TEST_ASSERT(QDELETED(criminal), "The unloading site didn't take the criminal")
+	TEST_ASSERT(posting.is_open() && !posting.board_relisting, "The bounty didn't stay up for the next load")
+	TEST_ASSERT_EQUAL(posting.board_worst_state, "downed", "The bounty forgot its criminal was downed")
+	TEST_ASSERT_NULL(posting.board_proof(), "A criminal taken by its site left proof of death")
+
+	// The next load: the same record, still paying no more than the downed share
+	var/mob/living/basic/bounty_criminal/again = posting.board_place_at(spot, "explore", null, null) // BOUNTY_ACTIVITY_EXPLORE
+	TEST_ASSERT(istype(again), "The criminal didn't come back")
+	TEST_ASSERT_EQUAL(again.record, posting.record, "Someone else came back")
+	TEST_ASSERT_EQUAL(again.worst_state, "downed", "The criminal came back with a clean slate")
+	TEST_ASSERT_EQUAL(posting.board_share_for("restrained", again.worst_state), 60, "A criminal downed before the unload pays in full") // BOUNTY_SHARE_DOWNED
+
+	// Dead when its site unloaded: it comes back as its proof of death, never alive
+	again.death()
+	posting.board_site_took_criminal(again)
+	TEST_ASSERT_EQUAL(posting.board_worst_state, "dead", "The bounty forgot its criminal died") // BOUNTY_STATE_DEAD
+	var/atom/movable/placed = posting.board_place_at(spot, "explore", null, null)
+	TEST_ASSERT(istype(placed, /obj/item/bounty_proof), "A dead criminal came back as [placed || "nothing"], not as proof")
+	TEST_ASSERT_NULL(posting.criminal(), "A dead criminal came back alive")
+	TEST_ASSERT_EQUAL(posting.board_proof(), placed, "The proof isn't the bounty's")
+
+// ===== CHASMS =====
+
+/// A criminal lost in a chasm leaves proof at the edge that the pad takes; proof thrown into a chasm is gone and the bounty relists (H1)
+/datum/unit_test/voidcrew_bounty_board/chasm
+	/// The tile turned into a chasm, put back afterwards
+	var/turf/board_test_pit
+	/// What it was before
+	var/board_test_pit_type
+
+/datum/unit_test/voidcrew_bounty_board/chasm/Destroy()
+	if(board_test_pit && board_test_pit_type)
+		board_test_pit.ChangeTurf(board_test_pit_type)
+	board_test_pit = null
+	return ..()
+
+/datum/unit_test/voidcrew_bounty_board/chasm/Run()
+	var/turf/pad_turf = run_loc_floor_bottom_left
+	var/obj/machinery/mission_pad/pad = allocate(/obj/machinery/mission_pad, pad_turf)
+	var/turf/pit = locate(pad_turf.x + 4, pad_turf.y + 4, pad_turf.z)
+	board_test_pit_type = pit.type
+	board_test_pit = pit.ChangeTurf(/turf/open/chasm)
+	pit = board_test_pit
+	TEST_ASSERT(istype(pit, /turf/open/chasm), "The test chasm wasn't made")
+	TEST_ASSERT(!bounty_spawn_turf_ok(pit), "A criminal may spawn over a chasm")
+
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/turf/brink = locate(pit.x - 1, pit.y, pit.z)
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, brink)
+	criminal.forceMove(pit)
+	sleep(3 SECONDS)
+	TEST_ASSERT(QDELETED(criminal) || istype(criminal.loc, /obj/effect/abstract/chasm_storage), "The criminal didn't fall into the chasm")
+	var/obj/item/bounty_proof/proof = posting.board_proof()
+	TEST_ASSERT_NOTNULL(proof, "A criminal lost in a chasm left no proof")
+	var/turf/proof_turf = get_turf(proof)
+	TEST_ASSERT(!istype(proof_turf, /turf/open/chasm), "The proof landed in the chasm")
+	TEST_ASSERT(get_dist(proof_turf, pit) <= 3, "The proof landed [get_dist(proof_turf, pit)] tiles from the chasm") // BOUNTY_PROOF_EDGE_RADIUS
+	TEST_ASSERT_NULL(posting.criminal(), "The body in the chasm still holds the bounty")
+	TEST_ASSERT(posting.is_open() && !posting.board_relisting, "The bounty didn't stay up on the proof")
+
+	// The pad takes the proof
+	proof.forceMove(pad_turf)
+	var/list/found = list()
+	TEST_ASSERT_NULL(posting.board_target_refusal(pad, found), "The pad refused the proof from the chasm")
+	TEST_ASSERT_EQUAL(found["target"], proof, "The pad found something other than the proof")
+
+	// Thrown into the chasm, the proof is gone for good, and the bounty lists somewhere new
+	proof.forceMove(pit)
+	sleep(3.5 SECONDS)
+	TEST_ASSERT(QDELETED(proof), "The chasm kept the proof in its depths")
+	TEST_ASSERT(posting.is_open(), "The bounty failed when its proof fell into a chasm")
+	TEST_ASSERT(posting.board_relisting, "The bounty didn't relist when its proof fell into a chasm")
+
+/// The backstop: a criminal with no turf any more (nullspace) doesn't hold the bounty; it relists (H1)
+/datum/unit_test/voidcrew_bounty_board/unreachable
+
+/datum/unit_test/voidcrew_bounty_board/unreachable/Run()
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/mob/living/basic/bounty_criminal/criminal = board_test_criminal(posting, run_loc_floor_bottom_left)
+	TEST_ASSERT(!posting.board_check_unreachable(), "A criminal standing on the floor counts as unreachable")
+	criminal.moveToNullspace()
+	TEST_ASSERT(posting.board_check_unreachable(), "A criminal in nullspace still holds the bounty")
+	TEST_ASSERT_NULL(posting.criminal(), "The bounty kept a criminal nobody can reach")
+	TEST_ASSERT(posting.board_relisting, "The bounty didn't relist")
+	TEST_ASSERT(HAS_TRAIT(criminal, "bounty_removed"), "The lost body could still leave proof") // TRAIT_BOUNTY_REMOVED
+	qdel(criminal)
+
+// ===== SPAWN PICKERS =====
+
+/// Spawn tiles: open, nothing dense, no lava, chasms or water; proof moves off hazards; pirate-ship spawns keep off the helm; outpost spawns on the customer floor (spec 6, M1)
+/datum/unit_test/voidcrew_bounty_board/pickers
+	/// The tile turned into lava, put back afterwards
+	var/turf/board_test_lava
+	/// What it was before
+	var/board_test_lava_type
+
+/datum/unit_test/voidcrew_bounty_board/pickers/Destroy()
+	if(board_test_lava && board_test_lava_type)
+		board_test_lava.ChangeTurf(board_test_lava_type)
+	board_test_lava = null
+	return ..()
+
+/datum/unit_test/voidcrew_bounty_board/pickers/Run()
+	var/turf/corner = run_loc_floor_bottom_left
+	var/turf/floor_spot = locate(corner.x + 1, corner.y + 1, corner.z)
+	TEST_ASSERT(bounty_spawn_turf_ok(floor_spot), "A clear floor is no place to spawn")
+	var/obj/structure/table/table = allocate(/obj/structure/table, floor_spot)
+	TEST_ASSERT(!bounty_spawn_turf_ok(floor_spot), "A criminal may spawn inside a table")
+	qdel(table)
+	var/list/one_tile = list(floor_spot.x, floor_spot.y, floor_spot.x, floor_spot.y, floor_spot.z)
+	TEST_ASSERT_EQUAL(bounty_turf_near(floor_spot, 1, one_tile), floor_spot, "The picker left its bounds")
+
+	var/turf/lava_spot = locate(corner.x + 4, corner.y + 1, corner.z)
+	board_test_lava_type = lava_spot.type
+	board_test_lava = lava_spot.ChangeTurf(/turf/open/lava/smooth)
+	lava_spot = board_test_lava
+	TEST_ASSERT(!bounty_spawn_turf_ok(lava_spot), "A criminal may spawn on lava")
+	var/turf/landing = bounty_proof_spot(lava_spot)
+	TEST_ASSERT(landing && !istype(landing, /turf/open/lava), "Proof dropped on lava stays in the lava")
+	TEST_ASSERT(get_dist(landing, lava_spot) <= 3, "Proof dropped on lava landed far off") // BOUNTY_PROOF_EDGE_RADIUS
+
+	// BOUNTY_NPC_SHIP_HELM_DISTANCE (5) from every helm, whatever stands in for one
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/obj/item/gps/helm_stand_in = allocate(/obj/item/gps, corner)
+	var/turf/near_helm = locate(corner.x + 2, corner.y, corner.z)
+	var/turf/far_from_helm = run_loc_floor_top_right
+	TEST_ASSERT(!posting.board_clear_of_helms(near_helm, list(helm_stand_in)), "A spawn 2 tiles from the helm was allowed")
+	if(get_dist(far_from_helm, corner) >= 5)
+		TEST_ASSERT(posting.board_clear_of_helms(far_from_helm, list(helm_stand_in)), "A spawn 5 or more tiles from the helm was refused")
+
+	// A trader outpost's fugitive stands where customers walk (P6's floor), never behind a counter or in a sealed room
+	var/obj/structure/overmap/trader_outpost/outpost
+	for(var/obj/structure/overmap/trader_outpost/candidate as anything in GLOB.trader_outposts)
+		if(candidate.loaded && candidate.template_bottom_left && length(candidate.lobby_alcove_turfs))
+			outpost = candidate
+			break
+	if(!outpost)
+		TEST_NOTICE(src, "No trader outpost is loaded in this world, so the outpost spawn wasn't checked")
+		return
+	posting.placement_kind = "trader_outpost" // BOUNTY_PLACEMENT_TRADER_OUTPOST
+	var/list/floor = bounty_outpost_public_floor(outpost, outpost.lobby_alcove_turfs)
+	for(var/i in 1 to 5)
+		var/list/picked = posting.board_pick_outpost_spawn(outpost)
+		TEST_ASSERT_NOTNULL(picked, "No spawn at a loaded trader outpost")
+		var/turf/picked_turf = picked["turf"]
+		TEST_ASSERT(picked_turf in floor, "A fugitive spawned off the customer floor at [AREACOORD(picked_turf)]")
+		TEST_ASSERT_EQUAL(picked["activity"], "blend", "A fugitive doesn't blend in") // BOUNTY_ACTIVITY_BLEND
+
+// ===== PIRATE SHIPS =====
+
+/// A pirate ship claimed, cleared or abandoned while its bounty waited is no place for the criminal: it moves on (M3)
+/datum/unit_test/voidcrew_bounty_board/npc_ship
+
+/datum/unit_test/voidcrew_bounty_board/npc_ship/Run()
+	var/obj/structure/overmap/ship/npc/pirate/pirate = allocate(/obj/structure/overmap/ship/npc/pirate)
+	var/mob/living/basic/mouse/crewmember = allocate(/mob/living/basic/mouse)
+	var/datum/criminal_bounty/posting = board_test_posting()
+	posting.placement_kind = "npc_ship" // BOUNTY_PLACEMENT_NPC_SHIP
+	posting.board_set_site(pirate)
+	TEST_ASSERT(!posting.board_npc_ship_usable(pirate), "A pirate ship with no crew can hold a criminal")
+	pirate.tracked_crew += crewmember
+	TEST_ASSERT(posting.board_npc_ship_usable(pirate), "A crewed pirate ship can't hold a criminal")
+	pirate.player_controlled = TRUE
+	TEST_ASSERT(!posting.board_npc_ship_usable(pirate), "A pirate ship players claimed can hold a criminal")
+	posting.board_arm()
+	TEST_ASSERT(posting.board_relisting, "A bounty on a claimed pirate ship didn't move on")
+	TEST_ASSERT_NULL(posting.criminal(), "A criminal spawned on a claimed pirate ship")
+	pirate.tracked_crew -= crewmember
+	pirate.player_controlled = FALSE
+	// Already resolved, so deleting the test hull doesn't make the pirate pool spawn a replacement
+	pirate.spawner_resolved = TRUE
+
+// ===== THE CARD AND THE WARRANT =====
+
+/// The warrant leaves one feature off, so the traders' clues tell a hunter something new; the Heavy's card warns of its armour
+/datum/unit_test/voidcrew_bounty_board/card
+
+/datum/unit_test/voidcrew_bounty_board/card/Run()
+	var/datum/criminal_bounty/posting = board_test_posting()
+	var/list/features = posting.record.feature_lines()
+	var/obj/item/paper/bounty_warrant/warrant = posting.print_warrant(run_loc_floor_bottom_left)
+	TEST_ASSERT_NOTNULL(warrant, "No warrant was printed")
+	TEST_ASSERT_EQUAL(warrant.posting_ref?.resolve(), posting, "The warrant isn't bound to its bounty")
+	var/text = ""
+	for(var/datum/paper_input/input as anything in warrant.raw_text_inputs)
+		text += input.raw_text
+	TEST_ASSERT(findtext(text, posting.record.name), "The warrant doesn't name them")
+	if(length(features))
+		for(var/i in 1 to length(features) - 1)
+			TEST_ASSERT(findtext(text, features[i]), "The warrant leaves off more than one feature")
+		TEST_ASSERT(!findtext(text, features[length(features)]), "The warrant lists every feature")
+	qdel(warrant)
+
+	posting.record.archetype = "boss" // BOUNTY_ARCHETYPE_BOSS
+	posting.record.kit = "heavy" // BOUNTY_KIT_HEAVY
+	TEST_ASSERT(findtext(posting.board_hint(), "heavy armour"), "The Heavy's card doesn't warn of its armour")
+	posting.record.kit = "ghost" // BOUNTY_KIT_GHOST
+	TEST_ASSERT(!findtext(posting.board_hint(), "heavy armour"), "Every mini-boss's card warns of heavy armour")

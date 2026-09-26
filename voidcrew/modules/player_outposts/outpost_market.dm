@@ -155,16 +155,22 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 /**
  * Charges a customer from the account of the ID they present, into the treasury.
  * Never sleeps, and never asks where the payer stands: a teleporter traveller pays the
- * destination's fare from the pad they leave. `shown_price` is the price the customer saw
- * (a client param, or the value captured before a prompt); a mismatch with `current_price`
- * refuses. Returns null when paid or free, else a short refusal for the customer.
+ * destination's fare from the pad they leave.
+ *
+ * `current_price` is the LISTED price (get_price(), or the shop listing). `shown_price` is the
+ * EFFECTIVE amount the customer saw: service_price_for(payer, listed price) at the time they were
+ * shown it, so 0 for members. Pass the client param the UI echoed, or the value captured before a
+ * prompt. The charge refuses unless `shown_price` equals what this payer owes now, so a price
+ * change or a membership change between quote and charge never moves money the customer did not
+ * agree to. Returns null when paid or free, else a short refusal for the customer.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/charge_service(mob/living/payer, service_key, current_price, shown_price, label)
 	if(QDELETED(src) || !isliving(payer))
 		return "Service unavailable."
-	if(!isnum(shown_price) || shown_price != current_price)
-		return "Price changed to [current_price] cr."
 	var/amount = service_price_for(payer, current_price)
+	// isnum() accepts NaN, which is unequal to everything and so refuses here too
+	if(!isnum(shown_price) || shown_price != amount)
+		return "Price changed to [amount] cr."
 	if(amount <= 0)
 		return null
 	var/datum/bank_account/account = payer.get_idcard(TRUE)?.registered_account
@@ -230,3 +236,46 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
  */
 /proc/blocks_magic_recall(atom/movable/holder)
 	return HAS_TRAIT(holder, TRAIT_BLOCKS_RECALL)
+
+/**
+ * Voids every summon mark made on `item` before now: the next recall breaks the mark instead of
+ * pulling the item. The shop's sale path calls this on each unit it sells, so a seller cannot mark
+ * an item, sell it and recall it. Marks made after the sale (the buyer's own) still work. A plain
+ * ADD_TRAIT(TRAIT_RECALL_SEVERED) only severs the first time; this re-adds it so every sale counts.
+ */
+/proc/sever_magic_recall(obj/item)
+	if(QDELETED(item))
+		return
+	REMOVE_TRAIT(item, TRAIT_RECALL_SEVERED, null)
+	ADD_TRAIT(item, TRAIT_RECALL_SEVERED, OUTPOST_SERVICE_TRAIT)
+
+/datum/action/cooldown/spell/summonitem
+	/// TRUE once the marked item gained TRAIT_RECALL_SEVERED after it was marked (sold by an outpost shop)
+	var/mark_severed = FALSE
+
+/datum/action/cooldown/spell/summonitem/mark_item(obj/to_mark)
+	mark_severed = FALSE
+	. = ..()
+	RegisterSignal(to_mark, SIGNAL_ADDTRAIT(TRAIT_RECALL_SEVERED), PROC_REF(on_mark_severed))
+
+/datum/action/cooldown/spell/summonitem/unmark_item()
+	if(marked_item)
+		UnregisterSignal(marked_item, SIGNAL_ADDTRAIT(TRAIT_RECALL_SEVERED))
+	mark_severed = FALSE
+	return ..()
+
+/datum/action/cooldown/spell/summonitem/proc/on_mark_severed(datum/source)
+	SIGNAL_HANDLER
+	mark_severed = TRUE
+
+/**
+ * Called first in try_recall_item() (summonitem.dm, upstream, which cannot see Voidcrew defines).
+ * TRUE when the mark was made before the item was sold: the mark is removed and the recall refused.
+ */
+/datum/action/cooldown/spell/summonitem/proc/recall_severed(mob/living/caster)
+	if(!mark_severed || !marked_item || !HAS_TRAIT(marked_item, TRAIT_RECALL_SEVERED))
+		return FALSE
+	if(caster)
+		to_chat(caster, span_warning("The mark broke when [marked_item] changed hands."))
+	unmark_item()
+	return TRUE

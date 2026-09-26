@@ -110,6 +110,10 @@
 
 /// Recalls our marked item to the caster. May bring some unexpected things along.
 /datum/action/cooldown/spell/summonitem/proc/try_recall_item(mob/living/caster)
+	// VOIDCREW EDIT ADDITION START - an outpost shop sale breaks marks made before it (outpost_market.dm)
+	if(recall_severed(caster))
+		return
+	// VOIDCREW EDIT ADDITION END
 	var/obj/item_to_retrieve = marked_item
 
 	if(item_to_retrieve.loc)

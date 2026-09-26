@@ -416,10 +416,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 		return null
 	return GLOB.bounty_styles[controller.blackboard[BB_BOUNTY_STYLE]]
 
-/// Health multiplier of a style (combat.md 6.2): P2 multiplies a normal criminal's tier health by it
-/proc/bounty_style_health_mult(style_key)
-	var/datum/bounty_style/style = GLOB.bounty_styles[style_key]
-	return style ? style.health_mult : 1
+// A style's health multiplier is P2's bounty_style_health_mult() (bounty_criminal.dm), from the combat.md defines.
 
 /// Stamina damage multiplier of a style (the brawler shrugs off some): P2 folds it into damage_coeff[STAMINA]
 /proc/bounty_style_stamina_mult(style_key)

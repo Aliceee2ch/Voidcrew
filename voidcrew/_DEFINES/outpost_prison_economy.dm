@@ -15,8 +15,9 @@
 // Stipends are deposited every OUTPOST_PRISON_DEPOSIT_INTERVAL seconds. A release pays
 // OUTPOST_PRISON_RELEASE_BONUS x (G x F averaged over the stay).
 // One cell turns over every ~13 minutes: an 11.5 minute average sentence and a 60-120 second
-// refill. On top of that, arrivals are 30-180 seconds apart wing-wide, which an empty wing feels
-// (filling it takes 1.5-9 minutes) but four staggered cells rarely do. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
+// refill. On top of that, arrivals are 30-180 seconds apart in each arrival lane, which an empty wing
+// feels (filling it takes 1.5-9 minutes) but four staggered cells rarely do. A wing has one lane,
+// and one more for each cell block extension, so a ten-cell wing takes three prisoners in parallel. Four cells at full pay: 4 x 12 cr/min x 60 x 11.5 / 13 = ~2,550 cr/h in stipends, plus
 // 4 x 60 / 13 = ~18.5 releases/h x 200 = ~3,700 cr/h in bonuses. Ceiling ~6,250 cr/h before
 // supplies; a well-kept wing nets 5,300-5,400 cr/h and pays back its 10,000 cr in about 2 hours.
 //
@@ -31,6 +32,12 @@
 #define OUTPOST_PRISON_COST 10000
 /// Prisoners the wing holds at once: one per cell
 #define OUTPOST_PRISON_CAPACITY 4
+/// The most prisoners a wing holds, with every cell block extension built
+#define OUTPOST_PRISON_MAX_CAPACITY 10
+/// Treasury price of each cell block extension (outpost_prison_extension.dm): three more cells
+#define OUTPOST_PRISON_EXTENSION_COST 7500
+/// Cell block extensions one wing may have
+#define OUTPOST_PRISON_MAX_EXTENSIONS 2
 /// Treasury credits per minute per prisoner at full care and conditions
 #define OUTPOST_PRISON_BASE_PAY 12
 /// Treasury credits for a release at full care and conditions
@@ -42,7 +49,7 @@
 #define OUTPOST_PRISON_SENTENCE_MAX (15 * 60)
 /// Seconds from opening intake to the first arrival
 #define OUTPOST_PRISON_FIRST_ARRIVAL 5
-/// Seconds between arrivals, wing-wide: after any prisoner beams in, the next waits this long however many cells are ready
+/// Seconds between arrivals in one arrival lane: after a lane brings a prisoner, it waits this long however many cells are ready
 #define OUTPOST_PRISON_ARRIVAL_GAP_MIN 30
 #define OUTPOST_PRISON_ARRIVAL_GAP_MAX 180
 /// Seconds before a freed cell takes a new arrival

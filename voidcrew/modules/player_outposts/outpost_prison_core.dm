@@ -48,7 +48,10 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	var/list/mob/living/basic/outpost_prisoner/prisoners = list()
 	/// The wing's cells, in number order
 	var/list/datum/outpost_prison_cell/cells = list()
+	/// Prisoners the wing holds at once: one per cell, at most OUTPOST_PRISON_MAX_CAPACITY
 	var/capacity = OUTPOST_PRISON_CAPACITY
+	/// Every tile of the wing's footprint and its extensions', each once, the wing's own first; see wing_turfs()
+	var/list/turf/wing_block_cache
 	/// Warden console log, newest first: list(list("time", "text"))
 	var/list/entries = list()
 	/// Seconds since prisoners whose AI is asleep last helped themselves to supplies
@@ -82,6 +85,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	wing.prison = src
 	GLOB.outpost_prisons += src
 	find_cells()
+	capacity = min(OUTPOST_PRISON_MAX_CAPACITY, length(cells))
+	sync_arrival_lanes()
 	refresh_cell_block()
 	refresh_conditions()
 	START_PROCESSING(SSprocessing, src)
@@ -114,16 +119,42 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 // ===== THE WING =====
 
-/// Every tile of the placed wing
+/// Every tile of the placed wing and of the extensions joined to it (outpost_prison_extension.dm), the wing's own first
 /datum/outpost_prison/proc/wing_turfs()
-	var/list/bounds = upgrade?.footprint_bounds
-	if(!bounds || !wing)
+	if(!upgrade?.footprint_bounds || !wing)
 		return list()
+	if(isnull(wing_block_cache))
+		wing_block_cache = upgrade.wing_blocks()
 	var/list/turfs = list()
-	for(var/turf/tile as anything in block(bounds[1], bounds[2], bounds[5], bounds[3], bounds[4], bounds[5]))
+	for(var/turf/tile as anything in wing_block_cache)
 		if(tile.loc == wing)
 			turfs += tile
 	return turfs
+
+/// Whether a tile is inside the footprint of the wing or of one of its extensions, whatever its area
+/datum/outpost_prison/proc/in_wing_bounds(turf/tile)
+	if(!tile || !upgrade)
+		return FALSE
+	for(var/list/bounds as anything in upgrade.wing_bounds())
+		if(tile.z == bounds[5] && tile.x >= bounds[1] && tile.y >= bounds[2] && tile.x <= bounds[3] && tile.y <= bounds[4])
+			return TRUE
+	return FALSE
+
+/**
+ * Whether a tile is on the wing's outer ring: inside the footprint of the wing or one of its
+ * extensions, beside a tile outside all of them. The walls where an extension joins are not.
+ */
+/datum/outpost_prison/proc/on_outer_ring(turf/tile)
+	if(!in_wing_bounds(tile))
+		return FALSE
+	for(var/direction in GLOB.cardinals)
+		if(!in_wing_bounds(get_step(tile, direction)))
+			return TRUE
+	return FALSE
+
+/// How many cell block extensions are joined to the wing
+/datum/outpost_prison/proc/extension_count()
+	return min(OUTPOST_PRISON_MAX_EXTENSIONS, length(upgrade?.extension_bounds))
 
 /// Cells free for a new arrival
 /datum/outpost_prison/proc/free_slots()
@@ -142,20 +173,33 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 /**
  * Finds the wing's cells from its numbered cell doors: the inside of a cell is the small room on
- * the side of its door that has a bed. Works at any rotation.
+ * the side of its door that has a bed. Works at any rotation. Only for a new prison: it throws
+ * away every cell it had, and with them who lives in each. An extension adds its cells with
+ * add_cells_from().
  */
 /datum/outpost_prison/proc/find_cells()
 	QDEL_LIST(cells)
+	add_cells_from(wing_turfs())
+
+/**
+ * Makes a cell for each numbered cell door of the wing on `turfs` that no cell has yet, and keeps
+ * `cells` in number order. Unnumbered doors, and doors whose number is taken, get the next free
+ * number. Returns the new cells.
+ */
+/datum/outpost_prison/proc/add_cells_from(list/turfs)
 	var/list/found = list()
-	for(var/turf/tile as anything in wing_turfs())
+	for(var/turf/tile as anything in turfs)
+		if(tile.loc != wing || cell_with_door_turf(tile))
+			continue
 		var/obj/machinery/door/airlock/security/glass/outpost_prison_cell/door = locate() in tile
 		if(!door)
 			continue
 		var/list/inside = cell_inside(door)
 		if(inside)
 			found += new /datum/outpost_prison_cell(src, door, inside)
-	// Number order; unnumbered or clashing doors take the next free number.
 	var/list/taken = list()
+	for(var/datum/outpost_prison_cell/cell as anything in cells)
+		taken["[cell.number]"] = TRUE
 	for(var/datum/outpost_prison_cell/cell as anything in found)
 		if(cell.number < 1 || taken["[cell.number]"])
 			cell.number = 0
@@ -169,13 +213,16 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 			next_number++
 		cell.number = next_number
 		taken["[next_number]"] = TRUE
-	while(length(found))
-		var/datum/outpost_prison_cell/lowest = found[1]
-		for(var/datum/outpost_prison_cell/cell as anything in found)
+	var/list/unsorted = cells + found
+	cells = list()
+	while(length(unsorted))
+		var/datum/outpost_prison_cell/lowest = unsorted[1]
+		for(var/datum/outpost_prison_cell/cell as anything in unsorted)
 			if(cell.number < lowest.number)
 				lowest = cell
-		found -= lowest
+		unsorted -= lowest
 		cells += lowest
+	return found
 
 /// The tiles inside the cell `door` closes, or null
 /datum/outpost_prison/proc/cell_inside(obj/machinery/door/door)

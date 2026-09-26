@@ -652,7 +652,8 @@ GLOBAL_LIST_INIT(outpost_prison_furniture_types, zebra_typecacheof(list(
 
 /**
  * Puts the wing's lights in steady emergency red and strobes the PRISON_STROBE_MAX_LIGHTS nearest
- * the middle of the cell block, or puts them all back. Driven directly rather than through the
+ * the middle of the cell block (PRISON_STROBE_LIGHTS_PER_EXTENSION more for each extension), or
+ * puts them all back. Driven directly rather than through the
  * fire alarm, so no firelocks close.
  */
 /datum/outpost_prison/proc/set_riot_lights(on)
@@ -671,7 +672,7 @@ GLOBAL_LIST_INIT(outpost_prison_furniture_types, zebra_typecacheof(list(
 			redraw_light(fixture)
 			riot_lights += WEAKREF(fixture)
 		strobe_lights = list()
-		for(var/obj/machinery/light/fixture as anything in nearest_to_cell_block(found, PRISON_STROBE_MAX_LIGHTS))
+		for(var/obj/machinery/light/fixture as anything in nearest_to_cell_block(found, PRISON_STROBE_MAX_LIGHTS + PRISON_STROBE_LIGHTS_PER_EXTENSION * extension_count()))
 			strobe_lights += WEAKREF(fixture)
 		strobe_bright = TRUE
 		strobe_timer = addtimer(CALLBACK(src, PROC_REF(strobe_step)), PRISON_STROBE_INTERVAL, TIMER_STOPPABLE | TIMER_DELETE_ME)

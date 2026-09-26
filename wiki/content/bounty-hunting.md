@@ -244,7 +244,7 @@ Bounty prisoners earn the outpost more than ordinary prisoners, and they're hard
 - Kessler won't take a bounty prisoner for his experiments.
 - Bounty prisoners fill at most half of a wing's cells. A wing takes one Most Wanted at a time, plus one more for each cell block extension.
 
-The warden's console has a **Bounty transfers** setting: **All**, **No Most Wanted** or **None**. Only managers can change it. It also shows how many bounty prisoners the wing holds, and names the next bounty arrival at least a minute before they beam in. A Most Wanted transfer is announced to the crew.
+The warden's console has a **Bounty prisoners** setting: **All**, **No Most Wanted** or **None**. Only managers can change it. The console names the next bounty arrival beside the intake switch shortly before they beam in, and a Most Wanted transfer is announced to the crew.
 
 ## Rules between crews
 

@@ -141,7 +141,8 @@
 
 	// Never at someone who is down
 	mech.mech_next_ability_at = 0
-	hunter.apply_damage(150, BRUTE)
+	// Suffocation, not brute: brute lands on one random limb, which caps it
+	hunter.adjustOxyLoss(150)
 	TEST_ASSERT(hunter.stat != CONSCIOUS, "The hunter didn't go down")
 	TEST_ASSERT(!mech.mech_start_lmg(hunter), "The machine gun spun up on a downed hunter")
 	TEST_ASSERT(!mech.mech_start_rockets(list(hunter)), "The volley locked on to a downed hunter")
@@ -369,7 +370,8 @@
 	clear_room()
 
 	// Never the downed
-	hunter.apply_damage(150, BRUTE)
+	// Suffocation, not brute: brute lands on one random limb, which caps it
+	hunter.adjustOxyLoss(150)
 	TEST_ASSERT(hunter.stat != CONSCIOUS, "The hunter didn't go down")
 	TEST_ASSERT(!gunman.mafia_target_ok(hunter), "A goon may go after a downed hunter")
 	hunter.fully_heal(HEAL_ALL)

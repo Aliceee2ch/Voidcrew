@@ -83,7 +83,7 @@
 /datum/outpost_upgrade/cargo_dock
 	id = "cargo_dock"
 	name = "Cargo Dock"
-	desc = "A landing pad for the cargo ferry. Cargo orders are delivered here."
+	desc = "A landing pad for freight deliveries."
 	price = 0
 	template_type = /datum/map_template/outpost_upgrade/cargo_dock
 	area_type = /area/voidcrew/player_outpost/cargo_dock

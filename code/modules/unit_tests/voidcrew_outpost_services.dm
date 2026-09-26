@@ -119,7 +119,7 @@
 	TEST_ASSERT(home.home_bundle_installed, "Founding did not install the included services")
 	assert_outpost_cargo_bundle(home)
 	TEST_ASSERT_NOTNULL(home.available_resident_pod(), "Purchased home has no resident arrival point")
-	TEST_ASSERT_EQUAL(home.freight.availability_error(), "No cargo dock. Place the cargo dock upgrade.", "Freight was available before a cargo dock was placed")
+	TEST_ASSERT_EQUAL(home.freight.availability_error(), "No cargo dock", "Freight was available before a cargo dock was placed")
 	var/cargo_dock = place_test_cargo_dock(home)
 	TEST_ASSERT(istype(cargo_dock, /datum/outpost_upgrade/cargo_dock), "The freight test could not place a cargo dock: [cargo_dock]")
 	var/datum/bank_account/account = home.treasury

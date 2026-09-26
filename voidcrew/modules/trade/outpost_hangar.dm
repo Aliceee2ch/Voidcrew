@@ -10,7 +10,7 @@
  * Standard berths (allocate_berth) are built per visit: the walls, deck and landing
  * pad come from /datum/outpost_berth_layout, with the fixed exit strip (airlock,
  * elevator alcove and panel, berth displays) set into the south wall. Player
- * outpost ship bays and freight receivers keep their full-size mapped hangars.
+ * outpost ship bays keep their full-size mapped hangars.
  *
  * Lifecycle: allocated synchronously in ship_act() before the dock warmup
  * starts; released when the ship finishes undocking (on_ship_undock_complete),
@@ -72,7 +72,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_berth, 32)
 	return ITEM_INTERACT_BLOCKING
 
 /**
- * Static hangar signage for the full-size mapped hangars (freight receiver): a 56x40
+ * Static hangar signage for the full-size mapped hangars (ship bays): a 56x40
  * pad puts every wall outside view range of a small hull in its middle, so these say
  * which way the way out is. Standard berths are sized to the ship and need none. Text is
  * mapper-set and never changes, so no host wiring: unlike the berth display these

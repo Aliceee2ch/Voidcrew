@@ -37,7 +37,7 @@ The **construction console** controls a building drone supplied by your local or
 
 The **bank machine** handles the outpost's money. Deposit from your ID account or physical currency; owners and treasury delegates can withdraw. The bank starts empty and keeps its balance through ownership changes or loss of the founding ship.
 
-Order supplies through the ordinary **cargo console**, or buy sheets through a **Galactic Materials Market** you build locally. Both charge the outpost bank and send a physical freight ferry. Ride the elevator to **Freight Receiving** to unload it. No player ship needs to stay docked for deliveries.
+Order supplies through the ordinary **cargo console**, or buy sheets through a **Galactic Materials Market** you build locally. Both charge the outpost bank and send a physical freight ferry, which lands on the outpost's **cargo dock**. The cargo dock is a free upgrade: buy it and place it from the **Upgrades** tab of the management console. Until it is placed, the cargo console cannot order. No player ship needs to stay docked for deliveries.
 
 Load eligible goods onto the ferry and dispatch it to export them. Payment goes to the outpost bank. Everyone must leave the ferry before it can depart. Failed deliveries refund undelivered purchases.
 

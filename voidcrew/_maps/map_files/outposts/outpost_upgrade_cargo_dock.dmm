@@ -1,0 +1,361 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"b" = (
+/obj/machinery/light/directional/west,
+/obj/effect/turf_decal/stripes/line{
+	dir = 4
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"c" = (
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"d" = (
+/obj/docking_port/stationary/outpost_cargo_dock,
+/turf/open/floor/iron/dark/smooth_large,
+/area/voidcrew/player_outpost/cargo_dock)
+"e" = (
+/obj/effect/spawner/structure/window/reinforced,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost/cargo_dock)
+"f" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"j" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"l" = (
+/obj/structure/sign/departments/cargo/directional/south,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"n" = (
+/obj/machinery/door/airlock/mining/glass{
+	name = "Cargo Dock"
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"p" = (
+/obj/effect/turf_decal/bot,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"v" = (
+/turf/open/floor/iron/dark/smooth_large,
+/area/voidcrew/player_outpost/cargo_dock)
+"x" = (
+/obj/machinery/light/directional/north,
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"z" = (
+/obj/machinery/light/directional/east,
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"A" = (
+/obj/machinery/light_switch/directional/south,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"D" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"F" = (
+/turf/closed/wall,
+/area/voidcrew/player_outpost/cargo_dock)
+"G" = (
+/obj/effect/turf_decal/stripes/corner{
+	dir = 4
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"I" = (
+/obj/effect/turf_decal/stripes/corner{
+	dir = 8
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"N" = (
+/obj/machinery/light/directional/south,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"P" = (
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"R" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 4
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"T" = (
+/obj/effect/turf_decal/stripes/corner{
+	dir = 2
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"V" = (
+/obj/machinery/power/apc/auto_name/directional/south,
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+"Z" = (
+/obj/effect/turf_decal/stripes/corner{
+	dir = 1
+	},
+/turf/open/floor/iron,
+/area/voidcrew/player_outpost/cargo_dock)
+
+(1,1,1) = {"
+F
+F
+F
+e
+F
+F
+F
+e
+F
+F
+F
+F
+F
+"}
+(2,1,1) = {"
+F
+T
+R
+R
+R
+b
+R
+R
+R
+G
+c
+c
+F
+"}
+(3,1,1) = {"
+F
+f
+v
+v
+v
+v
+v
+v
+v
+D
+p
+p
+F
+"}
+(4,1,1) = {"
+F
+x
+v
+v
+v
+v
+v
+v
+v
+D
+p
+N
+F
+"}
+(5,1,1) = {"
+e
+f
+v
+v
+v
+v
+v
+v
+v
+D
+c
+c
+F
+"}
+(6,1,1) = {"
+e
+f
+v
+v
+v
+v
+v
+v
+v
+D
+c
+l
+F
+"}
+(7,1,1) = {"
+F
+f
+v
+v
+v
+v
+v
+v
+v
+D
+c
+c
+F
+"}
+(8,1,1) = {"
+F
+f
+v
+v
+v
+v
+v
+v
+d
+D
+c
+A
+F
+"}
+(9,1,1) = {"
+F
+x
+v
+v
+v
+v
+v
+v
+v
+D
+c
+P
+n
+"}
+(10,1,1) = {"
+F
+f
+v
+v
+v
+v
+v
+v
+v
+D
+c
+V
+F
+"}
+(11,1,1) = {"
+e
+f
+v
+v
+v
+v
+v
+v
+v
+D
+c
+c
+F
+"}
+(12,1,1) = {"
+e
+f
+v
+v
+v
+v
+v
+v
+v
+D
+c
+c
+F
+"}
+(13,1,1) = {"
+F
+x
+v
+v
+v
+v
+v
+v
+v
+D
+p
+N
+F
+"}
+(14,1,1) = {"
+F
+f
+v
+v
+v
+v
+v
+v
+v
+D
+p
+p
+F
+"}
+(15,1,1) = {"
+F
+I
+j
+j
+j
+z
+j
+j
+j
+Z
+c
+c
+F
+"}
+(16,1,1) = {"
+F
+F
+F
+e
+F
+F
+F
+e
+F
+F
+F
+F
+F
+"}

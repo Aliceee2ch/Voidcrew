@@ -154,7 +154,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 	if(!QDELETED(src))
 		selected = home
 
-/// Uses the same physical shell, finite bundle and freight receiver loader as a deed.
+/// Uses the same physical shell and finite bundle as a deed.
 /datum/outpost_manipulator/proc/create_home(mob/user, turf/destination, shell_type, outpost_name)
 	if(!authorized(user))
 		return null

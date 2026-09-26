@@ -121,3 +121,9 @@
 #define CHECKPOINT_BUILD_STALL_TIME (1 MINUTES)
 /// How long a finished hull waits for its captain before being left claimable.
 #define CHECKPOINT_BUILD_CAPTAIN_WAIT (10 MINUTES)
+
+// ===== OUTPOST UPGRADES (see outpost_upgrades.dm) =====
+/// A placed upgrade needs a tile within this many tiles (Chebyshev) of outpost ground
+#define OUTPOST_UPGRADE_MAX_GAP 8
+/// How long a placement-map survey is reused before it is taken again
+#define OUTPOST_UPGRADE_SURVEY_LIFETIME (30 SECONDS)

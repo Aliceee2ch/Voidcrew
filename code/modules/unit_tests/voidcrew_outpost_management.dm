@@ -69,7 +69,14 @@
 	var/mob/living/carbon/human/owner = make_player(console_turf, "managementowner")
 	var/datum/player_outpost_management_ui/management_test/console_panel = allocate(__IMPLIED_TYPE__, home, owner, console)
 	var/datum/player_outpost_management_ui/management_test/physical_panel = allocate(__IMPLIED_TYPE__, home, owner, console)
-	var/turf/berth_turf = get_turf(home.freight_berth.panel)
+	// A facility outside the habitat footprint: a hangar berth in its own reservation.
+	var/datum/outpost_berth/facility = allocate(/datum/outpost_berth, home, 1, null)
+	facility.reservation = SSmapping.request_turf_block_reservation(3, 3, 1)
+	TEST_ASSERT_NOTNULL(facility.reservation, "No room for the hangar berth fixture.")
+	home.berths = list(facility)
+	var/turf/berth_corner = facility.reservation.bottom_left_turfs[1]
+	var/turf/berth_turf = locate(berth_corner.x + 1, berth_corner.y + 1, berth_corner.z)
+	berth_turf = berth_turf.ChangeTurf(/turf/open/floor/iron)
 	var/mob/living/carbon/human/resident = make_player(berth_turf, "managementresident")
 	TEST_ASSERT(home.is_owner(owner), "The test actor is not the claim owner.")
 	act(console_panel, owner, "buy_advert", null)
@@ -88,8 +95,8 @@
 	TEST_ASSERT(findtext(console_panel.advert_denial(owner), "Ready in ") == 1, "Broadcast cooldown gave no feedback")
 	var/datum/player_outpost_management_ui/unbound_panel = allocate(__IMPLIED_TYPE__, home, owner)
 	TEST_ASSERT_EQUAL(unbound_panel.ui_status(owner, GLOB.always_state), UI_CLOSE, "A management panel without a console or implant granted remote access.")
-	TEST_ASSERT_EQUAL(get_outpost_from_atom(resident), home, "The freight facility must belong to the claim.")
-	TEST_ASSERT(!(resident in home.mapzone.get_mind_mobs_in(home.footprint)), "The freight candidate must exercise a facility outside the habitat footprint.")
+	TEST_ASSERT_EQUAL(get_outpost_from_atom(resident), home, "The hangar berth must belong to the claim.")
+	TEST_ASSERT(!(resident in home.mapzone.get_mind_mobs_in(home.footprint)), "The berth candidate must exercise a facility outside the habitat footprint.")
 
 	for(var/turf/open/floor/location in home.outpost_area)
 		if(location != console_turf)
@@ -145,13 +152,13 @@
 	var/list/candidate_keys = list()
 	for(var/list/entry as anything in data["candidates"])
 		candidate_keys |= entry["ckey"]
-	TEST_ASSERT(resident.ckey in candidate_keys, "Management omitted a candidate in its freight facility.")
+	TEST_ASSERT(resident.ckey in candidate_keys, "Management omitted a candidate in its hangar berth.")
 	TEST_ASSERT(!(visitor.ckey in candidate_keys), "Management listed a visiting ship's occupant as a claim candidate.")
 	TEST_ASSERT(!(owner.ckey in candidate_keys), "The owner should not appear in their own candidate list.")
 	act(console_panel, owner, "add_builder", visitor)
 	TEST_ASSERT(!(visitor.ckey in home.authorized_builder_ckeys), "A forged request authorized a visiting ship occupant.")
 	act(console_panel, owner, "add_builder", resident)
-	TEST_ASSERT(resident.ckey in home.authorized_builder_ckeys, "The owner could not authorize a builder in the freight facility.")
+	TEST_ASSERT(resident.ckey in home.authorized_builder_ckeys, "The owner could not authorize a builder in the hangar berth.")
 	home.authorized_builder_ckeys.Cut()
 	home.residents |= visitor.mind
 	act(console_panel, owner, "delegate", visitor.mind, list("role" = "steward"))
@@ -212,7 +219,7 @@
 	TEST_ASSERT(home.is_owner(owner), "Cancelling the confirmation still transferred ownership.")
 	physical_panel.confirmation_result = TRUE
 	act(physical_panel, owner, "transfer", resident)
-	TEST_ASSERT(home.is_owner(resident), "A valid transfer to the freight-facility candidate failed.")
+	TEST_ASSERT(home.is_owner(resident), "A valid transfer to the hangar berth candidate failed.")
 	TEST_ASSERT(resident.mind in home.residents, "A valid transfer did not retain resident membership.")
 	resident.forceMove(console_turf)
 	var/datum/player_outpost_management_ui/management_test/resident_panel = allocate(__IMPLIED_TYPE__, home, resident, console)

@@ -42,8 +42,6 @@
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
 		if(bay?.contains_service_turf(location))
 			return TRUE
-	if(freight_berth?.contains_service_turf(location))
-		return TRUE
 	for(var/datum/outpost_berth/berth as anything in berths)
 		if(berth?.contains_service_turf(location))
 			return TRUE
@@ -55,7 +53,6 @@
 	var/list/datum/mind/treasurers = list()
 	var/datum/bank_account/outpost/treasury
 	var/datum/voidcrew_cargo_shuttle/outpost/freight
-	var/datum/outpost_berth/freight_berth
 	var/list/datum/supply_order/cargo_cart = list()
 	/// Set only by the founding flow, never by rebuilding a terminal.
 	var/home_bundle_installed = FALSE

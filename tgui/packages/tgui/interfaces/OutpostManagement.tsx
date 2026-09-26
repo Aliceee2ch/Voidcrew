@@ -1,5 +1,23 @@
-import { type ReactNode, useState } from 'react';
-import { Button, Dropdown, Icon, Input, TextArea } from 'tgui-core/components';
+import {
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  Button,
+  Dropdown,
+  Icon,
+  Input,
+  KeyListener,
+  TextArea,
+} from 'tgui-core/components';
+import type { KeyEvent } from 'tgui-core/events';
+import { acquireHotKey, releaseHotKey } from 'tgui-core/hotkeys';
+import { KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP } from 'tgui-core/keycodes';
 import type { BooleanLike } from 'tgui-core/react';
 import { resolveAsset } from '../assets';
 import { useBackend } from '../backend';
@@ -15,6 +33,7 @@ const PANELS = {
   registry: [606, 50, 586, 556],
   broadcast: [10, 616, 586, 136],
   command: [606, 616, 586, 136],
+  placement: [10, 50, 1182, 556],
 } as const;
 
 type Vessel = { ref: string; name: string };
@@ -27,6 +46,33 @@ type Resident = Vessel & {
   active: BooleanLike;
   steward: BooleanLike;
   treasurer: BooleanLike;
+};
+type UpgradeEntry = {
+  id: string;
+  name: string;
+  desc: string;
+  price: number;
+  width: number;
+  height: number;
+  /** BYOND dir of the entrance edge as authored */
+  entrance: number;
+  preview: string | null;
+};
+type UpgradeStatus = {
+  id: string;
+  state: 'available' | 'ready' | 'installed';
+  denial: string | null;
+  manage_denial: string | null;
+};
+/** One character per tile, rows from the bottom-left corner (see build_upgrade_survey()). */
+type UpgradeSurvey = {
+  x: number;
+  y: number;
+  z: number;
+  width: number;
+  height: number;
+  cells: string;
+  near: string;
 };
 type ResearchConnection = {
   ref: string;
@@ -86,6 +132,11 @@ export type OutpostData = {
     requested: BooleanLike;
     approved: BooleanLike;
   }[];
+  upgrade_catalog: UpgradeEntry[];
+  upgrades: UpgradeStatus[];
+  upgrade_error: string | null;
+  upgrade_surveying: BooleanLike;
+  upgrade_survey?: UpgradeSurvey | null;
 };
 type Act = (action: string, params?: Record<string, unknown>) => unknown;
 type Props = { data: OutpostData; act: Act };
@@ -347,6 +398,1043 @@ function Docking({ data, act }: Props) {
           ))}
         </div>
       ))}
+    </>
+  );
+}
+
+const UPGRADE_STATES = {
+  available: 'Available',
+  ready: 'Ready to place',
+  installed: 'Installed',
+};
+
+function upgradePrice(price: number) {
+  return price > 0 ? `${price} cr` : 'Free';
+}
+
+/** Tooltip for Cancel purchase: the denial, else the refund when there is one. */
+function refundTooltip(price: number, denial?: string | null) {
+  return denial || (price > 0 ? `Refund ${price} cr` : undefined);
+}
+
+type UpgradesProps = Props & { onPlace: (id: string) => void };
+
+function Upgrades({ data, act, onPlace }: UpgradesProps) {
+  const [index, setIndex] = useState(0);
+  const catalog = data.upgrade_catalog || [];
+  if (catalog.length === 0) {
+    return <Empty icon="cubes">No upgrades</Empty>;
+  }
+  const current = Math.min(index, catalog.length - 1);
+  const upgrade = catalog[current];
+  const status = (data.upgrades || []).find((entry) => entry.id === upgrade.id);
+  const state = status?.state || 'available';
+  const step = (delta: number) =>
+    setIndex((current + delta + catalog.length) % catalog.length);
+  return (
+    <>
+      <div className="Outpost__carousel">
+        <Button
+          icon="chevron-left"
+          disabled={catalog.length < 2}
+          onClick={() => step(-1)}
+        />
+        <strong className="Outpost__grow">{upgrade.name}</strong>
+        <Button
+          icon="chevron-right"
+          disabled={catalog.length < 2}
+          onClick={() => step(1)}
+        />
+      </div>
+      <div className="Outpost__preview">
+        {upgrade.preview ? (
+          <img src={resolveAsset(upgrade.preview)} alt={upgrade.name} />
+        ) : (
+          <Empty icon="image">No preview</Empty>
+        )}
+      </div>
+      <div className="Outpost__quiet">{upgrade.desc}</div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Size</span>
+        <span>{`${upgrade.width}×${upgrade.height}`}</span>
+      </div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Price</span>
+        <span>{upgradePrice(upgrade.price)}</span>
+      </div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">State</span>
+        <span>{UPGRADE_STATES[state]}</span>
+      </div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">
+          Treasury: {data.treasury_balance} cr
+        </span>
+        {state === 'available' ? (
+          <Button.Confirm
+            icon="cart-shopping"
+            disabled={!status || !!status.denial}
+            tooltip={status?.denial || undefined}
+            onClick={() => act('buy_upgrade', { id: upgrade.id })}
+          >
+            Buy
+          </Button.Confirm>
+        ) : null}
+        {state === 'ready' ? (
+          <>
+            <Button
+              icon="map-location-dot"
+              disabled={!!status?.manage_denial}
+              tooltip={status?.manage_denial || undefined}
+              onClick={() => onPlace(upgrade.id)}
+            >
+              Place
+            </Button>
+            <Button.Confirm
+              icon="rotate-left"
+              color="bad"
+              disabled={!!status?.manage_denial}
+              tooltip={refundTooltip(upgrade.price, status?.manage_denial)}
+              onClick={() => act('cancel_upgrade', { id: upgrade.id })}
+            >
+              Cancel purchase
+            </Button.Confirm>
+          </>
+        ) : null}
+      </div>
+      {data.upgrade_error ? (
+        <div className="Outpost__research-error" role="alert">
+          {data.upgrade_error}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+// ===== Placement map =====
+
+/** Opening pixels per tile. The canvas shows 36 x 28 tiles at this zoom. */
+const MAP_TILE = 16;
+const MAP_WIDTH = 36 * MAP_TILE;
+const MAP_HEIGHT = 28 * MAP_TILE;
+/** Pixels per tile the wheel steps through. */
+const ZOOM_STEPS = [4, 6, 8, 12, 16, 24];
+/** Wheel travel per zoom step. A mouse notch is about 100; touchpads send many small deltas. */
+const WHEEL_STEP = 60;
+/** Survey cells an upgrade may cover: space, lattice, floor. */
+const OPEN_CELLS = 'slf';
+const CELL_COLORS: Record<string, string> = {
+  s: '#07090b',
+  l: '#27313b',
+  f: '#474d54',
+  w: '#9ca0a5',
+  g: '#4f9fc4',
+  d: '#d3a24c',
+  m: '#8b5c34',
+  x: '#5e2323',
+};
+const LEGEND: [string, string][] = [
+  ['f', 'Floor'],
+  ['w', 'Wall'],
+  ['g', 'Window'],
+  ['d', 'Door'],
+  ['m', 'Object'],
+  ['x', 'No build'],
+];
+const PAN_KEYS: Record<number, [number, number]> = {
+  [KEY_LEFT]: [-1, 0],
+  [KEY_RIGHT]: [1, 0],
+  [KEY_UP]: [0, 1],
+  [KEY_DOWN]: [0, -1],
+};
+/** Clockwise from north, as BYOND dirs. */
+const CLOCKWISE_DIRS = [1, 4, 2, 8];
+const DIR_NAMES: Record<number, string> = {
+  1: 'north',
+  2: 'south',
+  4: 'east',
+  8: 'west',
+};
+
+type Tile = { x: number; y: number };
+type Footprint = {
+  origin: Tile;
+  width: number;
+  height: number;
+  blocked: Tile[];
+  reason: string | null;
+};
+
+/** Index of a world tile in the survey strings, or -1 outside the surveyed region. */
+function surveyIndex(survey: UpgradeSurvey, x: number, y: number) {
+  const column = x - survey.x;
+  const row = y - survey.y;
+  if (column < 0 || row < 0 || column >= survey.width || row >= survey.height) {
+    return -1;
+  }
+  return row * survey.width + column;
+}
+
+/** The same rule the server applies: every tile open, one tile near outpost ground. */
+function checkFootprint(
+  survey: UpgradeSurvey,
+  origin: Tile,
+  width: number,
+  height: number,
+): Footprint {
+  const blocked: Tile[] = [];
+  let outside = false;
+  let near = false;
+  for (let dx = 0; dx < width; dx++) {
+    for (let dy = 0; dy < height; dy++) {
+      const tile = { x: origin.x + dx, y: origin.y + dy };
+      const index = surveyIndex(survey, tile.x, tile.y);
+      if (index < 0) {
+        outside = true;
+        blocked.push(tile);
+        continue;
+      }
+      if (!OPEN_CELLS.includes(survey.cells[index])) {
+        blocked.push(tile);
+      }
+      if (survey.near[index] === '1') {
+        near = true;
+      }
+    }
+  }
+  const reason = outside
+    ? 'Out of range'
+    : blocked.length > 0
+      ? 'Blocked'
+      : !near
+        ? 'Too far from the outpost'
+        : null;
+  return { origin, width, height, blocked, reason };
+}
+
+/** The footprint of the room centred on a tile, at the given rotation. */
+function ghostFootprint(
+  survey: UpgradeSurvey | null,
+  anchor: Tile | null,
+  upgrade: UpgradeEntry,
+  rotation: number,
+): Footprint | null {
+  if (!survey || !anchor) {
+    return null;
+  }
+  const turned = rotation === 90 || rotation === 270;
+  const width = turned ? upgrade.height : upgrade.width;
+  const height = turned ? upgrade.width : upgrade.height;
+  return checkFootprint(
+    survey,
+    {
+      x: anchor.x - Math.floor(width / 2),
+      y: anchor.y - Math.floor(height / 2),
+    },
+    width,
+    height,
+  );
+}
+
+type Point = { x: number; y: number };
+/** x and y: the world tile position of the canvas's bottom-left corner, fractional while dragging. */
+type Camera = { x: number; y: number; zoom: number };
+
+/** World pixels left of and below the canvas, rounded so tile edges land on whole pixels. */
+function cameraOffset(camera: Camera): Point {
+  return {
+    x: Math.round(camera.x * camera.zoom),
+    y: Math.round(camera.y * camera.zoom),
+  };
+}
+
+/** Canvas pixel of a world position in tiles, y up. */
+function toCanvas(camera: Camera, world: Point): Point {
+  const offset = cameraOffset(camera);
+  return {
+    x: world.x * camera.zoom - offset.x,
+    y: MAP_HEIGHT - (world.y * camera.zoom - offset.y),
+  };
+}
+
+function toWorld(camera: Camera, point: Point): Point {
+  const offset = cameraOffset(camera);
+  return {
+    x: (point.x + offset.x) / camera.zoom,
+    y: (MAP_HEIGHT - point.y + offset.y) / camera.zoom,
+  };
+}
+
+/** The tile under a canvas pixel, or null off the canvas. */
+function tileAt(camera: Camera, point: Point | null): Tile | null {
+  if (
+    !point ||
+    point.x < 0 ||
+    point.y < 0 ||
+    point.x >= MAP_WIDTH ||
+    point.y >= MAP_HEIGHT
+  ) {
+    return null;
+  }
+  const world = toWorld(camera, point);
+  return { x: Math.floor(world.x), y: Math.ceil(world.y) - 1 };
+}
+
+/** Canvas pixel under a client position, whatever the canvas's CSS size. */
+function canvasPoint(
+  canvas: HTMLCanvasElement,
+  clientX: number,
+  clientY: number,
+): Point | null {
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    return null;
+  }
+  return {
+    x: ((clientX - rect.left) * MAP_WIDTH) / rect.width,
+    y: ((clientY - rect.top) * MAP_HEIGHT) / rect.height,
+  };
+}
+
+/** Keeps the view over the surveyed region, centring it when the region is smaller. */
+function clampAxis(value: number, start: number, size: number, span: number) {
+  if (size <= span) {
+    return start - (span - size) / 2;
+  }
+  return Math.min(Math.max(value, start), start + size - span);
+}
+
+function clampCamera(camera: Camera, survey: UpgradeSurvey): Camera {
+  return {
+    x: clampAxis(camera.x, survey.x, survey.width, MAP_WIDTH / camera.zoom),
+    y: clampAxis(camera.y, survey.y, survey.height, MAP_HEIGHT / camera.zoom),
+    zoom: camera.zoom,
+  };
+}
+
+/** Zooming out stops at the first step that shows the whole survey. */
+function minZoom(survey: UpgradeSurvey) {
+  let zoom = ZOOM_STEPS[0];
+  for (const step of ZOOM_STEPS) {
+    if (
+      step <= MAP_TILE &&
+      survey.width * step <= MAP_WIDTH &&
+      survey.height * step <= MAP_HEIGHT
+    ) {
+      zoom = step;
+    }
+  }
+  return zoom;
+}
+
+/** One zoom step in or out, keeping the world point under `point` where it is. */
+function zoomCamera(
+  camera: Camera,
+  survey: UpgradeSurvey,
+  point: Point,
+  direction: number,
+): Camera {
+  const zoom = ZOOM_STEPS[ZOOM_STEPS.indexOf(camera.zoom) + direction];
+  if (zoom === undefined || zoom < minZoom(survey)) {
+    return camera;
+  }
+  const world = toWorld(camera, point);
+  return clampCamera(
+    {
+      x: world.x - point.x / zoom,
+      y: world.y - (MAP_HEIGHT - point.y) / zoom,
+      zoom,
+    },
+    survey,
+  );
+}
+
+function hexColor(hex: string) {
+  return [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16));
+}
+
+/** Pixel colour per cell class. */
+const CELL_PIXELS: Record<string, number[]> = {};
+for (const [cell, hex] of Object.entries(CELL_COLORS)) {
+  CELL_PIXELS[cell] = hexColor(hex);
+}
+
+/** The build range border. Keep in step with $range in OutpostManagement.scss. */
+const RANGE_COLOR = '#e03c3c';
+/** Canvas pixels, at every zoom. */
+const RANGE_LINE = 2;
+
+/** x1, y1, x2, y2 in world tiles: one straight run of tile edges. */
+export type Segment = [number, number, number, number];
+
+/**
+ * Every tile edge between an in-range tile and an out-of-range tile or the survey
+ * edge, with runs along one line merged. Built once per survey.
+ */
+export function rangeOutline(survey: UpgradeSurvey): Segment[] {
+  const { x, y, width, height, near } = survey;
+  const inside = (column: number, row: number) =>
+    column >= 0 &&
+    row >= 0 &&
+    column < width &&
+    row < height &&
+    near[row * width + column] === '1';
+  const segments: Segment[] = [];
+  // The line along the bottom of each row, plus the top of the last one.
+  for (let row = 0; row <= height; row++) {
+    let start = -1;
+    for (let column = 0; column <= width; column++) {
+      const edge =
+        column < width && inside(column, row) !== inside(column, row - 1);
+      if (edge && start < 0) {
+        start = column;
+      } else if (!edge && start >= 0) {
+        segments.push([x + start, y + row, x + column, y + row]);
+        start = -1;
+      }
+    }
+  }
+  // The line along the left of each column, plus the right of the last one.
+  for (let column = 0; column <= width; column++) {
+    let start = -1;
+    for (let row = 0; row <= height; row++) {
+      const edge =
+        row < height && inside(column, row) !== inside(column - 1, row);
+      if (edge && start < 0) {
+        start = row;
+      } else if (!edge && start >= 0) {
+        segments.push([x + column, y + start, x + column, y + row]);
+        start = -1;
+      }
+    }
+  }
+  return segments;
+}
+
+/** Strokes the build range border with the current camera. Off-canvas runs are skipped. */
+function drawOutline(
+  context: CanvasRenderingContext2D,
+  camera: Camera,
+  outline: Segment[],
+) {
+  if (outline.length === 0) {
+    return;
+  }
+  const { zoom } = camera;
+  const offset = cameraOffset(camera);
+  const margin = RANGE_LINE;
+  context.save();
+  context.beginPath();
+  for (const [x1, y1, x2, y2] of outline) {
+    const left = x1 * zoom - offset.x;
+    const right = x2 * zoom - offset.x;
+    const bottom = MAP_HEIGHT - (y1 * zoom - offset.y);
+    const top = MAP_HEIGHT - (y2 * zoom - offset.y);
+    if (
+      right < -margin ||
+      left > MAP_WIDTH + margin ||
+      bottom < -margin ||
+      top > MAP_HEIGHT + margin
+    ) {
+      continue;
+    }
+    context.moveTo(left, bottom);
+    context.lineTo(right, top);
+  }
+  context.strokeStyle = RANGE_COLOR;
+  context.lineWidth = RANGE_LINE;
+  // Square caps fill the outer pixel where two runs meet at a corner.
+  context.lineCap = 'square';
+  context.stroke();
+  context.restore();
+}
+
+/** The survey at one pixel per tile, drawn once per survey and scaled up every frame. */
+function renderSurvey(survey: UpgradeSurvey): HTMLCanvasElement | null {
+  const { width, height, cells } = survey;
+  const bitmap = document.createElement('canvas');
+  bitmap.width = width;
+  bitmap.height = height;
+  const context = bitmap.getContext('2d');
+  if (!context || width < 1 || height < 1) {
+    return null;
+  }
+  const pixels = context.createImageData(width, height);
+  for (let row = 0; row < height; row++) {
+    // Survey rows run up from the bottom, bitmap rows down from the top.
+    let offset = (height - 1 - row) * width * 4;
+    for (let column = 0; column < width; column++) {
+      const color = CELL_PIXELS[cells[row * width + column]] || [0, 0, 0];
+      pixels.data[offset] = color[0];
+      pixels.data[offset + 1] = color[1];
+      pixels.data[offset + 2] = color[2];
+      pixels.data[offset + 3] = 255;
+      offset += 4;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
+  return bitmap;
+}
+
+type MapMenu = {
+  tile: Tile;
+  /** The clicked spot in world tiles; the menu follows it when the view moves. */
+  point: Point;
+};
+type MapScene = {
+  survey: UpgradeSurvey | null;
+  bitmap: HTMLCanvasElement | null;
+  outline: Segment[];
+  image: HTMLImageElement | null;
+  upgrade: UpgradeEntry;
+  rotation: number;
+  menu: MapMenu | null;
+};
+
+function drawMap(
+  canvas: HTMLCanvasElement,
+  scene: MapScene,
+  camera: Camera | null,
+  hover: Tile | null,
+) {
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return;
+  }
+  context.fillStyle = '#000';
+  context.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+  const { survey, bitmap, outline, image, upgrade, rotation, menu } = scene;
+  if (!survey || !bitmap || !camera) {
+    return;
+  }
+  const { zoom } = camera;
+  const corner = toCanvas(camera, {
+    x: survey.x,
+    y: survey.y + survey.height,
+  });
+  context.imageSmoothingEnabled = false;
+  context.drawImage(
+    bitmap,
+    corner.x,
+    corner.y,
+    survey.width * zoom,
+    survey.height * zoom,
+  );
+  drawOutline(context, camera, outline);
+  const footprint = ghostFootprint(
+    survey,
+    menu ? menu.tile : hover,
+    upgrade,
+    rotation,
+  );
+  if (!footprint) {
+    return;
+  }
+  const { x: left, y: top } = toCanvas(camera, {
+    x: footprint.origin.x,
+    y: footprint.origin.y + footprint.height,
+  });
+  const pixelWidth = footprint.width * zoom;
+  const pixelHeight = footprint.height * zoom;
+  if (image) {
+    context.save();
+    // The preview is much finer than the map, so smooth it as it shrinks.
+    context.imageSmoothingEnabled = true;
+    context.globalAlpha = 0.75;
+    context.translate(left + pixelWidth / 2, top + pixelHeight / 2);
+    // Canvas y points down, so a positive angle turns clockwise like the game's rotation.
+    context.rotate((rotation * Math.PI) / 180);
+    context.drawImage(
+      image,
+      (-upgrade.width * zoom) / 2,
+      (-upgrade.height * zoom) / 2,
+      upgrade.width * zoom,
+      upgrade.height * zoom,
+    );
+    context.restore();
+  }
+  const valid = !footprint.reason;
+  context.fillStyle = valid
+    ? 'rgba(90, 200, 110, 0.22)'
+    : 'rgba(220, 60, 60, 0.22)';
+  context.fillRect(left, top, pixelWidth, pixelHeight);
+  context.fillStyle = 'rgba(230, 50, 50, 0.55)';
+  for (const tile of footprint.blocked) {
+    const spot = toCanvas(camera, { x: tile.x, y: tile.y + 1 });
+    context.fillRect(spot.x, spot.y, zoom, zoom);
+  }
+  const line = zoom < 8 ? 1 : 2;
+  context.strokeStyle = valid ? '#6fd08a' : '#e05555';
+  context.lineWidth = line;
+  context.strokeRect(
+    left + line / 2,
+    top + line / 2,
+    pixelWidth - line,
+    pixelHeight - line,
+  );
+}
+
+function usePreviewImage(name: string | null) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    setImage(null);
+    if (!name) {
+      return;
+    }
+    let live = true;
+    const loading = new Image();
+    loading.onload = () => {
+      if (live) {
+        setImage(loading);
+      }
+    };
+    loading.src = resolveAsset(name);
+    return () => {
+      live = false;
+    };
+  }, [name]);
+  return image;
+}
+
+type PlacementProps = Props & {
+  upgrade: UpgradeEntry;
+  status: UpgradeStatus | undefined;
+  onBack: () => void;
+};
+
+function UpgradePlacement({
+  data,
+  act,
+  upgrade,
+  status,
+  onBack,
+}: PlacementProps) {
+  const survey = data.upgrade_survey || null;
+  const surveying = !!data.upgrade_surveying || !survey;
+  const [rotation, setRotation] = useState(0);
+  const [camera, setCamera] = useState<Camera | null>(null);
+  const [hover, setHover] = useState<Tile | null>(null);
+  const [menu, setMenu] = useState<MapMenu | null>(null);
+  const [panning, setPanning] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Input lands between renders, so the live camera and hover sit in refs. Each
+  // animation frame draws from them, then copies them to state for the panel.
+  const cameraRef = useRef<Camera | null>(null);
+  const hoverRef = useRef<Tile | null>(null);
+  const pointerRef = useRef<Point | null>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    /** Canvas pixels per CSS pixel. */
+    scale: Point;
+  } | null>(null);
+  const wheelRef = useRef(0);
+  const frameRef = useRef<number | null>(null);
+  const sceneRef = useRef<MapScene | null>(null);
+  const handlersRef = useRef<{
+    wheel: (event: WheelEvent) => void;
+    key: (key: KeyEvent) => void;
+  } | null>(null);
+  const image = usePreviewImage(upgrade.preview);
+  // Keyed on content: a static data update can resend the same survey.
+  const bitmap = useMemo(
+    () => (survey ? renderSurvey(survey) : null),
+    [survey?.width, survey?.height, survey?.cells],
+  );
+  const outline = useMemo(
+    () => (survey ? rangeOutline(survey) : []),
+    [survey?.x, survey?.y, survey?.width, survey?.height, survey?.near],
+  );
+
+  const turned = rotation === 90 || rotation === 270;
+  const footWidth = turned ? upgrade.height : upgrade.width;
+  const footHeight = turned ? upgrade.width : upgrade.height;
+  const footprint = ghostFootprint(
+    survey,
+    menu ? menu.tile : hover,
+    upgrade,
+    rotation,
+  );
+  const entrance =
+    CLOCKWISE_DIRS[
+      (CLOCKWISE_DIRS.indexOf(upgrade.entrance) + rotation / 90) % 4
+    ];
+  const menuSpot = menu && camera ? toCanvas(camera, menu.point) : null;
+
+  /** At most one draw per animation frame, however many inputs asked for one. */
+  const requestFrame = () => {
+    if (frameRef.current !== null) {
+      return;
+    }
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const canvas = canvasRef.current;
+      if (canvas && sceneRef.current) {
+        drawMap(canvas, sceneRef.current, cameraRef.current, hoverRef.current);
+      }
+      setCamera(cameraRef.current);
+      setHover(hoverRef.current);
+    });
+  };
+
+  /** Re-reads the tile under the cursor. The clicked tile holds while the menu is open. */
+  const trackHover = () => {
+    if (menu) {
+      return;
+    }
+    const current = cameraRef.current;
+    const tile = current ? tileAt(current, pointerRef.current) : null;
+    const old = hoverRef.current;
+    if (tile?.x === old?.x && tile?.y === old?.y) {
+      return;
+    }
+    hoverRef.current = tile;
+    requestFrame();
+  };
+
+  const moveCamera = (next: Camera) => {
+    if (!survey) {
+      return;
+    }
+    cameraRef.current = clampCamera(next, survey);
+    trackHover();
+    requestFrame();
+  };
+
+  const onWheel = (event: WheelEvent) => {
+    const canvas = canvasRef.current;
+    const current = cameraRef.current;
+    if (!canvas || !current || !survey) {
+      return;
+    }
+    const unit =
+      event.deltaMode === 1 ? 33 : event.deltaMode === 2 ? MAP_HEIGHT : 1;
+    const delta = event.deltaY * unit;
+    // Small deltas add up to a step; turning the wheel back starts over.
+    if (delta * wheelRef.current < 0) {
+      wheelRef.current = 0;
+    }
+    wheelRef.current += delta;
+    if (Math.abs(wheelRef.current) < WHEEL_STEP) {
+      return;
+    }
+    const direction = wheelRef.current > 0 ? -1 : 1;
+    wheelRef.current = 0;
+    const point = canvasPoint(canvas, event.clientX, event.clientY);
+    if (point) {
+      moveCamera(zoomCamera(current, survey, point, direction));
+    }
+  };
+
+  const onKey = (key: KeyEvent) => {
+    const delta = PAN_KEYS[key.code];
+    if (!delta) {
+      return;
+    }
+    key.event.preventDefault();
+    const current = cameraRef.current;
+    if (!current) {
+      return;
+    }
+    // About 16 screen pixels a press at any zoom, eight times that with shift.
+    const stride =
+      Math.max(1, Math.round(MAP_TILE / current.zoom)) * (key.shift ? 8 : 1);
+    moveCamera({
+      ...current,
+      x: current.x + delta[0] * stride,
+      y: current.y + delta[1] * stride,
+    });
+  };
+
+  const endDrag = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(drag.pointerId)) {
+      event.currentTarget.releasePointerCapture(drag.pointerId);
+    }
+    setPanning(false);
+  };
+
+  // Handlers bound outside React (the wheel, KeyListener) read these, so they always see this render.
+  useLayoutEffect(() => {
+    sceneRef.current = {
+      survey,
+      bitmap,
+      outline,
+      image,
+      upgrade,
+      rotation,
+      menu,
+    };
+    handlersRef.current = { wheel: onWheel, key: onKey };
+  });
+
+  useLayoutEffect(() => {
+    requestFrame();
+  }, [bitmap, outline, image, rotation, menu, upgrade.width, upgrade.height]);
+
+  // A new survey keeps the current view where it can, else opens on the outpost.
+  useLayoutEffect(() => {
+    if (!survey) {
+      return;
+    }
+    const old = cameraRef.current;
+    const zoom = Math.max(old?.zoom ?? MAP_TILE, minZoom(survey));
+    moveCamera(
+      old
+        ? { ...old, zoom }
+        : {
+            x: survey.x + Math.floor((survey.width - MAP_WIDTH / zoom) / 2),
+            y: survey.y + Math.floor((survey.height - MAP_HEIGHT / zoom) / 2),
+            zoom,
+          },
+    );
+  }, [survey?.x, survey?.y, survey?.z, survey?.width, survey?.height]);
+
+  // React's onWheel is passive and cannot stop the window scrolling.
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) {
+      return;
+    }
+    const listener = (event: WheelEvent) => {
+      event.preventDefault();
+      handlersRef.current?.wheel(event);
+    };
+    wrap.addEventListener('wheel', listener, { passive: false });
+    return () => wrap.removeEventListener('wheel', listener);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    },
+    [],
+  );
+
+  // The arrows already stay out of the game by default; hold them anyway while the map is up.
+  useEffect(() => {
+    for (const code of Object.keys(PAN_KEYS)) acquireHotKey(Number(code));
+    return () => {
+      for (const code of Object.keys(PAN_KEYS)) releaseHotKey(Number(code));
+    };
+  }, []);
+
+  return (
+    <>
+      <KeyListener onKeyDown={(key) => handlersRef.current?.key(key)} />
+      <div
+        className={`Outpost__map ${panning ? 'Outpost__map--panning' : ''}`}
+        ref={wrapRef}
+      >
+        <canvas
+          ref={canvasRef}
+          width={MAP_WIDTH}
+          height={MAP_HEIGHT}
+          onPointerDown={(event) => {
+            if (event.button !== 1) {
+              return;
+            }
+            // Middle-drag pans; the browser would start autoscroll instead.
+            event.preventDefault();
+            const rect = event.currentTarget.getBoundingClientRect();
+            if (!cameraRef.current || !rect.width || !rect.height) {
+              return;
+            }
+            event.currentTarget.setPointerCapture(event.pointerId);
+            dragRef.current = {
+              pointerId: event.pointerId,
+              x: event.clientX,
+              y: event.clientY,
+              scale: { x: MAP_WIDTH / rect.width, y: MAP_HEIGHT / rect.height },
+            };
+            setPanning(true);
+          }}
+          onPointerMove={(event) => {
+            pointerRef.current = canvasPoint(
+              event.currentTarget,
+              event.clientX,
+              event.clientY,
+            );
+            const drag = dragRef.current;
+            const current = cameraRef.current;
+            if (!drag || drag.pointerId !== event.pointerId || !current) {
+              trackHover();
+              return;
+            }
+            // Middle button let go while another is still held.
+            if (!(event.buttons & 4)) {
+              endDrag(event);
+              trackHover();
+              return;
+            }
+            // Deltas from the last move, so a zoom mid-drag doesn't jump the map.
+            const dx = ((event.clientX - drag.x) * drag.scale.x) / current.zoom;
+            const dy = ((event.clientY - drag.y) * drag.scale.y) / current.zoom;
+            drag.x = event.clientX;
+            drag.y = event.clientY;
+            moveCamera({ ...current, x: current.x - dx, y: current.y + dy });
+          }}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onLostPointerCapture={endDrag}
+          onPointerLeave={() => {
+            pointerRef.current = null;
+            trackHover();
+          }}
+          onMouseDown={(event) => {
+            if (event.button === 1) {
+              event.preventDefault();
+            }
+          }}
+          onAuxClick={(event) => event.preventDefault()}
+          onClick={(event) => {
+            // A left press during a middle-drag belongs to the drag.
+            if (dragRef.current) {
+              return;
+            }
+            const current = cameraRef.current;
+            const point = canvasPoint(
+              event.currentTarget,
+              event.clientX,
+              event.clientY,
+            );
+            pointerRef.current = point;
+            const tile = current ? tileAt(current, point) : null;
+            if (menu) {
+              setMenu(null);
+              hoverRef.current = tile;
+              requestFrame();
+              return;
+            }
+            if (!tile || !point || !current || surveying) {
+              return;
+            }
+            hoverRef.current = tile;
+            setHover(tile);
+            setMenu({ tile, point: toWorld(current, point) });
+          }}
+        />
+        {surveying ? (
+          <div className="Outpost__map-status">Surveying</div>
+        ) : null}
+        {menu && footprint && menuSpot ? (
+          <div
+            className="Outpost__map-menu"
+            style={{
+              left: `clamp(0px, ${(menuSpot.x / MAP_WIDTH) * 100}%, calc(100% - 130px))`,
+              top: `clamp(0px, ${(menuSpot.y / MAP_HEIGHT) * 100}%, calc(100% - 70px))`,
+            }}
+          >
+            <Button.Confirm
+              icon="hammer"
+              disabled={!!footprint.reason}
+              tooltip={footprint.reason || undefined}
+              confirmContent="Permanent. Build?"
+              onClick={() => {
+                act('place_upgrade', {
+                  id: upgrade.id,
+                  x: footprint.origin.x,
+                  y: footprint.origin.y,
+                  rotation,
+                });
+                setMenu(null);
+              }}
+            >
+              Build
+            </Button.Confirm>
+            <Button
+              icon="rotate-right"
+              onClick={() => {
+                setRotation((rotation + 90) % 360);
+                setMenu(null);
+              }}
+            >
+              Rotate
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      <div className="Outpost__map-side">
+        <div className="Outpost__heading">
+          <Icon name="map-location-dot" />
+          {upgrade.name}
+        </div>
+        <div className="Outpost__row">
+          <span className="Outpost__grow">Entrance</span>
+          <span>{DIR_NAMES[entrance]}</span>
+          <Button
+            icon="rotate-right"
+            tooltip="Rotate"
+            onClick={() => {
+              setRotation((rotation + 90) % 360);
+              setMenu(null);
+            }}
+          />
+        </div>
+        <div className="Outpost__row">
+          <span className="Outpost__grow">Size</span>
+          <span>{`${footWidth}×${footHeight}`}</span>
+        </div>
+        <div className="Outpost__row">
+          <span className="Outpost__grow">Spot</span>
+          <span>
+            {surveying
+              ? 'Surveying'
+              : footprint
+                ? footprint.reason || 'Clear'
+                : '-'}
+          </span>
+          <Button
+            icon="arrows-rotate"
+            tooltip="Refresh survey"
+            disabled={surveying}
+            onClick={() => act('refresh_upgrade_map', { id: upgrade.id })}
+          />
+        </div>
+        {data.upgrade_error ? (
+          <div className="Outpost__research-error" role="alert">
+            {data.upgrade_error}
+          </div>
+        ) : null}
+        <div className="Outpost__legend">
+          {LEGEND.map(([cell, label]) => (
+            <span key={cell}>
+              <i style={{ background: CELL_COLORS[cell] }} />
+              {label}
+            </span>
+          ))}
+          <span>
+            <i className="Outpost__legend-range" />
+            Build range
+          </span>
+        </div>
+        <div className="Outpost__quiet">
+          Wheel: zoom · Middle-drag or arrows: pan
+        </div>
+        <div className="Outpost__map-actions">
+          <Button icon="arrow-left" onClick={onBack}>
+            Back
+          </Button>
+          <Button.Confirm
+            icon="rotate-left"
+            color="bad"
+            disabled={!!status?.manage_denial}
+            tooltip={refundTooltip(upgrade.price, status?.manage_denial)}
+            onClick={() => act('cancel_upgrade', { id: upgrade.id })}
+          >
+            Cancel purchase
+          </Button.Confirm>
+        </div>
+      </div>
     </>
   );
 }
@@ -773,11 +1861,26 @@ function Ownership({ data, act }: Props) {
 
 export function OutpostManagementPanel({ data, act }: Props) {
   const [tab, setTab] = useState('docking');
+  const [placingId, setPlacingId] = useState<string | null>(null);
+  const placingUpgrade = (data.upgrade_catalog || []).find(
+    (entry) => entry.id === placingId,
+  );
+  const placingStatus = (data.upgrades || []).find(
+    (entry) => entry.id === placingId,
+  );
+  const placing = !!data.linked && !!placingUpgrade;
+  // Placed, cancelled or refused: back to the carousel.
+  useEffect(() => {
+    if (placingId && placingStatus?.state !== 'ready') {
+      setPlacingId(null);
+    }
+  }, [placingId, placingStatus?.state]);
   const tabs = [
     { id: 'docking', title: 'Docking', icon: 'anchor' },
     { id: 'residents', title: 'Residents', icon: 'users' },
     { id: 'access', title: 'Access', icon: 'id-card' },
     { id: 'research', title: 'Research', icon: 'flask' },
+    { id: 'upgrades', title: 'Upgrades', icon: 'cubes' },
   ];
   return (
     <div className="Outpost">
@@ -801,7 +1904,28 @@ export function OutpostManagementPanel({ data, act }: Props) {
         <Icon name={data.raidable ? 'shield-halved' : 'shield'} />
         <strong>{data.raidable ? 'Unpatrolled' : 'Patrolled'}</strong>
       </Panel>
-      {data.linked ? (
+      {placing && placingUpgrade ? (
+        <>
+          <Panel slot="placement">
+            <UpgradePlacement
+              data={data}
+              act={act}
+              upgrade={placingUpgrade}
+              status={placingStatus}
+              onBack={() => {
+                act('close_upgrade_map');
+                setPlacingId(null);
+              }}
+            />
+          </Panel>
+          <Panel slot="broadcast">
+            <Broadcast data={data} act={act} />
+          </Panel>
+          <Panel slot="command">
+            <Ownership data={data} act={act} />
+          </Panel>
+        </>
+      ) : data.linked ? (
         <>
           <Panel slot="directory">
             <nav className="Outpost__tabs">
@@ -829,6 +1953,15 @@ export function OutpostManagementPanel({ data, act }: Props) {
                 <Residents data={data} act={act} />
               ) : tab === 'research' ? (
                 <Research data={data} act={act} />
+              ) : tab === 'upgrades' ? (
+                <Upgrades
+                  data={data}
+                  act={act}
+                  onPlace={(id) => {
+                    act('open_upgrade_map', { id });
+                    setPlacingId(id);
+                  }}
+                />
               ) : (
                 <Access data={data} act={act} />
               )}

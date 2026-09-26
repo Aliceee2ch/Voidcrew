@@ -73,7 +73,7 @@
 		qdel(src)
 
 /datum/player_outpost_management_ui/ui_assets(mob/user)
-	return list(get_asset_datum(/datum/asset/simple/outpost_management_plate))
+	return list(get_asset_datum(/datum/asset/simple/outpost_management_plate), get_asset_datum(/datum/asset/simple/outpost_upgrade_previews))
 
 /datum/player_outpost_management_ui/ui_data(mob/user)
 	var/list/data = list("linked" = !!outpost)
@@ -172,6 +172,9 @@
 		bay.reconcile_silo()
 		bays += list(list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
 	data["ship_bays"] = bays
+	data["upgrades"] = upgrade_ui_data(user)
+	data["upgrade_error"] = upgrade_error
+	data["upgrade_surveying"] = outpost.upgrade_surveying
 	return data
 
 /datum/player_outpost_management_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -195,6 +198,8 @@
 		return
 	if(action in list("resident_mode", "resident_password", "invite_resident", "block_resident", "unblock_resident", "reset_resident_access", "add_resident", "remove_resident", "delegate"))
 		return service_action(action, params, user)
+	if(action in list("buy_upgrade", "cancel_upgrade", "open_upgrade_map", "refresh_upgrade_map", "close_upgrade_map", "place_upgrade"))
+		return upgrade_action(action, params, user)
 	. = TRUE
 	switch(action)
 		if("install_ship_bay")

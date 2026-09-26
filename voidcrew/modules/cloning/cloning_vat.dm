@@ -242,7 +242,7 @@
 	if(death_notified)
 		return
 	// Find whoever is holding the player right now: their ghost, or their corpse if still in it.
-	var/mob/target = mind.get_ghost(even_if_they_cant_reenter = TRUE, ghosts_with_clients = TRUE)
+	var/mob/target = holder_ghost(mind)
 	if(isnull(target) && current_body?.client)
 		target = current_body
 	if(isnull(target)) // Player is logged out; keep trying until they return.
@@ -332,9 +332,33 @@
 // Claiming (ghosts)
 // ---------------------------------------------------------------------------
 
+/**
+ * Whether this ghost is the imprinted player. Ghosting by suicide, DNR or the Ghost verb while
+ * alive cuts the ghost's link to its mind (ghostize(FALSE)), so such a ghost is matched by ckey:
+ * the same player, not a lobby observer, whose character is dead or gone.
+ */
+/obj/machinery/cloning_vat/proc/holder_matches(mob/dead/observer/ghost, datum/mind/mind)
+	if(!ghost || !mind)
+		return FALSE
+	if(ghost.mind == mind)
+		return TRUE
+	if(ghost.mind || ghost.started_as_observer || !ghost.ckey || ghost.ckey != ckey(mind.key))
+		return FALSE
+	return !mind.current || mind.current.stat == DEAD
+
+/// The imprinted player's connected ghost, if they have one
+/obj/machinery/cloning_vat/proc/holder_ghost(datum/mind/mind)
+	var/mob/dead/observer/ghost = mind.get_ghost(even_if_they_cant_reenter = TRUE, ghosts_with_clients = TRUE)
+	if(ghost)
+		return ghost
+	var/client/holder_client = GLOB.directory[ckey(mind.key)]
+	if(isobserver(holder_client?.mob) && holder_matches(holder_client.mob, mind))
+		return holder_client.mob
+	return null
+
 /obj/machinery/cloning_vat/attack_ghost(mob/dead/observer/user)
 	var/datum/mind/mind = imprint_mind_ref?.resolve()
-	if(mind && user.mind == mind)
+	if(mind && holder_matches(user, mind))
 		try_claim(user, mind)
 		return TRUE
 	return ..()
@@ -359,7 +383,7 @@
 	// Revalidate after the blocking prompt.
 	if(QDELETED(src) || QDELETED(user) || !body_ready || !is_operational || !anchored)
 		return
-	if(user.mind != mind || imprint_mind_ref?.resolve() != mind)
+	if(!holder_matches(user, mind) || imprint_mind_ref?.resolve() != mind)
 		return
 	current_body = mind.current
 	if(current_body && current_body.stat != DEAD)

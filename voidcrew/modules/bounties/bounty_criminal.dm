@@ -1168,7 +1168,10 @@
 /proc/bounty_turret_ignores(mob/living/creature, at_trader_outpost)
 	var/mob/living/basic/bounty_criminal/criminal = creature
 	if(istype(criminal))
-		return at_trader_outpost || criminal.capture_state() != BOUNTY_STATE_FREE
+		// At a trader outpost, turrets leave it alone unless an exposed fugitive hurt someone outside its grudge list (AR-C8, P6's outpost_turret_target()).
+		if(at_trader_outpost)
+			return !criminal.outpost_turret_target()
+		return criminal.capture_state() != BOUNTY_STATE_FREE
 	return at_trader_outpost && istype(creature, /mob/living/basic/bounty_companion)
 
 /// Whether someone with a mind is behind `attacker`: a person, a borg, or the pilot of a mech or other vehicle. Criminals and their companions never count.

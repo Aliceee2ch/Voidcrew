@@ -102,6 +102,12 @@
 	can_install_electronics = FALSE
 	access_choices = null // no card reader shenanigans; rental is the only flow
 	req_access = null
+	// Bolted to the depot floor: nobody drags a rented locker into the elevator
+	anchored = TRUE
+	anchorable = FALSE
+	move_resist = INFINITY
+	// Nobody hides inside one; a locked-in person could never get out
+	divable = FALSE
 
 /obj/structure/closet/secure_closet/outpost_rental/PopulateContents()
 	return // rented empty
@@ -141,12 +147,33 @@
 	balloon_alert(user, "the lock shrugs it off!")
 	return FALSE
 
-// No prying, cutting or deconstructing your way in either
+// No prying, cutting or deconstructing your way in either. An open locker takes
+// whatever is clicked into it, like any other closet.
 /obj/structure/closet/secure_closet/outpost_rental/tool_interact(obj/item/weapon, mob/living/user)
-	return FALSE
+	if(!opened || user.combat_mode)
+		return FALSE
+	user.transfer_item_to_turf(weapon, drop_location())
+	return TRUE
 
 /obj/structure/closet/secure_closet/outpost_rental/bust_open()
 	return
+
+// Knock does not open a lock the outpost guarantees
+/obj/structure/closet/secure_closet/outpost_rental/on_magic_unlock(datum/source, datum/action/cooldown/spell/aoe/knock/spell, atom/caster)
+	SIGNAL_HANDLER
+	return
+
+// Items only: a person shut in a rented locker could never get out
+/obj/structure/closet/secure_closet/outpost_rental/insertion_allowed(atom/movable/AM)
+	if(ismob(AM))
+		return FALSE
+	return ..()
+
+// Shoves and anything else that puts a mob straight inside land it back on the tile
+/obj/structure/closet/secure_closet/outpost_rental/Entered(atom/movable/arrived, atom/old_loc, list/atom/old_locs)
+	. = ..()
+	if(ismob(arrived))
+		arrived.forceMove(drop_location())
 
 // Attacking one is attacking outpost property
 /obj/structure/closet/secure_closet/outpost_rental/attacked_by(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)

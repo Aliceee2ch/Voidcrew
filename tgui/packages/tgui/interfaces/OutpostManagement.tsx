@@ -13,6 +13,7 @@ import {
   Icon,
   Input,
   KeyListener,
+  NumberInput,
   TextArea,
 } from 'tgui-core/components';
 import type { KeyEvent } from 'tgui-core/events';
@@ -46,6 +47,120 @@ type Resident = Vessel & {
   active: BooleanLike;
   steward: BooleanLike;
   treasurer: BooleanLike;
+  pricer?: BooleanLike;
+};
+type ShipBay = {
+  ref: string;
+  number: number;
+  ship: string | null;
+  status: string;
+  arrived: BooleanLike;
+  requested: BooleanLike;
+  approved: BooleanLike;
+  /** Eviction keys: absent until the dock fee package sends them. */
+  evict_denial?: string | null;
+  evicting?: BooleanLike;
+  /** Seconds until the ship is sent off. */
+  evict_eta?: number;
+  /** Credits refunded if evicted now; 0 for none. */
+  evict_refund?: number;
+};
+
+// ===== Marketplace (Pricing and Services tabs) =====
+
+type PriceRow = {
+  key: string;
+  label: string;
+  value: number;
+  default: number;
+  max: number;
+  available: BooleanLike;
+};
+type ShopSummary = {
+  installed?: BooleanLike;
+  open?: BooleanLike;
+  listings?: number;
+  priced?: number;
+  unpriced?: number;
+  items?: number;
+  capacity?: number;
+};
+type LedgerEntry = {
+  time: string;
+  service: string;
+  label: string;
+  payer: string;
+  account: string;
+  amount: number;
+};
+type ServiceTotal = { service: string; total: number; count: number };
+type Pricing = {
+  prices?: PriceRow[];
+  shop?: ShopSummary | null;
+  ledger?: LedgerEntry[] | null;
+  totals?: ServiceTotal[] | null;
+};
+type CloningVat = {
+  ref: string;
+  state: 'empty' | 'growing' | 'ready' | 'offline' | string;
+  holder: string | null;
+  percent: number;
+  paid: number;
+  evict_denial: string | null;
+};
+type CloningDetail = {
+  kind: 'cloning';
+  price?: number;
+  can_evict?: BooleanLike;
+  vats?: CloningVat[];
+};
+type ShopDetail = ShopSummary & { kind: 'shop'; can_toggle?: BooleanLike };
+type MedicalDetail = {
+  kind: 'medical';
+  price?: number;
+  pass_minutes?: number;
+  active_passes?: number;
+  can_edit?: BooleanLike;
+  procedures?: { id: string; name: string; enabled: BooleanLike }[];
+};
+type StorageDetail = {
+  kind: 'storage';
+  price?: number;
+  lockers?: number;
+  rented?: number;
+};
+type NetworkPad = { id: string; name: string; zone?: number | string | null };
+/** grounding-teleporter §7.5; `policy`, `allow` and `trips` are the older spec names. */
+type TeleporterDetail = {
+  kind: 'teleporter';
+  installed?: BooleanLike;
+  padName?: string;
+  arrivals?: string;
+  policy?: string;
+  allowlist?: NetworkPad[];
+  candidates?: NetworkPad[];
+  /** Seconds left on the raid lock. */
+  raidLockLeft?: number;
+  fee?: number;
+  price?: number;
+  can_edit?: BooleanLike;
+  tripsIn?: number;
+  tripsOut?: number;
+  trips?: number;
+  destinations?: number;
+};
+type ServiceDetail =
+  | CloningDetail
+  | ShopDetail
+  | MedicalDetail
+  | StorageDetail
+  | TeleporterDetail;
+type ServiceRoom = {
+  id: string;
+  name: string;
+  visitors_allowed?: BooleanLike;
+  can_toggle_visitors?: BooleanLike;
+  detail?: ServiceDetail | { kind?: string; [key: string]: unknown } | null;
 };
 type UpgradeEntry = {
   id: string;
@@ -92,6 +207,17 @@ export type OutpostData = {
   can_manage: BooleanLike;
   can_spend: BooleanLike;
   can_set_prices: BooleanLike;
+  /** Treasury user: picks the service silo. Older servers used can_set_prices. */
+  can_select_silo?: BooleanLike;
+  can_view_income?: BooleanLike;
+  /** This user is billed as a visitor (admin testing aid). */
+  playtest_visitor?: BooleanLike;
+  pricing?: Pricing | null;
+  services?: ServiceRoom[] | null;
+  /** Ship names whose crews count as members (abuse review F-12). */
+  owner_crews?: (string | Vessel)[] | null;
+  /** grounding-teleporter §7.5 top-level shape, used when no service row carries it. */
+  teleporter?: Omit<TeleporterDetail, 'kind'> | null;
   treasury_balance: number;
   service_silo: string | null;
   service_silos: Vessel[];
@@ -123,15 +249,7 @@ export type OutpostData = {
   ship_bay_cost: number;
   ship_bay_denial: string | null;
   ship_bay_error: string | null;
-  ship_bays: {
-    ref: string;
-    number: number;
-    ship: string | null;
-    status: string;
-    arrived: BooleanLike;
-    requested: BooleanLike;
-    approved: BooleanLike;
-  }[];
+  ship_bays: ShipBay[];
   upgrade_catalog: UpgradeEntry[];
   upgrades: UpgradeStatus[];
   upgrade_error: string | null;
@@ -175,10 +293,82 @@ function Empty({ icon, children }: { icon: string; children: ReactNode }) {
   );
 }
 
+/** Silo choice belongs to treasury users; older servers only sent can_set_prices. */
+function canSelectSilo(data: OutpostData) {
+  return data.can_select_silo === undefined
+    ? !!data.can_set_prices
+    : !!data.can_select_silo;
+}
+
+/** Whole seconds as m:ss. */
+function clock(seconds?: number | null) {
+  const total = Math.max(0, Math.ceil(Number(seconds) || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function credits(amount?: number | null) {
+  const value = Number(amount) || 0;
+  return value > 0 ? `${value.toLocaleString()} cr` : 'Free';
+}
+
+/** Evict or cancel for one bay row. Hidden until the server sends eviction keys. */
+function BayEviction({ bay, data, act }: Props & { bay: ShipBay }) {
+  if (bay.evict_denial === undefined && !bay.evicting) {
+    return null;
+  }
+  if (bay.evicting) {
+    return (
+      <>
+        <span className="Outpost__countdown" title="Time left to undock">
+          <Icon name="stopwatch" /> {clock(bay.evict_eta)}
+        </span>
+        <Button
+          icon="xmark"
+          disabled={!data.can_manage}
+          tooltip="Cancel the eviction"
+          onClick={() => act('cancel_bay_eviction', { ref: bay.ref })}
+        >
+          Cancel
+        </Button>
+      </>
+    );
+  }
+  if (!bay.ship) {
+    return null;
+  }
+  const refund = Number(bay.evict_refund) || 0;
+  return (
+    <Button.Confirm
+      icon="right-from-bracket"
+      color="bad"
+      disabled={!data.can_manage || !!bay.evict_denial}
+      tooltip={
+        bay.evict_denial ||
+        (refund > 0
+          ? `Three minutes to undock. Refunds ${refund} cr.`
+          : 'Three minutes to undock. No refund.')
+      }
+      onClick={() => act('evict_bay_ship', { ref: bay.ref })}
+    >
+      Evict
+    </Button.Confirm>
+  );
+}
+
 function Residents({ data, act }: Props) {
   const { residents = [], candidates = [], builders = [] } = data;
+  const crews = (data.owner_crews || [])
+    .map((crew) => (typeof crew === 'string' ? crew : crew?.name))
+    .filter(Boolean);
   return (
     <>
+      {data.owner_crews ? (
+        <div className="Outpost__quiet">
+          {crews.length
+            ? `Owner's crews: ${crews.join(', ')}. Their crew use services free.`
+            : "Owner's crews: none"}
+        </div>
+      ) : null}
       <div className="Outpost__section-label">
         Residents <span>{residents.length}</span>
       </div>
@@ -208,6 +398,14 @@ function Residents({ data, act }: Props) {
                 tooltip="Treasury"
                 onClick={() =>
                   act('delegate', { ref: person.ref, role: 'treasurer' })
+                }
+              />
+              <Button
+                icon="tags"
+                selected={!!person.pricer}
+                tooltip="Pricing: sets service prices and takes shop stock free"
+                onClick={() =>
+                  act('delegate', { ref: person.ref, role: 'pricer' })
                 }
               />
             </>
@@ -274,7 +472,7 @@ function Docking({ data, act }: Props) {
       <div className="Outpost__field-label">Outpost material source</div>
       <Dropdown
         width="100%"
-        disabled={!data.can_set_prices || !data.service_silos?.length}
+        disabled={!canSelectSilo(data) || !data.service_silos?.length}
         selected={data.service_silo || ''}
         options={(data.service_silos || []).map((silo) => ({
           value: silo.ref,
@@ -343,6 +541,7 @@ function Docking({ data, act }: Props) {
               {bay.approved ? 'Revoke materials' : 'Deny'}
             </Button>
           )}
+          <BayEviction bay={bay} data={data} act={act} />
         </div>
       ))}
       {groups.map(({ title, ships, kind }) => (
@@ -1439,6 +1638,577 @@ function UpgradePlacement({
   );
 }
 
+/** Ledger and totals name services by id or price key. */
+const SERVICE_NAMES: Record<string, string> = {
+  ship_bay: 'Ship bay',
+  dock_bay: 'Ship bay docking',
+  cloning_bay: 'Cloning bay',
+  clone_imprint: 'Cloning imprint',
+  medical_lab: 'Medical lab',
+  medlab_pass: 'Medical lab pass',
+  storage: 'Safe storage',
+  storage_rent: 'Locker rental',
+  shop: 'Shop',
+  teleporter: 'Teleporter',
+  teleport_arrival: 'Teleporter arrivals',
+  teleport_trip: 'Teleporter trip',
+};
+
+function serviceName(key: string) {
+  return SERVICE_NAMES[key] || key;
+}
+
+function PriceEditor({
+  row,
+  canSet,
+  act,
+}: {
+  row: PriceRow;
+  canSet: boolean;
+  act: Act;
+}) {
+  const value = Number(row.value) || 0;
+  const max = Math.max(0, Number(row.max) || 0);
+  const [draft, setDraft] = useState<number | null>(null);
+  // A new server value (ours accepted, or someone else's) replaces the draft.
+  useEffect(() => {
+    setDraft(null);
+  }, [value]);
+  const shown = draft ?? value;
+  return (
+    <div className="Outpost__row">
+      <div className="Outpost__person">
+        <strong>{row.label || serviceName(row.key)}</strong>
+        <small>
+          {row.available
+            ? `Default ${credits(row.default)}, up to ${max} cr`
+            : 'Room not installed'}
+        </small>
+      </div>
+      <NumberInput
+        value={shown}
+        minValue={0}
+        maxValue={max}
+        step={1}
+        stepPixelSize={2}
+        width="92px"
+        unit="cr"
+        disabled={!canSet}
+        onChange={(next) =>
+          setDraft(Math.min(max, Math.max(0, Math.round(next))))
+        }
+      />
+      <Button
+        icon="check"
+        disabled={!canSet || shown === value}
+        tooltip={canSet ? undefined : 'Owner, treasurers and pricers only'}
+        onClick={() => act('set_price', { key: row.key, value: shown })}
+      >
+        Set
+      </Button>
+    </div>
+  );
+}
+
+function shopLine(shop: ShopSummary) {
+  const listings = Number(shop.listings) || 0;
+  return [
+    shop.open ? 'Open' : 'Closed',
+    `${listings} listing${listings === 1 ? '' : 's'}`,
+    `${Number(shop.priced) || 0} priced`,
+    `${Number(shop.unpriced) || 0} not for sale`,
+    `${Number(shop.items) || 0} / ${Number(shop.capacity) || 0} items`,
+  ].join(' · ');
+}
+
+function PricingTab({ data, act }: Props) {
+  const pricing = data.pricing || {};
+  const prices = pricing.prices || [];
+  const shop = pricing.shop;
+  const ledger = pricing.ledger || [];
+  const totals = pricing.totals || [];
+  const canSet = !!data.can_set_prices;
+  const canView = !!data.can_view_income;
+  return (
+    <>
+      <div className="Outpost__section-label">
+        Service prices<span>{prices.length}</span>
+      </div>
+      {prices.length === 0 && <Empty icon="tags">No priced services</Empty>}
+      {prices.map((row) => (
+        <PriceEditor key={row.key} row={row} canSet={canSet} act={act} />
+      ))}
+      <div className="Outpost__quiet">
+        Members use every service free. Visitors pay the price shown here.
+      </div>
+      {shop?.installed ? (
+        <>
+          <div className="Outpost__section-label">Shop</div>
+          <div className="Outpost__row">
+            <Icon name="store" />
+            <span className="Outpost__grow">{shopLine(shop)}</span>
+          </div>
+          <div className="Outpost__quiet">
+            Item prices are set at the stock machine in the shop.
+          </div>
+        </>
+      ) : null}
+      {canView ? (
+        <>
+          <div className="Outpost__section-label">
+            Income by service<span>{totals.length}</span>
+          </div>
+          {totals.length === 0 && (
+            <div className="Outpost__quiet">No income yet</div>
+          )}
+          {totals.map((entry) => (
+            <div className="Outpost__row" key={entry.service}>
+              <span className="Outpost__grow">
+                {serviceName(entry.service)}
+              </span>
+              <span className="Outpost__research-status">
+                {Number(entry.count) || 0} paid
+              </span>
+              <strong className="Outpost__amount">
+                {(Number(entry.total) || 0).toLocaleString()} cr
+              </strong>
+            </div>
+          ))}
+          <div className="Outpost__section-label">
+            Ledger<span>{ledger.length}</span>
+          </div>
+          {ledger.length === 0 && (
+            <div className="Outpost__quiet">No entries</div>
+          )}
+          {ledger
+            .slice()
+            .reverse()
+            .map((entry, index) => (
+              <div
+                className="Outpost__row"
+                key={`${entry.time}-${ledger.length - index}`}
+              >
+                <span className="Outpost__time">{entry.time}</span>
+                <div className="Outpost__person">
+                  <strong>{entry.label || serviceName(entry.service)}</strong>
+                  {entry.payer || entry.account ? (
+                    <small>
+                      {entry.payer}
+                      {entry.account && entry.account !== entry.payer
+                        ? ` (${entry.account})`
+                        : ''}
+                    </small>
+                  ) : null}
+                </div>
+                {Number(entry.amount) > 0 ? (
+                  <strong className="Outpost__amount">
+                    +{Number(entry.amount).toLocaleString()} cr
+                  </strong>
+                ) : null}
+              </div>
+            ))}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+type ServiceAct = (action: string, params?: Record<string, unknown>) => void;
+
+const VAT_STATES: Record<string, string> = {
+  empty: 'Empty',
+  growing: 'Growing',
+  ready: 'Ready',
+  offline: 'Offline',
+};
+
+function CloningCard({
+  detail,
+  serviceAct,
+}: {
+  detail: CloningDetail;
+  serviceAct: ServiceAct;
+}) {
+  const vats = detail.vats || [];
+  return (
+    <>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Imprint price</span>
+        <span>{credits(detail.price)}</span>
+      </div>
+      {vats.length === 0 && <div className="Outpost__quiet">No vats</div>}
+      {vats.map((vat, index) => {
+        const paid = Number(vat.paid) || 0;
+        return (
+          <div className="Outpost__row" key={vat.ref || index}>
+            <Icon name="dna" />
+            <div className="Outpost__person">
+              <strong>
+                Vat {index + 1}:{' '}
+                {VAT_STATES[vat.state] || vat.state || 'Unknown'}
+                {vat.state === 'growing'
+                  ? ` ${Math.round(Number(vat.percent) || 0)}%`
+                  : ''}
+              </strong>
+              <small>
+                {vat.holder
+                  ? `${vat.holder}${paid > 0 ? `, paid ${paid} cr` : ''}`
+                  : 'Unclaimed'}
+              </small>
+            </div>
+            {vat.holder ? (
+              <Button.Confirm
+                icon="eject"
+                color="bad"
+                disabled={!detail.can_evict || !!vat.evict_denial}
+                tooltip={
+                  vat.evict_denial ||
+                  (paid > 0 ? `Refund ${paid} cr` : 'No refund')
+                }
+                onClick={() => serviceAct('evict', { ref: vat.ref })}
+              >
+                Evict
+              </Button.Confirm>
+            ) : null}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function ShopCard({
+  detail,
+  serviceAct,
+}: {
+  detail: ShopDetail;
+  serviceAct: ServiceAct;
+}) {
+  return (
+    <div className="Outpost__row">
+      <Icon name="store" />
+      <span className="Outpost__grow">{shopLine(detail)}</span>
+      <Button
+        icon={detail.open ? 'door-closed' : 'door-open'}
+        disabled={!detail.can_toggle}
+        onClick={() => serviceAct('toggle_open')}
+      >
+        {detail.open ? 'Close shop' : 'Open shop'}
+      </Button>
+    </div>
+  );
+}
+
+function MedicalCard({
+  detail,
+  serviceAct,
+}: {
+  detail: MedicalDetail;
+  serviceAct: ServiceAct;
+}) {
+  const procedures = detail.procedures || [];
+  return (
+    <>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">
+          Pass price ({Number(detail.pass_minutes) || 0} min)
+        </span>
+        <span>{credits(detail.price)}</span>
+      </div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Active passes</span>
+        <span>{Number(detail.active_passes) || 0}</span>
+      </div>
+      <div className="Outpost__field-label">Auto-surgeon procedures</div>
+      {procedures.length === 0 && (
+        <div className="Outpost__quiet">No procedures</div>
+      )}
+      {procedures.map((procedure) => (
+        <div className="Outpost__row" key={procedure.id}>
+          <span className="Outpost__grow">{procedure.name}</span>
+          <Button
+            icon={procedure.enabled ? 'toggle-on' : 'toggle-off'}
+            selected={!!procedure.enabled}
+            disabled={!detail.can_edit}
+            onClick={() =>
+              serviceAct('toggle_procedure', { procedure: procedure.id })
+            }
+          >
+            {procedure.enabled ? 'Offered' : 'Disabled'}
+          </Button>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function StorageCard({ detail }: { detail: StorageDetail }) {
+  return (
+    <>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Rental price</span>
+        <span>{credits(detail.price)}</span>
+      </div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Lockers rented</span>
+        <span>
+          {Number(detail.rented) || 0} / {Number(detail.lockers) || 0}
+        </span>
+      </div>
+    </>
+  );
+}
+
+const ARRIVAL_POLICIES = [
+  { id: 'open', name: 'Open', icon: 'door-open' },
+  { id: 'members', name: 'Members', icon: 'users' },
+  { id: 'allowlist', name: 'Allow list', icon: 'list-check' },
+  { id: 'closed', name: 'Closed', icon: 'lock' },
+];
+
+function TeleporterCard({
+  detail,
+  canManage,
+  serviceAct,
+}: {
+  detail: TeleporterDetail;
+  canManage: boolean;
+  serviceAct: ServiceAct;
+}) {
+  const [pick, setPick] = useState('');
+  const canEdit = detail.can_edit === undefined ? canManage : !!detail.can_edit;
+  const arrivals = detail.arrivals || detail.policy || 'open';
+  const allowlist = detail.allowlist || [];
+  const listed = new Set(allowlist.map((pad) => pad.id));
+  const candidates = (detail.candidates || []).filter(
+    (pad) => !listed.has(pad.id),
+  );
+  const chosen = candidates.find((pad) => pad.id === pick);
+  const raidLock = Number(detail.raidLockLeft) || 0;
+  const fee = detail.fee ?? detail.price;
+  return (
+    <>
+      {detail.padName ? (
+        <div className="Outpost__row">
+          <Icon name="circle-nodes" />
+          <strong className="Outpost__grow">{detail.padName}</strong>
+        </div>
+      ) : null}
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Arrival fare</span>
+        <span>{credits(fee)}</span>
+      </div>
+      <div className="Outpost__quiet">
+        Visitors pay it when they leave another pad for this one. Set it on the
+        Pricing tab.
+      </div>
+      <div className="Outpost__row">
+        <span className="Outpost__grow">Trips in / out</span>
+        <span>
+          {Number(detail.tripsIn ?? detail.trips) || 0} /{' '}
+          {Number(detail.tripsOut) || 0}
+        </span>
+      </div>
+      {raidLock > 0 ? (
+        <div className="Outpost__research-error" role="status">
+          Raid lock: visitors cannot arrive for {clock(raidLock)}
+        </div>
+      ) : null}
+      <label className="Outpost__field-label">Arrivals</label>
+      <div className="Outpost__switches">
+        {ARRIVAL_POLICIES.map((mode) => (
+          <Button
+            key={mode.id}
+            icon={mode.icon}
+            selected={arrivals === mode.id}
+            disabled={!canEdit}
+            onClick={() =>
+              serviceAct('set_teleporter_arrivals', { mode: mode.id })
+            }
+          >
+            {mode.name}
+          </Button>
+        ))}
+      </div>
+      <div className="Outpost__section-label">
+        Allow list<span>{allowlist.length}</span>
+      </div>
+      {arrivals !== 'allowlist' && (
+        <div className="Outpost__quiet">
+          Used when arrivals are set to Allow list.
+        </div>
+      )}
+      {allowlist.length === 0 && (
+        <div className="Outpost__quiet">No outposts listed</div>
+      )}
+      {allowlist.map((pad) => (
+        <div className="Outpost__row" key={pad.id}>
+          <Icon name="circle-nodes" />
+          <span className="Outpost__grow">{pad.name}</span>
+          <Button
+            icon="xmark"
+            tooltip="Remove from the allow list"
+            disabled={!canEdit}
+            onClick={() =>
+              serviceAct('teleporter_disallow', { target: pad.id })
+            }
+          />
+        </div>
+      ))}
+      <div className="Outpost__inline Outpost__allow-add">
+        <Dropdown
+          fluid
+          placeholder="Outpost pad"
+          selected={chosen?.id || ''}
+          displayText={chosen?.name || 'Outpost pad'}
+          options={candidates.map((pad) => ({
+            displayText: pad.name,
+            value: pad.id,
+          }))}
+          onSelected={setPick}
+          disabled={!canEdit || candidates.length === 0}
+        />
+        <Button
+          icon="plus"
+          disabled={!canEdit || !chosen}
+          onClick={() => {
+            if (!chosen) {
+              return;
+            }
+            serviceAct('teleporter_allow', { target: chosen.id });
+            setPick('');
+          }}
+        >
+          Allow
+        </Button>
+      </div>
+    </>
+  );
+}
+
+/** Any detail kind this console does not know: its plain values, so nothing is hidden. */
+function GenericCard({ detail }: { detail: Record<string, unknown> }) {
+  const rows = Object.entries(detail).filter(
+    ([key, value]) =>
+      key !== 'kind' &&
+      (typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'),
+  );
+  if (rows.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      {rows.map(([key, value]) => (
+        <div className="Outpost__row" key={key}>
+          <span className="Outpost__grow">{key.replace(/_/g, ' ')}</span>
+          <span>{String(value)}</span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function ServiceCard({
+  room,
+  data,
+  act,
+}: Props & {
+  room: ServiceRoom;
+}) {
+  const serviceAct: ServiceAct = (service_action, params = {}) =>
+    act('service_act', { ...params, id: room.id, service_action });
+  const detail = room.detail;
+  const kind = detail && typeof detail === 'object' ? detail.kind : undefined;
+  // The teleporter is always public; its arrival policy is the lever (abuse review F-33).
+  const showVisitors =
+    room.visitors_allowed !== undefined &&
+    room.visitors_allowed !== null &&
+    kind !== 'teleporter';
+  return (
+    <div className="Outpost__service">
+      <div className="Outpost__section-label">
+        {room.name || serviceName(room.id)}
+        {!!showVisitors && (
+          <span>{room.visitors_allowed ? 'Public' : 'Members only'}</span>
+        )}
+      </div>
+      {!!showVisitors && (
+        <div className="Outpost__row">
+          <span className="Outpost__grow">Visitors may enter</span>
+          <Button
+            icon={room.visitors_allowed ? 'door-open' : 'door-closed'}
+            selected={!!room.visitors_allowed}
+            disabled={!room.can_toggle_visitors}
+            tooltip="Members always pass. Anyone inside can always leave."
+            onClick={() =>
+              act('set_room_visitors', {
+                id: room.id,
+                allowed: room.visitors_allowed ? 0 : 1,
+              })
+            }
+          >
+            {room.visitors_allowed ? 'Allowed' : 'Members only'}
+          </Button>
+        </div>
+      )}
+      {!detail ? (
+        <div className="Outpost__quiet">No details</div>
+      ) : kind === 'cloning' ? (
+        <CloningCard detail={detail as CloningDetail} serviceAct={serviceAct} />
+      ) : kind === 'shop' ? (
+        <ShopCard detail={detail as ShopDetail} serviceAct={serviceAct} />
+      ) : kind === 'medical' ? (
+        <MedicalCard detail={detail as MedicalDetail} serviceAct={serviceAct} />
+      ) : kind === 'storage' ? (
+        <StorageCard detail={detail as StorageDetail} />
+      ) : kind === 'teleporter' ? (
+        <TeleporterCard
+          detail={detail as TeleporterDetail}
+          canManage={!!data.can_manage}
+          serviceAct={serviceAct}
+        />
+      ) : (
+        <GenericCard detail={detail as Record<string, unknown>} />
+      )}
+    </div>
+  );
+}
+
+/** Installed rooms; the §7.5 top-level teleporter block becomes a card when no row carries it. */
+function serviceRooms(data: OutpostData): ServiceRoom[] {
+  const rooms = (data.services || []).filter((room) => !!room?.id);
+  const teleporter = data.teleporter;
+  if (
+    teleporter?.installed &&
+    !rooms.some((room) => room.detail?.kind === 'teleporter')
+  ) {
+    rooms.push({
+      id: 'teleporter',
+      name: 'Teleporter',
+      detail: { ...teleporter, kind: 'teleporter' },
+    });
+  }
+  return rooms;
+}
+
+function Services({ data, act }: Props) {
+  const rooms = serviceRooms(data);
+  if (rooms.length === 0) {
+    return (
+      <Empty icon="store">No service rooms. Buy one on the Upgrades tab.</Empty>
+    );
+  }
+  return (
+    <>
+      {rooms.map((room) => (
+        <ServiceCard key={room.id} room={room} data={data} act={act} />
+      ))}
+    </>
+  );
+}
+
 function Access({ data, act }: Props) {
   const [account, setAccount] = useState('');
   const invites = Object.keys(data.resident_invites || {});
@@ -1859,8 +2629,37 @@ function Ownership({ data, act }: Props) {
   );
 }
 
+type Tab = { id: string; title: string; icon: string };
+const TAB_DOCKING: Tab = { id: 'docking', title: 'Docking', icon: 'anchor' };
+const TAB_PRICING: Tab = { id: 'pricing', title: 'Pricing', icon: 'tags' };
+
+/** Tabs by role (spec §1.4): managers see all; treasurers Docking and Pricing; pricers Pricing; others Docking. */
+function visibleTabs(data: OutpostData): Tab[] {
+  if (data.is_owner || data.can_manage) {
+    return [
+      TAB_DOCKING,
+      TAB_PRICING,
+      { id: 'residents', title: 'Residents', icon: 'users' },
+      { id: 'access', title: 'Access', icon: 'id-card' },
+      { id: 'research', title: 'Research', icon: 'flask' },
+      { id: 'upgrades', title: 'Upgrades', icon: 'cubes' },
+      { id: 'services', title: 'Services', icon: 'store' },
+    ];
+  }
+  const pricing = !!data.can_set_prices || !!data.can_view_income;
+  const treasurer = canSelectSilo(data) || !!data.can_spend;
+  const tabs: Tab[] = [];
+  if (treasurer || !pricing) {
+    tabs.push(TAB_DOCKING);
+  }
+  if (pricing) {
+    tabs.push(TAB_PRICING);
+  }
+  return tabs;
+}
+
 export function OutpostManagementPanel({ data, act }: Props) {
-  const [tab, setTab] = useState('docking');
+  const [chosenTab, setTab] = useState('docking');
   const [placingId, setPlacingId] = useState<string | null>(null);
   const placingUpgrade = (data.upgrade_catalog || []).find(
     (entry) => entry.id === placingId,
@@ -1875,13 +2674,10 @@ export function OutpostManagementPanel({ data, act }: Props) {
       setPlacingId(null);
     }
   }, [placingId, placingStatus?.state]);
-  const tabs = [
-    { id: 'docking', title: 'Docking', icon: 'anchor' },
-    { id: 'residents', title: 'Residents', icon: 'users' },
-    { id: 'access', title: 'Access', icon: 'id-card' },
-    { id: 'research', title: 'Research', icon: 'flask' },
-    { id: 'upgrades', title: 'Upgrades', icon: 'cubes' },
-  ];
+  const tabs = visibleTabs(data);
+  const tab = tabs.some((item) => item.id === chosenTab)
+    ? chosenTab
+    : tabs[0].id;
   return (
     <div className="Outpost">
       <div
@@ -1946,9 +2742,20 @@ export function OutpostManagementPanel({ data, act }: Props) {
                 </Button>
               ))}
             </nav>
+            {data.playtest_visitor ? (
+              <div className="Outpost__banner" role="status">
+                <Icon name="user-secret" />
+                Billed as a visitor. Services charge you and staff doors stay
+                shut.
+              </div>
+            ) : null}
             <div className="Outpost__directory-scroll">
               {tab === 'docking' ? (
                 <Docking data={data} act={act} />
+              ) : tab === 'pricing' ? (
+                <PricingTab data={data} act={act} />
+              ) : tab === 'services' ? (
+                <Services data={data} act={act} />
               ) : tab === 'residents' ? (
                 <Residents data={data} act={act} />
               ) : tab === 'research' ? (

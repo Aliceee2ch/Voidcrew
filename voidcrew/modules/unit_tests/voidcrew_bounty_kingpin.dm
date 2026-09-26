@@ -13,34 +13,48 @@
 
 // ===== FIXTURES =====
 
+/// The kingpin's tests: the board's clock stopped and the board emptied around each one
+/datum/unit_test/voidcrew_bounty_kingpin
+	abstract_type = /datum/unit_test/voidcrew_bounty_kingpin
+	/// The crews the test made (/datum/team/voidcrew), taken apart at the end
+	var/list/kingpin_test_teams = list()
+
 /// Stops the board's clock and closes every posting
-/datum/unit_test/proc/kingpin_test_begin()
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_begin()
 	SScriminal_bounties.can_fire = FALSE
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties.Copy())
 		posting.close("admin") // BOUNTY_CLOSE_ADMIN
 
-/// Closes whatever the test left, empties the prisoner pool and starts the board's clock again
-/datum/unit_test/proc/kingpin_test_end()
+/// Closes whatever the test left, takes its crews apart, empties the prisoner pool and starts the board's clock again
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_end()
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties.Copy())
 		posting.close("admin") // BOUNTY_CLOSE_ADMIN
+	// A crew roster holds its ship and its members' minds hold the crew: undone here, or none of them is ever collected
+	for(var/datum/team/voidcrew/team as anything in kingpin_test_teams)
+		for(var/datum/mind/member as anything in team.members.Copy())
+			team.remove_member(member)
+		team.ship?.ship_team = null
+		team.ship = null
+	kingpin_test_teams.Cut()
 	bounty_pool_clear("kingpin test")
 	SScriminal_bounties.can_fire = TRUE
 
 /// A turf in the test room, `dx` and `dy` from its bottom left corner (the room is 5 by 5)
-/datum/unit_test/proc/kingpin_test_spot(dx, dy)
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_spot(dx, dy)
 	return locate(run_loc_floor_bottom_left.x + dx, run_loc_floor_bottom_left.y + dy, run_loc_floor_bottom_left.z)
 
 /// A ship with an account and a crew roster
-/datum/unit_test/proc/kingpin_test_ship()
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_ship()
 	var/obj/structure/overmap/ship/ship = allocate(/obj/structure/overmap/ship)
 	ship.ship_account = allocate(/datum/bank_account/ship, "Kingpin Test [REF(ship)]", null, 1, FALSE)
 	var/datum/team/voidcrew/team = allocate(/datum/team/voidcrew)
 	team.ship = ship
 	ship.ship_team = team
+	kingpin_test_teams += team
 	return ship
 
 /// A person with a mind at `spot`, on `ship`'s crew if given
-/datum/unit_test/proc/kingpin_test_person(turf/spot, obj/structure/overmap/ship/ship)
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_person(turf/spot, obj/structure/overmap/ship/ship)
 	var/mob/living/carbon/human/consistent/person = allocate(/mob/living/carbon/human/consistent, spot)
 	person.mind_initialize()
 	if(ship)
@@ -52,7 +66,7 @@
  * the kingpin on the sofa for `posting`, and `goon_count` goons (up to 4) at the room's edges. The
  * talk spot is (2,2).
  */
-/datum/unit_test/proc/kingpin_test_lounge(datum/criminal_bounty/kingpin/posting, goon_count = 2)
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_lounge(datum/criminal_bounty/kingpin/posting, goon_count = 2)
 	var/turf/seat = kingpin_test_spot(2, 0)
 	var/obj/structure/chair/sofa/corp/sofa = allocate(/obj/structure/chair/sofa/corp, seat)
 	sofa.setDir(NORTH)
@@ -68,22 +82,19 @@
 	return kingpin
 
 /// A kingpin posting by hand (no site: red space), worth 1000 credits and 2 vouchers at full pay
-/datum/unit_test/proc/kingpin_test_posting()
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_posting()
 	var/datum/criminal_bounty/kingpin/posting = bounty_kingpin_new_posting(null)
 	posting.value = 1000
 	posting.board_vouchers = 2
 	return posting
 
 /// Trade vouchers lying on `spot`
-/datum/unit_test/proc/kingpin_test_vouchers(turf/spot)
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_vouchers(turf/spot)
 	var/count = 0
 	for(var/obj/item/stack/trade_voucher/voucher in spot)
 		count += voucher.amount
 	return count
 
-/// The kingpin's tests: the board's clock stopped and the board emptied around each one
-/datum/unit_test/voidcrew_bounty_kingpin
-	abstract_type = /datum/unit_test/voidcrew_bounty_kingpin
 
 /datum/unit_test/voidcrew_bounty_kingpin/New()
 	. = ..()
@@ -488,7 +499,9 @@
 	var/mob/living/basic/bounty_criminal/kingpin/boss = kingpin_test_lounge(second_posting, 1)
 	var/list/boss_goons = boss.kingpin_crew.goons()
 	var/mob/living/basic/bounty_kingpin_goon/last_goon = boss_goons[1]
-	boss.setBruteLoss(boss.maxHealth * 0.65)
+	// Through adjustBruteLoss(), as a hit would: setBruteLoss() from full health never updates `health`
+	boss.adjustBruteLoss(boss.maxHealth * 0.65)
+	TEST_ASSERT(boss.health <= boss.maxHealth * 0.4 && !boss.downed, "The test kingpin isn't hurt below 40% and still up ([boss.health])")
 	for(var/i in 1 to 20)
 		boss.kingpin_next_surrender_roll = 0
 		boss.kingpin_consider_surrender(boss.maxHealth)

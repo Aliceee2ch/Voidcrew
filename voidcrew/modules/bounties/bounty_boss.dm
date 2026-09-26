@@ -182,7 +182,7 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
  * TODO(P2 integration): spawn_bounty_criminal() should dress a boss with
  * apply_bounty_look(boss, record, boss.boss_kit_outfit()), or call this from P2's own outfit hook.
  */
-/mob/living/basic/bounty_criminal/boss/proc/boss_kit_outfit()
+/mob/living/basic/bounty_criminal/boss/boss_kit_outfit()
 	return /datum/outfit/bounty_boss
 
 /// With no record to dress it from (an admin spawn), the kit's look on a stock face
@@ -250,7 +250,7 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
  * write damage_coeff[STAMINA] back to its own value on a boss; call boss_update_tired(force = TRUE)
  * when the rally ends instead.
  */
-/mob/living/basic/bounty_criminal/boss/proc/boss_update_tired(silent = FALSE, force = FALSE)
+/mob/living/basic/bounty_criminal/boss/boss_update_tired(silent = FALSE, force = FALSE)
 	var/now_tired = stat != DEAD && maxHealth > 0 && health <= maxHealth * BOUNTY_BOSS_TIRED_BELOW / 100
 	if(now_tired == boss_tired && !force)
 		return FALSE

@@ -115,6 +115,45 @@ type Data = {
   ship_balance: number;
   refresh_cooldown_remaining: number;
   outpost_adverts: OutpostAdvert[];
+  // Wanted criminals (voidcrew/modules/bounties/bounty_board.dm)
+  wanted?: WantedEntry[];
+  wanted_hunt?: string | null;
+  wanted_max_hunts?: number;
+  // Static data: record id -> base64 mugshot, never sent in the live data
+  wanted_mugshots?: Record<string, string>;
+};
+
+/** One wanted criminal on the board: a public bounty or this ship's private offer. */
+type WantedEntry = {
+  ref: string;
+  name?: string;
+  alias?: string | null;
+  species?: string;
+  sex?: string;
+  tier?: number;
+  tier_name?: string;
+  hint?: string;
+  crime?: string | null;
+  place?: string;
+  zone?: string;
+  zone_color?: string;
+  mugshot_id?: string | null;
+  value?: number;
+  vouchers?: number;
+  shares?: number[];
+  time_left?: number;
+  clock_held?: BooleanLike;
+  status?: 'offered' | 'open' | 'relisting' | string;
+  private?: BooleanLike;
+  hunting_by_us?: BooleanLike;
+  hunters?: number;
+  was_abandoned?: BooleanLike;
+  hunt_refusal?: string | null;
+  crew_note?: string | null;
+  crew_note_bad?: BooleanLike;
+  pay_note?: string | null;
+  can_turn_in?: BooleanLike;
+  turn_in_state?: string | null;
 };
 
 type OutpostAdvert = {
@@ -160,6 +199,8 @@ const MissionBoardContent = () => {
     ship_balance,
     refresh_cooldown_remaining,
     outpost_adverts = [],
+    wanted = [],
+    wanted_mugshots = {},
   } = data;
 
   const [currentTab, setCurrentTab] = useState<
@@ -247,6 +288,19 @@ const MissionBoardContent = () => {
             icon="skull"
           >
             Bounties ({huntingCount}/{bounties.length})
+            {wanted.length > 0 ? (
+              <Box
+                inline
+                ml={1}
+                px={0.5}
+                bold
+                color="white"
+                backgroundColor="red"
+                style={{ borderRadius: '0.6em' }}
+              >
+                {wanted.length}
+              </Box>
+            ) : null}
           </Tabs.Tab>
           <Tabs.Tab
             selected={currentTab === 'broadcasts'}
@@ -298,6 +352,15 @@ const MissionBoardContent = () => {
 
         {currentTab === 'bounties' && (
           <Section fill scrollable>
+            {/* Wanted criminals come first */}
+            <WantedSection
+              wanted={wanted}
+              mugshots={wanted_mugshots}
+              hasPad={!!has_pad}
+            />
+
+            <Divider />
+
             {/* Player Bounty Creation */}
             <PlayerBountyCreator
               hasCreatedBounty={!!has_created_bounty}
@@ -754,6 +817,312 @@ const BountyCard = (props: BountyCardProps) => {
           )}
         </Flex.Item>
       </Flex>
+    </Section>
+  );
+};
+
+// ========== WANTED COMPONENTS ==========
+
+/** Card colour for each tier: Petty, Wanted, Most Wanted */
+const WANTED_TIER_COLORS: Record<number, string> = {
+  1: 'average',
+  2: 'orange',
+  3: 'bad',
+};
+
+/** What the pad preview says about the criminal standing on it */
+const WANTED_PAD_STATES: Record<string, string> = {
+  restrained: 'On the pad, restrained',
+  stunned: 'On the pad, subdued',
+  downed: 'On the pad, downed',
+  dead: 'On the pad, dead',
+  free: 'On the pad, but standing free',
+  proof: 'Evidence tag on the pad',
+};
+
+const formatWantedTime = (seconds: number) => {
+  const total = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(total / 60);
+  const rest = total % 60;
+  return `${minutes}:${rest.toString().padStart(2, '0')}`;
+};
+
+type WantedSectionProps = {
+  wanted: WantedEntry[];
+  mugshots: Record<string, string>;
+  hasPad: boolean;
+};
+
+/** The Wanted section at the top of the Bounties tab: the hunt first, then public bounties, then private offers. */
+const WantedSection = (props: WantedSectionProps) => {
+  const { wanted, mugshots, hasPad } = props;
+  const rank = (entry: WantedEntry) => {
+    if (entry.hunting_by_us) return 0;
+    if (!entry.private) return 1;
+    return 2;
+  };
+  const sorted = [...wanted].sort((a, b) => rank(a) - rank(b));
+
+  return (
+    <Section title={`Wanted (${wanted.length})`}>
+      <NoticeBox info mb={1}>
+        Bring a wanted criminal onto your mission pad and press Turn In. Once
+        downed they pay 60%, dead 25%. Any crew can turn in a public bounty;
+        offers are for your ship only.
+      </NoticeBox>
+      {sorted.length === 0 ? (
+        <NoticeBox>No one is wanted right now.</NoticeBox>
+      ) : (
+        <Stack vertical>
+          {sorted.map((entry) => (
+            <Stack.Item key={entry.ref}>
+              <WantedCard
+                entry={entry}
+                mugshot={
+                  entry.mugshot_id ? mugshots[entry.mugshot_id] : undefined
+                }
+                hasPad={hasPad}
+              />
+            </Stack.Item>
+          ))}
+        </Stack>
+      )}
+    </Section>
+  );
+};
+
+type WantedCardProps = {
+  entry: WantedEntry;
+  mugshot?: string;
+  hasPad: boolean;
+};
+
+const WantedCard = (props: WantedCardProps) => {
+  const { act } = useBackend<Data>();
+  const { entry, mugshot, hasPad } = props;
+
+  const tier = entry.tier ?? 1;
+  const tierColor = WANTED_TIER_COLORS[tier] ?? 'label';
+  const shares = entry.shares ?? [];
+  const full = shares[0] ?? entry.value ?? 0;
+  const downed = shares[1] ?? 0;
+  const dead = shares[2] ?? 0;
+  const vouchers = entry.vouchers ?? 0;
+  const hunters = entry.hunters ?? 0;
+  const hunting = !!entry.hunting_by_us;
+  const isOffer = !!entry.private;
+  const relisting = entry.status === 'relisting';
+  const abandoned = !!entry.was_abandoned;
+  const huntRefusal = entry.hunt_refusal ?? null;
+  const padState = entry.turn_in_state
+    ? (WANTED_PAD_STATES[entry.turn_in_state] ?? 'On the pad')
+    : null;
+  const voucherText =
+    vouchers > 0
+      ? ` + ${vouchers} trade voucher${vouchers > 1 ? 's' : ''}`
+      : '';
+
+  return (
+    <Section
+      className="MissionBoard__card"
+      title={
+        <Box inline color={abandoned ? 'gray' : undefined}>
+          <Box as="span" color={abandoned ? 'gray' : tierColor} mr={1}>
+            ☠
+          </Box>
+          {entry.name || 'Unknown'}
+        </Box>
+      }
+      buttons={
+        <Box inline>
+          <Box inline color={abandoned ? 'gray' : 'gold'} bold mr={1}>
+            {full} cr
+            {vouchers > 0 ? ` + ${vouchers}v` : ''}
+          </Box>
+          <Box inline color={entry.zone_color || 'label'}>
+            [{entry.zone || 'Unknown Zone'}]
+          </Box>
+        </Box>
+      }
+    >
+      <Flex mb={1}>
+        <Flex.Item mr={1}>
+          {mugshot ? (
+            <img
+              src={`data:image/png;base64,${mugshot}`}
+              width={64}
+              height={64}
+              style={{
+                imageRendering: 'pixelated',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              }}
+            />
+          ) : (
+            <Box
+              width="64px"
+              height="64px"
+              lineHeight="64px"
+              textAlign="center"
+              color="label"
+              backgroundColor="rgba(0, 0, 0, 0.3)"
+            >
+              ?
+            </Box>
+          )}
+        </Flex.Item>
+        <Flex.Item grow>
+          <Box>
+            <Box as="span" bold color={tierColor}>
+              {entry.tier_name || 'Wanted'}
+            </Box>
+            {entry.alias && entry.alias !== entry.name ? (
+              <Box as="span" color="label" ml={1}>
+                aka {entry.alias}
+              </Box>
+            ) : null}
+          </Box>
+          <Box color="label">
+            {entry.species || 'Unknown'}, {entry.sex || 'Unknown'}
+          </Box>
+          {entry.crime ? <Box>Wanted for {entry.crime}.</Box> : null}
+          <Box color={tier >= 3 ? 'bad' : 'average'}>
+            {entry.hint || 'Unknown'}
+          </Box>
+          {entry.crew_note ? (
+            <Box bold color={entry.crew_note_bad ? 'bad' : 'average'}>
+              {entry.crew_note}
+            </Box>
+          ) : null}
+          <Box color="teal">
+            {entry.pay_note ||
+              'Bring stun weapons: full pay only if never downed.'}
+          </Box>
+          <Box color={relisting ? 'average' : 'label'}>
+            {entry.place || 'Last seen: unknown'}
+          </Box>
+        </Flex.Item>
+      </Flex>
+
+      <LabeledList>
+        <LabeledList.Item label="Never downed">
+          <Box as="span" color="good" bold>
+            {full} cr{voucherText}
+          </Box>
+        </LabeledList.Item>
+        <LabeledList.Item label="Downed">
+          <Box as="span" color="average">
+            {downed} cr
+          </Box>
+        </LabeledList.Item>
+        <LabeledList.Item label="Dead">
+          <Box as="span" color="bad">
+            {dead} cr
+          </Box>
+        </LabeledList.Item>
+        <LabeledList.Item label="Time left">
+          {formatWantedTime(entry.time_left ?? 0)}
+          {entry.clock_held ? (
+            <Box as="span" color="label" ml={1}>
+              (held while hunted)
+            </Box>
+          ) : null}
+        </LabeledList.Item>
+      </LabeledList>
+
+      <Flex justify="space-between" align="center" mt={1} mb={1}>
+        <Flex.Item>
+          {isOffer ? (
+            <Box color="teal">Offered to your ship</Box>
+          ) : (
+            <Box as="span" color={hunters > 0 ? 'orange' : 'gray'}>
+              ⚔ {hunters} crew{hunters !== 1 ? 's' : ''} hunting
+            </Box>
+          )}
+        </Flex.Item>
+        <Flex.Item>
+          {hunting ? (
+            <Box color="green" bold>
+              [HUNTING]
+            </Box>
+          ) : null}
+          {abandoned ? (
+            <Box color="bad" bold>
+              [ABANDONED]
+            </Box>
+          ) : null}
+          {relisting ? (
+            <Box color="average" bold>
+              [RELOCATING]
+            </Box>
+          ) : null}
+        </Flex.Item>
+      </Flex>
+
+      {padState ? (
+        <Box mb={1} color={entry.can_turn_in ? 'good' : 'average'}>
+          {padState}
+        </Box>
+      ) : null}
+
+      <Divider />
+
+      <Stack>
+        <Stack.Item grow>
+          {hunting ? (
+            <Button
+              fluid
+              icon="times"
+              color="bad"
+              onClick={() => act('abandon_wanted', { ref: entry.ref })}
+            >
+              {isOffer ? 'Drop Offer' : 'Abandon'}
+            </Button>
+          ) : (
+            <Button
+              fluid
+              icon="crosshairs"
+              color={huntRefusal ? 'gray' : 'caution'}
+              disabled={!!huntRefusal}
+              tooltip={huntRefusal || 'Sets a helm waypoint to the site'}
+              onClick={() => act('hunt_wanted', { ref: entry.ref })}
+            >
+              {isOffer ? 'Accept Offer' : abandoned ? 'Abandoned' : 'Hunt'}
+            </Button>
+          )}
+        </Stack.Item>
+        <Stack.Item>
+          <Button
+            icon="check"
+            color="good"
+            disabled={!hasPad || !entry.can_turn_in}
+            tooltip={
+              !hasPad
+                ? 'Requires a mission pad'
+                : entry.can_turn_in
+                  ? 'Beam them off the pad and collect'
+                  : 'Put them on your mission pad first'
+            }
+            onClick={() => act('turn_in_wanted', { ref: entry.ref })}
+          >
+            Turn In
+          </Button>
+        </Stack.Item>
+        <Stack.Item>
+          <Button
+            icon="print"
+            disabled={!hasPad}
+            tooltip={
+              hasPad
+                ? 'Print a warrant with their picture on the pad'
+                : 'Requires a mission pad'
+            }
+            onClick={() => act('print_warrant', { ref: entry.ref })}
+          >
+            Warrant
+          </Button>
+        </Stack.Item>
+      </Stack>
     </Section>
   );
 };

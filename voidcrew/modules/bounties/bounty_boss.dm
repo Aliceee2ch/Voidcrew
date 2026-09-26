@@ -66,9 +66,9 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	// The placement adds the site's own factions (spec section 3), so the site's hostiles leave it be.
 	faction = list(FACTION_HOSTILE)
 	environment_smash = ENVIRONMENT_SMASH_NONE
-	// max_stamina stays 100: basic mobs leave stamina crit comparing raw points with a percentage.
-	max_stamina = 100
-	stamina_crit_threshold = 100
+	// max_stamina and the stamina crit threshold are P2's (100 and 99.9). Stamina never slows a boss:
+	// the tired slowdown is the only one the spec asks for, so steady disabler fire can't pin it (H3).
+	max_stamina_slowdown = 0
 	damage_coeff = list(BRUTE = 1, BURN = 1, TOX = 1, STAMINA = BOUNTY_BOSS_STAMINA_FRESH * 100 / BOUNTY_BOSS_STAMINA, OXY = 1)
 	melee_damage_lower = 10
 	melee_damage_upper = 14
@@ -112,7 +112,7 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	var/list/boss_engaged = list()
 	/// Walls and doors it may still break this fight
 	var/boss_walls_left = BOUNTY_BOSS_WALL_BUDGET
-	/// Whoever hurt it last, and when
+	/// Whoever hurt it last (a person, or the mech they are in), and when
 	var/datum/weakref/boss_last_attacker
 	var/boss_last_attacked_at = 0
 	/// world.time it calms down if it still finds no hunter on its site
@@ -165,10 +165,30 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 /mob/living/basic/bounty_criminal/boss/on_confronted(mob/user)
 	if(stat != CONSCIOUS || !isliving(user))
 		return
-	grudge |= WEAKREF(user)
+	body_add_grudge(user)
 	boss_turn_hostile(user)
-	if(boss_valid_target(user))
-		ai_controller?.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, user)
+	var/atom/target = boss_target_for(user)
+	if(boss_valid_target(target))
+		ai_controller?.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, target)
+
+/**
+ * Its blows land on a mech's hull in full (H2): tg's mech defence scales a mob's blow by how much it
+ * smashes, and a boss smashes nothing, so every blow would do nothing.
+ */
+/mob/living/basic/bounty_criminal/boss/melee_attack(atom/target, list/modifiers, ignore_cooldown = FALSE)
+	if(!ismecha(target))
+		return ..()
+	if(!early_melee_attack(target, modifiers, ignore_cooldown))
+		return FALSE
+	do_attack_animation(target, attack_vis_effect)
+	if(attack_sound)
+		playsound(target, attack_sound, 50, TRUE)
+	target.visible_message(span_danger("[src] [attack_verb_continuous] [target]!"))
+	boss_hit(target, rand(melee_damage_lower, melee_damage_upper), melee_damage_type, MELEE, 0, armour_penetration)
+	SEND_SIGNAL(src, COMSIG_HOSTILE_POST_ATTACKINGTARGET, target, TRUE)
+	if(!ignore_cooldown)
+		changeNext_move(melee_attack_cooldown)
+	return TRUE
 
 // ----- its kit -----
 
@@ -176,12 +196,7 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 /mob/living/basic/bounty_criminal/boss/proc/boss_health_table()
 	return list(initial(maxHealth))
 
-/**
- * The outfit its look is built in: each kit has one, so the five read differently at a glance.
- *
- * TODO(P2 integration): spawn_bounty_criminal() should dress a boss with
- * apply_bounty_look(boss, record, boss.boss_kit_outfit()), or call this from P2's own outfit hook.
- */
+/// The outfit its look is built in: each kit has one, so the five read differently at a glance. P2's look uses it.
 /mob/living/basic/bounty_criminal/boss/boss_kit_outfit()
 	return /datum/outfit/bounty_boss
 
@@ -244,18 +259,20 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 /**
  * Tired at or below BOUNTY_BOSS_TIRED_BELOW percent health: stamina weapons work fully, stuns and
  * knockdowns land, it moves slower and its cooldowns stretch. Healed back above the line, it is
- * fresh again. Returns TRUE if that changed.
+ * fresh again. Returns TRUE if that changed. P2's rally calls it with `force` when the rally ends.
  *
- * NOTE(P2 integration): P2's rally (no stamina damage for a while after getting up) should not
- * write damage_coeff[STAMINA] back to its own value on a boss; call boss_update_tired(force = TRUE)
- * when the rally ends instead.
+ * On tiring, its stamina loss starts again from zero, so the capture takes its whole pool
+ * (BOUNTY_BOSS_STAMINA: five disabler hits) whatever was thrown at it while it was fresh (H3).
  */
 /mob/living/basic/bounty_criminal/boss/boss_update_tired(silent = FALSE, force = FALSE)
 	var/now_tired = stat != DEAD && maxHealth > 0 && health <= maxHealth * BOUNTY_BOSS_TIRED_BELOW / 100
 	if(now_tired == boss_tired && !force)
 		return FALSE
+	var/was_tired = boss_tired
 	boss_tired = now_tired
 	damage_coeff[STAMINA] = boss_stamina_coefficient()
+	if(boss_tired && !was_tired && staminaloss > 0)
+		adjustStaminaLoss(-staminaloss, forced = TRUE)
 	status_flags &= ~(CANSTUN | CANKNOCKDOWN)
 	if(boss_tired)
 		status_flags |= CANSTUN | CANKNOCKDOWN
@@ -265,10 +282,10 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 		boss_bark("exhausted")
 	return TRUE
 
-/// Stamina damage coefficient now: the fresh or tired one, folded against its pool, as max_stamina is 100
+/// Stamina damage coefficient now: the fresh or tired one, folded against its pool, as max_stamina stays 100
 /mob/living/basic/bounty_criminal/boss/proc/boss_stamina_coefficient()
 	var/coefficient = boss_tired ? BOUNTY_BOSS_STAMINA_TIRED : boss_stamina_fresh
-	return coefficient * 100 / max(boss_stamina_pool, 1)
+	return coefficient * max_stamina / max(boss_stamina_pool, 1)
 
 // ----- busy -----
 
@@ -372,9 +389,9 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 // ----- the posse and turning hostile -----
 
 /**
- * Turns hostile, with `instigator` (who attacked, confronted or was spotted) in its posse. The
- * first time, every hunter within BOUNTY_BOSS_POSSE_RANGE who can see it joins too, and it says
- * its intro line.
+ * Turns hostile, with `instigator` (who attacked, confronted or was spotted) in its posse if they
+ * count (boss_counts_for_posse()). The first time, everyone who counts within
+ * BOUNTY_BOSS_POSSE_RANGE and can see it joins too, mech pilots included, and it says its intro line.
  */
 /mob/living/basic/bounty_criminal/boss/proc/boss_turn_hostile(mob/living/instigator)
 	if(stat == DEAD)
@@ -389,6 +406,9 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 		boss_engage(instigator, announce = FALSE)
 	for(var/mob/living/watcher in viewers(BOUNTY_BOSS_POSSE_RANGE, src))
 		boss_engage(watcher, announce = FALSE)
+	for(var/obj/vehicle/sealed/mecha/mech in view(BOUNTY_BOSS_POSSE_RANGE, src))
+		for(var/mob/living/pilot in mech.occupants)
+			boss_engage(pilot, announce = FALSE)
 	boss_apply_posse_health(announce = FALSE)
 	boss_bark("intro")
 	return TRUE
@@ -398,9 +418,27 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	boss_hostile = FALSE
 	ai_controller?.clear_blackboard_key(BB_BOUNTY_BOSS_PREY)
 
-/// Adds `hunter` to its posse, raising its health for the bigger posse. Returns TRUE if they are new.
+/**
+ * Whether `hunter` counts toward its posse (M4): a hunter on its grudge list (they attacked,
+ * confronted or cuffed it), or one whose ship is hunting its bounty. Being seen or targeted alone
+ * doesn't count.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_counts_for_posse(mob/living/hunter)
+	if(!bounty_boss_is_hunter(hunter))
+		return FALSE
+	if(body_has_grudge(hunter))
+		return TRUE
+	var/datum/criminal_bounty/posting = posting()
+	if(!posting || !hunter.mind)
+		return FALSE
+	for(var/obj/structure/overmap/ship/ship as anything in posting.hunter_ships())
+		if(hunter.mind in ship.ship_team?.members)
+			return TRUE
+	return FALSE
+
+/// Adds `hunter` to its posse if they count, raising its health for the bigger posse. Returns TRUE if they are new.
 /mob/living/basic/bounty_criminal/boss/proc/boss_engage(mob/living/hunter, announce = TRUE)
-	if(stat == DEAD || !bounty_boss_is_hunter(hunter))
+	if(stat == DEAD || !boss_counts_for_posse(hunter))
 		return FALSE
 	var/key = REF(hunter)
 	if(boss_engaged[key])
@@ -410,9 +448,13 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	return TRUE
 
 /**
- * Health for the posse it has: the kit's table entry for that many hunters, raised and never
- * lowered. Basic mobs keep damage apart from max health, so current health rises by the same
- * amount. Not while it is downed or cuffed. Returns TRUE if it rose.
+ * Max health for the posse it has: the kit's table entry for that many hunters (never more than the
+ * 4+ entry), raised and never lowered (M4).
+ * - Fresh, current health rises by the same step (spec: "raised, current health too").
+ * - Tired, it keeps the same share of its health, so a newcomer never heals it out of its capture
+ *   window.
+ * - Downed or cuffed, the raise waits; it is applied when it gets up (on_freed), keeping its share.
+ * Returns TRUE if max health rose.
  */
 /mob/living/basic/bounty_criminal/boss/proc/boss_apply_posse_health(announce = TRUE)
 	if(stat == DEAD || boss_is_downed() || boss_is_restrained())
@@ -424,7 +466,11 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	var/wanted = table[clamp(count, 1, length(table))]
 	if(wanted <= maxHealth)
 		return FALSE
+	var/share = maxHealth > 0 ? health / maxHealth : 1
 	setMaxHealth(wanted)
+	if(boss_tired)
+		// Basic mobs keep all their damage as bruteloss. Not rounded, so it never lands over the tired line.
+		bruteloss = wanted * (1 - share)
 	updatehealth()
 	boss_update_tired(silent = TRUE)
 	if(announce && count > 1)
@@ -434,101 +480,203 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 
 // ----- targets -----
 
-/// Whether it goes after `target`: a hunter it may hurt
+/// The people behind `thing`: the person, or everyone in the mech
+/mob/living/basic/bounty_criminal/boss/proc/boss_people_in(atom/thing)
+	. = list()
+	if(isliving(thing))
+		. += thing
+	else if(ismecha(thing))
+		var/obj/vehicle/sealed/mecha/mech = thing
+		for(var/mob/living/pilot in mech.occupants)
+			. += pilot
+
+/// What to go after for `who`: the mech they sit in, or them
+/mob/living/basic/bounty_criminal/boss/proc/boss_target_for(atom/who)
+	var/mob/living/person = who
+	if(isliving(person) && ismecha(person.loc))
+		return person.loc
+	return who
+
+/// Whether it goes after `target`: a hunter, or a mech with a hunter in it, that it may hurt
 /mob/living/basic/bounty_criminal/boss/proc/boss_valid_target(atom/target)
-	var/mob/living/victim = target
-	return isliving(victim) && bounty_boss_is_hunter(victim) && boss_can_hurt(victim)
+	return boss_can_hurt(target)
 
 /**
- * Whether its abilities may hurt `victim`: awake (never someone already down), not a criminal or
- * one of their friends, not on its side, and someone it may attack where it is (P2's may_attack()).
+ * Whether it and its abilities may hurt `victim` (C4, H2, M2, L1):
+ * - an awake hunter not on its side, or a mech with one in it (a pilot is hurt through the mech);
+ * - standing on its site, and never in a ship, a hangar or an outpost;
+ * - someone it may attack from where it is (P2's may_attack()).
+ * Never a criminal, one of their friends, fauna or anyone else on the site.
  */
-/mob/living/basic/bounty_criminal/boss/proc/boss_can_hurt(mob/living/victim)
-	if(!isliving(victim) || victim == src || QDELETED(victim) || victim.stat != CONSCIOUS)
+/mob/living/basic/bounty_criminal/boss/proc/boss_can_hurt(atom/victim)
+	if(QDELETED(victim) || victim == src)
 		return FALSE
-	if(istype(victim, /mob/living/basic/bounty_criminal) || istype(victim, /mob/living/basic/bounty_companion))
+	if(!boss_reach_ok(get_turf(victim)))
 		return FALSE
-	if(HAS_TRAIT(victim, TRAIT_GODMODE) || faction_check_atom(victim))
+	if(ismecha(victim))
+		var/obj/vehicle/sealed/mecha/mech = victim
+		return boss_hunter_aboard(mech) && may_attack(mech)
+	var/mob/living/person = victim
+	if(!isliving(person) || ismecha(person.loc) || !boss_hunter_awake(person))
 		return FALSE
-	return may_attack(victim)
+	return may_attack(person)
 
-/// Everyone on `turfs` its abilities may hurt
+/// An awake hunter not on its side
+/mob/living/basic/bounty_criminal/boss/proc/boss_hunter_awake(mob/living/person)
+	return bounty_boss_is_hunter(person) && person.stat == CONSCIOUS && !HAS_TRAIT(person, TRAIT_GODMODE) && !faction_check_atom(person)
+
+/// Whether an awake hunter not on its side sits in `mech`
+/mob/living/basic/bounty_criminal/boss/proc/boss_hunter_aboard(obj/vehicle/sealed/mecha/mech)
+	for(var/mob/living/pilot in mech.occupants)
+		if(boss_hunter_awake(pilot))
+			return TRUE
+	return FALSE
+
+/// Everyone on `turfs` its abilities may hurt: hunters, and mechs with hunters in them
 /mob/living/basic/bounty_criminal/boss/proc/boss_victims_on(list/turfs)
 	. = list()
 	for(var/turf/spot as anything in turfs)
-		for(var/mob/living/victim in spot)
-			if(boss_can_hurt(victim))
-				. += victim
+		for(var/atom/movable/thing as anything in spot)
+			if((isliving(thing) || ismecha(thing)) && boss_can_hurt(thing))
+				. += thing
 
-/// Whoever hurt it within BOUNTY_BOSS_REVENGE_TIME, if it may still go after them
+/**
+ * One hit from an ability on `victim`: `damage` of `damage_type` against `armour_flag` armour, and
+ * a knockdown. A mech takes it on its hull (H2).
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_hit(atom/victim, damage, damage_type = BRUTE, armour_flag = MELEE, knockdown = 0, armour_penetration = 0)
+	if(ismecha(victim))
+		var/obj/vehicle/sealed/mecha/mech = victim
+		mech.take_damage(damage, damage_type, armour_flag, TRUE, get_dir(mech, src), armour_penetration)
+		return TRUE
+	var/mob/living/person = victim
+	if(!isliving(person))
+		return FALSE
+	person.apply_damage(damage, damage_type, BODY_ZONE_CHEST, person.run_armor_check(BODY_ZONE_CHEST, armour_flag, armour_penetration = armour_penetration, silent = TRUE))
+	if(knockdown)
+		person.Knockdown(knockdown)
+	shake_camera(person, 3, 2)
+	return TRUE
+
+/// Whoever hurt it within BOUNTY_BOSS_REVENGE_TIME (their mech, if they were in one), if it may still go after them
 /mob/living/basic/bounty_criminal/boss/proc/boss_revenge_target()
 	if(world.time > boss_last_attacked_at + BOUNTY_BOSS_REVENGE_TIME)
 		return null
-	var/mob/living/attacker = boss_last_attacker?.resolve()
+	var/atom/attacker = boss_target_for(boss_last_attacker?.resolve())
 	return boss_valid_target(attacker) ? attacker : null
 
-/// The nearest hunter still on its site within BOUNTY_BOSS_HUNT_RANGE, for the hunt. Only players with a client count, from SSmobs' list for its level.
+/**
+ * `attacker` went for it: a person, or a mech and everyone in it (H2). The hunters behind it go on
+ * its grudge list and into its posse, it turns hostile, and it remembers whom to turn on.
+ */
+/mob/living/basic/bounty_criminal/boss/proc/boss_note_attacker(atom/attacker)
+	if(stat == DEAD || QDELETED(attacker) || attacker == src)
+		return FALSE
+	var/list/hunters = list()
+	for(var/mob/living/person as anything in boss_people_in(attacker))
+		if(bounty_boss_is_hunter(person))
+			hunters += person
+	if(!length(hunters))
+		return FALSE
+	boss_last_attacker = WEAKREF(boss_target_for(attacker))
+	boss_last_attacked_at = world.time
+	for(var/mob/living/hunter as anything in hunters)
+		body_add_grudge(hunter)
+		boss_turn_hostile(hunter)
+	return TRUE
+
+/// The nearest hunter (or their mech) still on its site within BOUNTY_BOSS_HUNT_RANGE, for the hunt. Only players with a client count, from SSmobs' list for its level.
 /mob/living/basic/bounty_criminal/boss/proc/boss_nearest_hunter()
 	var/turf/here = get_turf(src)
 	if(!here || here.z > length(SSmobs.clients_by_zlevel))
 		return null
-	var/mob/living/best
+	var/atom/best
 	var/best_distance = BOUNTY_BOSS_HUNT_RANGE + 1
 	for(var/mob/living/person as anything in SSmobs.clients_by_zlevel[here.z])
-		if(!boss_valid_target(person))
+		var/atom/target = boss_target_for(person)
+		if(!boss_valid_target(target))
 			continue
-		var/turf/spot = get_turf(person)
-		if(!spot || !boss_in_site_bounds(spot) || !leash_ok(spot))
+		var/turf/spot = get_turf(target)
+		if(!spot || !leash_ok(spot))
 			continue
 		var/distance = get_dist(here, spot)
 		if(distance < best_distance)
-			best = person
+			best = target
 			best_distance = distance
 	return best
 
-// ----- what it may break -----
+// ----- where it may reach, and what it may break -----
 
-/// Whether `spot` is inside its site_bounds (anywhere, with no leash)
-/mob/living/basic/bounty_criminal/boss/proc/boss_in_site_bounds(turf/spot)
-	if(!spot)
-		return FALSE
-	if(length(site_bounds) != 5)
-		return TRUE
-	return spot.z == site_bounds[5] && ISINRANGE(spot.x, site_bounds[1], site_bounds[3]) && ISINRANGE(spot.y, site_bounds[2], site_bounds[4])
+/// Whether an ability's effect may reach `spot` (M2): on its site, and never in a ship (other than the one it is wanted aboard), a hangar or an outpost
+/mob/living/basic/bounty_criminal/boss/proc/boss_reach_ok(turf/spot)
+	spot = get_turf(spot)
+	return !isnull(spot) && body_on_site(spot) && !body_forbidden_turf(spot)
 
 /**
- * Whether its abilities may damage anything on `spot`: on its site and its level, where it may go.
- *
- * TODO(P2 integration): AND P2's environment_damage_allowed(spot) here (never within 7 tiles of a
- * player ship's turf or dock strip, spec 12.2 AR-D2). Until it exists this uses leash_ok() and the
- * site bounds.
+ * Whether its abilities may damage anything on `spot`, or aim at it (H1, M2): on its level, and
+ * P2's environment_damage_allowed(): its own site, never a trader outpost, and never within
+ * BOUNTY_ENV_SAFE_RANGE tiles of a player ship, a hangar, a player outpost or a planet's dock strip.
  */
 /mob/living/basic/bounty_criminal/boss/proc/boss_environment_allowed(turf/spot)
-	if(!isturf(spot) || spot.z != z)
+	spot = get_turf(spot)
+	if(!spot || spot.z != z)
 		return FALSE
-	return leash_ok(spot) && boss_in_site_bounds(spot)
+	return environment_damage_allowed(spot)
 
-/// An indoor tile of its site: solid ground, not outdoors, not space, and not a docked ship's area unless it stands aboard one itself
+/// Whether a thrown or fired ability may be aimed at `spot` (M2): somewhere it could walk itself, and allowed for environment damage
+/mob/living/basic/bounty_criminal/boss/proc/boss_landing_ok(turf/spot)
+	spot = get_turf(spot)
+	return !isnull(spot) && leash_ok(spot) && boss_environment_allowed(spot)
+
+/// The air pressure on `spot`, in kPa
+/mob/living/basic/bounty_criminal/boss/proc/boss_turf_pressure(turf/spot)
+	var/datum/gas_mixture/air = spot?.return_air()
+	return air ? air.return_pressure() : 0
+
+/// Whether `spot` holds an airlock with space, another ship or somewhere off its site on one side: an outer airlock
+/mob/living/basic/bounty_criminal/boss/proc/boss_outer_airlock_turf(turf/spot)
+	if(!(locate(/obj/machinery/door/airlock) in spot))
+		return FALSE
+	for(var/direction in GLOB.cardinals)
+		var/turf/beside = get_step(spot, direction)
+		if(!beside || isspaceturf(beside) || isgroundlessturf(beside) || !boss_reach_ok(beside))
+			return TRUE
+	return FALSE
+
+/**
+ * An indoor tile of its site (H1, L2): solid ground, not outdoors, on its own site or ship and never in
+ * another ship, a hangar or an outpost, with air in it. A ship's tile counts only if nothing around
+ * it is space, off its site, another ship, or an outer airlock.
+ */
 /mob/living/basic/bounty_criminal/boss/proc/boss_indoor_turf(turf/spot)
 	if(!spot || isspaceturf(spot) || isgroundlessturf(spot) || islava(spot) || ischasm(spot))
 		return FALSE
 	var/area/spot_area = get_area(spot)
-	if(!spot_area || spot_area.outdoors)
+	if(!spot_area || spot_area.outdoors || !boss_reach_ok(spot))
 		return FALSE
-	if(istype(spot_area, /area/shuttle) && !istype(get_area(src), /area/shuttle))
+	if(isopenturf(spot) && boss_turf_pressure(spot) < BOUNTY_BOSS_INTERIOR_MIN_PRESSURE)
 		return FALSE
-	return boss_in_site_bounds(spot)
+	if(istype(spot_area, /area/shuttle))
+		for(var/direction in GLOB.alldirs)
+			var/turf/beside = get_step(spot, direction)
+			if(!beside || isspaceturf(beside) || isgroundlessturf(beside) || !boss_reach_ok(beside) || boss_outer_airlock_turf(beside))
+				return FALSE
+	return TRUE
 
 /**
  * Whether breaking what is on `spot` (a wall, or the tile a window or door stands on) keeps it
- * indoors: `spot` and every open tile beside it must be indoor tiles of its site. Never a hull,
- * never an outside wall, never a window onto space or the outdoors.
+ * indoors: `spot` and every open tile beside it must be indoor tiles of its site (H1), with no more
+ * than BOUNTY_BOSS_INTERIOR_MAX_PRESSURE_GAP between their pressures (L2). Never a hull, never an
+ * outside wall, never a window onto space, the outdoors, a vacuum or another ship.
  */
 /mob/living/basic/bounty_criminal/boss/proc/boss_interior_spot(turf/spot)
 	if(!spot)
 		return FALSE
-	if(isopenturf(spot) && !boss_indoor_turf(spot))
-		return FALSE
+	var/list/open_sides = list()
+	if(isopenturf(spot))
+		if(!boss_indoor_turf(spot))
+			return FALSE
+		open_sides += spot
 	for(var/direction in GLOB.cardinals)
 		var/turf/beside = get_step(spot, direction)
 		if(!beside)
@@ -536,6 +684,16 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 		if(isclosedturf(beside))
 			continue
 		if(!boss_indoor_turf(beside))
+			return FALSE
+		open_sides += beside
+	if(length(open_sides) > 1)
+		var/lowest = INFINITY
+		var/highest = 0
+		for(var/turf/side as anything in open_sides)
+			var/pressure = boss_turf_pressure(side)
+			lowest = min(lowest, pressure)
+			highest = max(highest, pressure)
+		if(highest - lowest > BOUNTY_BOSS_INTERIOR_MAX_PRESSURE_GAP)
 			return FALSE
 	return TRUE
 
@@ -565,9 +723,10 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 
 /**
  * Damages `thing` for one use of an ability: `damage` against `damage_flag` armour, or null to break
- * it outright. `tally` is that use's one-item count of structures left (BOUNTY_BOSS_ABILITY_STRUCTURE_CAP).
- * A wall is dismantled to a girder; a wall or a door that breaks spends the fight's budget.
- * Returns TRUE if it did damage.
+ * it outright whatever its armour (M1). `tally` is that use's one-item count of structures left
+ * (BOUNTY_BOSS_ABILITY_STRUCTURE_CAP). Broken outright, a wall comes down to the floor and a door goes
+ * with its frame, so the way through really opens; either spends the fight's wall budget, as does a
+ * door that damage alone destroys. Returns TRUE if it did damage.
  */
 /mob/living/basic/bounty_criminal/boss/proc/boss_damage_structure(atom/thing, damage, list/tally, damage_flag = MELEE)
 	if(length(tally) && tally[1] <= 0)
@@ -581,15 +740,35 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 		boss_walls_left--
 		wall.visible_message(span_danger("[wall] caves in!"))
 		playsound(wall, 'sound/effects/meteorimpact.ogg', 70, TRUE)
-		wall.dismantle_wall()
+		wall.dismantle_wall(devastated = TRUE)
 		return TRUE
 	var/obj/object = thing
-	var/amount = isnull(damage) ? object.get_integrity() : damage
+	var/turf/spot = get_turf(object)
 	var/is_door = istype(object, /obj/machinery/door)
-	object.take_damage(amount, BRUTE, damage_flag, TRUE, get_dir(object, src))
+	if(isnull(damage))
+		object.take_damage(object.get_integrity(), BRUTE, "", TRUE, get_dir(object, src))
+		if(!QDELETED(object))
+			qdel(object)
+		if(is_door)
+			boss_walls_left--
+			for(var/obj/structure/door_assembly/frame in spot)
+				qdel(frame)
+		return TRUE
+	object.take_damage(damage, BRUTE, damage_flag, TRUE, get_dir(object, src))
 	if(is_door && (QDELETED(object) || object.get_integrity() <= 0))
 		boss_walls_left--
 	return TRUE
+
+/// With its boss gone, whom its leftover fire or blast may still hurt: awake hunters, and mechs with one in them
+/proc/bounty_boss_orphan_victim(atom/thing)
+	if(ismecha(thing))
+		var/obj/vehicle/sealed/mecha/mech = thing
+		for(var/mob/living/pilot in mech.occupants)
+			if(bounty_boss_is_hunter(pilot) && pilot.stat == CONSCIOUS)
+				return TRUE
+		return FALSE
+	var/mob/living/person = thing
+	return isliving(person) && !ismecha(person.loc) && person.stat == CONSCIOUS && bounty_boss_is_hunter(person)
 
 // ===== SIGNALS =====
 
@@ -648,21 +827,19 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	SIGNAL_HANDLER
 	source.boss_update_tired()
 
+// A person or a mech (relay_attackers reports mech melee with the mech as the attacker).
 /datum/component/bounty_boss_signals/proc/on_attacked(mob/living/basic/bounty_criminal/boss/source, atom/attacker, attack_flags)
 	SIGNAL_HANDLER
-	if(!isliving(attacker) || attacker == source || !(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
+	if(!(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
 		return
-	if(!bounty_boss_is_hunter(attacker) || source.stat == DEAD)
-		return
-	source.boss_last_attacker = WEAKREF(attacker)
-	source.boss_last_attacked_at = world.time
-	source.boss_turn_hostile(attacker)
+	source.boss_note_attacker(attacker)
 
 /datum/component/bounty_boss_signals/proc/on_target(mob/living/basic/bounty_criminal/boss/source)
 	SIGNAL_HANDLER
-	var/mob/living/target = source.ai_controller?.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
-	if(bounty_boss_is_hunter(target))
-		source.boss_turn_hostile(target)
+	var/atom/target = source.ai_controller?.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
+	for(var/mob/living/person as anything in source.boss_people_in(target))
+		if(bounty_boss_is_hunter(person))
+			source.boss_turn_hostile(person)
 
 /datum/component/bounty_boss_signals/proc/on_disabled(mob/living/basic/bounty_criminal/boss/source)
 	SIGNAL_HANDLER
@@ -674,9 +851,14 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	source.boss_update_hold()
 	// Not forced: P2's rally may have just set the stamina coefficient for itself.
 	source.boss_update_tired(silent = TRUE)
+	// Hunters who joined while it was down or cuffed count now, keeping its share of health (M4).
+	source.boss_apply_posse_health(announce = FALSE)
 
 /datum/component/bounty_boss_signals/proc/on_prehit(mob/living/basic/bounty_criminal/boss/source, obj/projectile/shot)
 	SIGNAL_HANDLER
+	// relay_attackers drops shots whose firer isn't a mob, so a mech's gunfire is noted here (H2).
+	if(ismecha(shot.firer) && shot.is_hostile_projectile())
+		source.boss_note_attacker(shot.firer)
 	return source.boss_projectile_prehit(shot)
 
 /datum/component/bounty_boss_signals/proc/on_check_block(mob/living/basic/bounty_criminal/boss/source, atom/hit_by, damage, attack_text, attack_type, armour_penetration, damage_type)
@@ -755,13 +937,15 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	var/pending_serial = 0
 	/// What the wind-up is aimed at
 	var/datum/weakref/pending_target
-	/// Weakrefs to telegraph visuals and beams still showing, removed if the wind-up is cancelled
+	/// Weakrefs to telegraph visuals and beams still showing, removed when the wind-up ends or is cancelled
 	var/list/telegraphs
+	/// Weakrefs to marks that stay on past the wind-up until the thing lands (L3), removed only if the wind-up is cancelled
+	var/list/lingering
 	/// Structures this use may still damage: a one-item list a helper counts down
 	var/list/structure_tally
 
 /datum/action/cooldown/mob_cooldown/bounty_boss/Destroy()
-	clear_telegraphs()
+	clear_telegraphs(TRUE)
 	pending_target = null
 	structure_tally = null
 	return ..()
@@ -777,6 +961,15 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 /datum/action/cooldown/mob_cooldown/bounty_boss/proc/worth_using(atom/target)
 	return !QDELETED(target)
 
+/// Whether `target` is something its abilities go for: a person, or a mech (H2)
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/aimable(atom/target)
+	return !QDELETED(target) && (isliving(target) || ismecha(target))
+
+/// Whether a thrown or fired ability may be aimed at where `target` stands (M2)
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/landing_ok(atom/target)
+	var/mob/living/basic/bounty_criminal/boss/boss = owner
+	return istype(boss) && boss.boss_landing_ok(get_turf(target))
+
 /datum/action/cooldown/mob_cooldown/bounty_boss/Activate(atom/target)
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
 	if(!istype(boss) || QDELETED(target))
@@ -787,6 +980,8 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	StartCooldown(cooldown_time * boss.boss_cooldown_mult())
 	pending_serial = serial
 	pending_target = WEAKREF(target)
+	// Marks left lingering from the last use look after themselves.
+	lingering = null
 	boss.face_atom(target)
 	boss.boss_bark("ability")
 	telegraph(target)
@@ -817,7 +1012,7 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 /datum/action/cooldown/mob_cooldown/bounty_boss/proc/cancel_windup()
 	pending_serial = 0
 	pending_target = null
-	clear_telegraphs()
+	clear_telegraphs(TRUE)
 
 /// Shows where it will land and how, with a sound, for the wind-up
 /datum/action/cooldown/mob_cooldown/bounty_boss/proc/telegraph(atom/target)
@@ -827,23 +1022,34 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 /datum/action/cooldown/mob_cooldown/bounty_boss/proc/effect(atom/target)
 	return
 
-/// Keeps track of a telegraph visual or beam, removed if the wind-up is cancelled
-/datum/action/cooldown/mob_cooldown/bounty_boss/proc/add_telegraph(datum/thing)
+/// Keeps track of a telegraph visual or beam: removed when the wind-up ends, or with `linger` only if it is cancelled
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/add_telegraph(datum/thing, linger = FALSE)
 	if(thing)
-		LAZYADD(telegraphs, WEAKREF(thing))
+		if(linger)
+			LAZYADD(lingering, WEAKREF(thing))
+		else
+			LAZYADD(telegraphs, WEAKREF(thing))
 	return thing
 
-/datum/action/cooldown/mob_cooldown/bounty_boss/proc/clear_telegraphs()
-	for(var/datum/weakref/ref as anything in telegraphs)
+/// Removes the wind-up's telegraph, and with `all` the marks that were to linger past it too
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/clear_telegraphs(all = FALSE)
+	var/list/to_clear = telegraphs
+	telegraphs = null
+	if(all)
+		to_clear = (to_clear || list()) + (lingering || list())
+		lingering = null
+	for(var/datum/weakref/ref as anything in to_clear)
 		var/datum/thing = ref.resolve()
 		if(!QDELETED(thing))
 			qdel(thing)
-	telegraphs = null
 
-/// Marks `turfs` for the length of the wind-up
-/datum/action/cooldown/mob_cooldown/bounty_boss/proc/mark_turfs(list/turfs, mark_color, mark_state = "target_box")
+/**
+ * Marks `turfs` for the length of the wind-up, and `linger` longer: a thrown thing's landing stays
+ * marked until it lands, a burst's cone until the last round (L3).
+ */
+/datum/action/cooldown/mob_cooldown/bounty_boss/proc/mark_turfs(list/turfs, mark_color, mark_state = "target_box", linger = 0)
 	for(var/turf/spot as anything in turfs)
-		add_telegraph(new /obj/effect/temp_visual/bounty_boss_mark(spot, windup, mark_color, mark_state))
+		add_telegraph(new /obj/effect/temp_visual/bounty_boss_mark(spot, windup + linger, mark_color, mark_state), linger > 0)
 
 /// Damages `thing` as part of this use, within its cap and the fight's wall budget
 /datum/action/cooldown/mob_cooldown/bounty_boss/proc/break_thing(atom/thing, damage, damage_flag = MELEE)
@@ -927,10 +1133,11 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 // ===== FIRE =====
 
 /**
- * A patch of a boss's fire: flames on `turfs` for `lifetime`. Anyone it may hurt who stands in them
- * is set alight (/datum/status_effect/bounty_boss_burning) every second. Effect-only fire: no gas,
- * no hotspots, nothing flammable set burning, no fire alarms. Capped at BOUNTY_BOSS_FIRE_POOL_CAP
- * server-wide.
+ * A patch of a boss's fire: flames on `turfs` for `lifetime`, only where its boss's abilities may
+ * reach (never off its site or in a ship, hangar or outpost, M2). A hunter it may hurt who stands in
+ * them is set alight (/datum/status_effect/bounty_boss_burning) every second; a mech with a hunter
+ * in it takes the burn on its hull. Effect-only fire: no gas, no hotspots, nothing flammable set
+ * burning, no fire alarms. Capped at BOUNTY_BOSS_FIRE_POOL_CAP server-wide.
  */
 /obj/effect/bounty_boss_fire_pool
 	name = "fire"
@@ -953,7 +1160,7 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	lifetime = lifetime || 4 SECONDS
 	turfs = list()
 	for(var/turf/spot as anything in fire_turfs)
-		if(isturf(spot) && !isclosedturf(spot))
+		if(isturf(spot) && !isclosedturf(spot) && (!boss || boss.boss_reach_ok(spot)))
 			turfs += spot
 	if(!length(turfs))
 		return INITIALIZE_HINT_QDEL
@@ -974,19 +1181,24 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	boss_ref = null
 	return ..()
 
-/// Whether it may burn `victim`: its boss's rules, or with the boss gone, anyone awake who isn't a criminal
-/obj/effect/bounty_boss_fire_pool/proc/may_burn(mob/living/victim)
+/// Whether it may burn `victim`: its boss's rules, or with the boss gone, awake hunters and their mechs
+/obj/effect/bounty_boss_fire_pool/proc/may_burn(atom/victim)
 	var/mob/living/basic/bounty_criminal/boss/boss = boss_ref?.resolve()
 	if(!QDELETED(boss))
 		return boss.boss_can_hurt(victim)
-	return isliving(victim) && victim.stat == CONSCIOUS && !istype(victim, /mob/living/basic/bounty_criminal) && !istype(victim, /mob/living/basic/bounty_companion)
+	return bounty_boss_orphan_victim(victim)
 
-/// Sets alight everyone it may burn in the flames, with `damage` burn first if given
+/// Sets alight everyone it may burn in the flames, with `damage` burn first if given; mechs take the burn on the hull
 /obj/effect/bounty_boss_fire_pool/proc/scorch(damage = 0)
 	for(var/turf/spot as anything in turfs)
-		for(var/mob/living/victim in spot)
-			if(!may_burn(victim))
+		for(var/atom/movable/thing as anything in spot)
+			if(!(isliving(thing) || ismecha(thing)) || !may_burn(thing))
 				continue
+			if(ismecha(thing))
+				var/obj/vehicle/sealed/mecha/mech = thing
+				mech.take_damage(max(damage, BOUNTY_BOSS_BURNING_DAMAGE), BURN, FIRE, FALSE)
+				continue
+			var/mob/living/victim = thing
 			if(damage > 0)
 				victim.apply_damage(damage, BURN, blocked = victim.run_armor_check(null, FIRE, silent = TRUE), spread_damage = TRUE)
 				to_chat(victim, span_userdanger("You're caught in the flames!"))
@@ -997,8 +1209,8 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 
 /**
  * Set alight by a boss's fire: BOUNTY_BOSS_BURNING_DAMAGE burn a second, against fire armour, for
- * BOUNTY_BOSS_BURNING_TIME, renewed while standing in the flames. Scripted: it never lights the air
- * or anything else.
+ * BOUNTY_BOSS_BURNING_TIME, renewed while standing in the flames. It goes out once they are down
+ * (C4, M3). Scripted: it never lights the air or anything else.
  */
 /datum/status_effect/bounty_boss_burning
 	id = "bounty_boss_burning"
@@ -1010,14 +1222,14 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	var/mutable_appearance/flames
 
 /datum/status_effect/bounty_boss_burning/on_apply()
-	if(owner.stat == DEAD || HAS_TRAIT(owner, TRAIT_NOFIRE))
+	if(owner.stat != CONSCIOUS || HAS_TRAIT(owner, TRAIT_NOFIRE))
 		return FALSE
 	flames = mutable_appearance('icons/mob/effects/onfire.dmi', ishuman(owner) ? "human_small_fire" : "generic_fire", -HIGHEST_LAYER, appearance_flags = RESET_COLOR | KEEP_APART)
 	owner.add_overlay(flames)
 	return TRUE
 
 /datum/status_effect/bounty_boss_burning/tick(seconds_between_ticks)
-	if(owner.stat == DEAD)
+	if(owner.stat != CONSCIOUS)
 		qdel(src)
 		return
 	owner.apply_damage(BOUNTY_BOSS_BURNING_DAMAGE, BURN, blocked = owner.run_armor_check(null, FIRE, silent = TRUE), spread_damage = TRUE)
@@ -1055,13 +1267,19 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 		/datum/ai_planning_subtree/bounty_boss_hunt,
 	)
 
-/// Hunters it may hurt, and never anyone already down (C4)
+/**
+ * Hunters it may hurt, and mechs with one in them (H2); never anyone already down (C4). tg's own mech
+ * branch would test the pilot, whom it only hurts through the mech, so a mech is judged here.
+ */
 /datum/targeting_strategy/basic/bounty_boss
 
 /datum/targeting_strategy/basic/bounty_boss/can_attack(mob/living/living_mob, atom/the_target, vision_range)
 	var/mob/living/basic/bounty_criminal/boss/boss = living_mob
 	if(!istype(boss) || !boss.boss_valid_target(the_target))
 		return FALSE
+	if(ismecha(the_target))
+		var/range = vision_range || BOUNTY_BOSS_POSSE_RANGE
+		return isturf(boss.loc) && the_target.z == boss.z && get_dist(boss, the_target) <= range && can_see(boss, the_target, range)
 	return ..()
 
 /// Nothing at all while it winds up, charges or reels, or while it can't act
@@ -1141,7 +1359,7 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	var/mob/living/basic/bounty_criminal/boss/boss = controller.pawn
 	if(!boss.boss_hostile || controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET))
 		return
-	var/mob/living/prey = controller.blackboard[BB_BOUNTY_BOSS_PREY]
+	var/atom/prey = controller.blackboard[BB_BOUNTY_BOSS_PREY]
 	if(world.time >= controller.blackboard[BB_BOUNTY_BOSS_HUNT_AT] || QDELETED(prey) || !boss.boss_valid_target(prey))
 		controller.set_blackboard_key(BB_BOUNTY_BOSS_HUNT_AT, world.time + BOUNTY_BOSS_HUNT_INTERVAL)
 		prey = boss.boss_nearest_hunter()

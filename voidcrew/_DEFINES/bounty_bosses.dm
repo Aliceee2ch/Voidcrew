@@ -9,12 +9,18 @@
 
 /// Percent of max health at or below which a boss is tired: stamina works fully, it slows, its cooldowns stretch, and it can be stunned
 #define BOUNTY_BOSS_TIRED_BELOW 40
-/// Stamina damage coefficient while fresh, against the pool below (the Heavy's is BOUNTY_HEAVY_STAMINA_FRESH)
-#define BOUNTY_BOSS_STAMINA_FRESH 0.2
+/// Stamina damage coefficient while fresh (the Heavy's is BOUNTY_HEAVY_STAMINA_FRESH). 0 after review H3: combat.md's 0.2 only slowed a fresh boss under steady disabler fire and pre-loaded its pool, so capture took one hit instead of five.
+#define BOUNTY_BOSS_STAMINA_FRESH 0
 /// Stamina damage coefficient once tired
 #define BOUNTY_BOSS_STAMINA_TIRED 1
-/// Stamina damage it takes to stamina-crit a tired boss (the Heavy's is BOUNTY_HEAVY_STAMINA). max_stamina stays 100 because of the stamcrit removal quirk; the pool is folded into the coefficient instead.
+/// Stamina damage it takes to stamina-crit a tired boss (the Heavy's is BOUNTY_HEAVY_STAMINA), counted from zero when it tires. max_stamina stays P2's 100 because of the stamcrit removal quirk; the pool is folded into the coefficient instead.
 #define BOUNTY_BOSS_STAMINA 150
+/// Below this pressure (kPa) on either side, a wall, window or door is not interior (P4)
+#define BOUNTY_BOSS_INTERIOR_MIN_PRESSURE 20
+/// More than this pressure difference (kPa) between its sides, and a wall, window or door is not interior (P4)
+#define BOUNTY_BOSS_INTERIOR_MAX_PRESSURE_GAP 50
+/// A dodge or miss message is shown at most this often (P4)
+#define BOUNTY_BOSS_MESSAGE_COOLDOWN (1 SECONDS)
 /// How much slower a tired boss moves
 #define BOUNTY_BOSS_TIRED_SLOWDOWN 0.3
 /// Ability cooldowns are this much longer while tired (P4: the spec says "longer" and gives no number)
@@ -206,7 +212,8 @@
 #define BOUNTY_HEAVY_BRUTE_MOD 0.55
 #define BOUNTY_HEAVY_BURN_MOD 0.65
 #define BOUNTY_HEAVY_SPEED 2.2
-#define BOUNTY_HEAVY_STAMINA_FRESH 0.15
+/// 0 after review H3, as BOUNTY_BOSS_STAMINA_FRESH (combat.md had 0.15)
+#define BOUNTY_HEAVY_STAMINA_FRESH 0
 #define BOUNTY_HEAVY_STAMINA 180
 /// Its rifle butt
 #define BOUNTY_HEAVY_MELEE_MIN 14
@@ -220,9 +227,11 @@
 /// How long the burst takes to fire
 #define BOUNTY_HEAVY_BURST_TIME (2 SECONDS)
 #define BOUNTY_HEAVY_BURST_DAMAGE 9
-/// Full width of the cone, in degrees
+/// Full width of the cone the rounds go into, in degrees
 #define BOUNTY_HEAVY_BURST_ARC 30
-/// The rounds' damage to structures, as a share of their damage (none off its site)
+/// Extra width, in degrees, of the cone marked on the floor, so edge tiles a round can cross are marked too (P4)
+#define BOUNTY_HEAVY_BURST_MARK_MARGIN 10
+/// The rounds' damage to windows, grilles, tables and barricades it may break, as a share of their damage (none to anything else)
 #define BOUNTY_HEAVY_BURST_DEMOLITION 0.25
 /// Barricade: tg's security barrier, dropped in front of it
 #define BOUNTY_HEAVY_BARRICADE_WINDUP (1 SECONDS)

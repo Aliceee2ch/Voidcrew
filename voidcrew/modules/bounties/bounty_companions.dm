@@ -87,9 +87,9 @@
 	var/mob/living/basic/bounty_criminal/leader = leader_ref?.resolve()
 	return QDELETED(leader) ? null : leader
 
-/// Whether they can still fight: awake, not run off, not given up
+/// Whether they can still fight: awake, on their feet (a knockdown is a cuff window, H2), not run off, not given up
 /mob/living/basic/bounty_companion/proc/ai_can_fight()
-	return stat == CONSCIOUS && !ai_gave_up && !ai_fled && !HAS_TRAIT(src, TRAIT_INCAPACITATED)
+	return stat == CONSCIOUS && !ai_gave_up && !ai_fled && !HAS_TRAIT(src, TRAIT_INCAPACITATED) && !HAS_TRAIT(src, TRAIT_FLOORED)
 
 /**
  * Joins `leader`: their faction, a style of their own, a look for the site, and a name. Called by
@@ -137,7 +137,7 @@
 /mob/living/basic/bounty_companion/proc/ai_join_fight(mob/living/target)
 	if(!ai_can_fight() || !isliving(target) || QDELETED(ai_controller) || bounty_ai_same_gang(src, target))
 		return
-	ai_controller.insert_blackboard_key_lazylist(BB_BASIC_MOB_RETALIATE_LIST, target)
+	ai_mark_enemy(target)
 	var/mob/living/basic/bounty_criminal/leader = ai_leader()
 	if(leader && get_dist(src, leader) > 4)
 		ai_controller.set_blackboard_key(BB_BASIC_MOB_REINFORCEMENT_TARGET, leader)
@@ -183,7 +183,7 @@
 	ai_controller.clear_blackboard_key(BB_BASIC_MOB_RETALIATE_LIST)
 	ai_controller.clear_blackboard_key(BB_BASIC_MOB_REINFORCEMENT_TARGET)
 	if(threat)
-		ai_controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, threat)
+		ai_controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, bounty_ai_target_for(threat))
 	ai_controller.CancelActions()
 
 /// Stamina crit: hands up, done with it
@@ -200,11 +200,32 @@
 	ai_controller.clear_blackboard_key(BB_BASIC_MOB_RETALIATE_LIST)
 	ai_controller.CancelActions()
 
-/// Attacked: their criminal hears of it
-/mob/living/basic/bounty_companion/proc/ai_attacked_by(mob/living/attacker)
-	if(!isliving(attacker) || bounty_ai_same_gang(src, attacker) || !ai_can_fight())
+/**
+ * `enemy` is someone to fight: onto their retaliation list, and the mech they sit in with them (H4:
+ * the targeting takes the mech while they are in it, and them once they climb out).
+ */
+/mob/living/basic/bounty_companion/proc/ai_mark_enemy(mob/living/enemy)
+	if(QDELETED(ai_controller) || !isliving(enemy))
 		return
-	ai_enter_fight()
+	ai_controller.insert_blackboard_key_lazylist(BB_BASIC_MOB_RETALIATE_LIST, enemy)
+	var/atom/vehicle = bounty_ai_target_for(enemy)
+	if(vehicle != enemy)
+		ai_controller.insert_blackboard_key_lazylist(BB_BASIC_MOB_RETALIATE_LIST, vehicle)
+
+/**
+ * Attacked: they take the attacker on (their own retaliation, fed by the controller's attack hooks
+ * rather than tg's element, so friendly fire can be left out) and their criminal hears of it. A stray
+ * blow from their own side of the site with nobody playing it is let go (M1). Knocked down, they
+ * still remember who did it, and fight once up.
+ */
+/mob/living/basic/bounty_companion/proc/ai_attacked_by(mob/living/attacker)
+	if(stat == DEAD || ai_gave_up || ai_fled || !isliving(attacker) || bounty_ai_same_gang(src, attacker))
+		return
+	if(bounty_ai_friendly_fire(src, attacker))
+		return
+	ai_mark_enemy(attacker)
+	if(ai_can_fight())
+		ai_enter_fight()
 	ai_leader()?.ai_ally_attacked(attacker)
 
 /// About to take damage: badly hurt, they may run (one roll)
@@ -283,7 +304,7 @@
 				continue
 			return other_seat.loc
 	if(istype(activity, /datum/bounty_activity/camp))
-		var/atom/fire = leader.ai_camp_piece(/obj/structure/bonfire) || leader.ai_camp_piece(/obj/item/flashlight/lantern)
+		var/atom/fire = leader.ai_camp_fire()
 		if(fire)
 			return get_dist(src, fire) <= 1 ? null : ai_free_tile_near(fire, 1)
 	if(get_dist(src, leader) <= BOUNTY_COMPANION_FOLLOW)
@@ -361,9 +382,12 @@
 		companions |= WEAKREF(buddy)
 		. += buddy
 
-/// One of their companions was attacked by `attacker`: it goes on their grudge list, and the gang turns on them
+/**
+ * One of their companions was attacked by `attacker`: it goes on their grudge list, and the gang
+ * turns on them. Never while blended in (C1), and never over friendly fire (M1).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_ally_attacked(mob/living/attacker)
-	if(!isliving(attacker) || bounty_ai_same_gang(src, attacker))
+	if(blended || !isliving(attacker) || bounty_ai_same_gang(src, attacker) || bounty_ai_friendly_fire(src, attacker))
 		return
 	ai_add_grudge(attacker)
 	if(ai_can_act() && !hidden && ai_mode != BOUNTY_AI_FIGHTING && ai_mode != BOUNTY_AI_FLEEING)
@@ -388,11 +412,15 @@
 		/datum/ai_planning_subtree/bounty_companion_idle,
 	)
 
+/**
+ * No tg retaliation element: the controller's own attack hooks (items, hands, mobs, mechs, shots,
+ * throws) feed the retaliation list through ai_attacked_by(), which leaves friendly fire out (M1) and
+ * takes a pilot's mech on with them (H4).
+ */
 /datum/ai_controller/basic_controller/bounty/companion/TryPossessPawn(atom/new_pawn)
 	if(!istype(new_pawn, /mob/living/basic/bounty_companion))
 		return AI_CONTROLLER_INCOMPATIBLE
 	var/mob/living/basic/bounty_companion/companion = new_pawn
-	companion.AddElement(/datum/element/ai_retaliate)
 	RegisterSignal(companion, COMSIG_LIVING_ENTER_STAMCRIT, PROC_REF(on_stamcrit))
 	return ..()
 
@@ -438,14 +466,18 @@
 	var/mob/living/basic/bounty_companion/companion = controller.pawn
 	if(!istype(companion) || companion.stat != CONSCIOUS || companion.ai_gave_up)
 		return SUBTREE_RETURN_FINISH_PLANNING
+	// Knocked down or stunned: nothing at all until they are up (H2)
+	if(HAS_TRAIT(companion, TRAIT_FLOORED) || HAS_TRAIT(companion, TRAIT_INCAPACITATED))
+		return SUBTREE_RETURN_FINISH_PLANNING
 	if(!companion.ai_fled)
 		return
 	var/atom/threat = controller.blackboard[BB_BASIC_MOB_FLEE_TARGET]
-	if(QDELETED(threat) || get_dist(companion, threat) >= (controller.blackboard[BB_BASIC_MOB_FLEE_DISTANCE] || BOUNTY_FLEE_DISTANCE))
+	if(QDELETED(threat) || bounty_ai_dist(companion, threat) >= (controller.blackboard[BB_BASIC_MOB_FLEE_DISTANCE] || BOUNTY_FLEE_DISTANCE))
 		return SUBTREE_RETURN_FINISH_PLANNING
 
-/// tg's retaliation, while they can still fight
+/// tg's retaliation, while they can still fight. Its list is filled by the controller's hooks, not tg's element.
 /datum/ai_planning_subtree/target_retaliate/bounty
+	operational_datums = null
 
 /datum/ai_planning_subtree/target_retaliate/bounty/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
 	if(!bounty_ai_fighting(controller.pawn))
@@ -495,6 +527,8 @@
 		companion.ai_idle_spot = companion.ai_pick_idle_spot(leader)
 	var/turf/spot = companion.ai_idle_spot
 	if(spot && companion.loc != spot)
+		// Off the seat, the glass stays behind (L7)
+		companion.ai_put_drink_away()
 		companion.ai_stand_up()
 		controller.set_blackboard_key(BB_BOUNTY_DESTINATION, spot)
 		controller.queue_behavior(/datum/ai_behavior/travel_towards/bounty, BB_BOUNTY_DESTINATION)

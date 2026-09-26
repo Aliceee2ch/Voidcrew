@@ -75,10 +75,61 @@
 	return TRUE
 
 /**
+ * Whether `fighter` (a criminal, or a companion) may hit `target`. A criminal goes by the body's
+ * may_attack(), its own state included. A companion goes by its criminal's may_attack_scope() alone
+ * (who is fair game on their side), so it fights on when its criminal is down, cuffed, dead or has
+ * given up (H3). Never their own gang.
+ */
+/proc/bounty_ai_may_hit(atom/movable/fighter, atom/target)
+	if(QDELETED(target) || bounty_ai_same_gang(fighter, target))
+		return FALSE
+	if(istype(fighter, /mob/living/basic/bounty_criminal))
+		var/mob/living/basic/bounty_criminal/criminal = fighter
+		return criminal.may_attack(target)
+	var/mob/living/basic/bounty_criminal/leader = bounty_ai_side_of(fighter)
+	return !leader || leader.may_attack_scope(target)
+
+/// Tiles between `first` and `second` by the turfs they stand on, so a pilot counts as where their mech is (H4); INFINITY across z-levels
+/proc/bounty_ai_dist(atom/first, atom/second)
+	var/turf/first_turf = get_turf(first)
+	var/turf/second_turf = get_turf(second)
+	if(!first_turf || !second_turf || first_turf.z != second_turf.z)
+		return INFINITY
+	return get_dist(first_turf, second_turf)
+
+/// Whether `viewer` can see `seen` within `range`, by the turfs they are on (a pilot through their mech's)
+/proc/bounty_ai_can_see(atom/viewer, atom/seen, range)
+	var/turf/seen_turf = get_turf(seen)
+	return !isnull(seen_turf) && bounty_ai_dist(viewer, seen_turf) <= range && can_see(get_turf(viewer), seen_turf, range)
+
+/// What to go after for `who`: the mech they sit in, or them (H4, as P4 does for bosses)
+/proc/bounty_ai_target_for(atom/who)
+	var/mob/living/person = who
+	if(isliving(person) && ismecha(person.loc))
+		return person.loc
+	return who
+
+/// The pilot of `mech` who counts as the attacker: the first one in it, or null
+/proc/bounty_ai_pilot_of(obj/vehicle/sealed/mecha/mech)
+	for(var/mob/living/pilot in mech.occupants)
+		return pilot
+	return null
+
+/**
+ * Whether a blow from `attacker` is only friendly fire (M1): someone on `victim`'s side of the site
+ * (its own faction: the pirates it is aboard with, the site's fauna) with nobody playing them.
+ */
+/proc/bounty_ai_friendly_fire(mob/living/victim, atom/attacker)
+	var/mob/living/fellow = attacker
+	return isliving(fellow) && !bounty_player_behind(fellow) && victim.faction_check_atom(fellow)
+
+/**
  * Whether `person` holds something a criminal takes as a threat: a gun, a blade, a baton or
- * anything heavy; and, unless `weapons_only`, cuffs or a printed warrant.
+ * anything heavy, or sits in a mech; and, unless `weapons_only`, cuffs or a printed warrant.
  */
 /proc/bounty_ai_is_armed(mob/living/person, weapons_only = FALSE)
+	if(ismecha(person.loc))
+		return TRUE
 	for(var/obj/item/held in person.held_items)
 		if(istype(held, /obj/item/gun) || istype(held, /obj/item/melee) || istype(held, /obj/item/knife))
 			return TRUE
@@ -174,7 +225,9 @@
 
 /**
  * `user` confronted them: showed the warrant, or accused them. A meek criminal bolts, a normal one
- * fights; a boss starts its fight (P4 overrides this on /boss); P6 decides what a decoy does.
+ * fights; a boss starts its fight (P4 overrides this on /boss); P6 decides what a decoy does. This
+ * and P6's exposure (which ends its act, then calls this) are the only ways out of blending in:
+ * anything else that happens to a blended patron shows nothing (C1).
  */
 /mob/living/basic/bounty_criminal/proc/on_confronted(mob/user)
 	if(stat != CONSCIOUS || !isliving(user) || QDELETED(user))
@@ -222,36 +275,41 @@
 		return
 	bounty_ai_apply_style(src, key, ai_damage_mult())
 
-/// Whether they can do anything at all: alive, standing, free and not giving up
+/**
+ * Whether they can do anything at all: alive, on their feet, free and not giving up. Knocked down,
+ * stunned or in stamina crit (P2's body_is_stunned()) is the cuff window: no blows, no shots, no
+ * climbing into hiding (H2).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_can_act()
-	if(stat != CONSCIOUS || HAS_TRAIT(src, TRAIT_BOUNTY_HELD) || is_downed() || is_restrained())
+	if(stat != CONSCIOUS || HAS_TRAIT(src, TRAIT_BOUNTY_HELD) || HAS_TRAIT(src, TRAIT_FLOORED) || is_downed() || is_restrained())
 		return FALSE
-	return !HAS_TRAIT(src, TRAIT_BOUNTY_SURRENDERED)
+	return !body_is_stunned()
 
 /// Says a line for `context`, never from inside a signal handler's stack
 /mob/living/basic/bounty_criminal/proc/ai_bark(context)
 	INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), context)
 
-/// Puts `who` on the list of people they may fight (P2's may_attack() reads it)
+/// Puts `who` on the list of people they may fight, by P2's rules (the cap, never another criminal or a companion)
 /mob/living/basic/bounty_criminal/proc/ai_add_grudge(mob/living/who)
 	if(!isliving(who) || bounty_ai_same_gang(src, who))
 		return
-	grudge |= WEAKREF(who)
+	body_add_grudge(who)
 
 /// Whether `who` is on their grudge list
 /mob/living/basic/bounty_criminal/proc/ai_has_grudge(mob/living/who)
-	return !!who && (WEAKREF(who) in grudge)
+	return body_has_grudge(who)
 
-/// The nearest person on their grudge list they can see, or null
+/// The nearest person on their grudge list they can see (a pilot through their mech), or null
 /mob/living/basic/bounty_criminal/proc/ai_nearest_grudge(range = BOUNTY_FIGHT_VISION)
 	var/mob/living/best
 	var/best_distance = INFINITY
 	for(var/datum/weakref/ref as anything in grudge)
 		var/mob/living/enemy = ref?.resolve()
-		if(QDELETED(enemy) || enemy.stat != CONSCIOUS || enemy.z != z)
+		var/turf/enemy_turf = get_turf(enemy)
+		if(QDELETED(enemy) || enemy.stat != CONSCIOUS || enemy_turf?.z != z)
 			continue
-		var/distance = get_dist(src, enemy)
-		if(distance > range || distance >= best_distance || !can_see(src, enemy, range))
+		var/distance = bounty_ai_dist(src, enemy)
+		if(distance > range || distance >= best_distance || !bounty_ai_can_see(src, enemy, range))
 			continue
 		best = enemy
 		best_distance = distance
@@ -266,10 +324,11 @@
 	ai_threat_ref = threat ? WEAKREF(threat) : null
 	ai_threat_seen_at = world.time
 
-/// Whether they can see their threat now; seeing it restarts the clock on losing it
+/// Whether they can see their threat now (a pilot through their mech); seeing it restarts the clock on losing it
 /mob/living/basic/bounty_criminal/proc/ai_sees_threat(range = BOUNTY_FIGHT_VISION)
 	var/mob/living/threat = ai_threat()
-	if(!threat || threat.z != z || get_dist(src, threat) > range || !can_see(src, threat, range))
+	var/turf/threat_turf = get_turf(threat)
+	if(!threat || threat_turf?.z != z || !bounty_ai_can_see(src, threat, range))
 		return FALSE
 	ai_threat_seen_at = world.time
 	return TRUE
@@ -277,23 +336,48 @@
 /mob/living/basic/bounty_criminal/proc/ai_set_mode(new_mode)
 	ai_mode = new_mode
 
-/// Moves at `new_speed` from now on
+/// Moves at `new_speed` from now on. Compared with the speed they have, not a cache: the body sets speed too (L3).
 /mob/living/basic/bounty_criminal/proc/ai_set_pace(new_speed)
-	if(ai_pace == new_speed)
-		return
 	ai_pace = new_speed
-	set_varspeed(new_speed)
+	if(speed != new_speed)
+		set_varspeed(new_speed)
 
-/// Takes them out of blending in, if they were: not for decoys, who are always patrons (bounty_activities.dm)
+/**
+ * Takes them out of blending in: P6's act ends with it, and they never go back to the routine (a
+ * P6 exposure has already cleared `blended` by the time on_confronted() runs). Not for decoys, who
+ * are always patrons (bounty_activities.dm).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_expose()
-	if(blended)
-		ai_end_blend()
+	ai_end_blend()
 
-/// Whether a blow while blended in gives them away: the fugitive's does (spec section 7), a decoy's does not
-/mob/living/basic/bounty_criminal/proc/ai_exposed_by_blows()
-	return TRUE
+/**
+ * The floor they can walk to within `radius` of where they stand, as turf = TRUE: one flood from
+ * their tile that never crosses a wall, a window, a counter or a door they have no access for (the
+ * pathfinder's own step check), and never leaves their site. Built once per flight, never per tick
+ * (H1). get_path_to() can't be used here: it sleeps, and planning must not.
+ */
+/mob/living/basic/bounty_criminal/proc/ai_reachable_turfs(radius)
+	. = list()
+	var/turf/start = get_turf(src)
+	if(!start)
+		return
+	.[start] = TRUE
+	var/datum/can_pass_info/pass_info = new(src, ai_controller?.get_access())
+	var/list/queue = list(start)
+	var/index = 1
+	while(index <= length(queue))
+		var/turf/current = queue[index++]
+		for(var/direction in GLOB.alldirs)
+			var/turf/next = get_step(current, direction)
+			if(!next || .[next] || next.density || get_dist(start, next) > radius)
+				continue
+			// Blocked from this side only: another side may still reach it (a railing's open end)
+			if(current.LinkBlockedWithAccess(next, pass_info) || !leash_ok(next))
+				continue
+			.[next] = TRUE
+			queue += next
 
-/// Gets out of the way of `threat` without looking for somewhere to hide: for P6 to move a decoy that was hit
+/// Gets out of the way of `threat` without looking for somewhere to hide (a decoy that stopped blending in)
 /mob/living/basic/bounty_criminal/proc/ai_flee_from(mob/living/threat)
 	if(!isliving(threat) || !ai_flee_event(threat, null, seek_hiding = FALSE, quiet = TRUE))
 		return FALSE
@@ -323,8 +407,8 @@
 	for(var/mob/living/person in SSspatial_grid.orthogonal_range_search(here, SPATIAL_GRID_CONTENTS_TYPE_CLIENTS, range))
 		if(!bounty_ai_is_hunter(person))
 			continue
-		var/distance = get_dist(src, person)
-		if(distance > range || !can_see(src, person, range))
+		var/distance = bounty_ai_dist(src, person)
+		if(distance > range || !bounty_ai_can_see(src, person, range))
 			continue
 		var/key = REF(person)
 		seen[key] = distance
@@ -339,27 +423,28 @@
 	return found
 
 /**
- * Someone attacked them. Never from a signal handler's stack: reveal and react can open closets
- * and move things. While blended in, nothing shows unless the blow exposes them (the fugitive; a
- * decoy stays a patron and P6 decides what it does).
+ * Someone attacked them (a mech's pilot for the mech). Never from a signal handler's stack: reveal
+ * and react can open closets and move things.
+ * - Blended in, nothing shows at all (C1): P6 alone decides which blows expose the fugitive, and
+ *   calls on_confronted() for them.
+ * - Friendly fire from their own side of the site with nobody playing it (the pirates they are
+ *   aboard with, the site's fauna) is let go (M1).
  */
 /mob/living/basic/bounty_criminal/proc/ai_attacked_by(mob/living/attacker)
-	if(stat == DEAD || !isliving(attacker) || bounty_ai_same_gang(src, attacker))
+	if(stat == DEAD || blended || !isliving(attacker) || bounty_ai_same_gang(src, attacker))
 		return
-	if(blended && !ai_exposed_by_blows())
+	if(bounty_ai_friendly_fire(src, attacker))
 		return
 	ai_add_grudge(attacker)
 	if(hidden)
 		ai_reveal(attacker, "hit")
 		return
-	var/was_blended = blended
-	ai_expose()
 	if(!ai_can_act())
 		return
 	if(ai_mode == BOUNTY_AI_FLEEING || ai_mode == BOUNTY_AI_FIGHTING)
 		ai_attacked_again(attacker)
 		return
-	ai_react(attacker, was_blended ? "accused_rightly" : null)
+	ai_react(attacker, null)
 
 /// Attacked while already running or fighting
 /mob/living/basic/bounty_criminal/proc/ai_attacked_again(mob/living/attacker)
@@ -387,9 +472,12 @@
 	ai_bark("downed")
 	ai_companions_lose_heart()
 
-/// Back up after the recovery time (P2's COMSIG_BOUNTY_CRIMINAL_RECOVERED): they run or fight again
+/**
+ * Back up after the recovery time (P2's COMSIG_BOUNTY_CRIMINAL_RECOVERED): they run or fight again.
+ * Blended in, they only go back to the blend routine, like any patron (M2).
+ */
 /mob/living/basic/bounty_criminal/proc/ai_on_recovered()
-	if(!ai_can_act())
+	if(blended || !ai_can_act())
 		return
 	ai_bark("recover")
 	ai_react(ai_threat() || ai_nearest_grudge(), "recover")
@@ -409,7 +497,7 @@
 		return
 	REMOVE_TRAIT(src, TRAIT_BOUNTY_SURRENDERED, BOUNTY_TRAIT)
 	ai_over_head = bounty_ai_update_held(src, ai_over_head, null)
-	if(ai_can_act())
+	if(!blended && ai_can_act())
 		ai_react(ai_nearest_grudge(), null)
 
 /// Dead: they let go of everything, and a disguise comes off, so the body looks like them
@@ -427,6 +515,8 @@
 		ai_unhide()
 	ai_stop_aiming()
 	ai_suspend_activity()
+	// Off the floor from a retreat's rest too, not only an activity's (L9)
+	ai_stand_up()
 	ai_hand = bounty_ai_update_held(src, ai_hand, null)
 	REMOVE_TRAIT(src, TRAIT_BOUNTY_SPRINTING, BOUNTY_AI_TRAIT)
 	if(!QDELETED(ai_controller))
@@ -487,23 +577,35 @@
 // ===== TARGETING AND MOVEMENT =====
 
 /**
- * Who a criminal or a companion may fight: tg's rules (in sight, not in godmode, not their own
- * faction), plus the body's may_attack() (off their site and at trader outposts, only their grudge
- * list), never their own gang, and never a downed hunter (BB_TARGET_MINIMUM_STAT is CONSCIOUS,
- * spec C4).
+ * Who a criminal or a companion may fight: tg's rules (in sight, not in godmode), plus
+ * bounty_ai_may_hit() (the body's rules on who is fair game, never their own gang), and never a
+ * downed hunter (BB_TARGET_MINIMUM_STAT is CONSCIOUS, spec C4). A pilot is fought through their
+ * mech (H4): tg's own mech branch tests the pilot with no sight range and never passes, so a mech
+ * is judged here, as P4 does for bosses.
  */
 /datum/targeting_strategy/basic/bounty
 
 /datum/targeting_strategy/basic/bounty/can_attack(mob/living/living_mob, atom/the_target, vision_range)
+	if(ismecha(the_target))
+		return mech_attackable(living_mob, the_target, vision_range)
 	. = ..()
 	if(!.)
 		return FALSE
-	if(bounty_ai_same_gang(living_mob, the_target))
+	var/mob/living/person = the_target
+	if(isliving(person) && ismecha(person.loc))
 		return FALSE
-	var/mob/living/basic/bounty_criminal/side = bounty_ai_side_of(living_mob)
-	if(side && !side.may_attack(the_target))
+	return bounty_ai_may_hit(living_mob, the_target)
+
+/// A mech in sight with someone awake aboard who is fair game
+/datum/targeting_strategy/basic/bounty/proc/mech_attackable(mob/living/living_mob, obj/vehicle/sealed/mecha/mech, vision_range)
+	var/range = vision_range || BOUNTY_FIGHT_VISION
+	if(QDELETED(mech) || !isturf(living_mob.loc) || mech.z != living_mob.z || get_dist(living_mob, mech) > range || !can_see(living_mob, mech, range))
 		return FALSE
-	return TRUE
+	var/minimum_stat = living_mob.ai_controller?.blackboard[minimum_stat_key]
+	for(var/mob/living/pilot in mech.occupants)
+		if(pilot.stat <= minimum_stat && !bounty_ai_same_gang(living_mob, pilot))
+			return bounty_ai_may_hit(living_mob, mech)
+	return FALSE
 
 /**
  * Smart pathing that stays on their site (AR-E1): a step off the leash (P2's leash_ok(): the site's
@@ -606,8 +708,8 @@
 /datum/ai_behavior/bounty_watch/perform(seconds_per_tick, datum/ai_controller/controller)
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
 	var/mob/living/threat = istype(criminal) ? criminal.ai_threat() : null
-	if(threat && get_dist(criminal, threat) <= BOUNTY_FIGHT_VISION)
-		criminal.face_atom(threat)
+	if(threat && bounty_ai_dist(criminal, threat) <= BOUNTY_FIGHT_VISION)
+		criminal.face_atom(bounty_ai_target_for(threat))
 	return AI_BEHAVIOR_DELAY
 
 /**
@@ -688,9 +790,11 @@
 	RegisterSignal(fighter, COMSIG_ATOM_ATTACK_HAND, PROC_REF(on_touched))
 	// A basic mob's blow reaches attack_animal() too, so this one signal covers both kinds of mob
 	RegisterSignal(fighter, COMSIG_ATOM_ATTACK_ANIMAL, PROC_REF(on_attacked_by_mob))
+	RegisterSignal(fighter, COMSIG_ATOM_ATTACK_MECH, PROC_REF(on_attacked_by_mech))
 	RegisterSignal(fighter, COMSIG_ATOM_BULLET_ACT, PROC_REF(on_shot))
 	RegisterSignal(fighter, COMSIG_ATOM_HITBY, PROC_REF(on_hit_by_thrown))
 	RegisterSignal(fighter, COMSIG_MOB_APPLY_DAMAGE, PROC_REF(on_damage))
+	RegisterSignal(fighter, SIGNAL_ADDTRAIT(TRAIT_FLOORED), PROC_REF(on_floored))
 	return ..()
 
 /datum/ai_controller/basic_controller/bounty/UnpossessPawn(destroy)
@@ -705,18 +809,17 @@
 			COMSIG_ATOM_AFTER_ATTACKEDBY,
 			COMSIG_ATOM_ATTACK_HAND,
 			COMSIG_ATOM_ATTACK_ANIMAL,
+			COMSIG_ATOM_ATTACK_MECH,
 			COMSIG_ATOM_BULLET_ACT,
 			COMSIG_ATOM_HITBY,
 			COMSIG_MOB_APPLY_DAMAGE,
+			SIGNAL_ADDTRAIT(TRAIT_FLOORED),
 		))
 	return ..()
 
-/// Whether the pawn may land a blow or a shot on `target`
+/// Whether the pawn may land a blow or a shot on `target` (a companion fights on when its criminal is down, H3)
 /datum/ai_controller/basic_controller/bounty/proc/may_strike(atom/target)
-	if(bounty_ai_same_gang(pawn, target))
-		return FALSE
-	var/mob/living/basic/bounty_criminal/side = bounty_ai_side_of(pawn)
-	return !side || side.may_attack(target)
+	return bounty_ai_may_hit(pawn, target)
 
 /// Whether the pawn may shoot at `target` now at all. Subtypes add their rules.
 /datum/ai_controller/basic_controller/bounty/proc/may_shoot(atom/target)
@@ -794,12 +897,28 @@
 			return
 	INVOKE_ASYNC(src, PROC_REF(pawn_attacked), attacker)
 
-/// Only a shot that actually hit: one that passed through a blended patron never gets here
+/// A mech's blow is its pilot's (H4)
+/datum/ai_controller/basic_controller/bounty/proc/on_attacked_by_mech(atom/source, obj/vehicle/sealed/mecha/mecha_attacker, mob/living/pilot)
+	SIGNAL_HANDLER
+	var/mob/living/attacker = isliving(pilot) ? pilot : bounty_ai_pilot_of(mecha_attacker)
+	if(attacker)
+		INVOKE_ASYNC(src, PROC_REF(pawn_attacked), attacker)
+
+/// Only a shot that actually hit: one that passed through a blended patron never gets here. A mech's gunfire is its pilot's (H4).
 /datum/ai_controller/basic_controller/bounty/proc/on_shot(atom/source, obj/projectile/shot, def_zone, piercing_hit, blocked)
 	SIGNAL_HANDLER
-	if(!shot.is_hostile_projectile() || !isliving(shot.firer))
+	if(!shot.is_hostile_projectile())
 		return
-	INVOKE_ASYNC(src, PROC_REF(pawn_attacked), shot.firer)
+	var/mob/living/attacker = shot.firer
+	if(ismecha(attacker))
+		attacker = bounty_ai_pilot_of(attacker)
+	if(isliving(attacker))
+		INVOKE_ASYNC(src, PROC_REF(pawn_attacked), attacker)
+
+/// Knocked down: whatever they were doing stops now, a volley or a wind-up included (H2)
+/datum/ai_controller/basic_controller/bounty/proc/on_floored(atom/source)
+	SIGNAL_HANDLER
+	CancelActions()
 
 /datum/ai_controller/basic_controller/bounty/proc/on_hit_by_thrown(atom/source, atom/movable/thrown, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
 	SIGNAL_HANDLER
@@ -913,14 +1032,16 @@
 		return PROJECTILE_INTERRUPT_HIT_PHASE
 	return NONE
 
-/// Nobody pulls a blended patron (AR-C7); pulling at a hider finds them
+/**
+ * Pulling at a hider finds them (P2 sends the signal before its own refusal, L1). Who may pull a
+ * blended patron is P2's rule (body_can_be_dragged(): a downed one can be dragged, AR-C7) and P6's
+ * act, never decided here.
+ */
 /datum/ai_controller/basic_controller/bounty/criminal/proc/on_pull_check(mob/living/basic/bounty_criminal/source, mob/living/user)
 	SIGNAL_HANDLER
 	if(source.hidden)
 		if(isliving(user))
 			INVOKE_ASYNC(source, TYPE_PROC_REF(/mob/living/basic/bounty_criminal, ai_reveal), user, "pulled")
-		return COMSIG_ATOM_CANT_PULL
-	if(source.blended)
 		return COMSIG_ATOM_CANT_PULL
 	return NONE
 

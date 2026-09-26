@@ -96,6 +96,12 @@
 #define BOUNTY_ACTIVITY_RANGE 8
 /// How far exploring looks for things to look at
 #define BOUNTY_EXPLORE_RANGE 10
+/// Glasses a criminal leaves on tables at the bar before a finished glass just goes
+#define BOUNTY_BAR_GLASSES_MAX 2
+/// Spots an activity remembers as out of reach
+#define BOUNTY_FAILED_SPOTS_MAX 8
+/// How long a trader outpost's public floor is reused between its patrons before it is worked out again
+#define BOUNTY_OUTPOST_FLOOR_CACHE (1 MINUTES)
 
 // ===== MEEK (combat.md 6.1, spec C6) =====
 

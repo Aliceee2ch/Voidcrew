@@ -37,6 +37,8 @@
 		/datum/ai_planning_subtree/basic_melee_attack_subtree/bounty,
 		/datum/ai_planning_subtree/bounty_retreat,
 		/datum/ai_planning_subtree/bounty_aware,
+		// For a decoy on this tree (P6 gives decoys their fugitive's controller): run, then calm down (M3)
+		/datum/ai_planning_subtree/bounty_flee_and_calm,
 		/datum/ai_planning_subtree/bounty_activity,
 	)
 
@@ -50,9 +52,9 @@
 	var/mob/living/watched = ai_threat()
 	if(ai_mode == BOUNTY_AI_CALM || ai_mode == BOUNTY_AI_RETREATING)
 		ai_become_aware(hunter)
-	else if(ai_mode == BOUNTY_AI_AWARE && (!watched || get_dist(src, hunter) < get_dist(src, watched)))
+	else if(ai_mode == BOUNTY_AI_AWARE && (!watched || bounty_ai_dist(src, hunter) < bounty_ai_dist(src, watched)))
 		ai_set_threat(hunter)
-	if(ai_mode == BOUNTY_AI_AWARE && get_dist(src, hunter) <= BOUNTY_NORMAL_THREAT_RANGE && bounty_ai_is_armed(hunter, weapons_only = TRUE))
+	if(ai_mode == BOUNTY_AI_AWARE && bounty_ai_dist(src, hunter) <= BOUNTY_NORMAL_THREAT_RANGE && bounty_ai_is_armed(hunter, weapons_only = TRUE))
 		ai_start_fight(hunter)
 
 /mob/living/basic/bounty_criminal/normal/ai_react(mob/living/threat, bark)
@@ -65,14 +67,14 @@
 		return
 	ai_start_fight(threat, bark)
 
-/// Hit in a fight by someone new: they turn on whoever is closer
+/// Hit in a fight by someone new: they turn on whoever is closer (a pilot through their mech, H4)
 /mob/living/basic/bounty_criminal/normal/ai_attacked_again(mob/living/attacker)
 	if(ai_mode == BOUNTY_AI_FIGHTING)
 		ai_rally_companions(attacker)
 		var/mob/living/threat = ai_threat()
-		if(!threat || get_dist(src, attacker) < get_dist(src, threat))
+		if(!threat || bounty_ai_dist(src, attacker) < bounty_ai_dist(src, threat))
 			ai_set_threat(attacker)
-			ai_controller?.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, attacker)
+			ai_controller?.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, bounty_ai_target_for(attacker))
 		if(prob(30))
 			ai_bark("hurt")
 		return
@@ -110,7 +112,7 @@
 
 // ===== FIGHTING =====
 
-/// Starts (or keeps) fighting `target`: up, weapon out, companions called in, a line for it
+/// Starts (or keeps) fighting `target`: up, weapon out, companions called in, a line for it. A pilot is fought through their mech (H4).
 /mob/living/basic/bounty_criminal/proc/ai_start_fight(mob/living/target, bark)
 	if(!ai_can_act() || !isliving(target) || QDELETED(ai_controller))
 		return FALSE
@@ -127,26 +129,32 @@
 	if(fresh)
 		ai_bark(bark || "fight_start")
 	ai_rally_companions(target)
-	ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, target)
+	ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, bounty_ai_target_for(target))
 	return TRUE
 
-/// The nearest valid target on their grudge list, keeping the current one while it is still good
+/**
+ * The nearest valid target on their grudge list, keeping the current one while it is still good.
+ * Someone in a mech is fought through the mech (H4): tg's melee can't reach a pilot inside.
+ */
 /mob/living/basic/bounty_criminal/proc/ai_pick_fight_target()
 	if(QDELETED(ai_controller))
 		return null
 	var/datum/targeting_strategy/strategy = GET_TARGETING_STRATEGY(ai_controller.blackboard[BB_TARGETING_STRATEGY])
-	var/mob/living/current = ai_controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
-	if(isliving(current) && strategy.can_attack(src, current, BOUNTY_FIGHT_VISION))
+	var/atom/current = ai_controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
+	if(!QDELETED(current) && strategy.can_attack(src, current, BOUNTY_FIGHT_VISION))
 		return current
-	var/mob/living/best
+	var/atom/best
 	var/best_distance = INFINITY
 	for(var/datum/weakref/ref as anything in grudge)
 		var/mob/living/enemy = ref?.resolve()
-		if(QDELETED(enemy) || !strategy.can_attack(src, enemy, BOUNTY_FIGHT_VISION))
+		if(QDELETED(enemy))
 			continue
-		var/distance = get_dist(src, enemy)
+		var/atom/target = bounty_ai_target_for(enemy)
+		if(!strategy.can_attack(src, target, BOUNTY_FIGHT_VISION))
+			continue
+		var/distance = get_dist(src, target)
 		if(distance < best_distance)
-			best = enemy
+			best = target
 			best_distance = distance
 	return best
 
@@ -167,9 +175,10 @@
 	var/mob/living/basic/bounty_criminal/criminal = controller.pawn
 	if(criminal.ai_mode != BOUNTY_AI_FIGHTING)
 		return
-	var/mob/living/target = criminal.ai_pick_fight_target()
+	var/atom/target = criminal.ai_pick_fight_target()
 	if(target)
-		criminal.ai_set_threat(target)
+		// The threat is the person: a mech's pilot
+		criminal.ai_set_threat(ismecha(target) ? (bounty_ai_pilot_of(target) || target) : target)
 		controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, target)
 		return
 	controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
@@ -219,7 +228,8 @@
  * so a new target, a retreat or a call for help is picked up mid-fight.
  */
 /datum/ai_behavior/basic_ranged_attack/bounty
-	action_cooldown = 0.2 SECONDS
+	// Often enough for the 0.4 s wind-up; each tick walks the line of fire (L10)
+	action_cooldown = 0.4 SECONDS
 	behavior_flags = AI_BEHAVIOR_REQUIRE_MOVEMENT | AI_BEHAVIOR_MOVE_AND_PERFORM | AI_BEHAVIOR_CAN_PLAN_DURING_EXECUTION
 	required_distance = BOUNTY_PISTOL_RANGE
 	chase_range = BOUNTY_FIGHT_VISION
@@ -242,6 +252,27 @@
 		adjust_position(fighter, target)
 		return AI_BEHAVIOR_DELAY
 	return style.ranged_tick(fighter, target)
+
+/// tg's sidestep out of a friend's line of fire, never off the leash, into lava or into a chasm (L11)
+/datum/ai_behavior/basic_ranged_attack/bounty/adjust_position(mob/living/living_pawn, atom/target)
+	var/turf/our_turf = get_turf(living_pawn)
+	if(!our_turf)
+		return
+	var/mob/living/basic/bounty_criminal/leash_holder = bounty_ai_side_of(living_pawn)
+	var/list/possible_turfs = list()
+	for(var/direction in GLOB.alldirs)
+		var/turf/target_turf = get_step(our_turf, direction)
+		if(isnull(target_turf) || target_turf.is_blocked_turf() || get_dist(target_turf, target) > get_dist(living_pawn, target))
+			continue
+		if(islava(target_turf) || ischasm(target_turf) || !target_turf.can_cross_safely(living_pawn))
+			continue
+		if(leash_holder && !leash_holder.leash_ok(target_turf))
+			continue
+		possible_turfs += target_turf
+	if(!length(possible_turfs))
+		return
+	var/turf/picked_turf = get_closest_atom(/turf, possible_turfs, target)
+	living_pawn.Move(picked_turf, get_dir(living_pawn, picked_turf))
 
 /// A wind-up cut short never carries over: the next shot telegraphs again
 /datum/ai_behavior/basic_ranged_attack/bounty/finish_action(datum/ai_controller/controller, succeeded, target_key, targeting_strategy_key, hiding_location_key)
@@ -591,14 +622,11 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	damage_high = BOUNTY_BRAWLER_DAMAGE_HIGH
 	interval = BOUNTY_BRAWLER_INTERVAL
 
-/// Now and then a punch shoves them back a tile and staggers them; no stun
+/// Now and then a punch shoves them back a tile (never onto lava, into a chasm or out into space, M5) and staggers them; no stun
 /datum/bounty_style/brawler/on_melee_hit(mob/living/basic/fighter, mob/living/target)
 	if(target.stat != CONSCIOUS || !prob(BOUNTY_BRAWLER_SHOVE_CHANCE))
 		return
-	var/shove_dir = get_dir(fighter, target)
-	var/turf/behind = get_step(target, shove_dir)
-	if(shove_dir && behind && !behind.is_blocked_turf(source_atom = target))
-		target.Move(behind, shove_dir)
+	bounty_ai_shove_back(fighter, target)
 	target.apply_status_effect(/datum/status_effect/staggered, BOUNTY_BRAWLER_STAGGER)
 	fighter.visible_message(span_warning("[fighter] shoves [target] back!"))
 	playsound(target, 'sound/items/weapons/shove.ogg', 50, TRUE)
@@ -721,8 +749,9 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 
 /**
  * A criminal's bullet: nothing embeds, no shrapnel, no casing left behind. It never hits the
- * shooter's own gang, and off their site or at a trader outpost it passes anyone the body's
- * may_attack() rules out (AR-C8, AR-D1): only a direct target is hit regardless.
+ * shooter's own gang, and off their site or at a trader outpost it passes anyone the body's rules
+ * leave alone (AR-C8, AR-D1; bounty_ai_may_hit(), so a companion's shots don't depend on its
+ * criminal being up, H3): only a direct target is hit regardless.
  */
 /obj/projectile/bullet/bounty
 	name = "bullet"
@@ -735,10 +764,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	. = ..()
 	if(!. || direct_target || !isliving(target) || !firer)
 		return
-	if(bounty_ai_same_gang(firer, target))
-		return FALSE
-	var/mob/living/basic/bounty_criminal/side = bounty_ai_side_of(firer)
-	if(side && !side.may_attack(target))
+	if(!bounty_ai_may_hit(firer, target))
 		return FALSE
 
 /obj/projectile/bullet/bounty/holdout
@@ -777,10 +803,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	. = ..()
 	if(!. || direct_target || !isliving(target) || !firer)
 		return
-	if(bounty_ai_same_gang(firer, target))
-		return FALSE
-	var/mob/living/basic/bounty_criminal/side = bounty_ai_side_of(firer)
-	if(side && !side.may_attack(target))
+	if(!bounty_ai_may_hit(firer, target))
 		return FALSE
 
 /obj/projectile/bounty_bottle/on_hit(atom/target, blocked = 0, pierce_hit)

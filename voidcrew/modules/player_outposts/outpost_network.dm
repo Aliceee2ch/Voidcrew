@@ -357,6 +357,13 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/tile_denial = arrival_tile_denial()
 	if(tile_denial)
 		return tile_denial
+	// Nobody arrives in a room they could not walk out of (abuse review F-03)
+	var/obj/structure/overmap/dynamic/player_outpost/exit_home = host
+	if(!is_trader)
+		var/datum/outpost_upgrade/service/teleporter/room = exit_home.service_upgrade("teleporter")
+		var/exit_denial = room?.exit_denial()
+		if(exit_denial)
+			return exit_denial
 	if(!ignore_busy && (is_receiving() || is_charging()))
 		return "Busy"
 	return null
@@ -429,7 +436,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/fee = destination.arrival_fee(traveller)
 	if(!isnum(shown_fee) || shown_fee != fee)
 		return "Price changed to [fee] cr."
-	var/pay_denial = payment_denial(traveller, fee)
+	var/pay_denial = payment_denial(traveller, fee, destination.player_host())
 	if(pay_denial)
 		return pay_denial
 	var/charge_time = charge_time_to(destination)
@@ -459,12 +466,14 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	return null
 
 /// Whether `traveller` can pay `fee` from the ID they present, or null
-/obj/machinery/outpost_network_pad/proc/payment_denial(mob/living/traveller, fee)
+/obj/machinery/outpost_network_pad/proc/payment_denial(mob/living/traveller, fee, obj/structure/overmap/dynamic/player_outpost/payee)
 	if(fee <= 0)
 		return null
 	var/datum/bank_account/account = traveller.get_idcard(TRUE)?.registered_account
 	if(!account)
 		return "No bank account on your ID."
+	if(payee && account == payee.treasury)
+		return "Payment declined."
 	if(!account.has_money(fee))
 		return "Insufficient credits."
 	return null
@@ -551,7 +560,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	if(!denial && fee != shown_fee)
 		denial = "Price changed to [fee] cr."
 	if(!denial)
-		denial = payment_denial(traveller, fee)
+		denial = payment_denial(traveller, fee, destination.player_host())
 	if(denial)
 		undo_charge_visuals(traveller, denial)
 		return denial
@@ -694,7 +703,12 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 		return null
 	var/obj/machinery/outpost_network_pad/trader/pad = new(spot[1])
 	pad.link_host(src, spot[2])
-	pad.AddElement(/datum/element/outpost_property)
+	// The same protection as a service room's fixtures: property, explosion and singularity proof
+	var/datum/outpost_upgrade/service/teleporter/prototype = GLOB.outpost_upgrade_catalog["teleporter"]
+	if(istype(prototype))
+		prototype.protect_fixture(pad)
+	else
+		pad.AddElement(/datum/element/outpost_property)
 	new /obj/effect/turf_decal/box/white(spot[2])
 	network_pad_ref = WEAKREF(pad)
 	return pad

@@ -21,6 +21,11 @@
 	out["home_b"] = home_b
 	out["room_a"] = room_a
 	out["room_b"] = room_b
+	// A breathable corridor outside each door, or the rooms report their exit to vacuum
+	for(var/datum/outpost_upgrade/service/teleporter/room as anything in list(room_a, room_b))
+		for(var/turf/exit as anything in room.exit_turfs())
+			if(!isclosedturf(exit))
+				exit.ChangeTurf(/turf/open/floor/iron)
 	out["pad_a"] = room_a.pad_ref?.resolve()
 	out["pad_b"] = room_b.pad_ref?.resolve()
 	if(!out["pad_a"] || !out["pad_b"])
@@ -247,6 +252,14 @@
 	// The room door stays open to visitors; the arrival policy is the owner's lever (F-33)
 	TEST_ASSERT_EQUAL(room_b.set_visitors_allowed(owner_b, FALSE), "Use the arrival policy.", "The teleporter room could be closed to visitors")
 	TEST_ASSERT(room_b.visitors_allowed, "The teleporter room was closed to visitors")
+
+	// A room that opens onto vacuum takes no arrivals (F-03)
+	var/list/exits = room_b.exit_turfs()
+	TEST_ASSERT(length(exits), "The teleporter room has no exit")
+	var/turf/exit = exits[1]
+	exit = exit.ChangeTurf(/turf/open/space/basic)
+	TEST_ASSERT_EQUAL(pad_b.arrival_denial(visitor, pad_a), "Exit to vacuum", "A room opening onto vacuum took arrivals")
+	exit.ChangeTurf(/turf/open/floor/iron)
 
 	// A blocked arrival spot refuses arrivals
 	var/obj/structure/closet/blocker = allocate(/obj/structure/closet, pad_b.arrival_turf)

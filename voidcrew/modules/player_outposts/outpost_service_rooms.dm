@@ -85,7 +85,6 @@
 	var/list/inside = list()
 	for(var/turf/tile as anything in room)
 		inside[tile] = TRUE
-	var/inward = turn(rotated_entrance(rotation), 180)
 	for(var/turf/tile as anything in room)
 		for(var/obj/machinery/door/airlock/outpost/service/door in tile)
 			doors += WEAKREF(door)
@@ -94,6 +93,8 @@
 			for(var/direction in GLOB.cardinals)
 				if(inside[get_step(tile, direction)])
 					continue
+				// This door's own inside: a side or back door does not face the way the entrance does
+				var/inward = turn(direction, 180)
 				door.unres_sides = inward
 				door.update_appearance()
 				log_mapping("OUTPOST SERVICE ROOM: [door] at [AREACOORD(door)] in the [name] had no unrestricted side; set to [dir2text(inward)]")

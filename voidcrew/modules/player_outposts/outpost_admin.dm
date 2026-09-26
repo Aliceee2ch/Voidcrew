@@ -67,7 +67,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 	var/list/people = list()
 	for(var/datum/mind/member as anything in selected.residents)
 		if(!QDELETED(member))
-			people += list(list("ref" = REF(member), "name" = member.name, "is_self" = (member == user.mind), "steward" = (member in selected.stewards), "treasurer" = (member in selected.treasurers)))
+			people += list(list("ref" = REF(member), "name" = member.name, "is_self" = (member == user.mind), "steward" = (member in selected.stewards), "treasurer" = (member in selected.treasurers), "pricer" = (member in selected.pricers)))
 	data["selected"] = list(
 		"ref" = REF(selected), "name" = selected.name, "owner" = selected.founder_ckey || "Unowned",
 		"coords" = "[coords[1]], [coords[2]]", "shell" = selected.shell_template?.name || "Unloaded",
@@ -79,6 +79,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		"ship_bays" = ship_bay_data(selected),
 		"checkpoints" = checkpoint_admin_data(selected),
 	)
+	market_admin_data(selected, data["selected"])
 	return data
 
 /datum/outpost_manipulator/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -194,6 +195,9 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 	if(action in list("checkpoint_save", "checkpoint_rebuild_docked", "checkpoint_order_free", "checkpoint_rebuild", "checkpoint_delete", "bay_remove_ship", "rebuild_rush", "rebuild_hand_over", "rebuild_stop"))
 		manage_checkpoints(home, user, action, params)
 		return
+	if(action in list("playtest_visitor", "service_admin"))
+		manage_market(home, user, action, params)
+		return
 	switch(action)
 		if("jump", "jump_overmap")
 			var/turf/destination = action == "jump" ? home.arrival_turf : get_turf(home)
@@ -268,10 +272,11 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 				home.residents -= resident
 				home.stewards -= resident
 				home.treasurers -= resident
+				home.pricers -= resident
 			else
-				if(!(params["role"] in list("steward", "treasurer")))
+				if(!(params["role"] in list("steward", "treasurer", "pricer")))
 					return
-				var/list/roles = params["role"] == "steward" ? home.stewards : home.treasurers
+				var/list/roles = home.delegated_role_list(params["role"])
 				if(resident in roles)
 					roles -= resident
 				else

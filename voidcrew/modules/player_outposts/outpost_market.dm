@@ -104,12 +104,16 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 
 /**
  * Whether `user` uses this outpost's services free and passes its staff doors: the owner, a
- * resident, or anyone on one of the owner's ship crews. The playtest visitor never is.
+ * resident, or anyone on one of the owner's ship crews. The playtest visitor and blocked
+ * players never are.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/is_outpost_member(mob/user)
 	if(!user)
 		return FALSE
 	if(playtest_visitor_ckey && user.ckey == playtest_visitor_ckey)
+		return FALSE
+	// A player the owner blocked is out, whatever character or crew they are on
+	if(user.ckey && (user.ckey in blocked_residents) && !is_owner(user))
 		return FALSE
 	if(is_resident(user))
 		return TRUE
@@ -230,3 +234,229 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
  */
 /proc/blocks_magic_recall(atom/movable/holder)
 	return HAS_TRAIT(holder, TRAIT_BLOCKS_RECALL)
+
+// ===== ROLE BOOKKEEPING =====
+
+/// The delegated role list a console or manipulator action names, or null
+/obj/structure/overmap/dynamic/player_outpost/proc/delegated_role_list(role)
+	switch(role)
+		if("steward")
+			return stewards
+		if("treasurer")
+			return treasurers
+		if("pricer")
+			return pricers
+	return null
+
+/// Takes a character off the resident roster and out of every delegated role
+/obj/structure/overmap/dynamic/player_outpost/proc/strip_resident(datum/mind/member)
+	residents -= member
+	stewards -= member
+	treasurers -= member
+	pricers -= member
+
+/// Strips every character `player_key` plays from the roster and roles (blocking a player). Never the owner.
+/obj/structure/overmap/dynamic/player_outpost/proc/strip_resident_by_ckey(player_key)
+	if(!player_key || player_key == founder_ckey)
+		return
+	for(var/datum/mind/member as anything in residents | stewards | treasurers | pricers)
+		if(QDELETED(member) || ckey(member.key) != player_key)
+			continue
+		strip_resident(member)
+
+/// Called by abandon(): no pricers, default prices, no playtest billing, every room back to its defaults
+/obj/structure/overmap/dynamic/player_outpost/proc/reset_market_on_abandon()
+	pricers.Cut()
+	reset_prices()
+	playtest_visitor_ckey = null
+	for(var/datum/outpost_upgrade/service/room as anything in installed_service_rooms())
+		room.on_outpost_abandoned()
+
+/// Installed service rooms: catalog order, then any room outside the catalog (test rooms)
+/obj/structure/overmap/dynamic/player_outpost/proc/installed_service_rooms()
+	var/list/rooms = list()
+	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
+		var/datum/outpost_upgrade/service/room = service_upgrade(upgrade_id)
+		if(room)
+			rooms += room
+	for(var/upgrade_id in outpost_upgrades)
+		if(GLOB.outpost_upgrade_catalog[upgrade_id])
+			continue
+		var/datum/outpost_upgrade/service/room = service_upgrade(upgrade_id)
+		if(room)
+			rooms += room
+	return rooms
+
+// ===== MANAGEMENT CONSOLE (Pricing and Services tabs, bay eviction) =====
+
+/datum/player_outpost_management_ui
+	/// The last refusal from a pricing, service room or eviction action
+	var/market_error
+
+/**
+ * The marketplace half of the console's ui_data(). Everything is in ui_data, never static
+ * (a static push remounts the window). Keys are the spec 3.1.4 contract.
+ */
+/datum/player_outpost_management_ui/proc/market_ui_data(mob/user, list/data, can_manage)
+	var/can_price = outpost.is_current_pricing_user(user)
+	var/can_view_income = can_manage || can_price
+	var/staff = can_view_income || outpost.is_current_treasury_user(user)
+	data["can_view_income"] = can_view_income
+	data["playtest_visitor"] = !!(outpost.playtest_visitor_ckey && user?.ckey == outpost.playtest_visitor_ckey)
+	data["market_error"] = market_error
+	data["owner_crews"] = can_manage ? outpost.owner_crew_ui_data() : list()
+	data["pricing"] = outpost.pricing_ui_data(user, can_view_income)
+	data["services"] = staff ? service_rooms_ui_data(user, can_manage) : list()
+
+/// One card per installed service room, with the room's own detail (service_ui_data())
+/datum/player_outpost_management_ui/proc/service_rooms_ui_data(mob/user, can_manage)
+	var/list/services = list()
+	for(var/datum/outpost_upgrade/service/room as anything in outpost.installed_service_rooms())
+		var/list/detail = room.service_ui_data(user)
+		if(!islist(detail))
+			detail = null
+		services += list(list(
+			"id" = room.id,
+			"name" = room.name,
+			"kind" = detail ? detail["kind"] : null,
+			"visitors_allowed" = room.visitors_allowed,
+			"can_toggle_visitors" = can_manage,
+			"detail" = detail,
+		))
+	return services
+
+/// Adds the bay's eviction state (the dock fee package fills it in) to a Docking tab bay row
+/datum/player_outpost_management_ui/proc/bay_eviction_ui_data(datum/outpost_berth/ship_bay/bay, mob/user, list/row)
+	row["evict_denial"] = "Not available."
+	row["evicting"] = FALSE
+	row["evict_eta"] = 0
+	row["evict_refund"] = 0
+	var/list/eviction = outpost.bay_eviction_row(bay, user)
+	for(var/key in eviction)
+		row[key] = eviction[key]
+
+/**
+ * Pricing, Services tab and bay eviction actions. Each checks its own permission, so this runs
+ * before the console's management gate. TRUE when the action was one of these.
+ */
+/datum/player_outpost_management_ui/proc/market_action(action, list/params, mob/living/user)
+	switch(action)
+		if("set_price")
+			market_error = outpost.set_price(user, params["key"], params["value"])
+		if("set_room_visitors")
+			var/datum/outpost_upgrade/service/room = outpost.service_upgrade(params["id"])
+			market_error = room ? room.set_visitors_allowed(user, params["allowed"]) : "No such room."
+		if("service_act")
+			var/datum/outpost_upgrade/service/room = outpost.service_upgrade(params["id"])
+			var/service_action = params["service_action"]
+			if(!room || !istext(service_action))
+				market_error = "No such room."
+			else
+				market_error = null
+				room.service_ui_act(user, service_action, params)
+		if("evict_bay_ship", "cancel_bay_eviction")
+			var/datum/outpost_berth/ship_bay/bay = locate(params["ref"]) in outpost.bay_berths
+			if(!outpost.is_current_management_user(user))
+				market_error = "Management access required."
+			else if(!bay)
+				market_error = "No such bay."
+			else if(action == "evict_bay_ship")
+				market_error = outpost.request_bay_eviction(user, bay)
+			else
+				market_error = null
+				outpost.cancel_bay_eviction(user, bay)
+		else
+			return FALSE
+	return TRUE
+
+/// The Pricing tab: every price with the viewer's own fee, the shop summary, and income for those who may see it
+/obj/structure/overmap/dynamic/player_outpost/proc/pricing_ui_data(mob/user, can_view_income)
+	var/list/prices = list()
+	for(var/key in GLOB.outpost_price_table)
+		var/list/row = GLOB.outpost_price_table[key]
+		var/value = get_price(key)
+		prices += list(list(
+			"key" = key,
+			"label" = row["label"],
+			"value" = value,
+			"default" = row["default"],
+			"max" = row["max"],
+			"available" = price_available(key),
+			// What this viewer would pay: 0 for members. charge_service() compares against it.
+			"fee" = service_price_for(user, value),
+		))
+	var/list/shop
+	var/datum/outpost_upgrade/service/shop_room = service_upgrade(OUTPOST_SERVICE_SHOP)
+	if(shop_room)
+		var/list/summary = shop_room.pricing_summary()
+		shop = islist(summary) ? summary.Copy() : list()
+		shop["installed"] = TRUE
+	var/list/ledger
+	var/list/totals
+	if(can_view_income)
+		ledger = list()
+		// Newest first
+		for(var/index in length(service_ledger) to 1 step -1)
+			ledger += list(service_ledger[index])
+		totals = list()
+		for(var/service_key in service_totals)
+			var/list/total = service_totals[service_key]
+			var/list/price_row = GLOB.outpost_price_table[service_key]
+			totals += list(list(
+				"service" = service_key,
+				"label" = price_row ? price_row["label"] : (service_key == OUTPOST_SERVICE_SHOP ? "Shop sales" : service_key),
+				"total" = total["total"],
+				"count" = total["count"],
+			))
+	return list("prices" = prices, "shop" = shop, "ledger" = ledger, "totals" = totals)
+
+/// The ship crews the owner's character belongs to. Everyone on them is a member here.
+/obj/structure/overmap/dynamic/player_outpost/proc/owner_crew_ui_data()
+	var/list/crews = list()
+	var/datum/mind/owner_mind = founder_mind?.resolve()
+	if(!owner_mind)
+		return crews
+	for(var/datum/team/voidcrew/team as anything in owner_mind.ship_teams)
+		if(QDELETED(team))
+			continue
+		var/obj/structure/overmap/ship/ship = team.ship
+		crews += list(list(
+			"name" = ship ? ship.name : team.name,
+			"ref" = ship ? REF(ship) : null,
+			"members" = length(team.members),
+		))
+	return crews
+
+// ===== OUTPOST MANIPULATOR (admin) =====
+
+/// Adds the playtest billing toggle and each installed room's admin rows to the manipulator's selected outpost
+/datum/outpost_manipulator/proc/market_admin_data(obj/structure/overmap/dynamic/player_outpost/home, list/selected_data)
+	selected_data["playtest_visitor"] = home.playtest_visitor_ckey
+	var/list/services = list()
+	for(var/datum/outpost_upgrade/service/room as anything in home.installed_service_rooms())
+		var/list/rows = room.admin_ui_data()
+		services += list(list(
+			"id" = room.id,
+			"name" = room.name,
+			"visitors_allowed" = room.visitors_allowed,
+			"rows" = islist(rows) ? rows : list(),
+		))
+	selected_data["services"] = services
+
+/datum/outpost_manipulator/proc/manage_market(obj/structure/overmap/dynamic/player_outpost/home, mob/user, action, list/params)
+	switch(action)
+		if("playtest_visitor")
+			if(!user.ckey)
+				return
+			// Billing only: management and pricing permission are untouched
+			var/billing = home.playtest_visitor_ckey != user.ckey
+			home.playtest_visitor_ckey = billing ? user.ckey : null
+			record(user, home, billing ? "bill themself as a visitor" : "stop billing themself as a visitor")
+		if("service_admin")
+			var/datum/outpost_upgrade/service/room = home.service_upgrade(params["id"])
+			var/service_action = params["service_action"]
+			if(!room || !istext(service_action))
+				error = "No such room."
+				return
+			if(room.admin_ui_act(user, service_action, params) && !QDELETED(home))
+				record(user, home, "[service_action] in the [room.name]")

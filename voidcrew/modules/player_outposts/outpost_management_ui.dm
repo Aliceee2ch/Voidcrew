@@ -66,7 +66,7 @@
 	if(QDELETED(console) || get_turf(console) != console_turf || get_outpost_from_atom(console) != outpost)
 		return UI_CLOSE
 	var/physical_status = console.ui_status(user, console.ui_state(user))
-	return min(physical_status, isliving(user) && (outpost.is_current_management_user(user) || outpost.is_current_treasury_user(user) || outpost.can_claim(user) || (outpost.ship_bay_installed && user.ckey)) ? UI_INTERACTIVE : UI_UPDATE)
+	return min(physical_status, isliving(user) && (outpost.is_current_management_user(user) || outpost.is_current_treasury_user(user) || outpost.is_current_pricing_user(user) || outpost.can_claim(user) || (outpost.ship_bay_installed && user.ckey)) ? UI_INTERACTIVE : UI_UPDATE)
 
 /datum/player_outpost_management_ui/ui_close(mob/user)
 	if(!QDELETED(src))
@@ -86,10 +86,14 @@
 	data["is_owner"] = outpost.is_owner(user)
 	data["has_owner"] = !!outpost.founder_ckey
 	data["can_claim"] = !!console_ref && outpost.can_claim(user)
-	data["can_manage"] = outpost.is_current_management_user(user)
+	var/can_manage = outpost.is_current_management_user(user)
+	var/treasury_user = outpost.is_current_treasury_user(user)
+	data["can_manage"] = can_manage
 	data["can_spend"] = outpost.can_spend(user)
-	data["can_set_prices"] = outpost.is_current_treasury_user(user)
-	data["treasury_balance"] = outpost.treasury?.account_balance || 0
+	data["can_set_prices"] = outpost.is_current_pricing_user(user)
+	data["can_select_silo"] = treasury_user
+	// Only the people who run the outpost see its money, roster and research (market_ui_data() trims the rest)
+	data["treasury_balance"] = (can_manage || treasury_user) ? (outpost.treasury?.account_balance || 0) : 0
 	var/obj/machinery/ore_silo/selected_silo = outpost.ship_bay_silo()
 	data["service_silo"] = selected_silo ? REF(selected_silo) : null
 	var/list/silos = list()
@@ -121,6 +125,43 @@
 		if(!QDELETED(banned_ship))
 			banned += list(list("name" = banned_ship.name, "ref" = REF(banned_ship)))
 	data["banned_ships"] = banned
+	outpost.ensure_home_services()
+	if(can_manage)
+		manager_ui_data(user, data)
+	else
+		data["builders"] = list()
+		data["candidates"] = list()
+		data["resident_mode"] = null
+		data["resident_active"] = 0
+		data["arrival_available"] = FALSE
+		data["resident_invites"] = list()
+		data["resident_blocked"] = list()
+		data["residents"] = list()
+		data["research_servers"] = list()
+		data["research_ships"] = list()
+		data["research_connections"] = list()
+	data["research_error"] = research_error
+	data["ship_bay_installed"] = outpost.ship_bay_installed
+	data["ship_bay_cost"] = OUTPOST_SHIP_BAY_COST
+	data["ship_bay_denial"] = outpost.ship_bay_install_denial(user)
+	data["ship_bay_error"] = ship_bay_error
+	var/list/bays = list()
+	for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
+		if(!bay)
+			continue
+		bay.reconcile_silo()
+		var/list/bay_row = list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo)
+		bay_eviction_ui_data(bay, user, bay_row)
+		bays += list(bay_row)
+	data["ship_bays"] = bays
+	data["upgrades"] = upgrade_ui_data(user)
+	data["upgrade_error"] = upgrade_error
+	data["upgrade_surveying"] = outpost.upgrade_surveying
+	market_ui_data(user, data, can_manage)
+	return data
+
+/// The roster, construction grants and research links: management only
+/datum/player_outpost_management_ui/proc/manager_ui_data(mob/user, list/data)
 	data["builders"] = outpost.authorized_builder_ckeys.Copy()
 	var/list/candidates = list()
 	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
@@ -129,7 +170,6 @@
 		candidates += list(list("name" = candidate.real_name, "ckey" = candidate.ckey, "ref" = REF(candidate), "is_resident" = (candidate.mind in outpost.residents)))
 	data["candidates"] = candidates
 
-	outpost.ensure_home_services()
 	data["resident_mode"] = outpost.resident_mode
 	data["resident_active"] = outpost.active_resident_count()
 	data["arrival_available"] = !!outpost.available_resident_pod()
@@ -137,7 +177,7 @@
 	data["resident_blocked"] = outpost.blocked_residents.Copy()
 	var/list/people = list()
 	for(var/datum/mind/member as anything in outpost.residents)
-		people += list(list("ref" = REF(member), "name" = member.name, "is_self" = (member == user.mind), "active" = !!member.current?.client && member.current.stat != DEAD, "steward" = (member in outpost.stewards), "treasurer" = (member in outpost.treasurers)))
+		people += list(list("ref" = REF(member), "name" = member.name, "is_self" = (member == user.mind), "active" = !!member.current?.client && member.current.stat != DEAD, "steward" = (member in outpost.stewards), "treasurer" = (member in outpost.treasurers), "pricer" = (member in outpost.pricers)))
 	data["residents"] = people
 	var/list/servers = list()
 	var/list/server_options = outpost.research_server_options()
@@ -160,22 +200,6 @@
 		var/obj/machinery/rnd/server/ship/server = link.home_server.resolve()
 		connections += list(list("ref" = REF(link), "ship" = ship.name, "server" = server.name, "status" = link.status_text(), "approved" = link.ship_approved))
 	data["research_connections"] = connections
-	data["research_error"] = research_error
-	data["ship_bay_installed"] = outpost.ship_bay_installed
-	data["ship_bay_cost"] = OUTPOST_SHIP_BAY_COST
-	data["ship_bay_denial"] = outpost.ship_bay_install_denial(user)
-	data["ship_bay_error"] = ship_bay_error
-	var/list/bays = list()
-	for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
-		if(!bay)
-			continue
-		bay.reconcile_silo()
-		bays += list(list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo))
-	data["ship_bays"] = bays
-	data["upgrades"] = upgrade_ui_data(user)
-	data["upgrade_error"] = upgrade_error
-	data["upgrade_surveying"] = outpost.upgrade_surveying
-	return data
 
 /datum/player_outpost_management_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
@@ -191,6 +215,9 @@
 	if(action == "select_service_silo")
 		var/obj/machinery/ore_silo/silo = locate(params["ref"]) in outpost.service_silos()
 		outpost.select_service_silo(user, silo)
+		return TRUE
+	// Pricing, Services tab and bay eviction actions check their own permissions
+	if(market_action(action, params, user))
 		return TRUE
 	if(!outpost.is_current_management_user(user))
 		return
@@ -355,6 +382,8 @@
 				outpost.blocked_residents |= player_key
 				outpost.invited_residents -= player_key
 				outpost.resident_clearance -= player_key
+				// A blocked player's current character stops being a member at once
+				outpost.strip_resident_by_ckey(player_key)
 			else
 				outpost.blocked_residents -= player_key
 		if("add_resident")
@@ -373,8 +402,9 @@
 				outpost.residents -= member
 				outpost.stewards -= member
 				outpost.treasurers -= member
-			else if(outpost.is_owner(user) && (params["role"] in list("steward", "treasurer")))
-				var/list/permissions = params["role"] == "steward" ? outpost.stewards : outpost.treasurers
+				outpost.pricers -= member
+			else if(outpost.is_owner(user) && (params["role"] in list("steward", "treasurer", "pricer")))
+				var/list/permissions = outpost.delegated_role_list(params["role"])
 				if(member in permissions)
 					permissions -= member
 				else

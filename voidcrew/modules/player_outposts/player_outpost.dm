@@ -784,6 +784,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	pending_dock_requests.Cut()
 	pending_dock_variants.Cut()
 	QDEL_NULL(current_advert)
+	reset_market_on_abandon() // VOIDCREW MARKET: pricers, prices, playtest billing, room settings
 
 /**
  * Transfers ownership to another player, or accepts a local claim on an unowned site.
@@ -803,6 +804,18 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	treasurers -= former_owner
 	stewards -= user.mind
 	treasurers -= user.mind
+	pricers -= former_owner
+	pricers -= user.mind
+	playtest_visitor_ckey = null
+	if(claiming)
+		// A claimant starts with their own crew, not the previous owner's residents
+		residents.Cut()
+		stewards.Cut()
+		treasurers.Cut()
+		pricers.Cut()
+	else if(former_owner && former_owner != new_owner.mind)
+		// The former owner is not kept on as a member; the new owner can add them back
+		residents -= former_owner
 	authorized_builder_ckeys -= founder_ckey
 	residents |= new_owner.mind
 	resident_clearance[new_owner.ckey] = resident_access_revision

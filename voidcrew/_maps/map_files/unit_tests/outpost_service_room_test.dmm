@@ -1,0 +1,71 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"a" = (
+/turf/closed/indestructible/reinforced,
+/area/template_noop)
+"b" = (
+/turf/open/indestructible,
+/area/template_noop)
+"c" = (
+/obj/effect/spawner/structure/window/reinforced,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"d" = (
+/obj/machinery/door/airlock/outpost/service,
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible,
+/area/template_noop)
+"e" = (
+/obj/machinery/door/airlock/outpost/service/staff,
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 8
+	},
+/turf/open/indestructible,
+/area/template_noop)
+"f" = (
+/obj/structure/table,
+/turf/open/indestructible,
+/area/template_noop)
+"g" = (
+/obj/machinery/computer,
+/turf/open/indestructible,
+/area/template_noop)
+
+(1,1,1) = {"
+a
+a
+c
+a
+a
+"}
+(2,1,1) = {"
+a
+f
+b
+b
+a
+"}
+(3,1,1) = {"
+a
+b
+b
+b
+d
+"}
+(4,1,1) = {"
+a
+g
+b
+b
+a
+"}
+(5,1,1) = {"
+a
+a
+e
+a
+a
+"}

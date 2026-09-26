@@ -55,7 +55,6 @@ type ShipBay = {
   number: number;
   ship: string | null;
   status: string;
-  arrived: BooleanLike;
   requested: BooleanLike;
   approved: BooleanLike;
   /** Eviction keys: absent until the dock fee package sends them. */
@@ -63,8 +62,6 @@ type ShipBay = {
   evicting?: BooleanLike;
   /** Seconds until the ship is sent off. */
   evict_eta?: number;
-  /** Credits refunded if evicted now; 0 for none. */
-  evict_refund?: number;
 };
 
 // ===== Marketplace (Pricing and Services tabs) =====
@@ -73,31 +70,20 @@ type PriceRow = {
   key: string;
   label: string;
   value: number;
-  default: number;
   max: number;
+  /** Whether the room this price belongs to is built */
   available: BooleanLike;
-};
-type ShopSummary = {
-  installed?: BooleanLike;
-  open?: BooleanLike;
-  listings?: number;
-  priced?: number;
-  unpriced?: number;
-  items?: number;
-  capacity?: number;
 };
 type LedgerEntry = {
   time: string;
-  service: string;
   label: string;
-  payer: string;
-  account: string;
+  /** Who paid, or whose account was refunded */
+  who: string | null;
   amount: number;
 };
-type ServiceTotal = { service: string; total: number; count: number };
+type ServiceTotal = { service: string; label: string; total: number };
 type Pricing = {
   prices?: PriceRow[];
-  shop?: ShopSummary | null;
   ledger?: LedgerEntry[] | null;
   totals?: ServiceTotal[] | null;
 };
@@ -105,32 +91,22 @@ type CloningVat = {
   ref: string;
   state: 'empty' | 'growing' | 'ready' | 'offline' | string;
   holder: string | null;
-  percent: number;
-  paid: number;
-  /** What an eviction refunds now: 0 when free or the paying account is gone. */
-  refund?: number;
   evict_denial: string | null;
 };
 type CloningDetail = {
   kind: 'cloning';
-  price?: number;
   can_evict?: BooleanLike;
   vats?: CloningVat[];
 };
-type ShopDetail = ShopSummary & { kind: 'shop'; can_toggle?: BooleanLike };
+type ShopDetail = {
+  kind: 'shop';
+  open?: BooleanLike;
+  can_toggle?: BooleanLike;
+};
 type MedicalDetail = {
   kind: 'medical';
-  price?: number;
-  pass_minutes?: number;
-  active_passes?: number;
   can_edit?: BooleanLike;
   procedures?: { id: string; name: string; enabled: BooleanLike }[];
-};
-type StorageDetail = {
-  kind: 'storage';
-  price?: number;
-  lockers?: number;
-  rented?: number;
 };
 type NetworkPad = { id: string; name: string; zone?: number | string | null };
 /** grounding-teleporter §7.5; `policy`, `allow` and `trips` are the older spec names. */
@@ -142,23 +118,12 @@ type TeleporterDetail = {
   policy?: string;
   allowlist?: NetworkPad[];
   candidates?: NetworkPad[];
-  /** Seconds left on the raid lock. */
-  raidLockLeft?: number;
-  /** Why visitors cannot arrive right now (lockdown, raid lock, request mode), if anything. */
-  policyNote?: string | null;
-  fee?: number;
-  price?: number;
   can_edit?: BooleanLike;
-  tripsIn?: number;
-  tripsOut?: number;
-  trips?: number;
-  destinations?: number;
 };
 type ServiceDetail =
   | CloningDetail
   | ShopDetail
   | MedicalDetail
-  | StorageDetail
   | TeleporterDetail;
 type ServiceRoom = {
   id: string;
@@ -217,8 +182,6 @@ export type OutpostData = {
   playtest_visitor?: BooleanLike;
   pricing?: Pricing | null;
   services?: ServiceRoom[] | null;
-  /** The last refusal from a pricing, service room or eviction action; null once one succeeds. */
-  market_error?: string | null;
   /** Ship names whose crews count as members (abuse review F-12). */
   owner_crews?: (string | Vessel)[] | null;
   /** grounding-teleporter §7.5 top-level shape, used when no service row carries it. */
@@ -226,22 +189,18 @@ export type OutpostData = {
   treasury_balance: number;
   service_silo: string | null;
   service_silos: Vessel[];
-  ship_bay_materials: { name: string; sheets: number; available: number }[];
-  raidable: BooleanLike;
   dock_mode: string;
   rename_cooldown: number;
   advert_cost: number;
   advert_cooldown: number;
   advert_remaining: number;
   advert_denial: string | null;
-  advert_error: string | null;
   dock_requests: Vessel[];
   approved_ships: Vessel[];
   banned_ships: Vessel[];
   builders: string[];
   candidates: Candidate[];
   resident_mode: string;
-  resident_active: number;
   arrival_available: BooleanLike;
   residents: Resident[];
   resident_invites: Record<string, BooleanLike>;
@@ -249,11 +208,9 @@ export type OutpostData = {
   research_servers: Vessel[];
   research_ships: Vessel[];
   research_connections: ResearchConnection[];
-  research_error: string | null;
   ship_bay_installed: BooleanLike;
   ship_bay_cost: number;
   ship_bay_denial: string | null;
-  ship_bay_error: string | null;
   ship_bays: ShipBay[];
   upgrade_catalog: UpgradeEntry[];
   upgrades: UpgradeStatus[];
@@ -310,11 +267,6 @@ function clock(seconds?: number | null) {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
-function credits(amount?: number | null) {
-  const value = Number(amount) || 0;
-  return value > 0 ? `${value.toLocaleString()} cr` : 'Free';
-}
-
 /** Evict or cancel for one bay row. Hidden until the server sends eviction keys. */
 function BayEviction({ bay, data, act }: Props & { bay: ShipBay }) {
   if (bay.evict_denial === undefined && !bay.evicting) {
@@ -323,13 +275,12 @@ function BayEviction({ bay, data, act }: Props & { bay: ShipBay }) {
   if (bay.evicting) {
     return (
       <>
-        <span className="Outpost__countdown" title="Time left to undock">
+        <span className="Outpost__countdown">
           <Icon name="stopwatch" /> {clock(bay.evict_eta)}
         </span>
         <Button
           icon="xmark"
           disabled={!data.can_manage}
-          tooltip="Cancel the eviction"
           onClick={() => act('cancel_bay_eviction', { ref: bay.ref })}
         >
           Cancel
@@ -340,18 +291,12 @@ function BayEviction({ bay, data, act }: Props & { bay: ShipBay }) {
   if (!bay.ship) {
     return null;
   }
-  const refund = Number(bay.evict_refund) || 0;
   return (
     <Button.Confirm
       icon="right-from-bracket"
       color="bad"
       disabled={!data.can_manage || !!bay.evict_denial}
-      tooltip={
-        bay.evict_denial ||
-        (refund > 0
-          ? `Three minutes to undock. Refunds ${refund} cr.`
-          : 'Three minutes to undock. No refund.')
-      }
+      tooltip={bay.evict_denial || undefined}
       onClick={() => act('evict_bay_ship', { ref: bay.ref })}
     >
       Evict
@@ -366,32 +311,24 @@ function Residents({ data, act }: Props) {
     .filter(Boolean);
   return (
     <>
-      {data.owner_crews ? (
-        <div className="Outpost__quiet">
-          {crews.length
-            ? `Owner's crews: ${crews.join(', ')}. Their crew use services free.`
-            : "Owner's crews: none"}
-        </div>
+      {crews.length > 0 ? (
+        <div className="Outpost__quiet">Owner's crews: {crews.join(', ')}</div>
       ) : null}
-      <div className="Outpost__section-label">
-        Residents <span>{residents.length}</span>
-      </div>
-      {residents.length === 0 && <Empty icon="users">No residents</Empty>}
+      {residents.length > 0 ? (
+        <div className="Outpost__section-label">Residents</div>
+      ) : null}
       {residents.map((person) => (
         <div className="Outpost__row" key={person.ref}>
           <span
             className={`Outpost__dot ${person.active ? 'Outpost__dot--online' : ''}`}
           />
-          <div className="Outpost__person">
-            <strong>{person.name}</strong>
-            <small>{person.active ? 'Active' : 'Away'}</small>
-          </div>
+          <strong className="Outpost__grow">{person.name}</strong>
           {!!data.is_owner && (
             <>
               <Button
                 icon="id-badge"
                 selected={!!person.steward}
-                tooltip="Management"
+                tooltip="Steward"
                 onClick={() =>
                   act('delegate', { ref: person.ref, role: 'steward' })
                 }
@@ -399,7 +336,7 @@ function Residents({ data, act }: Props) {
               <Button
                 icon="coins"
                 selected={!!person.treasurer}
-                tooltip="Treasury"
+                tooltip="Treasurer"
                 onClick={() =>
                   act('delegate', { ref: person.ref, role: 'treasurer' })
                 }
@@ -407,7 +344,7 @@ function Residents({ data, act }: Props) {
               <Button
                 icon="tags"
                 selected={!!person.pricer}
-                tooltip="Pricing: sets service prices and takes shop stock free"
+                tooltip="Pricer"
                 onClick={() =>
                   act('delegate', { ref: person.ref, role: 'pricer' })
                 }
@@ -416,26 +353,18 @@ function Residents({ data, act }: Props) {
           )}
           <Button
             icon="user-minus"
-            tooltip={
-              person.is_self ? 'You cannot remove yourself' : 'Remove resident'
-            }
+            tooltip="Remove"
             disabled={!data.can_manage || !!person.is_self}
             onClick={() => act('remove_resident', { ref: person.ref })}
           />
         </div>
       ))}
-      <div className="Outpost__section-label">
-        On site <span>{candidates.length}</span>
-      </div>
-      {candidates.length === 0 && (
-        <Empty icon="location-dot">Nobody else on site</Empty>
-      )}
+      {candidates.length > 0 ? (
+        <div className="Outpost__section-label">On site</div>
+      ) : null}
       {candidates.map((person) => (
         <div className="Outpost__row" key={person.ref}>
-          <div className="Outpost__person">
-            <strong>{person.name}</strong>
-            <small>{person.ckey}</small>
-          </div>
+          <strong className="Outpost__grow">{person.name}</strong>
           <Button
             icon="user-plus"
             tooltip="Add resident"
@@ -446,7 +375,7 @@ function Residents({ data, act }: Props) {
           {!!data.is_owner && (
             <Button
               icon="hammer"
-              tooltip="Construction"
+              tooltip="Builder"
               selected={builders.includes(person.ckey)}
               onClick={() =>
                 act(
@@ -460,6 +389,20 @@ function Residents({ data, act }: Props) {
           )}
         </div>
       ))}
+      {builders.length > 0 ? (
+        <div className="Outpost__section-label">Builders</div>
+      ) : null}
+      {builders.map((key) => (
+        <div className="Outpost__row" key={key}>
+          <span className="Outpost__grow">{key}</span>
+          <Button
+            icon="xmark"
+            tooltip="Remove builder"
+            disabled={!data.is_owner}
+            onClick={() => act('remove_builder', { ckey: key })}
+          />
+        </div>
+      ))}
     </>
   );
 }
@@ -470,68 +413,49 @@ function Docking({ data, act }: Props) {
     { title: 'Cleared', ships: data.approved_ships || [], kind: 'approved' },
     { title: 'Blocked', ships: data.banned_ships || [], kind: 'banned' },
   ];
+  const silos = data.service_silos || [];
   return (
     <>
-      <div className="Outpost__section-label">Ship bay</div>
-      <div className="Outpost__field-label">Outpost material source</div>
-      <Dropdown
-        width="100%"
-        disabled={!canSelectSilo(data) || !data.service_silos?.length}
-        selected={data.service_silo || ''}
-        options={(data.service_silos || []).map((silo) => ({
-          value: silo.ref,
-          displayText: silo.name,
-        }))}
-        placeholder="No outpost silo selected"
-        onSelected={(ref) => act('select_service_silo', { ref })}
-      />
-      <div className="Outpost__quiet">Treasury: {data.treasury_balance} cr</div>
-      {data.ship_bay_installed ? (
-        <div className="Outpost__quiet">
-          Permanent bay installed. Select Ship Bay at the helm or visit by
-          elevator.
+      {silos.length > 1 ? (
+        <div className="Outpost__row">
+          <span>Silo</span>
+          <Dropdown
+            width="100%"
+            disabled={!canSelectSilo(data)}
+            selected={data.service_silo || ''}
+            options={silos.map((silo) => ({
+              value: silo.ref,
+              displayText: silo.name,
+            }))}
+            placeholder="No silo"
+            onSelected={(ref) => act('select_service_silo', { ref })}
+          />
         </div>
-      ) : (
+      ) : null}
+      {data.ship_bay_installed ? null : (
         <div className="Outpost__row">
           <span className="Outpost__grow">
-            One permanent construction bay: {data.ship_bay_cost} cr, 100 iron,
-            50 glass.
+            Ship bay {formatMoney(data.ship_bay_cost || 0)} cr, 100 iron, 50
+            glass
           </span>
           <Button
             disabled={!!data.ship_bay_denial}
-            tooltip={
-              data.ship_bay_denial || 'Paid from the outpost treasury and silo'
-            }
+            tooltip={data.ship_bay_denial || undefined}
             onClick={() => act('install_ship_bay')}
           >
             Install
           </Button>
         </div>
       )}
-      {!!data.ship_bay_error && (
-        <div className="Outpost__quiet">{data.ship_bay_error}</div>
-      )}
-      {!data.ship_bay_installed && (
-        <div className="Outpost__quiet">
-          {(data.ship_bay_materials || []).map((material) => (
-            <div key={material.name}>
-              {material.name}: {Math.floor(material.available)} /{' '}
-              {material.sheets} sheets
-            </div>
-          ))}
-          {!!data.ship_bay_denial && <div>{data.ship_bay_denial}</div>}
-        </div>
-      )}
       {(data.ship_bays || []).map((bay) => (
         <div className="Outpost__row" key={bay.ref}>
           <span className="Outpost__grow">
-            Bay {bay.number}: {bay.ship || bay.status}{' '}
-            {!!bay.ship && `(${bay.status})`}
+            Bay {bay.number}:{' '}
+            {bay.ship ? `${bay.ship} - ${bay.status}` : bay.status}
           </span>
           {!!bay.requested && (
             <Button
               disabled={!data.can_spend || !data.can_manage}
-              tooltip="Allow this bay to use the outpost silo for this visit"
               onClick={() => act('approve_bay_silo', { ref: bay.ref })}
             >
               Allow materials
@@ -548,59 +472,57 @@ function Docking({ data, act }: Props) {
           <BayEviction bay={bay} data={data} act={act} />
         </div>
       ))}
-      {groups.map(({ title, ships, kind }) => (
-        <div key={kind}>
-          <div className="Outpost__section-label">
-            {title}
-            <span>{ships.length}</span>
-          </div>
-          {ships.length === 0 && <div className="Outpost__quiet">None</div>}
-          {ships.map((ship) => (
-            <div className="Outpost__row" key={ship.ref}>
-              <Icon name="shuttle-space" />
-              <strong className="Outpost__grow">{ship.name}</strong>
-              {kind === 'request' && (
+      {groups.map(({ title, ships, kind }) =>
+        ships.length === 0 ? null : (
+          <div key={kind}>
+            <div className="Outpost__section-label">{title}</div>
+            {ships.map((ship) => (
+              <div className="Outpost__row" key={ship.ref}>
+                <Icon name="shuttle-space" />
+                <strong className="Outpost__grow">{ship.name}</strong>
+                {kind === 'request' && (
+                  <Button
+                    icon="check"
+                    color="good"
+                    tooltip="Clear approach"
+                    disabled={!data.can_manage}
+                    onClick={() => act('approve_request', { ref: ship.ref })}
+                  />
+                )}
                 <Button
-                  icon="check"
-                  color="good"
-                  tooltip="Clear approach"
-                  disabled={!data.can_manage}
-                  onClick={() => act('approve_request', { ref: ship.ref })}
-                />
-              )}
-              <Button
-                icon={kind === 'banned' ? 'unlock' : 'xmark'}
-                tooltip={
-                  kind === 'banned'
-                    ? 'Unblock vessel'
-                    : kind === 'request'
-                      ? 'Deny approach'
-                      : 'Revoke clearance'
-                }
-                disabled={!data.can_manage}
-                onClick={() =>
-                  act(
+                  icon={kind === 'banned' ? 'unlock' : 'xmark'}
+                  tooltip={
                     kind === 'banned'
-                      ? 'unban_ship'
+                      ? 'Unblock vessel'
                       : kind === 'request'
-                        ? 'deny_request'
-                        : 'revoke_approval',
-                    { ref: ship.ref },
-                  )
-                }
-              />
-              {kind !== 'banned' && (
-                <Button
-                  icon="ban"
-                  tooltip="Block vessel"
+                        ? 'Deny approach'
+                        : 'Revoke clearance'
+                  }
                   disabled={!data.can_manage}
-                  onClick={() => act('ban_ship', { ref: ship.ref })}
+                  onClick={() =>
+                    act(
+                      kind === 'banned'
+                        ? 'unban_ship'
+                        : kind === 'request'
+                          ? 'deny_request'
+                          : 'revoke_approval',
+                      { ref: ship.ref },
+                    )
+                  }
                 />
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
+                {kind !== 'banned' && (
+                  <Button
+                    icon="ban"
+                    tooltip="Block vessel"
+                    disabled={!data.can_manage}
+                    onClick={() => act('ban_ship', { ref: ship.ref })}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        ),
+      )}
     </>
   );
 }
@@ -1540,26 +1462,6 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
   );
 }
 
-/** Ledger and totals name services by id or price key. */
-const SERVICE_NAMES: Record<string, string> = {
-  ship_bay: 'Ship bay',
-  dock_bay: 'Ship bay docking',
-  cloning_bay: 'Cloning bay',
-  clone_imprint: 'Cloning imprint',
-  medical_lab: 'Medical lab',
-  medlab_pass: 'Medical lab pass',
-  storage: 'Safe storage',
-  storage_rent: 'Locker rental',
-  shop: 'Shop',
-  teleporter: 'Teleporter',
-  teleport_arrival: 'Teleporter arrivals',
-  teleport_trip: 'Teleporter trip',
-};
-
-function serviceName(key: string) {
-  return SERVICE_NAMES[key] || key;
-}
-
 function PriceEditor({
   row,
   canSet,
@@ -1579,14 +1481,11 @@ function PriceEditor({
   const shown = draft ?? value;
   return (
     <div className="Outpost__row">
-      <div className="Outpost__person">
-        <strong>{row.label || serviceName(row.key)}</strong>
-        <small>
-          {row.available
-            ? `Default ${credits(row.default)}, up to ${max} cr`
-            : 'Room not installed'}
-        </small>
-      </div>
+      <span
+        className={`Outpost__grow ${row.available ? '' : 'Outpost__quiet'}`}
+      >
+        {row.label || row.key}
+      </span>
       <NumberInput
         value={shown}
         minValue={0}
@@ -1603,7 +1502,6 @@ function PriceEditor({
       <Button
         icon="check"
         disabled={!canSet || shown === value}
-        tooltip={canSet ? undefined : 'Owner, treasurers and pricers only'}
         onClick={() => act('set_price', { key: row.key, value: shown })}
       >
         Set
@@ -1612,76 +1510,35 @@ function PriceEditor({
   );
 }
 
-function shopLine(shop: ShopSummary) {
-  const listings = Number(shop.listings) || 0;
-  return [
-    shop.open ? 'Open' : 'Closed',
-    `${listings} listing${listings === 1 ? '' : 's'}`,
-    `${Number(shop.priced) || 0} priced`,
-    `${Number(shop.unpriced) || 0} not for sale`,
-    `${Number(shop.items) || 0} / ${Number(shop.capacity) || 0} items`,
-  ].join(' · ');
-}
-
 function PricingTab({ data, act }: Props) {
   const pricing = data.pricing || {};
   const prices = pricing.prices || [];
-  const shop = pricing.shop;
   const ledger = pricing.ledger || [];
   const totals = pricing.totals || [];
   const canSet = !!data.can_set_prices;
-  const canView = !!data.can_view_income;
   return (
     <>
-      <div className="Outpost__section-label">
-        Service prices<span>{prices.length}</span>
-      </div>
-      {prices.length === 0 && <Empty icon="tags">No priced services</Empty>}
       {prices.map((row) => (
         <PriceEditor key={row.key} row={row} canSet={canSet} act={act} />
       ))}
-      <div className="Outpost__quiet">
-        Members use every service free. Visitors pay the price shown here.
-      </div>
-      {shop?.installed ? (
+      {totals.length > 0 ? (
         <>
-          <div className="Outpost__section-label">Shop</div>
-          <div className="Outpost__row">
-            <Icon name="store" />
-            <span className="Outpost__grow">{shopLine(shop)}</span>
-          </div>
-          <div className="Outpost__quiet">
-            Item prices are set at the stock machine in the shop.
-          </div>
-        </>
-      ) : null}
-      {canView ? (
-        <>
-          <div className="Outpost__section-label">
-            Income by service<span>{totals.length}</span>
-          </div>
-          {totals.length === 0 && (
-            <div className="Outpost__quiet">No income yet</div>
-          )}
+          <div className="Outpost__section-label">Income</div>
           {totals.map((entry) => (
             <div className="Outpost__row" key={entry.service}>
               <span className="Outpost__grow">
-                {serviceName(entry.service)}
-              </span>
-              <span className="Outpost__research-status">
-                {Number(entry.count) || 0} paid
+                {entry.label || entry.service}
               </span>
               <strong className="Outpost__amount">
-                {(Number(entry.total) || 0).toLocaleString()} cr
+                {formatMoney(Number(entry.total) || 0)} cr
               </strong>
             </div>
           ))}
-          <div className="Outpost__section-label">
-            Ledger<span>{ledger.length}</span>
-          </div>
-          {ledger.length === 0 && (
-            <div className="Outpost__quiet">No entries</div>
-          )}
+        </>
+      ) : null}
+      {ledger.length > 0 ? (
+        <>
+          <div className="Outpost__section-label">Ledger</div>
           {/* The server sends the ledger newest first. */}
           {ledger.map((entry, index) => (
             <div
@@ -1690,23 +1547,16 @@ function PricingTab({ data, act }: Props) {
             >
               <span className="Outpost__time">{entry.time}</span>
               <div className="Outpost__person">
-                <strong>{entry.label || serviceName(entry.service)}</strong>
-                {entry.payer || entry.account ? (
-                  <small>
-                    {entry.payer}
-                    {entry.account && entry.account !== entry.payer
-                      ? ` (${entry.account})`
-                      : ''}
-                  </small>
-                ) : null}
+                <strong>{entry.label}</strong>
+                {entry.who ? <small>{entry.who}</small> : null}
               </div>
               {Number(entry.amount) > 0 ? (
                 <strong className="Outpost__amount">
-                  +{Number(entry.amount).toLocaleString()} cr
+                  +{formatMoney(Number(entry.amount))} cr
                 </strong>
               ) : Number(entry.amount) < 0 ? (
                 <strong className="Outpost__amount Outpost__amount--refund">
-                  -{Math.abs(Number(entry.amount)).toLocaleString()} cr
+                  -{formatMoney(Math.abs(Number(entry.amount)))} cr
                 </strong>
               ) : null}
             </div>
@@ -1736,48 +1586,26 @@ function CloningCard({
   const vats = detail.vats || [];
   return (
     <>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Imprint price</span>
-        <span>{credits(detail.price)}</span>
-      </div>
-      {vats.length === 0 && <div className="Outpost__quiet">No vats</div>}
-      {vats.map((vat, index) => {
-        const paid = Number(vat.paid) || 0;
-        const refund = Number(vat.refund) || 0;
-        return (
-          <div className="Outpost__row" key={vat.ref || index}>
-            <Icon name="dna" />
-            <div className="Outpost__person">
-              <strong>
-                Vat {index + 1}:{' '}
-                {VAT_STATES[vat.state] || vat.state || 'Unknown'}
-                {vat.state === 'growing'
-                  ? ` ${Math.round(Number(vat.percent) || 0)}%`
-                  : ''}
-              </strong>
-              <small>
-                {vat.holder
-                  ? `${vat.holder}${paid > 0 ? `, paid ${paid} cr` : ''}`
-                  : 'Unclaimed'}
-              </small>
-            </div>
-            {vat.holder ? (
-              <Button.Confirm
-                icon="eject"
-                color="bad"
-                disabled={!detail.can_evict || !!vat.evict_denial}
-                tooltip={
-                  vat.evict_denial ||
-                  (refund > 0 ? `Refund ${refund} cr` : 'No refund')
-                }
-                onClick={() => serviceAct('evict', { ref: vat.ref })}
-              >
-                Evict
-              </Button.Confirm>
-            ) : null}
-          </div>
-        );
-      })}
+      {vats.map((vat, index) => (
+        <div className="Outpost__row" key={vat.ref || index}>
+          <Icon name="dna" />
+          <span className="Outpost__grow">
+            Vat {index + 1}: {VAT_STATES[vat.state] || vat.state || 'Unknown'}
+            {vat.holder ? `, ${vat.holder}` : ''}
+          </span>
+          {vat.holder ? (
+            <Button.Confirm
+              icon="eject"
+              color="bad"
+              disabled={!detail.can_evict || !!vat.evict_denial}
+              tooltip={vat.evict_denial || undefined}
+              onClick={() => serviceAct('evict', { ref: vat.ref })}
+            >
+              Evict
+            </Button.Confirm>
+          ) : null}
+        </div>
+      ))}
     </>
   );
 }
@@ -1792,7 +1620,7 @@ function ShopCard({
   return (
     <div className="Outpost__row">
       <Icon name="store" />
-      <span className="Outpost__grow">{shopLine(detail)}</span>
+      <span className="Outpost__grow">{detail.open ? 'Open' : 'Closed'}</span>
       <Button
         icon={detail.open ? 'door-closed' : 'door-open'}
         disabled={!detail.can_toggle}
@@ -1814,20 +1642,6 @@ function MedicalCard({
   const procedures = detail.procedures || [];
   return (
     <>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">
-          Pass price ({Number(detail.pass_minutes) || 0} min)
-        </span>
-        <span>{credits(detail.price)}</span>
-      </div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Active passes</span>
-        <span>{Number(detail.active_passes) || 0}</span>
-      </div>
-      <div className="Outpost__field-label">Auto-surgeon procedures</div>
-      {procedures.length === 0 && (
-        <div className="Outpost__quiet">No procedures</div>
-      )}
       {procedures.map((procedure) => (
         <div className="Outpost__row" key={procedure.id}>
           <span className="Outpost__grow">{procedure.name}</span>
@@ -1843,23 +1657,6 @@ function MedicalCard({
           </Button>
         </div>
       ))}
-    </>
-  );
-}
-
-function StorageCard({ detail }: { detail: StorageDetail }) {
-  return (
-    <>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Rental price</span>
-        <span>{credits(detail.price)}</span>
-      </div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Lockers rented</span>
-        <span>
-          {Number(detail.rented) || 0} / {Number(detail.lockers) || 0}
-        </span>
-      </div>
     </>
   );
 }
@@ -1889,8 +1686,6 @@ function TeleporterCard({
     (pad) => !listed.has(pad.id),
   );
   const chosen = candidates.find((pad) => pad.id === pick);
-  const raidLock = Number(detail.raidLockLeft) || 0;
-  const fee = detail.fee ?? detail.price;
   return (
     <>
       {detail.padName ? (
@@ -1899,27 +1694,6 @@ function TeleporterCard({
           <strong className="Outpost__grow">{detail.padName}</strong>
         </div>
       ) : null}
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Arrival fare</span>
-        <span>{credits(fee)}</span>
-      </div>
-      <div className="Outpost__quiet">
-        Visitors pay it when they leave another pad for this one. Set it on the
-        Pricing tab.
-      </div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Trips in / out</span>
-        <span>
-          {Number(detail.tripsIn ?? detail.trips) || 0} /{' '}
-          {Number(detail.tripsOut) || 0}
-        </span>
-      </div>
-      {raidLock > 0 ? (
-        <div className="Outpost__research-error" role="status">
-          Raid lock: visitors cannot arrive for {clock(raidLock)}
-        </div>
-      ) : null}
-      <label className="Outpost__field-label">Arrivals</label>
       <div className="Outpost__switches">
         {ARRIVAL_POLICIES.map((mode) => (
           <Button
@@ -1935,29 +1709,12 @@ function TeleporterCard({
           </Button>
         ))}
       </div>
-      {detail.policyNote ? (
-        <div className="Outpost__research-error" role="status">
-          {detail.policyNote}
-        </div>
-      ) : null}
-      <div className="Outpost__section-label">
-        Allow list<span>{allowlist.length}</span>
-      </div>
-      {arrivals !== 'allowlist' && (
-        <div className="Outpost__quiet">
-          Used when arrivals are set to Allow list.
-        </div>
-      )}
-      {allowlist.length === 0 && (
-        <div className="Outpost__quiet">No outposts listed</div>
-      )}
       {allowlist.map((pad) => (
         <div className="Outpost__row" key={pad.id}>
           <Icon name="circle-nodes" />
           <span className="Outpost__grow">{pad.name}</span>
           <Button
             icon="xmark"
-            tooltip="Remove from the allow list"
             disabled={!canEdit}
             onClick={() =>
               serviceAct('teleporter_disallow', { target: pad.id })
@@ -2038,20 +1795,13 @@ function ServiceCard({
     kind !== 'teleporter';
   return (
     <div className="Outpost__service">
-      <div className="Outpost__section-label">
-        {room.name || serviceName(room.id)}
-        {!!showVisitors && (
-          <span>{room.visitors_allowed ? 'Public' : 'Members only'}</span>
-        )}
-      </div>
-      {!!showVisitors && (
-        <div className="Outpost__row">
-          <span className="Outpost__grow">Visitors may enter</span>
+      <div className="Outpost__row">
+        <strong className="Outpost__grow">{room.name || room.id}</strong>
+        {showVisitors ? (
           <Button
             icon={room.visitors_allowed ? 'door-open' : 'door-closed'}
             selected={!!room.visitors_allowed}
             disabled={!room.can_toggle_visitors}
-            tooltip="Members always pass. Anyone inside can always leave."
             onClick={() =>
               act('set_room_visitors', {
                 id: room.id,
@@ -2059,21 +1809,17 @@ function ServiceCard({
               })
             }
           >
-            {room.visitors_allowed ? 'Allowed' : 'Members only'}
+            {room.visitors_allowed ? 'Public' : 'Members only'}
           </Button>
-        </div>
-      )}
-      {!detail ? (
-        <div className="Outpost__quiet">No details</div>
-      ) : kind === 'cloning' ? (
+        ) : null}
+      </div>
+      {!detail ? null : kind === 'cloning' ? (
         <CloningCard detail={detail as CloningDetail} serviceAct={serviceAct} />
       ) : kind === 'shop' ? (
         <ShopCard detail={detail as ShopDetail} serviceAct={serviceAct} />
       ) : kind === 'medical' ? (
         <MedicalCard detail={detail as MedicalDetail} serviceAct={serviceAct} />
-      ) : kind === 'storage' ? (
-        <StorageCard detail={detail as StorageDetail} />
-      ) : kind === 'teleporter' ? (
+      ) : kind === 'storage' ? null : kind === 'teleporter' ? (
         <TeleporterCard
           detail={detail as TeleporterDetail}
           canManage={!!data.can_manage}
@@ -2106,9 +1852,7 @@ function serviceRooms(data: OutpostData): ServiceRoom[] {
 function Services({ data, act }: Props) {
   const rooms = serviceRooms(data);
   if (rooms.length === 0) {
-    return (
-      <Empty icon="store">No service rooms. Buy one on the Upgrades tab.</Empty>
-    );
+    return <Empty icon="store">No service rooms</Empty>;
   }
   return (
     <>
@@ -2119,22 +1863,63 @@ function Services({ data, act }: Props) {
   );
 }
 
-function Access({ data, act }: Props) {
+const ARRIVAL_MODES = [
+  { id: 'open', name: 'Open' },
+  { id: 'password', name: 'Password' },
+  { id: 'approved', name: 'Invite' },
+  { id: 'closed', name: 'Closed' },
+];
+
+function Arrivals({ data, act }: Props) {
   const [account, setAccount] = useState('');
+  const [password, setPassword] = useState('');
   const invites = Object.keys(data.resident_invites || {});
   const blocked = data.resident_blocked || [];
-  const builders = data.builders || [];
   const submit = (action: string) => {
     act(action, { ckey: account.trim() });
     setAccount('');
   };
   return (
     <>
-      <div className="Outpost__section-label">Return access</div>
+      <div className="Outpost__switches">
+        {ARRIVAL_MODES.map((mode) => (
+          <Button
+            key={mode.id}
+            selected={data.resident_mode === mode.id}
+            disabled={!data.can_manage}
+            onClick={() => act('resident_mode', { mode: mode.id })}
+          >
+            {mode.name}
+          </Button>
+        ))}
+      </div>
+      {data.resident_mode === 'password' && (
+        <div className="Outpost__inline Outpost__password">
+          <input
+            className="Input Input--fluid"
+            type="password"
+            placeholder="New password"
+            value={password}
+            onChange={(event) => setPassword(event.currentTarget.value)}
+            autoComplete="new-password"
+            maxLength={64}
+            disabled={!data.can_manage}
+          />
+          <Button
+            icon="key"
+            tooltip="Set password"
+            disabled={!data.can_manage || !password.trim()}
+            onClick={() => {
+              act('resident_password', { password });
+              setPassword('');
+            }}
+          />
+        </div>
+      )}
       <div className="Outpost__inline">
         <Input
           fluid
-          placeholder="Player account"
+          placeholder="Account name"
           value={account}
           onChange={setAccount}
           disabled={!data.can_manage}
@@ -2152,48 +1937,34 @@ function Access({ data, act }: Props) {
           onClick={() => submit('block_resident')}
         />
       </div>
-      <div className="Outpost__section-label">
-        Invited<span>{invites.length}</span>
-      </div>
-      {invites.length === 0 && <div className="Outpost__quiet">None</div>}
+      {invites.length > 0 ? (
+        <div className="Outpost__section-label">Invited</div>
+      ) : null}
       {invites.map((key) => (
         <div className="Outpost__row" key={key}>
           <span className="Outpost__grow">{key}</span>
-          <Icon name="user-check" />
         </div>
       ))}
-      <div className="Outpost__section-label">
-        Blocked<span>{blocked.length}</span>
-      </div>
-      {blocked.length === 0 && <div className="Outpost__quiet">None</div>}
+      {blocked.length > 0 ? (
+        <div className="Outpost__section-label">Blocked</div>
+      ) : null}
       {blocked.map((key) => (
         <div className="Outpost__row" key={key}>
           <span className="Outpost__grow">{key}</span>
           <Button
             icon="unlock"
-            tooltip="Unblock account"
+            tooltip="Unblock"
             disabled={!data.can_manage}
             onClick={() => act('unblock_resident', { ckey: key })}
           />
         </div>
       ))}
-      <div className="Outpost__section-label">
-        Construction<span>{builders.length}</span>
-      </div>
-      {builders.length === 0 && (
-        <div className="Outpost__quiet">Owner only</div>
-      )}
-      {builders.map((key) => (
-        <div className="Outpost__row" key={key}>
-          <span className="Outpost__grow">{key}</span>
-          <Button
-            icon="xmark"
-            tooltip="Revoke construction"
-            disabled={!data.is_owner}
-            onClick={() => act('remove_builder', { ckey: key })}
-          />
+      {data.arrival_available ? null : (
+        <div className="Outpost__arrival">
+          <Icon name="bed" />
+          No free cryopod
         </div>
-      ))}
+      )}
       <Button.Confirm
         className="Outpost__reset"
         icon="rotate-left"
@@ -2201,7 +1972,7 @@ function Access({ data, act }: Props) {
         disabled={!data.can_manage}
         onClick={() => act('reset_resident_access')}
       >
-        Reset return access
+        Reset access
       </Button.Confirm>
     </>
   );
@@ -2220,11 +1991,7 @@ function Research({ data, act }: Props) {
 
   return (
     <>
-      <div className="Outpost__heading">
-        <Icon name="flask" />
-        Research connections
-      </div>
-      <label className="Outpost__field-label">Source server</label>
+      <label className="Outpost__field-label">Server</label>
       <div className="Outpost__inline">
         <Dropdown
           fluid
@@ -2239,7 +2006,7 @@ function Research({ data, act }: Props) {
           disabled={!data.can_manage || servers.length === 0}
         />
       </div>
-      <label className="Outpost__field-label">Docked ship</label>
+      <label className="Outpost__field-label">Ship</label>
       <div className="Outpost__inline">
         <Dropdown
           fluid
@@ -2267,22 +2034,13 @@ function Research({ data, act }: Props) {
           Invite
         </Button>
       </div>
-      {data.research_error ? (
-        <div className="Outpost__research-error" role="alert">
-          {data.research_error}
-        </div>
+      {connections.length > 0 ? (
+        <div className="Outpost__section-label">Connections</div>
       ) : null}
-      <div className="Outpost__section-label">
-        Connections<span>{connections.length}</span>
-      </div>
-      {connections.length === 0 && (
-        <Empty icon="link-slash">No research connections</Empty>
-      )}
       {connections.map((connection) => {
         const approved = !!connection.approved;
         return (
           <div className="Outpost__row" key={connection.ref}>
-            <Icon name={approved ? 'link' : 'hourglass-half'} />
             <div className="Outpost__person">
               <strong>{connection.ship}</strong>
               <small>{connection.server}</small>
@@ -2293,7 +2051,6 @@ function Research({ data, act }: Props) {
             <Button
               icon={approved ? 'link-slash' : 'xmark'}
               color={approved ? 'bad' : undefined}
-              tooltip={approved ? 'Disconnect' : 'Cancel pending invitation'}
               disabled={!data.can_manage}
               onClick={() => act('revoke_research', { ref: connection.ref })}
             >
@@ -2309,131 +2066,64 @@ function Research({ data, act }: Props) {
 function Registry({ data, act }: Props) {
   const [name, setName] = useState(data.outpost_name || '');
   const [memo, setMemo] = useState(data.memo || '');
-  const [password, setPassword] = useState('');
   const docking = [
     { id: 'open', name: 'Open', icon: 'door-open' },
     { id: 'request', name: 'Request', icon: 'hand' },
     { id: 'lockdown', name: 'Lockdown', icon: 'lock' },
   ];
-  const arrivals = [
-    { id: 'open', name: 'Open' },
-    { id: 'password', name: 'Password' },
-    { id: 'approved', name: 'Invite' },
-    { id: 'closed', name: 'Closed' },
-  ];
   return (
-    <>
-      <div className="Outpost__heading">
-        <Icon name="sliders" />
-        Registry & policies
-      </div>
-      <div className="Outpost__registry-scroll">
-        <label className="Outpost__field-label">Designation</label>
-        <div className="Outpost__inline">
-          <Input
-            fluid
-            value={name}
-            onChange={setName}
-            disabled={!data.can_manage}
-            maxLength={64}
-          />
-          <Button
-            icon="check"
-            tooltip={
-              data.rename_cooldown > 0
-                ? `Rename available in ${Math.ceil(data.rename_cooldown)}s`
-                : 'Rename'
-            }
-            disabled={
-              !data.can_manage ||
-              !name.trim() ||
-              name.trim() === data.outpost_name ||
-              data.rename_cooldown > 0
-            }
-            onClick={() => act('rename', { name: name.trim() })}
-          />
-        </div>
-        <label className="Outpost__field-label">Public memo</label>
-        <div className="Outpost__memo">
-          <TextArea
-            fluid
-            height="62px"
-            value={memo}
-            onChange={setMemo}
-            disabled={!data.can_manage}
-            placeholder="Public memo"
-          />
-          <Button
-            icon="floppy-disk"
-            tooltip="Save memo"
-            disabled={!data.can_manage || memo === data.memo}
-            onClick={() => act('set_memo', { memo })}
-          />
-        </div>
-        <label className="Outpost__field-label">Docking</label>
-        <div className="Outpost__switches">
-          {docking.map((mode) => (
-            <Button
-              key={mode.id}
-              icon={mode.icon}
-              selected={data.dock_mode === mode.id}
-              disabled={!data.can_manage}
-              onClick={() => act('set_dock_mode', { mode: mode.id })}
-            >
-              {mode.name}
-            </Button>
-          ))}
-        </div>
-        <label className="Outpost__field-label">Resident arrivals</label>
-        <div className="Outpost__switches">
-          {arrivals.map((mode) => (
-            <Button
-              key={mode.id}
-              selected={data.resident_mode === mode.id}
-              disabled={!data.can_manage}
-              onClick={() => act('resident_mode', { mode: mode.id })}
-            >
-              {mode.name}
-            </Button>
-          ))}
-        </div>
-        {data.resident_mode === 'password' && (
-          <div className="Outpost__inline Outpost__password">
-            <input
-              className="Input Input--fluid"
-              type="password"
-              placeholder="New password"
-              value={password}
-              onChange={(event) => setPassword(event.currentTarget.value)}
-              autoComplete="new-password"
-              maxLength={64}
-              disabled={!data.can_manage}
-            />
-            <Button
-              icon="key"
-              tooltip="Set password"
-              disabled={!data.can_manage || !password.trim()}
-              onClick={() => {
-                act('resident_password', { password });
-                setPassword('');
-              }}
-            />
-          </div>
-        )}
-        <div className="Outpost__limit">
-          <span>{data.resident_active || 0} active residents</span>
-        </div>
-        <div
-          className={
-            'Outpost__arrival ' +
-            (data.arrival_available ? 'Outpost__arrival--ready' : '')
+    <div className="Outpost__registry-scroll">
+      <div className="Outpost__inline">
+        <Input
+          fluid
+          value={name}
+          onChange={setName}
+          disabled={!data.can_manage}
+          maxLength={64}
+        />
+        <Button
+          icon="check"
+          tooltip={data.rename_cooldown > 0 ? 'Renamed recently' : 'Rename'}
+          disabled={
+            !data.can_manage ||
+            !name.trim() ||
+            name.trim() === data.outpost_name ||
+            data.rename_cooldown > 0
           }
-        >
-          <Icon name="bed" />
-          {data.arrival_available ? 'Cryo ready' : 'No free cryopod'}
-        </div>
+          onClick={() => act('rename', { name: name.trim() })}
+        />
       </div>
-    </>
+      <div className="Outpost__memo">
+        <TextArea
+          fluid
+          height="62px"
+          value={memo}
+          onChange={setMemo}
+          disabled={!data.can_manage}
+          placeholder="Public memo"
+        />
+        <Button
+          icon="floppy-disk"
+          tooltip="Save memo"
+          disabled={!data.can_manage || memo === data.memo}
+          onClick={() => act('set_memo', { memo })}
+        />
+      </div>
+      <label className="Outpost__field-label">Docking</label>
+      <div className="Outpost__switches">
+        {docking.map((mode) => (
+          <Button
+            key={mode.id}
+            icon={mode.icon}
+            selected={data.dock_mode === mode.id}
+            disabled={!data.can_manage}
+            onClick={() => act('set_dock_mode', { mode: mode.id })}
+          >
+            {mode.name}
+          </Button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -2443,27 +2133,15 @@ function Broadcast({ data, act }: Props) {
     <>
       <div className="Outpost__heading">
         <Icon name="satellite-dish" />
-        Broadcast{!!live && <span className="Outpost__live">LIVE</span>}
+        Broadcast
       </div>
       <div className="Outpost__footer-row">
         <div className="Outpost__readout">
           <strong>
             {live
-              ? `${Math.ceil(data.advert_remaining / 60)} min`
-              : `${data.advert_cost} cr`}
+              ? `On air, ${Math.ceil(data.advert_remaining / 60)} min`
+              : `${formatMoney(data.advert_cost || 0)} cr`}
           </strong>
-          <small
-            role="status"
-            className={
-              !live && (data.advert_denial || data.advert_error)
-                ? 'Outpost__broadcast-error'
-                : undefined
-            }
-          >
-            {live
-              ? 'Broadcast live'
-              : data.advert_denial || data.advert_error || 'Sector listing'}
-          </small>
         </div>
         <Button
           icon="tower-broadcast"
@@ -2474,7 +2152,7 @@ function Broadcast({ data, act }: Props) {
             live ||
             data.advert_cooldown > 0
           }
-          tooltip={data.advert_denial || data.advert_error || undefined}
+          tooltip={(!live && data.advert_denial) || undefined}
           onClick={() => act('buy_advert')}
         >
           {live ? 'On air' : 'Broadcast'}
@@ -2488,55 +2166,51 @@ function Ownership({ data, act }: Props) {
   const [recipient, setRecipient] = useState<string>('');
   const candidates = data.candidates || [];
   const selected = candidates.find((person) => person.ref === recipient);
-  return (
-    <>
-      <div className="Outpost__heading">
-        <Icon name="flag" />
-        Ownership
+  if (data.is_owner) {
+    return (
+      <div className="Outpost__ownership">
+        <Dropdown
+          fluid
+          placeholder="New owner"
+          displayText={selected?.name || 'New owner'}
+          selected={recipient}
+          options={candidates.map((person) => ({
+            displayText: person.name,
+            value: person.ref,
+          }))}
+          onSelected={setRecipient}
+        />
+        <Button
+          icon="right-left"
+          disabled={!selected}
+          onClick={() => act('transfer', { ref: recipient })}
+        >
+          Transfer
+        </Button>
+        <Button
+          color="bad"
+          icon="arrow-right-from-bracket"
+          onClick={() => act('abandon')}
+        >
+          Abandon
+        </Button>
       </div>
-      {data.is_owner ? (
-        <div className="Outpost__ownership">
-          <Dropdown
-            fluid
-            placeholder="New owner"
-            displayText={selected?.name || 'New owner'}
-            selected={recipient}
-            options={candidates.map((person) => ({
-              displayText: person.name,
-              value: person.ref,
-            }))}
-            onSelected={setRecipient}
-          />
-          <Button
-            icon="right-left"
-            disabled={!selected}
-            onClick={() => act('transfer', { ref: recipient })}
-          >
-            Transfer
-          </Button>
-          <Button
-            color="bad"
-            icon="arrow-right-from-bracket"
-            onClick={() => act('abandon')}
-          >
-            Abandon
-          </Button>
-        </div>
-      ) : !data.has_owner ? (
-        <div className="Outpost__ownership">
-          <Button
-            icon="flag"
-            disabled={!data.can_claim}
-            onClick={() => act('claim')}
-          >
-            Claim outpost
-          </Button>
-        </div>
-      ) : (
-        <div className="Outpost__quiet">{data.founder_name}</div>
-      )}
-    </>
-  );
+    );
+  }
+  if (!data.has_owner) {
+    return (
+      <div className="Outpost__ownership">
+        <Button
+          icon="flag"
+          disabled={!data.can_claim}
+          onClick={() => act('claim')}
+        >
+          Claim outpost
+        </Button>
+      </div>
+    );
+  }
+  return null;
 }
 
 type Tab = { id: string; title: string; icon: string };
@@ -2555,7 +2229,7 @@ function visibleTabs(data: OutpostData): Tab[] {
       TAB_DOCKING,
       TAB_PRICING,
       { id: 'residents', title: 'Residents', icon: 'users' },
-      { id: 'access', title: 'Access', icon: 'id-card' },
+      { id: 'arrivals', title: 'Arrivals', icon: 'id-card' },
       { id: 'research', title: 'Research', icon: 'flask' },
       { id: 'upgrades', title: 'Upgrades', icon: 'cubes' },
       TAB_SERVICES,
@@ -2615,8 +2289,12 @@ export function OutpostManagementPanel({ data, act }: Props) {
         <strong>{data.founder_name || 'Unclaimed'}</strong>
       </Panel>
       <Panel slot="status" className="Outpost__rail Outpost__rail--status">
-        <Icon name={data.raidable ? 'shield-halved' : 'shield'} />
-        <strong>{data.raidable ? 'Unpatrolled' : 'Patrolled'}</strong>
+        {data.can_manage || data.can_spend ? (
+          <>
+            <span>TREASURY</span>
+            <strong>{formatMoney(data.treasury_balance || 0)} cr</strong>
+          </>
+        ) : null}
       </Panel>
       {placing && placingUpgrade ? (
         <>
@@ -2662,21 +2340,7 @@ export function OutpostManagementPanel({ data, act }: Props) {
             {data.playtest_visitor ? (
               <div className="Outpost__banner" role="status">
                 <Icon name="user-secret" />
-                Billed as a visitor. Services charge you and staff doors stay
-                shut.
-              </div>
-            ) : null}
-            {data.market_error ? (
-              <div
-                className="Outpost__research-error Outpost__market-error"
-                role="alert"
-              >
-                <span className="Outpost__grow">{data.market_error}</span>
-                <Button
-                  icon="xmark"
-                  tooltip="Dismiss"
-                  onClick={() => act('dismiss_market_error')}
-                />
+                Billed as a visitor.
               </div>
             ) : null}
             <div className="Outpost__directory-scroll">
@@ -2700,7 +2364,7 @@ export function OutpostManagementPanel({ data, act }: Props) {
                   }}
                 />
               ) : (
-                <Access data={data} act={act} />
+                <Arrivals data={data} act={act} />
               )}
             </div>
           </Panel>

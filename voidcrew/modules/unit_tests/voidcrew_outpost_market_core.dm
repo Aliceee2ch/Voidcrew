@@ -87,7 +87,7 @@
 	TEST_ASSERT_EQUAL(home.get_price("clone_imprint"), 13, "A fractional price was not rounded")
 	var/list/last_line = home.service_ledger[length(home.service_ledger)]
 	TEST_ASSERT_EQUAL(last_line["amount"], 0, "A price change wrote an amount to the ledger")
-	TEST_ASSERT(findtext(last_line["label"], "600 -> 13"), "The ledger did not record the old and new price: [last_line["label"]]")
+	TEST_ASSERT(findtext(last_line["label"], "600 cr to 13 cr"), "The ledger did not record the old and new price: [last_line["label"]]")
 
 	TEST_ASSERT_EQUAL(home.set_price(owner, "clone_imprint", 20), "Too many price changes.", "A second change inside the cooldown was accepted")
 	TEST_ASSERT_EQUAL(home.get_price("clone_imprint"), 13, "A refused change still set the price")
@@ -120,15 +120,16 @@
 	var/list/pricing = data["pricing"]
 	TEST_ASSERT_EQUAL(length(pricing["prices"]), length(GLOB.outpost_price_table), "The Pricing tab is missing price rows")
 	for(var/list/row as anything in pricing["prices"])
-		for(var/key in list("key", "label", "value", "default", "max", "available", "fee"))
+		for(var/key in list("key", "label", "value", "max", "available"))
 			TEST_ASSERT(key in row, "A price row has no [key]")
 		if(row["key"] == "clone_imprint")
 			TEST_ASSERT_EQUAL(row["value"], max_price, "The Pricing tab shows the wrong imprint price")
-			TEST_ASSERT_EQUAL(row["fee"], 0, "The owner was shown a fee for their own service")
+			TEST_ASSERT_EQUAL(home.service_price_for(owner, row["value"]), 0, "The owner would pay a fee for their own service")
 	var/list/ledger = pricing["ledger"]
 	TEST_ASSERT(islist(ledger) && length(ledger), "The owner cannot see the income ledger")
 	TEST_ASSERT(islist(pricing["totals"]), "The owner was sent no income totals")
-	TEST_ASSERT_NULL(pricing["shop"], "A claim with no shop sent a shop summary")
+	TEST_ASSERT(!("shop" in pricing), "The Pricing tab still sends a shop summary")
+	TEST_ASSERT(length(ledger) <= 10, "The Pricing tab sent more than a short ledger") // OUTPOST_SERVICE_LEDGER_SHOWN
 
 // ===== 2 AND 3. THE PRICER ROLE, DELEGATION, CLEANUP AND LIFECYCLE =====
 
@@ -164,10 +165,10 @@
 	act(steward_panel, steward, "set_price", null, list("key" = "medlab_pass", "value" = 450))
 	TEST_ASSERT_EQUAL(home.get_price("medlab_pass"), 300, "A steward set a price")
 	TEST_ASSERT_EQUAL(steward_panel.market_error, "Pricing access required.", "A steward's refused price change gave no reason")
-	act(steward_panel, steward, "dismiss_market_error")
-	TEST_ASSERT_NULL(steward_panel.market_error, "Dismissing the market error kept it")
 	act(treasurer_panel, treasurer, "set_price", null, list("key" = "medlab_pass", "value" = 450))
 	TEST_ASSERT_EQUAL(home.get_price("medlab_pass"), 450, "A treasurer could not set a price through the console")
+	act(pricer_panel, pricer, "set_price", null, list("key" = "not_a_price", "value" = 250))
+	TEST_ASSERT_EQUAL(pricer_panel.market_error, "Unknown price.", "A pricer's refused price change gave no reason")
 	act(pricer_panel, pricer, "set_price", null, list("key" = "storage_rent", "value" = 250))
 	TEST_ASSERT_EQUAL(home.get_price("storage_rent"), 250, "A pricer could not set a price through the console")
 	TEST_ASSERT_NULL(pricer_panel.market_error, "A pricer's accepted price change left an error")
@@ -480,7 +481,7 @@
 	var/list/services = owner_data["services"]
 	TEST_ASSERT_EQUAL(length(services), 4, "The Services tab does not list every installed room")
 	for(var/list/card as anything in services)
-		for(var/key in list("id", "name", "kind", "visitors_allowed", "can_toggle_visitors", "detail"))
+		for(var/key in list("id", "name", "visitors_allowed", "can_toggle_visitors", "detail"))
 			TEST_ASSERT(key in card, "A Services card has no [key]")
 		var/list/detail = card["detail"]
 		TEST_ASSERT_EQUAL(detail["kind"], "unit_test", "A Services card lost its room's detail")

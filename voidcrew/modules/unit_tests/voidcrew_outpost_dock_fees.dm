@@ -388,7 +388,7 @@
 	bay.rebuild_owner = null
 	var/list/row = home.bay_eviction_row(bay, owner)
 	TEST_ASSERT_NULL(row["evict_denial"], "The owner was refused an eviction: [row["evict_denial"]]")
-	TEST_ASSERT_EQUAL(row["evict_refund"], 500, "The row does not show the refund due")
+	TEST_ASSERT_EQUAL(home.bay_eviction_refund(ship), 500, "The eviction would not refund the fee due")
 	TEST_ASSERT(!row["evicting"], "The row shows an eviction before one started")
 
 	// F-15: evict, cancel, evict inside the window refunds once
@@ -398,7 +398,7 @@
 	row = home.bay_eviction_row(bay, owner)
 	TEST_ASSERT(row["evicting"], "The row does not show the running eviction")
 	TEST_ASSERT(row["evict_eta"] > 0 && row["evict_eta"] <= 180, "The eviction countdown is not in seconds")
-	TEST_ASSERT_EQUAL(row["evict_refund"], 0, "The row still offers a paid refund")
+	TEST_ASSERT_EQUAL(home.bay_eviction_refund(ship), 0, "The eviction still offers a paid refund")
 	TEST_ASSERT_NOTNULL(home.request_bay_eviction(owner, bay), "A second eviction started while one runs")
 	TEST_ASSERT_NULL(home.cancel_bay_eviction(owner, bay), "The owner could not cancel the eviction")
 	row = home.bay_eviction_row(bay, owner)

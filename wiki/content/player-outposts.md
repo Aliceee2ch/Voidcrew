@@ -29,7 +29,7 @@ Use the **outpost management console** to rename the outpost, set a public memo,
 
 A **Registry uplink** implant adds an **Outpost Management** action that works from anywhere, including other ships and sectors. Splice sells it for **2,800 credits**; it uses **2 neural load**. Choose any outpost you own or have management permission for. The implant grants no additional permissions, and removal or chrome failure disconnects remote access. Without it, use the physical console.
 
-You can delegate management, bank withdrawals, and construction separately. Your founding ship's crew automatically become residents with construction permission. Other residents need construction permission granted separately.
+You can delegate management (steward), bank withdrawals (treasurer), service prices (pricer) and construction (builder) separately, from the **Residents** tab. Your founding ship's crew automatically become residents with construction permission. Other residents need construction permission granted separately. When the console refuses something, it says why in chat.
 
 The **construction console** controls a building drone supplied by your local ore silo. Link the console to the silo with a multitool and deposit materials before building. You can also expand the habitat with ordinary tools.
 
@@ -74,7 +74,7 @@ Keep the relay and outpost server powered. After a power outage, restore power a
 
 ## Residents and visitors
 
-Use Outpost Management to add residents and invite players back. There is no outpost resident limit. Admission can be **open**, **password**, **approved-only**, or **closed**.
+Use Outpost Management to add residents (the **Residents** tab) and invite players back (the **Arrivals** tab, by account name). There is no outpost resident limit. Admission can be **open**, **password**, **approved-only**, or **closed**. The Arrivals tab warns when no resident cryopod is free.
 
 Eligible players choose the outpost in the join menu and arrive through an available resident cryopod with an assistant loadout. Normal respawn rules and cryo cooldowns still apply. Returning residents keep their remembered access unless it is revoked; changing the password clears remembered password access.
 
@@ -86,9 +86,11 @@ Ship docking has separate controls:
 
 Banning a ship overrides docking clearance. Use the hangar elevator to travel between the habitat and occupied visitor berths.
 
+The **Docking** tab also sells a permanent **ship bay** for 10,000 credits, 100 iron and 50 glass from the outpost silo; it needs a working hangar elevator. Ships reach it through the **Ship Bay** option at the helm, and people by elevator. When a ship in the bay asks to use the outpost silo, the request appears on its bay row. An evicted ship has three minutes to undock, and gets its docking fee back if it paid in the last 30 minutes.
+
 ## Advertising
 
-A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships, adds its memo and coordinates to [mission boards](missions.md), and marks it on helm charts. The panel shows why a purchase is refused.
+A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships, adds its memo and coordinates to [mission boards](missions.md), and marks it on helm charts. A refused purchase says why in chat.
 
 ## Raiding and siege
 

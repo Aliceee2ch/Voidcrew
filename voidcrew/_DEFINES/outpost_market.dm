@@ -12,6 +12,8 @@
 
 /// Income ledger lines kept per outpost; the treasury's own history keeps 20
 #define OUTPOST_SERVICE_LEDGER_MAX 50
+/// Ledger lines the management console's Pricing tab shows, newest first
+#define OUTPOST_SERVICE_LEDGER_SHOWN 10
 /// One price change per user this often
 #define OUTPOST_PRICE_SET_COOLDOWN (1 SECONDS)
 

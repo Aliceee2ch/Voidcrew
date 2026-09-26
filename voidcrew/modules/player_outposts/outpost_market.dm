@@ -84,7 +84,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 	outpost_prices[key] = value
 	price_set_times[setter] = world.time
 	log_game("PLAYER OUTPOST: [key_name(user)] set the [row["label"]] price at '[name]' from [old_value] to [value] cr")
-	add_service_ledger(key, "Price: [row["label"]] [old_value] -> [value] by [user.real_name]", user.real_name, null, 0)
+	add_service_ledger(key, "[row["label"]]: [old_value] cr to [value] cr", user.real_name, null, 0)
 	return null
 
 /// Every price back to its default (abandonment)
@@ -296,7 +296,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 // ===== MANAGEMENT CONSOLE (Pricing and Services tabs, bay eviction) =====
 
 /datum/player_outpost_management_ui
-	/// The last refusal from a pricing, service room or eviction action
+	/// Why the last pricing, service room or eviction action was refused, or null. The user is told in chat.
 	var/market_error
 
 /**
@@ -309,7 +309,6 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 	var/staff = can_view_income || outpost.is_current_treasury_user(user)
 	data["can_view_income"] = can_view_income
 	data["playtest_visitor"] = !!(outpost.playtest_visitor_ckey && user?.ckey == outpost.playtest_visitor_ckey)
-	data["market_error"] = market_error
 	data["owner_crews"] = can_manage ? outpost.owner_crew_ui_data() : list()
 	data["pricing"] = outpost.pricing_ui_data(user, can_view_income)
 	data["services"] = staff ? service_rooms_ui_data(user, can_manage) : list()
@@ -324,7 +323,6 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		services += list(list(
 			"id" = room.id,
 			"name" = room.name,
-			"kind" = detail ? detail["kind"] : null,
 			"visitors_allowed" = room.visitors_allowed,
 			"can_toggle_visitors" = can_manage && room.visitors_toggleable,
 			"detail" = detail,
@@ -336,19 +334,20 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 	row["evict_denial"] = "Not available."
 	row["evicting"] = FALSE
 	row["evict_eta"] = 0
-	row["evict_refund"] = 0
 	var/list/eviction = outpost.bay_eviction_row(bay, user)
 	for(var/key in eviction)
 		row[key] = eviction[key]
 
 /**
  * Pricing, Services tab and bay eviction actions. Each checks its own permission, so this runs
- * before the console's management gate. TRUE when the action was one of these.
+ * before the console's management gate. TRUE when the action was one of these. A refusal is kept
+ * in market_error and told to the user in chat.
  */
 /datum/player_outpost_management_ui/proc/market_action(action, list/params, mob/living/user)
+	if(!(action in list("set_price", "set_room_visitors", "service_act", "evict_bay_ship", "cancel_bay_eviction")))
+		return FALSE
+	market_error = null
 	switch(action)
-		if("dismiss_market_error")
-			market_error = null
 		if("set_price")
 			market_error = outpost.set_price(user, params["key"], params["value"])
 		if("set_room_visitors")
@@ -360,51 +359,47 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 			if(!room || !istext(service_action))
 				market_error = "No such room."
 			else
-				market_error = null
 				room.service_ui_act(user, service_action, params)
 		if("evict_bay_ship", "cancel_bay_eviction")
 			var/datum/outpost_berth/ship_bay/bay = locate(params["ref"]) in outpost.bay_berths
 			if(!outpost.is_current_management_user(user))
-				market_error = "Management access required."
+				market_error = "Not authorized."
 			else if(!bay)
 				market_error = "No such bay."
 			else if(action == "evict_bay_ship")
 				market_error = outpost.request_bay_eviction(user, bay)
 			else
 				market_error = outpost.cancel_bay_eviction(user, bay)
-		else
-			return FALSE
+	if(market_error)
+		to_chat(user, span_warning(market_error))
 	return TRUE
 
-/// The Pricing tab: every price with the viewer's own fee, the shop summary, and income for those who may see it
+/// The Pricing tab: every price, and income for those who may see it
 /obj/structure/overmap/dynamic/player_outpost/proc/pricing_ui_data(mob/user, can_view_income)
 	var/list/prices = list()
 	for(var/key in GLOB.outpost_price_table)
 		var/list/row = GLOB.outpost_price_table[key]
-		var/value = get_price(key)
 		prices += list(list(
 			"key" = key,
 			"label" = row["label"],
-			"value" = value,
-			"default" = row["default"],
+			"value" = get_price(key),
 			"max" = row["max"],
 			"available" = price_available(key),
-			// What this viewer would pay: 0 for members. charge_service() compares against it.
-			"fee" = service_price_for(user, value),
 		))
-	var/list/shop
-	var/datum/outpost_upgrade/service/shop_room = service_upgrade(OUTPOST_SERVICE_SHOP)
-	if(shop_room)
-		var/list/summary = shop_room.pricing_summary()
-		shop = islist(summary) ? summary.Copy() : list()
-		shop["installed"] = TRUE
 	var/list/ledger
 	var/list/totals
 	if(can_view_income)
 		ledger = list()
-		// Newest first
-		for(var/index in length(service_ledger) to 1 step -1)
-			ledger += list(service_ledger[index])
+		// Newest first, and only the last few
+		var/oldest = max(1, length(service_ledger) - OUTPOST_SERVICE_LEDGER_SHOWN + 1)
+		for(var/index in length(service_ledger) to oldest step -1)
+			var/list/line = service_ledger[index]
+			ledger += list(list(
+				"time" = line["time"],
+				"label" = line["label"],
+				"who" = line["payer"] || line["account"],
+				"amount" = line["amount"],
+			))
 		totals = list()
 		for(var/service_key in service_totals)
 			var/list/total = service_totals[service_key]
@@ -413,9 +408,8 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 				"service" = service_key,
 				"label" = price_row ? price_row["label"] : (service_key == OUTPOST_SERVICE_SHOP ? "Shop sales" : service_key),
 				"total" = total["total"],
-				"count" = total["count"],
 			))
-	return list("prices" = prices, "shop" = shop, "ledger" = ledger, "totals" = totals)
+	return list("prices" = prices, "ledger" = ledger, "totals" = totals)
 
 /// The ship crews the owner's character belongs to. Everyone on them is a member here.
 /obj/structure/overmap/dynamic/player_outpost/proc/owner_crew_ui_data()
@@ -427,11 +421,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		if(QDELETED(team))
 			continue
 		var/obj/structure/overmap/ship/ship = team.ship
-		crews += list(list(
-			"name" = ship ? ship.name : team.name,
-			"ref" = ship ? REF(ship) : null,
-			"members" = length(team.members),
-		))
+		crews += ship ? ship.name : team.name
 	return crews
 
 // ===== OUTPOST MANIPULATOR (admin) =====

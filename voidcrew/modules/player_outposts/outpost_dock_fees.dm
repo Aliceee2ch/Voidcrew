@@ -462,7 +462,6 @@
 		"evict_denial" = bay_eviction_denial(user, bay),
 		"evicting" = !!eviction,
 		"evict_eta" = eta,
-		"evict_refund" = istype(bay) && bay.is_ship_present() ? bay_eviction_refund(bay.ship) : 0,
 	)
 
 /// Orders the ship in `bay` out. Null when started, else a refusal.
@@ -491,6 +490,7 @@
 	)
 	watch_bay_ship(ship)
 	log_game("[key_name(user)] evicted [ship.name] from the ship bay at [name][refunded ? ", refunding its [refunded] cr docking fee" : ""]")
+	to_chat(user, span_notice("[ship.name] ordered out of the ship bay.[refunded ? " [refunded] cr refunded." : ""]"))
 	ship.ship_notify("Bay clearance revoked by [name]. Undock within [DisplayTimeText(OUTPOST_BAY_EVICTION_GRACE)]. Crew ashore stay at the outpost.[refunded ? " Your [refunded] cr docking fee was refunded." : ""]", "DOCKING", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 40)
 	management_console?.on_dock_requests_changed()
 	return null
@@ -506,6 +506,7 @@
 		return "No eviction is under way."
 	stop_bay_eviction(ship_ref)
 	log_game("[key_name(user)] cancelled the eviction of [bay.ship.name] from the ship bay at [name]")
+	to_chat(user, span_notice("[bay.ship.name] may stay."))
 	bay.ship.ship_notify("[name] restored your bay clearance.", "DOCKING", SHIP_NOTIFY_NOTICE)
 	management_console?.on_dock_requests_changed()
 	return null

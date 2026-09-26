@@ -117,8 +117,6 @@ $muted: #969588;
 .Outpost__dot { flex: 0 0 5px; height: 5px; border-radius: 50%; background: #645f53; }
 .Outpost__dot--online { background: #8dbb79; box-shadow: 0 0 6px #63945280; }
 .Outpost__quiet { padding: 10px 0; color: $muted; font-size: 11px; }
-.Outpost__research-error { margin-top: 10px; color: #e7a296; font-size: 11px; }
-.Outpost__market-error { display: flex; align-items: center; gap: 6px; margin: 4px 0 6px; }
 .Outpost__research-status { flex: 0 0 auto; color: $muted; font-size: 10px; text-align: right; }
 .Outpost__empty {
   display: flex;
@@ -147,15 +145,11 @@ $muted: #969588;
 .Outpost__memo { align-items: flex-start; }
 .Outpost__switches > .Button { flex: 1; justify-content: center; font-size: 11px; padding: 0 6px; }
 .Outpost__password { margin-top: 8px; }
-.Outpost__limit { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 12px; small { color: $muted; } }
 .Outpost__arrival { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 11px; color: $amber; }
-.Outpost__arrival--ready { color: #9fbd85; }
 .Outpost__reset { margin-top: 18px !important; }
 .Outpost__count { margin-left: 6px; padding: 1px 5px; background: rgba($ice, 0.2); color: $ice; border-radius: 2px; }
-.Outpost__live { margin-left: auto; color: #9fbd85; font-size: 9px; letter-spacing: 1px; }
 .Outpost__footer-row { display: flex; align-items: center; justify-content: space-between; flex: 1; gap: 10px; padding-top: 8px; }
 .Outpost__readout { display: flex; flex-direction: column; gap: 3px; strong { color: $amber; font: 18px 'Consolas', monospace; } small { color: $muted; font-size: 10px; } }
-.Outpost__readout .Outpost__broadcast-error { color: $amber; }
 .Outpost__ownership { display: flex; align-items: center; flex: 1; min-width: 0; gap: 6px; padding-top: 8px; > .Dropdown { flex: 1; min-width: 0; } }
 // Marketplace: Pricing and Services tabs, bay eviction, visitor billing banner.
 .Outpost__banner {

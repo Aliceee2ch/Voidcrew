@@ -52,7 +52,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 
 /obj/structure/overmap/dynamic/player_outpost/proc/ship_bay_install_denial(mob/user)
 	if(!is_current_management_user(user) || !can_spend(user))
-		return "Management and treasury access required."
+		return "Not authorized."
 	var/denial = ship_bay_setup_denial()
 	if(denial)
 		return denial
@@ -60,9 +60,9 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		return "Insufficient outpost funds."
 	var/obj/machinery/ore_silo/silo = ship_bay_silo()
 	if(!silo)
-		return "Select an outpost material silo in Docking."
+		return "No silo selected."
 	if(!silo.materials?.has_materials(ship_bay_material_cost()))
-		return "The outpost silo needs 100 iron sheets and 50 glass sheets."
+		return "Silo short of iron or glass."
 	return null
 
 /// Structural requirements shared by paid installation and administrative grants.
@@ -70,7 +70,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	if(ship_bay_installed || ship_bay_installing)
 		return "Ship bay already installed or being prepared."
 	if(loading || !loaded || !has_hangar_elevator())
-		return "An operational outpost elevator is required."
+		return "Needs a working elevator."
 	return null
 
 /// Load the permanent interior before granting the upgrade or taking payment.
@@ -364,7 +364,7 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 		return TRUE
 	if(!silo_requested_at)
 		silo_requested_at = world.time || 1
-		home.notify_owner("[ship.name] requests outpost materials in Ship Bay [bay_number]. Review the request in Docking.", "SHIP BAY")
+		home.notify_owner("[ship.name] requests outpost materials in Ship Bay [bay_number].", "SHIP BAY")
 	return TRUE
 
 /datum/outpost_berth/ship_bay/proc/approve_silo(mob/user)

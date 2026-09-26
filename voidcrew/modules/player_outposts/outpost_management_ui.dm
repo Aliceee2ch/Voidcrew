@@ -13,8 +13,9 @@
 	var/datum/weakref/console_ref
 	var/datum/weakref/uplink_ref
 	var/turf/console_turf
-	var/advert_error
+	/// Why the last research invitation was refused, or null. The user is told in chat.
 	var/research_error
+	/// Why the last ship bay action was refused, or null. The user is told in chat.
 	var/ship_bay_error
 
 /datum/player_outpost_management_ui/New(obj/structure/overmap/dynamic/player_outpost/target, mob/user, obj/machinery/computer/player_outpost_management/console, obj/item/organ/cyberimp/cyberware/registry_uplink/uplink)
@@ -99,17 +100,14 @@
 	var/list/silos = list()
 	for(var/obj/machinery/ore_silo/silo as anything in outpost.service_silos())
 		var/area/silo_area = get_area(silo)
-		silos += list(list("ref" = REF(silo), "name" = "[silo.name] ([silo_area.name], [silo.x], [silo.y])"))
+		silos += list(list("ref" = REF(silo), "name" = "[silo.name] ([silo_area.name])"))
 	data["service_silos"] = silos
-	data["ship_bay_materials"] = outpost_material_data(outpost.ship_bay_material_cost(), selected_silo)
-	data["raidable"] = outpost.raidable
 	data["dock_mode"] = outpost.dock_mode
 	data["rename_cooldown"] = COOLDOWN_TIMELEFT(outpost, rename_cooldown) / 10
 	data["advert_cost"] = OUTPOST_ADVERT_COST
 	data["advert_cooldown"] = COOLDOWN_TIMELEFT(outpost, advert_cooldown) / 10
 	data["advert_remaining"] = outpost.current_advert ? outpost.current_advert.get_remaining_seconds() : 0
 	data["advert_denial"] = advert_denial(user)
-	data["advert_error"] = advert_error
 
 	var/list/requests = list()
 	for(var/obj/structure/overmap/ship/requester in outpost.pending_dock_requests)
@@ -132,7 +130,6 @@
 		data["builders"] = list()
 		data["candidates"] = list()
 		data["resident_mode"] = null
-		data["resident_active"] = 0
 		data["arrival_available"] = FALSE
 		data["resident_invites"] = list()
 		data["resident_blocked"] = list()
@@ -140,17 +137,15 @@
 		data["research_servers"] = list()
 		data["research_ships"] = list()
 		data["research_connections"] = list()
-	data["research_error"] = research_error
 	data["ship_bay_installed"] = outpost.ship_bay_installed
 	data["ship_bay_cost"] = OUTPOST_SHIP_BAY_COST
 	data["ship_bay_denial"] = outpost.ship_bay_install_denial(user)
-	data["ship_bay_error"] = ship_bay_error
 	var/list/bays = list()
 	for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
 		if(!bay)
 			continue
 		bay.reconcile_silo()
-		var/list/bay_row = list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "arrived" = bay.is_ship_present(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo)
+		var/list/bay_row = list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo)
 		bay_eviction_ui_data(bay, user, bay_row)
 		bays += list(bay_row)
 	data["ship_bays"] = bays
@@ -170,7 +165,6 @@
 	data["candidates"] = candidates
 
 	data["resident_mode"] = outpost.resident_mode
-	data["resident_active"] = outpost.active_resident_count()
 	data["arrival_available"] = !!outpost.available_resident_pod()
 	data["resident_invites"] = outpost.invited_residents.Copy()
 	data["resident_blocked"] = outpost.blocked_residents.Copy()
@@ -220,8 +214,6 @@
 		return TRUE
 	if(!outpost.is_current_management_user(user))
 		return
-	// Any other accepted console action clears a stale market refusal
-	market_error = null
 	if((action in list("transfer", "abandon", "add_builder", "remove_builder")) && !outpost.is_owner(user))
 		return
 	if(action in list("resident_mode", "resident_password", "invite_resident", "block_resident", "unblock_resident", "reset_resident_access", "add_resident", "remove_resident", "delegate"))
@@ -232,6 +224,8 @@
 	switch(action)
 		if("install_ship_bay")
 			ship_bay_error = outpost.install_ship_bay(user)
+			if(ship_bay_error)
+				to_chat(user, span_warning(ship_bay_error))
 		if("approve_bay_silo", "revoke_bay_silo")
 			if(!outpost.can_spend(user))
 				return
@@ -240,6 +234,8 @@
 				return
 			if(action == "approve_bay_silo")
 				ship_bay_error = bay.approve_silo(user) ? null : "Material request is no longer available."
+				if(ship_bay_error)
+					to_chat(user, span_warning(ship_bay_error))
 			else
 				bay.revoke_silo()
 		if("invite_research")
@@ -252,6 +248,8 @@
 				research_error = "Research server unavailable"
 			else if(!outpost.propose_research_link(user, server, ship, server.source_code_hdd))
 				research_error = "Invitation refused"
+			if(research_error)
+				to_chat(user, span_warning("[research_error]."))
 		if("revoke_research")
 			research_error = null
 			var/datum/outpost_research_link/link = locate(params["ref"]) in outpost.research_links
@@ -309,7 +307,7 @@
 				return
 			var/datum/mind/original_recipient_mind = recipient.mind
 			var/original_recipient_ckey = recipient.ckey
-			if(!confirm_ownership_action(user, "Transfer ownership of [outpost.name] to [recipient.real_name]? This cannot be undone.", "Transfer Ownership", "Transfer"))
+			if(!confirm_ownership_action(user, "Transfer [outpost.name] to [recipient.real_name]?", "Transfer Ownership", "Transfer"))
 				return
 			if(!ownership_prompt_valid(original_outpost, user, ui) || !original_outpost.is_management_candidate(recipient) || recipient.mind != original_recipient_mind || recipient.ckey != original_recipient_ckey)
 				return
@@ -317,7 +315,7 @@
 				to_chat(user, span_warning("Ownership transfer failed."))
 		if("abandon")
 			var/obj/structure/overmap/dynamic/player_outpost/original_outpost = outpost
-			if(!confirm_ownership_action(user, "Abandon [outpost.name]? Anyone visiting will be able to claim it.", "Abandon Outpost", "Abandon"))
+			if(!confirm_ownership_action(user, "Abandon [outpost.name]?", "Abandon Outpost", "Abandon"))
 				return
 			if(ownership_prompt_valid(original_outpost, user, ui))
 				original_outpost.abandon(user)
@@ -333,25 +331,23 @@
 	if(outpost.current_advert)
 		return "Broadcast already live"
 	if(!outpost.can_spend(user))
-		return "Treasury permission required"
+		return "Not authorized"
 	if(!COOLDOWN_FINISHED(outpost, advert_cooldown))
-		return "Ready in [CEILING(COOLDOWN_TIMELEFT(outpost, advert_cooldown) / 10, 1)]s"
+		return "Transmitter cooling down"
 	if(!outpost.treasury)
-		return "Outpost bank unavailable"
+		return "No bank link"
 	if(!outpost.treasury.has_money(OUTPOST_ADVERT_COST))
 		return "Insufficient outpost funds"
 	return null
 
 /datum/player_outpost_management_ui/proc/buy_advert(mob/living/user)
-	advert_error = null
 	var/denial = advert_denial(user)
 	if(denial)
 		to_chat(user, span_warning("Broadcast rejected: [denial]."))
 		return FALSE
 	var/datum/bank_account/account = outpost.treasury
 	if(!account.adjust_money(-OUTPOST_ADVERT_COST, "Paid to Colonial Registry by [user.ckey] for broadcast: [outpost.name]"))
-		advert_error = "Payment declined"
-		to_chat(user, span_warning("Broadcast rejected: [advert_error]."))
+		to_chat(user, span_warning("Broadcast rejected: Payment declined."))
 		return FALSE
 	COOLDOWN_START(outpost, advert_cooldown, OUTPOST_ADVERT_COOLDOWN)
 	outpost.current_advert = new /datum/outpost_advert(outpost)

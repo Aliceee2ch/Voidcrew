@@ -22,8 +22,8 @@
 /// Pause after one ability before the next may start, so telegraphs never overlap
 #define BOUNTY_BOSS_ABILITY_GAP_MIN (2 SECONDS)
 #define BOUNTY_BOSS_ABILITY_GAP_MAX (4 SECONDS)
-/// TRUE: never the same ability twice in a row, even when it is the only one ready (the hoarfrost rotation). FALSE: skip the last one only while another is ready.
-#define BOUNTY_BOSS_STRICT_ROTATION TRUE
+/// FALSE (set by the coordinator, matching the balance sim): skip the last ability only while another is ready, so a kit's main ability can repeat when its other one is on cooldown or not worth using. TRUE: never the same ability twice in a row, even when it is the only one ready (the hoarfrost rotation).
+#define BOUNTY_BOSS_STRICT_ROTATION FALSE
 /// Interior walls and doors one boss may break in its fight, all abilities together
 #define BOUNTY_BOSS_WALL_BUDGET 2
 /// Structures (tables, chairs, windows, grilles, doors, walls) one use of an ability may damage (P4)

@@ -336,8 +336,9 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 // ----- abilities -----
 
 /**
- * The ability to use on `target` now, or null: ready, worth it, and never the one it used last
- * (the hoarfrost rotation; BOUNTY_BOSS_STRICT_ROTATION).
+ * The ability to use on `target` now, or null: ready and worth it, and not the one it used last
+ * while another is ready. With BOUNTY_BOSS_STRICT_ROTATION (boss_strict_rotation) the last one is
+ * never picked again straight away, even when it is the only one ready.
  */
 /mob/living/basic/bounty_criminal/boss/proc/boss_choose_ability(atom/target)
 	if(QDELETED(target) || !boss_can_use_ability())

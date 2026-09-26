@@ -453,10 +453,10 @@
 	return "A bandolier of grenades is slung across [p_their()] chest."
 
 /**
- * It keeps BOUNTY_DEMOLITIONIST_KEEP_MIN to _MAX tiles from its target while it has something to
- * throw next. It fights hand to hand when someone is right on it, or when the rotation leaves it
- * nothing to throw (its last ability was the grenade and no breach is possible), rather than
- * standing idle.
+ * It keeps BOUNTY_DEMOLITIONIST_KEEP_MIN to _MAX tiles from its target while it has something it
+ * could throw from there. It fights hand to hand when someone is right on it, or when nothing is
+ * ready for this target (out of its sight with no breach possible, or the strict rotation ruling
+ * out the grenade), rather than standing idle.
  */
 /mob/living/basic/bounty_criminal/boss/demolitionist/boss_engage_plan(datum/ai_controller/controller, atom/target)
 	if(!isliving(target))
@@ -473,13 +473,20 @@
 	// In its band: it waits for the next throw.
 	return TRUE
 
-/// Whether the rotation leaves it an ability that could be used on `target` from here, cooldowns aside
+/**
+ * Whether the rotation leaves it an ability it could use on `target` from its band. Cooldowns are
+ * ignored on purpose, so it holds its range between grenades instead of stepping in and out.
+ */
 /mob/living/basic/bounty_criminal/boss/demolitionist/proc/boss_has_next_throw(atom/target)
 	for(var/datum/action/cooldown/mob_cooldown/bounty_boss/ability as anything in boss_abilities)
 		if(QDELETED(ability) || (boss_strict_rotation && ability.type == boss_last_ability))
 			continue
-		// Ranged throws count from anywhere in the band; a breach only when one is possible now.
-		if(istype(ability, /datum/action/cooldown/mob_cooldown/bounty_boss/grenade) || ability.worth_using(target))
+		// A grenade needs the target in sight; its range is checked by the band itself. A breach only when one is possible now.
+		if(istype(ability, /datum/action/cooldown/mob_cooldown/bounty_boss/grenade))
+			if(can_see(src, target, get_dist(src, target)))
+				return TRUE
+			continue
+		if(ability.worth_using(target))
 			return TRUE
 	return FALSE
 

@@ -274,15 +274,28 @@
 	var/datum/action/cooldown/mob_cooldown/bounty_boss/next = pyro.boss_choose_ability(near)
 	TEST_ASSERT(next && next.type != flamer.type, "The flamer came up again straight after the flamer")
 
-	// Only the last one worth using: strictly, nothing (the hoarfrost rotation).
+	// The rotation as shipped (BOUNTY_BOSS_STRICT_ROTATION FALSE): the last ability repeats only when no other is off cooldown.
+	TEST_ASSERT(!pyro.boss_strict_rotation, "The shipped rotation is strict")
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/molotov/molotov = ability_of(pyro, /datum/action/cooldown/mob_cooldown/bounty_boss/molotov)
+	ready(pyro)
+	pyro.boss_last_ability = flamer.type
+	molotov.next_use_time = world.time + 100 SECONDS
+	var/datum/action/cooldown/mob_cooldown/bounty_boss/again = pyro.boss_choose_ability(near)
+	TEST_ASSERT(again && again.type == flamer.type, "The flamer didn't repeat with the molotov on cooldown")
+	molotov.next_use_time = 0
+	for(var/i in 1 to 10)
+		var/datum/action/cooldown/mob_cooldown/bounty_boss/other = pyro.boss_choose_ability(near)
+		TEST_ASSERT(other && other.type == molotov.type, "The flamer repeated while the molotov was off cooldown")
+
+	// Only one ability worth using: it repeats; strictly, nothing (the hoarfrost rotation).
 	var/mob/living/basic/bounty_criminal/boss/juggernaut/boss = allocate(/mob/living/basic/bounty_criminal/boss/juggernaut, spot(0, 3))
 	var/mob/living/carbon/human/consistent/far = hunter_at(spot(3, 3))
 	var/datum/action/cooldown/mob_cooldown/bounty_boss/first = boss.boss_choose_ability(far)
 	TEST_ASSERT(istype(first, /datum/action/cooldown/mob_cooldown/bounty_boss/charge), "The Juggernaut didn't choose to charge someone three tiles off")
 	boss.boss_last_ability = first.type
-	TEST_ASSERT_NULL(boss.boss_choose_ability(far), "The Juggernaut chose the same ability twice in a row")
-	boss.boss_strict_rotation = FALSE
-	TEST_ASSERT_NOTNULL(boss.boss_choose_ability(far), "The relaxed rotation won't reuse the only ability ready")
+	TEST_ASSERT_NOTNULL(boss.boss_choose_ability(far), "The rotation won't reuse the only ability ready")
+	boss.boss_strict_rotation = TRUE
+	TEST_ASSERT_NULL(boss.boss_choose_ability(far), "The strict rotation chose the same ability twice in a row")
 
 // ===== SUMMONED THINGS CLEAN UP =====
 

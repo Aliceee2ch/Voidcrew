@@ -326,7 +326,7 @@
 	return /datum/outfit/bounty_boss/pyromaniac
 
 /mob/living/basic/bounty_criminal/boss/pyromaniac/boss_gear_text()
-	return "[p_Their()] fire suit is scorched black. Fire won't touch [p_them()], but a laser would."
+	return "[p_Their()] fire suit is scorched black."
 
 /datum/outfit/bounty_boss/pyromaniac
 	name = "Bounty mini-boss: Pyromaniac"
@@ -1117,7 +1117,7 @@
 	return /datum/outfit/bounty_boss/heavy
 
 /mob/living/basic/bounty_criminal/boss/heavy/boss_gear_text()
-	return "[p_They()] [p_are()] in heavy armour. Lasers would do better than bullets."
+	return "[p_They()] [p_are()] in heavy armour."
 
 /datum/outfit/bounty_boss/heavy
 	name = "Bounty mini-boss: Heavy"

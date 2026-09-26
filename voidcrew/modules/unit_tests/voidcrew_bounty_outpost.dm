@@ -579,6 +579,10 @@
 	if(length(lines))
 		TEST_ASSERT_EQUAL(length(feature_clues), 1, "The traders could give [length(feature_clues)] feature clues, not only the one off the warrant")
 		TEST_ASSERT_EQUAL(feature_clues[1], length(lines), "The traders' feature clue is one the warrant already lists")
+		// Said the way a person says it, never the examine label ("Scar: ...")
+		var/feature_words = posting.outpost_clue_words(list("feature", length(lines)))
+		TEST_ASSERT(findtext(feature_words, "I remember one thing about them. "), "The feature clue reads: [feature_words]")
+		TEST_ASSERT(!findtext(feature_words, ":"), "The feature clue reads out the examine label: [feature_words]")
 	else
 		TEST_ASSERT(!length(feature_clues), "A fugitive with no features has a feature clue")
 
@@ -602,8 +606,12 @@
 	var/list/listed = ids[public_posting.record.id]
 	TEST_ASSERT_NOTNULL(listed, "The board does not list a public posting")
 	TEST_ASSERT_EQUAL(listed["reward"], 1234, "The board shows the wrong reward")
-	TEST_ASSERT_EQUAL(listed["tier"], "Petty", "The board shows the wrong tier")
-	TEST_ASSERT(findtext(listed["place"], outpost.name), "The board does not say where they were seen: [listed["place"]]")
+	TEST_ASSERT_EQUAL(listed["tier_level"], public_posting.record.tier, "The board shows the wrong tier")
+	TEST_ASSERT_EQUAL(listed["terms"], "Wanted alive", "The board doesn't say how they're wanted")
+	// A poster, not the rules: no clock, no kill-only flag (2026-09-26)
+	for(var/key in list("time_left", "kill_only", "here", "tier"))
+		TEST_ASSERT(!(key in listed), "The board still sends [key]")
+	TEST_ASSERT_EQUAL(listed["place"], "Seen on this concourse", "The board does not say where they were seen: [listed["place"]]")
 	TEST_ASSERT(!ids[private_posting.record.id], "The board lists a private offer")
 	TEST_ASSERT(!ids[closed_posting.record.id], "The board lists a closed posting")
 
@@ -762,7 +770,7 @@
 	near.outpost = outpost
 	TEST_ASSERT_EQUAL(posting.outpost_trader_reacts(fugitive), near, "The nearest trader didn't react to the fugitive being exposed")
 
-/// The wanted board: the ship card's own place words (a lair's real name, BUG-5), "seen on this concourse" for a fugitive here (P11), and the vouchers and WANTED: DEAD (BUG-13)
+/// The wanted board: the ship card's own place words (a lair's real name, BUG-5), "Seen on this concourse" for a fugitive here (P11), and the vouchers and "Wanted dead" (BUG-13)
 /datum/unit_test/voidcrew_bounty_outpost/board_card
 
 /datum/unit_test/voidcrew_bounty_outpost/board_card/Run()
@@ -787,11 +795,11 @@
 	var/list/here_entry = entries[here.record.id]
 	var/list/elsewhere_entry = entries[elsewhere.record.id]
 	var/list/lair_entry = entries[lair.record.id]
-	TEST_ASSERT(here_entry?["here"], "A fugitive on this concourse isn't marked as seen here")
-	TEST_ASSERT(!elsewhere_entry?["here"], "A fugitive at another outpost is marked as seen here")
+	TEST_ASSERT_EQUAL(here_entry?["place"], "Seen on this concourse", "A fugitive on this concourse isn't marked as seen here: [here_entry?["place"]]")
+	TEST_ASSERT(elsewhere_entry?["place"] != "Seen on this concourse", "A fugitive at another outpost is marked as seen here")
 	TEST_ASSERT_EQUAL(here_entry?["vouchers"], 2, "The board doesn't show the vouchers")
-	TEST_ASSERT(!here_entry?["kill_only"], "A live bounty reads as kill only")
-	TEST_ASSERT(lair_entry?["kill_only"], "A kill-only bounty doesn't read WANTED: DEAD")
+	TEST_ASSERT_EQUAL(here_entry?["terms"], "Wanted alive", "A live bounty reads as [here_entry?["terms"]]")
+	TEST_ASSERT_EQUAL(lair_entry?["terms"], "Wanted dead", "A kill-only bounty reads as [lair_entry?["terms"]]")
 	TEST_ASSERT(findtext(lair_entry?["place"], "Club Test"), "The board doesn't name the lair: [lair_entry?["place"]]")
 	TEST_ASSERT(!findtext(lair_entry?["place"], "encrypted signal"), "The board calls a lair an encrypted signal")
 	lair.close("admin") // BOUNTY_CLOSE_ADMIN

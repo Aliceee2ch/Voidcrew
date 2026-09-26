@@ -47,7 +47,7 @@
 		return "no hands free"
 	// Standing and free, it fights or runs; it has to be put down, stunned or talked into giving up first (C2).
 	if(capture_state() == BOUNTY_STATE_FREE)
-		return "put [p_them()] down first"
+		return "[p_they()] pull[p_s()] away!"
 	return null
 
 /// Restraints used on it: refused with a balloon alert (and a free one is alerted), or put on in the background

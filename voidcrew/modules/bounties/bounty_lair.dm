@@ -43,7 +43,7 @@
 
 /obj/item/bounty_proof/trophy
 	name = "trophy"
-	desc = "Proof of a kill for a kill-only bounty. Put it on your ship's mission pad and press Turn In on the mission board for the full reward."
+	desc = "Proof of a kill."
 	w_class = WEIGHT_CLASS_SMALL
 
 /obj/item/bounty_proof/trophy/lich
@@ -89,11 +89,6 @@
 /datum/criminal_bounty/kill_only/board_share_for(state, worst_state)
 	return state == BOUNTY_STATE_DEAD ? 100 : 0
 
-/// The card's figures: the whole value, on the kill
-/datum/criminal_bounty/kill_only/board_share_amounts()
-	var/list/full = board_payout(100)
-	return list(full[1], 0, full[1])
-
 /// The pad takes its trophy only: the one it dropped, or any trophy bound to it, lying on the pad's own tile
 /datum/criminal_bounty/kill_only/board_target_on_pad(obj/machinery/mission_pad/pad)
 	if(!pad || !isturf(pad.loc))
@@ -108,7 +103,7 @@
 
 /datum/criminal_bounty/kill_only/board_target_refusal(obj/machinery/mission_pad/pad, list/found)
 	if(!board_target_on_pad(pad))
-		return "put the trophy on the pad"
+		return "no trophy on the pad"
 	return ..()
 
 /datum/criminal_bounty/kill_only/board_pad_preview(obj/structure/overmap/ship/ship, obj/machinery/mission_pad/pad)
@@ -144,7 +139,6 @@
 	lines += "<b>Species:</b> [board_species_name()]. <b>Sex:</b> [board_sex_name()].<br>"
 	if(record?.crime)
 		lines += "<b>Wanted for:</b> [record.crime].<br>"
-	lines += "<b>[board_terms()]</b>.<br>"
 	lines += "[board_place_text()], [board_zone_name()].<br>"
 	lines += "<b>Reward:</b> [board_reward_text()].<br>"
 	return lines.Join("\n")
@@ -203,7 +197,7 @@
 
 /// Tells every player crew a kill-only bounty is up
 /datum/criminal_bounty/kill_only/proc/kill_announce()
-	var/message = "WANTED: DEAD. [record?.name || "Unknown"], [lowertext(bounty_tier_name(record?.tier))]. [board_place_text()], [board_zone_name()]. The bounty is on your mission board."
+	var/message = "WANTED: DEAD. [record?.name || "Unknown"]. [board_place_text()], [board_zone_name()]."
 	for(var/obj/structure/overmap/ship/ship as anything in SSovermap.simulated_ships)
 		if(QDELETED(ship) || ship.abandoned || istype(ship, /obj/structure/overmap/ship/npc))
 			continue
@@ -906,7 +900,7 @@
 	mugshot_icon = 'icons/mob/rideables/mecha.dmi'
 	mugshot_state = "mauler"
 	goon_type = /mob/living/basic/trooper/russian/mafia
-	gate_message = "With both lieutenants down, the garage door grinds open."
+	gate_message = "The garage door grinds open."
 
 /**
  * Posts a `kind` lair now: its template (or `template`), on a free overmap square in zone band `band` (or a yellow or

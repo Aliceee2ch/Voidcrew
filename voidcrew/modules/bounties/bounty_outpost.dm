@@ -244,7 +244,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 	var/where = outpost ? outpost.name : "the outpost"
 	log_game("BOUNTY: [record?.name] slipped away from [where].")
 	// Detached first (outpost_release_site()), so relist() never deletes them mid-walk. P5 shows the
-	// reason as "WANTED: <name>: <reason>."
+	// reason as "WANTED: <name> <reason>."
 	outpost_release_site()
 	relist("slipped away from [where]")
 	return TRUE
@@ -481,7 +481,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 		return
 	log_game("BOUNTY: [key_name(user)] showed [record?.name]'s warrant to the wrong person at [AREACOORD(target)].")
 	if(raise_alert(BOUNTY_ALERT_WRONG_WARRANT) && alert < BOUNTY_OUTPOST_ALERT_SLIP && status == BOUNTY_POSTING_OPEN)
-		to_chat(user, span_warning("Heads turn. One more mistake and whoever you're after will slip away."))
+		to_chat(user, span_warning("Heads turn your way."))
 
 /**
  * Someone showed them a warrant that isn't theirs: they protest, and show a docking pass that
@@ -818,7 +818,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 	deliberate_hit(user)
 	if(owner.capture_state() != BOUNTY_STATE_FREE)
 		return NONE
-	owner.balloon_alert(user, "put [owner.p_them()] down first")
+	owner.balloon_alert(user, "[owner.p_they()] pull[owner.p_s()] away!")
 	return ITEM_INTERACT_BLOCKING
 
 /datum/component/bounty_outpost_blend/proc/on_item_attack(datum/source, obj/item/weapon, mob/living/attacker, list/modifiers, list/attack_modifiers)
@@ -1234,11 +1234,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 		if(BOUNTY_CLUE_HAIR)
 			return bounty_outpost_hair_clue(record)
 		if(BOUNTY_CLUE_FEATURE)
-			var/list/lines = record?.feature_lines()
-			var/index = kind[2]
-			if(index < 1 || index > length(lines))
-				return null
-			var/line = trim(STRIP_HTML_FULL(lines[index], MAX_MESSAGE_LEN))
+			var/line = bounty_outpost_feature_clue(record, kind[2])
 			return line ? "I remember one thing about them. [line]" : null
 		if(BOUNTY_CLUE_RULED_OUT)
 			var/where = outpost_clue_place(kind)
@@ -1286,6 +1282,39 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 	if(get_dist(middle, spot) <= max(1, round(min(bounds[3] - bounds[1], bounds[4] - bounds[2]) / 8)))
 		return "in the middle of the concourse"
 	return "on the [dir2text(get_dir(middle, spot))] side of the concourse"
+
+/**
+ * The feature at `index` in `record`'s examine order (P1's feature_lines()), as a trader would say it:
+ * "They've got a scar across the left cheek.", never the examine label. Null past the end.
+ */
+/proc/bounty_outpost_feature_clue(datum/bounty_record/record, index)
+	var/list/features = record?.features
+	if(!length(features) || index < 1)
+		return null
+	var/count = 0
+	for(var/kind in bounty_feature_labels())
+		var/value = features[kind]
+		if(!istext(value) || !length(value))
+			continue
+		count++
+		if(count != index)
+			continue
+		value = trim(STRIP_HTML_FULL(value, MAX_MESSAGE_LEN))
+		if(!length(value))
+			return null
+		switch(kind)
+			if(BOUNTY_FEATURE_SCAR)
+				return "They've got a scar [value]."
+			if(BOUNTY_FEATURE_TATTOO)
+				return "They've got a tattoo, [value]."
+			if(BOUNTY_FEATURE_GLASSES, BOUNTY_FEATURE_CLOTHING)
+				return "They wear [value]."
+			if(BOUNTY_FEATURE_LIMP)
+				return "The one you want [value]."
+			if(BOUNTY_FEATURE_HAIR)
+				return "Their hair's [value]."
+		return "[capitalize(value)]."
+	return null
 
 /// How the fugitive's hair differs from the mugshot, as a trader would say it, or null if it doesn't
 /proc/bounty_outpost_hair_clue(datum/bounty_record/record)
@@ -1356,7 +1385,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 // P6's values. P5 prints it on the pad and writes the listing on it.
 /obj/item/paper/bounty_warrant
 	name = "bounty warrant"
-	desc = "A printed warrant: a mugshot, the charges and what to look for. Show it to someone to see if they're who you're after."
+	desc = "A printed warrant: a mugshot, the charges and a description."
 
 /obj/item/paper/bounty_warrant/Initialize(mapload)
 	. = ..()
@@ -1396,7 +1425,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
 		return
 	var/wait = posting.outpost_warrant_wait(user)
 	if(wait)
-		balloon_alert(user, "wait [DisplayTimeText(wait)]!")
+		balloon_alert(user, "too soon!")
 		return
 	posting.outpost_start_warrant_cooldown(user)
 	user.visible_message(span_notice("[user] holds up a warrant for [target] to see."), span_notice("You hold up the warrant for [target] to see."), vision_distance = COMBAT_MESSAGE_RANGE)
@@ -1419,7 +1448,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
  */
 /obj/structure/bounty_wanted_board
 	name = "wanted board"
-	desc = "A locked board of wanted notices, kept current from the bounty network. Hunts are taken on at a ship's mission console."
+	desc = "A locked board of wanted notices."
 	icon = 'icons/obj/wallmounts.dmi'
 	icon_state = "noticeboard"
 	density = FALSE
@@ -1442,7 +1471,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/bounty_wanted_board, 32)
 /obj/structure/bounty_wanted_board/examine(mob/user)
 	. = ..()
 	var/count = length(bounty_public_postings())
-	. += span_notice(count ? "[count] wanted notice\s posted. Use it to read them." : "No wanted notices posted right now.")
+	. += span_notice(count ? "[count] wanted notice\s posted." : "No wanted notices posted right now.")
 
 /obj/structure/bounty_wanted_board/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if(istype(tool, /obj/item/paper) || istype(tool, /obj/item/photo))
@@ -1490,29 +1519,27 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/bounty_wanted_board, 32)
 	outpost_refresh_viewers()
 
 /**
- * The public postings as the board lists them. Where they were seen is the ship card's own words (a
- * lair's real name, never "encrypted signal": BUG-5), and a fugitive at this very outpost is marked
- * "here" (P11). A kill-only bounty says so, and the vouchers show beside the credits (BUG-13).
+ * The public postings as the board lists them, as wanted posters: the ship card's terms ("Wanted
+ * alive", "Wanted dead") and place words (a lair's real name, never "encrypted signal": BUG-5), with
+ * the vouchers beside the credits (BUG-13). A fugitive blending in on this very concourse is "Seen on
+ * this concourse" (P11).
  */
 /obj/structure/bounty_wanted_board/proc/outpost_board_entries()
 	var/list/entries = list()
 	var/obj/structure/overmap/trader_outpost/this_outpost = get_trader_outpost_for_turf(get_turf(src))
 	for(var/datum/criminal_bounty/posting as anything in bounty_public_postings())
 		var/datum/bounty_record/record = posting.record
-		var/obj/structure/overmap/where = posting.site()
+		var/here = !!this_outpost && posting.placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST && posting.site() == this_outpost && !istype(posting, /datum/criminal_bounty/kingpin)
 		entries += list(list(
 			"id" = record.id,
 			"name" = record.name,
 			"alias" = (record.alias && record.alias != record.name) ? record.alias : null,
-			"tier" = bounty_tier_name(record.tier),
 			"tier_level" = record.tier,
+			"terms" = posting.board_terms(),
 			"crime" = record.crime,
 			"reward" = posting.value,
 			"vouchers" = posting.board_vouchers,
-			"kill_only" = !posting.board_share_for(BOUNTY_STATE_RESTRAINED, BOUNTY_STATE_FREE),
-			"place" = posting.board_place_text(),
-			"here" = !!this_outpost && posting.placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST && where == this_outpost,
-			"time_left" = posting.expires_at ? max(0, round((posting.expires_at - world.time) / (1 SECONDS))) : null,
+			"place" = here ? "Seen on this concourse" : posting.board_place_text(),
 		))
 	return entries
 

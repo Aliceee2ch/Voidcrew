@@ -307,7 +307,7 @@ SUBSYSTEM_DEF(criminal_bounties)
 	log_game("BOUNTY: posted the [posting.board_log_name()] in zone [zone], worth [posting.value] cr and [posting.board_vouchers] voucher(s)")
 	// A Most Wanted is news for every crew (P8); Wanted and petty ones never are
 	if(tier == BOUNTY_TIER_MOST_WANTED && !private_to)
-		board_announce("WANTED: a new Most Wanted is on your mission board: [record.name], [posting.board_zone_name()].")
+		board_announce("MOST WANTED: [record.name]. [posting.board_place_text()].")
 	posting.board_arm()
 	return posting
 

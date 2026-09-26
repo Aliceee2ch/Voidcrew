@@ -288,7 +288,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /mob/living/basic/bounty_criminal/kingpin/examine(mob/user)
 	. = ..()
 	if(kingpin_can_talk())
-		. += span_notice("You could talk to [p_them()] from across the table.")
+		. += span_notice("[p_They()] look[p_s()] ready to talk business.")
 
 // Every hit that gets through: with his crew down, he may give up
 /mob/living/basic/bounty_criminal/kingpin/adjust_health(amount, updating_health = TRUE, forced = FALSE)
@@ -2211,10 +2211,10 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 /obj/effect/bounty_kingpin_offer/examine(mob/user)
 	. = offer_item ? offer_item.examine(user) : ..()
-	. += span_notice("It's the kingpin's offer. Take the deal and it's yours.")
+	. += span_notice("It's the kingpin's offer.")
 
 /obj/effect/bounty_kingpin_offer/attack_hand(mob/living/user, list/modifiers)
-	balloon_alert(user, "take the deal first!")
+	balloon_alert(user, "not yours yet!")
 	return TRUE
 
 /obj/effect/bounty_kingpin_offer/proc/on_item_deleted(datum/source)
@@ -2407,7 +2407,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 			claimants -= ship_ref
 			board_hunt_started -= ship_ref
 			ship.remove_waypoint(board_waypoint_key())
-		ship.ship_notify("WANTED: your crew took [record?.name || "the kingpin"]'s deal. None of you can collect on him now.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
+		ship.ship_notify("WANTED: your crew took [record?.name || "the kingpin"]'s deal.", "MISSION CONTROL", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 50)
 	for(var/datum/mind/mind as anything in crew_minds)
 		kingpin_bound_minds |= WEAKREF(mind)
 		var/key = bounty_kingpin_mind_key(mind)
@@ -2427,11 +2427,6 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(state == BOUNTY_STATE_DEAD || worst_state == BOUNTY_STATE_DEAD)
 		return BOUNTY_KINGPIN_PAY_DEAD
 	return BOUNTY_KINGPIN_PAY_ALIVE
-
-/datum/criminal_bounty/kingpin/board_share_amounts()
-	var/list/alive = board_payout(BOUNTY_KINGPIN_PAY_ALIVE)
-	var/list/dead = board_payout(BOUNTY_KINGPIN_PAY_DEAD)
-	return list(alive[1], alive[1], dead[1])
 
 /datum/criminal_bounty/kingpin/board_terms()
 	return "Wanted dead or alive"
@@ -2467,12 +2462,11 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(kingpin_announced || !is_open())
 		return
 	kingpin_announced = TRUE
-	var/list/amounts = board_share_amounts()
 	var/who = record?.alias ? "[record.name], \"[record.alias]\"" : record?.name
 	for(var/obj/structure/overmap/ship/ship as anything in SSovermap.simulated_ships)
 		if(QDELETED(ship) || ship.abandoned || istype(ship, /obj/structure/overmap/ship/npc))
 			continue
-		ship.ship_notify("WANTED DEAD OR ALIVE: [who], in the lounge at [board_site_name || "the black market"]. [amounts[1]] cr alive, [amounts[3]] cr dead.", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+		ship.ship_notify("WANTED DEAD OR ALIVE: [who], in the lounge at [board_site_name || "the black market"]. Reward: [board_reward_text()].","MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 
 /datum/criminal_bounty/kingpin/hunt_refusal(obj/structure/overmap/ship/ship)
 	var/refusal = kingpin_bound_refusal(ship)

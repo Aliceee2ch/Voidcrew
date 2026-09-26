@@ -325,7 +325,7 @@
 	// aboard a dying pirate ship goes with it, and its own deletion decides what is left
 	if(criminal() || board_proof())
 		return
-	relist(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP ? "lost with the [board_site_name || "ship"]" : "moved on")
+	relist(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP ? "was lost with the [board_site_name || "ship"]" : "has moved on")
 
 // ===== THE CRIMINAL =====
 
@@ -349,7 +349,7 @@
 	if(!where)
 		return FALSE
 	if(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP && !board_npc_ship_usable(where))
-		relist("moved on")
+		relist("has moved on")
 		return FALSE
 	if(!board_site_loaded(where))
 		board_wait_for_load(where)
@@ -381,7 +381,7 @@
 	if(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP && !board_npc_ship_usable(where))
 		board_spawning = FALSE
 		if(is_open() && !board_relisting)
-			relist("moved on")
+			relist("has moved on")
 		return null
 	if(spot && !board_spawn_still_wanted(where))
 		board_spawning = FALSE
@@ -393,7 +393,7 @@
 		// A site that never has room (or a spawn that keeps failing) gives the bounty to another site
 		if(board_spawn_failures >= BOUNTY_SPAWN_ATTEMPTS)
 			log_game("BOUNTY: the [board_log_name()] found no place to spawn in [board_spawn_failures] tries")
-			relist("moved on")
+			relist("has moved on")
 	return placed
 
 /**
@@ -465,7 +465,7 @@
 			board_detach_criminal()
 			ADD_TRAIT(criminal, TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT)
 			qdel(criminal)
-			relist("moved on")
+			relist("has moved on")
 			return FALSE
 		// Closed or relisted while the setup ran: whoever it placed walks out again
 		if(!is_open() || board_relisting)
@@ -573,7 +573,7 @@
 	ADD_TRAIT(criminal, TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT)
 	if(board_proof())
 		return TRUE
-	relist("lost, with nothing left to bring in")
+	relist("has vanished")
 	return TRUE
 
 /// A moment after the criminal was destroyed: with no proof left either, the bounty relists at a new site (AR-A6)
@@ -583,7 +583,7 @@
 		return
 	if(criminal() || board_proof())
 		return
-	relist(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP && !site() ? "lost with the [board_site_name || "ship"]" : "lost, with nothing left to bring in")
+	relist(placement_kind == BOUNTY_PLACEMENT_NPC_SHIP && !site() ? "was lost with the [board_site_name || "ship"]" : "has vanished")
 
 // ===== SPAWN PICKERS =====
 
@@ -972,5 +972,5 @@
 /proc/bounty_gps_refusal(obj/structure/overmap/ship/ship)
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
 		if(posting.is_open() && posting.is_hunting(ship) && posting.placement_kind == BOUNTY_PLACEMENT_TRADER_OUTPOST)
-			return "no tracker at a trader outpost"
+			return "no signal to track"
 	return null

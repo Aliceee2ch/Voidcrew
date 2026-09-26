@@ -130,7 +130,6 @@ type WantedEntry = {
   species?: string;
   sex?: string;
   tier?: number;
-  tier_name?: string;
   // "Wanted alive", "Wanted dead or alive" or "Wanted dead"
   terms?: string;
   crime?: string | null;
@@ -824,6 +823,10 @@ const WANTED_TIER_COLORS: Record<number, string> = {
   3: 'bad',
 };
 
+/** The poster's heading: MOST WANTED for tier 3, WANTED for the rest */
+const wantedHeading = (tier?: number) =>
+  tier === 3 ? 'MOST WANTED' : 'WANTED';
+
 /** A server phrase as the start of a sentence */
 const toSentence = (text?: string | null) =>
   text ? text.charAt(0).toUpperCase() + text.slice(1) : undefined;
@@ -947,7 +950,7 @@ const WantedCard = (props: WantedCardProps) => {
         </Flex.Item>
         <Flex.Item grow>
           <Box bold color={tierColor}>
-            {(entry.tier_name || 'Wanted').toUpperCase()}
+            {wantedHeading(entry.tier)}
             {isOffer ? (
               <Box as="span" color="teal" ml={1}>
                 Private contract

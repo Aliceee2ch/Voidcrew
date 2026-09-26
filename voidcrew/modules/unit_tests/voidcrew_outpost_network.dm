@@ -284,9 +284,12 @@
 	exit.ChangeTurf(/turf/open/floor/iron)
 
 	// A blocked arrival spot refuses arrivals
+	// B-11: a wrenched-down closet is clutter and never closes the pad; a fixed blocker does
 	var/obj/structure/closet/blocker = allocate(/obj/structure/closet, pad_b.arrival_turf)
 	blocker.set_anchored(TRUE)
-	TEST_ASSERT_EQUAL(pad_b.arrival_denial(visitor, pad_a), "Arrival blocked", "A walled-in arrival spot took arrivals")
+	TEST_ASSERT_NULL(pad_b.arrival_denial(visitor, pad_a), "A wrenched closet on the arrival spot closed the pad")
+	blocker.resistance_flags |= INDESTRUCTIBLE
+	TEST_ASSERT_EQUAL(pad_b.arrival_denial(visitor, pad_a), "Arrival blocked", "A fixed blocker on the arrival spot took arrivals")
 	qdel(blocker)
 
 	// Abandonment: arrivals close while unowned; the settings go back to defaults

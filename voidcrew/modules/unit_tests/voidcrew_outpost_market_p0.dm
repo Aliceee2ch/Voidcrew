@@ -143,8 +143,11 @@
 	var/turf/open/corridor = outside
 	corridor.air.copy_from(SSair.parse_gas_string(OPENTURF_DEFAULT_ATMOS, /datum/gas_mixture/turf))
 	TEST_ASSERT_NULL(blueprint.exit_denial(), "A breathable corridor outside the door was reported: [blueprint.exit_denial()]")
+	// B-11: removable clutter never closes a room, only fixed or protected blockers do
 	var/obj/structure/grille/grille = allocate(__IMPLIED_TYPE__, outside)
-	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "A grille across the door was not reported")
+	TEST_ASSERT_NULL(blueprint.exit_denial(), "A cuttable grille across the door closed the room")
+	grille.resistance_flags |= INDESTRUCTIBLE
+	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "An indestructible grille across the door was not reported")
 	qdel(grille)
 
 	// F-07: a shield generator inside the room never holds the shield role

@@ -306,18 +306,19 @@
 
 // ===== WHAT IT DOES =====
 
-/// Below this mood `prisoner` squares up to `person`: lower for a fair member, higher for a brute
+/// Below this mood `prisoner` squares up to `person`: lower for a fair member, higher for a brute, and higher for some bounty prisoners (outpost_prison_bounty.dm)
 /datum/outpost_prison/proc/threat_mood_for(mob/living/basic/outpost_prisoner/prisoner, mob/person)
+	. = PRISONER_THREAT_MOOD
 	switch(staff_label(person))
 		if("fair")
-			return PRISON_REP_THREAT_FAIR
+			. = PRISON_REP_THREAT_FAIR
 		if("brute")
-			return PRISON_REP_THREAT_BRUTE
-	return PRISONER_THREAT_MOOD
+			. = PRISON_REP_THREAT_BRUTE
+	. += prisoner ? prisoner.bounty_threat_bonus() : 0
 
-/// The highest line threat_mood_for() can return, so a prisoner above it looks for nobody
-/datum/outpost_prison/proc/threat_mood_ceiling()
-	return max(PRISONER_THREAT_MOOD, PRISON_REP_THREAT_BRUTE)
+/// The highest line threat_mood_for() can return (for `prisoner`, when given), so a prisoner above it looks for nobody
+/datum/outpost_prison/proc/threat_mood_ceiling(mob/living/basic/outpost_prisoner/prisoner)
+	return max(PRISONER_THREAT_MOOD, PRISON_REP_THREAT_BRUTE) + (prisoner ? prisoner.bounty_threat_bonus() : 0)
 
 /// The mood a talk-down from `person` gives `prisoner`
 /datum/outpost_prison/proc/talk_mood_for(mob/living/basic/outpost_prisoner/prisoner, mob/person)

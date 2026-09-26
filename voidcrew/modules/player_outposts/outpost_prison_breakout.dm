@@ -253,7 +253,7 @@
 			target.Shake(1, 1, 0.3 SECONDS)
 		else if(istype(target, /obj/structure/window) || istype(target, /obj/structure/grille))
 			damage = PRISON_RIOT_WINDOW_DAMAGE
-		target.take_damage(damage, BRUTE, "", TRUE, get_dir(target, rioter))
+		target.take_damage(damage * rioter.bounty_breakout_mult(), BRUTE, "", TRUE, get_dir(target, rioter))
 		broke = !exit_blocker(tile)
 	if(broke)
 		exit_broken(label)
@@ -305,7 +305,7 @@
 	var/obj/machinery/door/window/staff_door = staff_windoor()
 	if(staff_door?.density)
 		staff_door.Shake(1, 1, 0.3 SECONDS)
-		staff_door.take_rioter_damage(PRISON_RIOT_WINDOOR_DAMAGE, get_dir(staff_door, rioter))
+		staff_door.take_rioter_damage(PRISON_RIOT_WINDOOR_DAMAGE * rioter.bounty_breakout_mult(), get_dir(staff_door, rioter))
 		if(!QDELETED(staff_door))
 			return FALSE
 		visible_message(span_danger("The office side of [src] gives way!"))

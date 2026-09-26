@@ -176,18 +176,19 @@
 
 // ===== MOOD =====
 
-/// How hard losses hit them, by personality
+/// How hard losses hit them, by personality, and harder or softer for some bounty prisoners (outpost_prison_bounty.dm)
 /mob/living/basic/outpost_prisoner/proc/mood_scale()
+	. = 1
 	switch(personality)
 		if("grumpy")
-			return 1.4
+			. = 1.4
 		if("nervous")
-			return 1.2
+			. = 1.2
 		if("quiet")
-			return 0.9
+			. = 0.9
 		if("cheerful")
-			return 0.7
-	return 1
+			. = 0.7
+	. *= bounty_mood_scale()
 
 /// Changes their mood at once. Losses are scaled by personality.
 /mob/living/basic/outpost_prisoner/proc/adjust_mood(amount)
@@ -770,6 +771,9 @@
 		attack_sound = pick('sound/items/weapons/punch1.ogg', 'sound/items/weapons/punch2.ogg', 'sound/items/weapons/punch3.ogg')
 		attack_vis_effect = ATTACK_EFFECT_PUNCH
 		sharpness = NONE
+	// Some bounty prisoners hit harder (outpost_prison_bounty.dm).
+	melee_damage_lower *= bounty_damage_mult()
+	melee_damage_upper *= bounty_damage_mult()
 
 // Every blow is set up afresh, whether the trouble AI (strike()) or the breakout AI (the outpost
 // patrol's melee) throws it: a new stab or slash, and never a shiv's edge on bare hands.
@@ -877,7 +881,7 @@
 	if(other.can_be_dragged())
 		return FALSE
 	// A shiv (a stabbing, outpost_prison_incidents.dm) hits harder than a fist, though not as hard as at staff.
-	var/damage = min(has_shiv() ? rand(PRISONER_STAB_MIN, PRISONER_STAB_MAX) : rand(PRISONER_FIGHT_HIT_MIN, PRISONER_FIGHT_HIT_MAX), other.health - 1)
+	var/damage = min((has_shiv() ? rand(PRISONER_STAB_MIN, PRISONER_STAB_MAX) : rand(PRISONER_FIGHT_HIT_MIN, PRISONER_FIGHT_HIT_MAX)) * bounty_damage_mult(), other.health - 1)
 	do_attack_animation(other, attack_vis_effect)
 	playsound(other, attack_sound, 50, TRUE)
 	other.visible_message(span_danger("[src] [attack_verb_continuous] [other]!"))

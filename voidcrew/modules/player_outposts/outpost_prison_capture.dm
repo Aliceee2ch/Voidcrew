@@ -60,7 +60,7 @@
 
 /// How long cuffing them takes: quicker when they are down
 /mob/living/basic/outpost_prisoner/proc/cuff_time()
-	return is_down() ? PRISONER_CUFF_TIME_DOWN : PRISONER_CUFF_TIME_STANDING
+	return (is_down() ? PRISONER_CUFF_TIME_DOWN : PRISONER_CUFF_TIME_STANDING) * bounty_cuff_mult()
 
 /// Cuffs used on them (from the item interaction signal): refused with a balloon alert, or put on in the background
 /mob/living/basic/outpost_prisoner/proc/on_cuffs_used(mob/living/user, obj/item/restraints/handcuffs/restraints)

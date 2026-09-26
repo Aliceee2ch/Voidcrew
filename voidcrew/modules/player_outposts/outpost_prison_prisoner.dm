@@ -129,6 +129,8 @@
 	var/last_cared_at = 0
 	/// world.time they last got the lift of a shared meal
 	var/shared_meal_at = 0
+	/// The criminal they were, when a bounty hunter caught them (outpost_prison_bounty.dm); null for an ordinary prisoner
+	var/datum/bounty_record/bounty_record
 	COOLDOWN_DECLARE(speech_cooldown)
 	COOLDOWN_DECLARE(thanks_cooldown)
 	/// Running while someone is putting a dressing on them
@@ -140,8 +142,12 @@
 	/// Running while what they last said is up over their head: no thought bubble (hush_bubble())
 	COOLDOWN_DECLARE(bubble_hush)
 
-/mob/living/basic/outpost_prisoner/Initialize(mapload)
+/mob/living/basic/outpost_prisoner/Initialize(mapload, datum/bounty_record/record)
 	gender = pick(MALE, FEMALE)
+	// A caught bounty criminal (admit_next()) keeps their body and who they were (outpost_prison_bounty.dm).
+	bounty_record = record
+	if(record)
+		apply_bounty_body(record)
 	. = ..()
 	real_name = generate_random_name_species_based(gender, TRUE, /datum/species/human)
 	name = real_name
@@ -152,6 +158,8 @@
 	crime = length(crimes) ? pick(crimes) : "unpaid docking fees"
 	outfit_path = pick(/datum/outfit/outpost_prisoner, /datum/outfit/outpost_prisoner/glasses, /datum/outfit/outpost_prisoner/beanie)
 	look_number = random_outpost_npc_look_number()
+	if(record)
+		apply_bounty_record(record)
 	INVOKE_ASYNC(src, PROC_REF(build_look))
 	// One shared list: element arguments are keyed by list reference.
 	var/static/list/edible_types = list(/obj/item/food)
@@ -203,9 +211,12 @@
 		cuffs = null
 		uncuffed()
 
-/// Dresses them as their own person in their outfit, with a body to match their gender. Can sleep.
+/// Dresses them as their own person in their outfit, with a body to match their gender; a bounty prisoner keeps the face they were caught with (bounty_looks.dm). Can sleep.
 /mob/living/basic/outpost_prisoner/proc/build_look()
-	set_outpost_npc_look(src, outfit_path, gender, look_number)
+	if(bounty_record)
+		apply_bounty_look(src, bounty_record, outfit_path)
+	else
+		set_outpost_npc_look(src, outfit_path, gender, look_number)
 	if(QDELETED(src))
 		return
 	update_appearance(UPDATE_OVERLAYS)

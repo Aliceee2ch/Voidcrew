@@ -233,7 +233,7 @@
 		count++
 	if(!count)
 		return 0
-	return clamp(100 - total / count + tension_spike + contraband_tension(), 0, 100)
+	return clamp(100 - total / count + tension_spike + contraband_tension() + bounty_tension(), 0, 100)
 
 /// The stage for `tension`. Coming from `previous`, a stage holds until tension falls PRISON_TENSION_HYSTERESIS below its line.
 /proc/outpost_prison_stage_for(tension, previous)
@@ -320,6 +320,7 @@
 	var/extra_cause = contraband_cause()
 	if(extra_cause)
 		causes += extra_cause
+	causes += bounty_restless_causes()
 	if(cuffed)
 		causes += "[cuffed] cuffed"
 	var/bodies = bodies_in_cell_block()
@@ -411,7 +412,7 @@
 			if(prisoner.threat_left <= 0)
 				prisoner.decide_swing(person)
 			continue
-		if(prisoner.talking || prisoner.held_by_talk_menu() || prisoner.swing_ref || prisoner.threat_cooldown > 0 || prisoner.mood >= threat_mood_ceiling())
+		if(prisoner.talking || prisoner.held_by_talk_menu() || prisoner.swing_ref || prisoner.threat_cooldown > 0 || prisoner.mood >= threat_mood_ceiling(prisoner))
 			continue
 		var/mob/living/nearby = prisoner.staff_nearby(PRISONER_THREAT_RANGE, spare_helpers = TRUE)
 		// Who they square up to depends on who it is (outpost_prison_social.dm).
@@ -892,6 +893,7 @@
 	open_incident()
 	var/charged = 0
 	for(var/mob/living/basic/outpost_prisoner/rioter as anything in rioters)
+		close_bounty_record(rioter, BOUNTY_RECORD_CLOSED)
 		charged += charge_fine(OUTPOST_PRISON_TRANSFER_FEE, "Prisoner transfer: [rioter.real_name]", TRUE)
 		note_prisoner_lost(rioter, "transferred")
 		add_log("[rioter.real_name] was transferred out.")
@@ -1351,6 +1353,7 @@
  * OUTPOST_PRISON_ESCAPE_FINE as part of the incident, and the corrections service counts them lost.
  */
 /datum/outpost_prison/proc/escaped_for_good(mob/living/basic/outpost_prisoner/prisoner)
+	close_bounty_record(prisoner, BOUNTY_RECORD_ESCAPED)
 	var/fine = charge_fine(OUTPOST_PRISON_ESCAPE_FINE, "Prison escape fine: [prisoner.real_name]", TRUE)
 	note_prisoner_lost(prisoner, "escaped")
 	add_log("[prisoner.real_name] got away. Fined [fine] cr.")

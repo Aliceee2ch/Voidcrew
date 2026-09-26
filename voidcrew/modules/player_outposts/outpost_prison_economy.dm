@@ -82,7 +82,7 @@
 /// A prisoner served `served` seconds of their sentence: their stipend for it, and the seconds served and kept for the release bonus
 /datum/outpost_prison/proc/accrue_pay(mob/living/basic/outpost_prisoner/prisoner, served)
 	var/factor = pay_factor(prisoner)
-	pay_owed += OUTPOST_PRISON_BASE_PAY * factor * served / 60
+	pay_owed += OUTPOST_PRISON_BASE_PAY * bounty_pay_mult(prisoner) * factor * served / 60
 	prisoner.served_seconds += served
 	prisoner.kept_seconds += factor * served
 
@@ -119,7 +119,7 @@
 
 /// What a prisoner earns the treasury per minute right now
 /datum/outpost_prison/proc/prisoner_pay_rate(mob/living/basic/outpost_prisoner/prisoner)
-	return OUTPOST_PRISON_BASE_PAY * pay_factor(prisoner)
+	return OUTPOST_PRISON_BASE_PAY * bounty_pay_mult(prisoner) * pay_factor(prisoner)
 
 /// What every prisoner earns the treasury per minute right now
 /datum/outpost_prison/proc/pay_rate()
@@ -431,7 +431,8 @@
 		var/turf/spot = cell.arrival_turf()
 		if(!spot)
 			continue
-		var/mob/living/basic/outpost_prisoner/prisoner = new(spot)
+		// An ordinary arrival may be a caught bounty criminal from the pool; the admin panel's never is (outpost_prison_bounty.dm).
+		var/mob/living/basic/outpost_prisoner/prisoner = new(spot, forced ? null : bounty_pool_take(src))
 		admit(prisoner, cell)
 		prisoner.beam_in()
 		start_arrival_gap(lane || soonest_lane())
@@ -477,9 +478,10 @@
 	if(prisoner.phase != PRISONER_PRESENT || prisoner.stat == DEAD)
 		return 0
 	var/average = prisoner.served_seconds ? prisoner.kept_seconds / prisoner.served_seconds : 0
-	var/bonus = round(OUTPOST_PRISON_RELEASE_BONUS * average)
+	var/bonus = round(OUTPOST_PRISON_RELEASE_BONUS * bounty_pay_mult(prisoner) * average)
 	pay_treasury(bonus, "Prison release: [prisoner.real_name]")
 	add_log("[prisoner.real_name] released, +[bonus] cr.")
+	close_bounty_record(prisoner, BOUNTY_RECORD_RELEASED)
 	// Friends may say goodbye instead (outpost_prison_life.dm).
 	if(!on_prisoner_releasing(prisoner, average))
 		prisoner.say_context("release")
@@ -492,6 +494,7 @@
  */
 /datum/outpost_prison/proc/on_prisoner_death(mob/living/basic/outpost_prisoner/prisoner)
 	add_log("[prisoner.real_name] died.")
+	close_bounty_record(prisoner, BOUNTY_RECORD_DEAD)
 	prisoner.died_at = world.time
 	prisoner.clear_trouble()
 	if(prisoner.staff_to_blame())
@@ -556,6 +559,7 @@
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners.Copy())
 		if(QDELETED(prisoner) || prisoner.phase == PRISONER_LEAVING)
 			continue
+		close_bounty_record(prisoner, BOUNTY_RECORD_CLOSED)
 		prisoner.beam_out()
 		transferred++
 	end_incident()

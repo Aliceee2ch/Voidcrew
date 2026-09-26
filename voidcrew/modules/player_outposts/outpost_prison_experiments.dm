@@ -235,6 +235,9 @@
 		return FALSE
 	if(QDELETED(subject) || subject.prison != src || subject.phase != PRISONER_PRESENT || subject.stat == DEAD)
 		return FALSE
+	// Kessler won't touch a bounty prisoner: who they were would be lost (outpost_prison_bounty.dm).
+	if(bounty_experiment_refusal(subject))
+		return FALSE
 	if(experiment_active())
 		return FALSE
 	if(!forced && (subject.trouble == PRISONER_TROUBLE_LOOSE || !in_cell_block(subject)))

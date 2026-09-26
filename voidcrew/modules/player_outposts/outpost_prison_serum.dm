@@ -94,7 +94,8 @@
 		return "one experiment at a time"
 	if(subject.trouble == PRISONER_TROUBLE_LOOSE || !prison.in_cell_block(subject))
 		return "only in the cell block"
-	return null
+	// Not a bounty prisoner (outpost_prison_bounty.dm)
+	return bounty_experiment_refusal(subject)
 
 // ----- the specimen -----
 

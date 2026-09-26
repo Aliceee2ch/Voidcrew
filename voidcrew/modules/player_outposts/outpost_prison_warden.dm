@@ -142,6 +142,8 @@
 			"status" = roster_status(prisoner),
 			// Their birthday is today and the yard has not had the cake yet (outpost_prison_life.dm)
 			"birthday" = prisoner.has_birthday && !prisoner.party_done && prisoner.stat != DEAD,
+			// Brought in on a bounty: the badge's tier and multiplier, or null (outpost_prison_bounty.dm)
+			"bounty" = bounty_roster_badge(prisoner),
 		))
 	var/list/alarm = alarm_state()
 	var/list/conditions = conditions_payload()

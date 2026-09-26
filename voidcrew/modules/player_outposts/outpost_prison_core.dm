@@ -104,6 +104,7 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	var/list/leaving = prisoners
 	prisoners = list()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in leaving)
+		close_bounty_record(prisoner, BOUNTY_RECORD_CLOSED)
 		prisoner.prison = null
 		prisoner.cell = null
 	QDEL_LIST(leaving)
@@ -749,6 +750,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 /datum/outpost_prison/proc/forget(mob/living/basic/outpost_prisoner/prisoner)
 	if(!(prisoner in prisoners))
 		return
+	// Whatever else closed their bounty record first decided how it ended (outpost_prison_bounty.dm).
+	close_bounty_record(prisoner, BOUNTY_RECORD_CLOSED)
 	if(prisoner.fight)
 		end_fight(prisoner.fight)
 	if(prisoner.trouble == PRISONER_TROUBLE_LOOSE)

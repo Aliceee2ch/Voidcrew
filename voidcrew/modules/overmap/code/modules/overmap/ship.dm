@@ -1775,17 +1775,6 @@
 	return TRUE
 
 /**
- * A ship notice's words: `message` led by its `category` ("SHIELDS: Shields are down."), unless the
- * message already opens with a capital tag of its own ("WANTED: ...", "BOUNTY ACCEPTED: ...") or there
- * is no category, so no line carries two tags.
- */
-/proc/ship_notify_text(message, category)
-	var/static/regex/own_tag = regex(@"^[A-Z][A-Z0-9 '\-]*:")
-	if(!category || own_tag.Find("[message]"))
-		return "[message]"
-	return "[category]: [message]"
-
-/**
  * Minimalist ship notification - sends a styled chat message to all crew members.
  * Much less intrusive than ship_notify/priority_announce.
  *
@@ -1798,14 +1787,13 @@
  */
 /obj/structure/overmap/ship/ship_notify(message, category = "ALERT", alert_level = SHIP_NOTIFY_NOTICE, sound_file = null, volume = 100)
 	var/formatted
-	var/text = ship_notify_text(message, category)
 	switch(alert_level)
 		if(SHIP_NOTIFY_DANGER)
-			formatted = span_bolddanger(text)
+			formatted = span_bolddanger("[message]")
 		if(SHIP_NOTIFY_WARNING)
-			formatted = span_boldwarning(text)
+			formatted = span_boldwarning("[message]")
 		else
-			formatted = span_boldnotice(text)
+			formatted = span_boldnotice("[message]")
 
 	for(var/datum/mind/shipmate as anything in ship_team?.members)
 		var/mob/crewmate = shipmate.current

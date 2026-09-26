@@ -1123,8 +1123,6 @@
 	posting.placement_kind = "planet" // BOUNTY_PLACEMENT_PLANET
 	TEST_ASSERT_NULL(bounty_gps_refusal(ship), "A planet hunt explains a beacon away")
 
-	TEST_ASSERT_EQUAL(ship_notify_text("Shields are down.", "SHIELDS"), "SHIELDS: Shields are down.", "A ship notice drops its category")
-	TEST_ASSERT_EQUAL(ship_notify_text("WANTED: now hunting someone.", "MISSION CONTROL"), "WANTED: now hunting someone.", "A ship notice with its own tag got a second one")
 
 /// Most Wanted news: every crew hears one posted, and hears one brought in, but never a Wanted (P8)
 /datum/unit_test/voidcrew_bounty_board/news

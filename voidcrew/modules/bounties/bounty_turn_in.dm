@@ -41,3 +41,13 @@
  */
 /proc/bounty_offer_refusal(list/items)
 	return null
+
+/**
+ * Leaves proof of death where `criminal` was destroyed (gibbed, dusted, fallen into lava or a chasm),
+ * so the dead share can still be claimed at a pad. Returns the proof, or null. P2 calls it as the
+ * body is destroyed.
+ *
+ * P0 stub: leaves nothing.
+ */
+/proc/bounty_drop_proof(mob/living/basic/bounty_criminal/criminal)
+	return null

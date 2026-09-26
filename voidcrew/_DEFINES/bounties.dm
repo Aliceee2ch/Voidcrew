@@ -63,6 +63,8 @@
 #define BOUNTY_ACTIVITY_EXPLORE "explore"
 #define BOUNTY_ACTIVITY_LOOT "loot"
 #define BOUNTY_ACTIVITY_CAMP "camp"
+/// Blending in among a trader outpost's patrons: the fugitive and its decoys share it (P3)
+#define BOUNTY_ACTIVITY_BLEND "blend"
 
 // ===== CAPTURE STATES =====
 // What capture_state() (P2) returns, listed in the order it checks them. The pad pays by these (P5).

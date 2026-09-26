@@ -28,3 +28,13 @@
 /// The name of the asset the UI loads the mugshot from (through ui_static_data() or an asset), never sent in ui_data(). P0 stub: none ("").
 /proc/bounty_mugshot_asset(datum/bounty_record/record)
 	return ""
+
+/**
+ * Gives `record` an older look (record.old_look) that differs from their current one in hair or
+ * clothes, for a trader-outpost fugitive's mugshot: the listing shows how they looked, not how they
+ * look now. Returns the old look.
+ *
+ * P0 stub: none (null).
+ */
+/proc/make_old_look(datum/bounty_record/record)
+	return null

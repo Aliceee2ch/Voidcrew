@@ -88,6 +88,8 @@ GLOBAL_LIST_EMPTY(bounty_prisoner_pool)
 	var/created_at = 0
 	/// Their mugshot, a base64 PNG built once and cached here (bounty_record_mugshot())
 	var/mugshot
+	/// How they looked when the mugshot was taken, if that differs from how they look now (a trader-outpost fugitive has changed their hair or clothes). P1 fills it (make_old_look()); the mugshot uses it when set.
+	var/datum/bounty_look/old_look
 
 /datum/bounty_record/New()
 	. = ..()
@@ -191,6 +193,8 @@ GLOBAL_LIST_EMPTY(bounty_prisoner_pool)
 	var/list/grudge = list()
 	/// Their leash, list(min_x, min_y, max_x, max_y, z), or null for none (P2's leash_ok())
 	var/list/site_bounds
+	/// The worst capture state they have reached (BOUNTY_STATE_*): once downed or dead, the pay share never rises again. P2 writes it, P5 pays on it.
+	var/worst_state = BOUNTY_STATE_FREE
 
 /// The posting they are wanted on, if it still exists
 /mob/living/basic/bounty_criminal/proc/posting()
@@ -244,3 +248,14 @@ GLOBAL_LIST_EMPTY(bounty_prisoner_pool)
 
 /// A locked board on a trader outpost's concourse showing the public Wanted list. P6 owns it (bounty_outpost.dm).
 /obj/structure/bounty_wanted_board
+
+/**
+ * What is left of a criminal whose body was destroyed (gibbed, dusted, lost in lava or a chasm): proof of
+ * death that the pad takes for the dead share. P2 drops it through bounty_drop_proof(); P5 owns the type's
+ * values and takes it at the pad (bounty_turn_in.dm).
+ */
+/obj/item/bounty_proof
+	/// Weakref to the posting (/datum/criminal_bounty)
+	var/datum/weakref/posting_ref
+	/// Whose it is
+	var/datum/bounty_record/record

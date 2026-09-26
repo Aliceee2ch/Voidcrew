@@ -91,3 +91,9 @@ Every so often, while someone from the outpost is home, a **mail pod** drops int
 ## Cards, dice and birthdays
 
 Prisoners play cards and dice at the mess tables. Sit on a stool at their table when a hand starts and you'll be dealt in. Now and then a prisoner arrives on their birthday and says so. Give them a whole cake, or put one on a hatch, and the yard throws them a party.
+
+## Bounty prisoners
+
+Some arrivals are criminals that ship crews caught alive for a [bounty](bounty-hunting.md). They earn the outpost 1.5 times what an ordinary prisoner does if they were Petty, twice as much if Wanted, and 2.5 times as much if Most Wanted. The higher tiers are also tougher, hit harder and riot sooner. The roster marks them with their tier, and examining one shows who brought them in. If your crew catches one, your own wing gets first claim on them for 10 minutes.
+
+Managers choose which ones the wing takes under **Bounty transfers** on the warden's console: **All**, **No Most Wanted** or **None**. The console names the next bounty arrival at least a minute before they beam in. See [After the catch](bounty-hunting.md#after-the-catch-prison-wings) for the full numbers.

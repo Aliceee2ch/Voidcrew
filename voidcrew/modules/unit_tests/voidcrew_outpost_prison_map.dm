@@ -150,3 +150,55 @@
 	TEST_ASSERT_EQUAL(length(wing_things(prison, /obj/structure/outpost_kessler_vent)), 7, "The wing should still have seven Kessler vents")
 
 	settle_prison_air(home)
+
+/**
+ * The wing's side walls are where cell block extensions join (outpost_prison_extension.dm): a joint
+ * at the bottom of each, and on each wall the three rows that open once an extension joins, with
+ * nothing hung on them and ground to stand on inside. The wing is loaded raw, since placement reads
+ * the joints and may take them off the map. Helpers are in voidcrew_outpost_prison_extension_map.dm.
+ */
+/datum/unit_test/voidcrew_outpost_prison_map_joints
+	var/datum/turf_reservation/reserved
+
+/datum/unit_test/voidcrew_outpost_prison_map_joints/Destroy()
+	QDEL_NULL(reserved)
+	return ..()
+
+/datum/unit_test/voidcrew_outpost_prison_map_joints/Run()
+	var/datum/map_template/wing = new("voidcrew/_maps/map_files/outposts/outpost_upgrade_prison.dmm")
+	reserved = SSmapping.request_turf_block_reservation(wing.width + 2, wing.height + 2, 1)
+	TEST_ASSERT_NOTNULL(reserved, "Could not reserve room for the wing")
+	var/turf/origin = reserved.bottom_left_turfs[1]
+	var/turf/bottom_left = locate(origin.x + 1, origin.y + 1, origin.z)
+	TEST_ASSERT_NOTNULL(wing.load_rotated(bottom_left, 0), "The prison wing did not load")
+
+	var/snap_count = 0
+	for(var/turf/tile as anything in block(bottom_left.x, bottom_left.y, bottom_left.z, bottom_left.x + wing.width - 1, bottom_left.y + wing.height - 1, bottom_left.z))
+		for(var/obj/effect/landmark/outpost_upgrade_snap/snap in tile)
+			snap_count++
+	TEST_ASSERT_EQUAL(snap_count, 2, "The wing should have two extension joints, one per side wall")
+
+	for(var/side in list("left", "right"))
+		var/turf/corner = locate(bottom_left.x + (side == "left" ? 0 : wing.width - 1), bottom_left.y, bottom_left.z)
+		var/inward = (side == "left") ? EAST : WEST
+		var/obj/effect/landmark/outpost_upgrade_snap/snap = locate() in corner
+		TEST_ASSERT_NOTNULL(snap, "The wing has no joint at the bottom of its [side] wall")
+		TEST_ASSERT(istype(snap, side == "left" ? /obj/effect/landmark/outpost_upgrade_snap/left : /obj/effect/landmark/outpost_upgrade_snap/right), "The wing's [side] joint is a [snap.type]")
+		TEST_ASSERT_EQUAL(snap.side, side, "The wing's [side] joint is for the wrong side")
+		TEST_ASSERT_EQUAL(snap.snap_group, "prison_cells", "The wing's [side] joint takes the wrong upgrades")
+		TEST_ASSERT_EQUAL(snap.dir, side == "left" ? WEST : EAST, "The wing's [side] joint faces the wrong way")
+		TEST_ASSERT(isclosedturf(corner), "The wing's [side] joint is not on a wall")
+		TEST_ASSERT_EQUAL(jointext(snap.seam_openings, ","), jointext(vc_test_prison_joint_openings(), ","), "The wing's [side] joint opens the wrong rows")
+		// The side wall's shape: the extension maps' far walls copy it, windows at 8 and 10.
+		for(var/row in 1 to wing.height)
+			var/turf/wall = locate(corner.x, corner.y + row - 1, corner.z)
+			var/expected = (row == 8 || row == 10) ? "window" : "wall"
+			TEST_ASSERT_EQUAL(vc_test_prison_wall_shape(wall), expected, "The wing's [side] wall at row [row] changed shape; the extension maps copy it")
+			if(!(row in snap.seam_openings))
+				continue
+			var/turf/inner = get_step(wall, inward)
+			var/obj/hung = vc_test_prison_hung_on(inner, wall)
+			TEST_ASSERT(!hung, "[hung] hangs on the wing's [side] wall at row [row], which opens when an extension joins")
+			TEST_ASSERT(vc_test_prison_standable(inner), "Nobody can stand inside the wing's [side] wall at row [row], which opens when an extension joins")
+			var/obj/clutter = vc_test_prison_opening_clutter(wall)
+			TEST_ASSERT(!clutter, "[clutter] is on the wing's [side] wall at row [row], which opens when an extension joins")

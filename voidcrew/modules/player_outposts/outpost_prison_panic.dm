@@ -97,7 +97,8 @@
 	if(wanted == running_scared)
 		return
 	running_scared = wanted
-	set_varspeed(wanted ? OUTPOST_PANIC_FLEE_SPEED : initial(speed))
+	// A loose meek bounty prisoner keeps their pace (outpost_prison_bounty.dm).
+	set_varspeed(wanted ? OUTPOST_PANIC_FLEE_SPEED : bounty_base_speed())
 
 /**
  * A rioter running from a creature, planned from the trouble subtree: TRUE while they are on the

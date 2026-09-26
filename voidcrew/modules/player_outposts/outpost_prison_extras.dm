@@ -190,9 +190,12 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 		"mail" = mail_payload(user),
 	)
 
-/// A warden console action a package handles; TRUE if one did
+/// A warden console action a package handles (guards, bounty transfers); TRUE if one did
 /datum/outpost_prison/proc/extras_act(action, list/params, mob/user)
-	return guards_act(action, params, user)
+	if(guards_act(action, params, user))
+		return TRUE
+	// Bounty transfers (outpost_prison_bounty.dm)
+	return bounty_warden_act(action, params, user)
 
 /// The admin panel's "extras" block
 /datum/outpost_prison/proc/extras_admin_payload()

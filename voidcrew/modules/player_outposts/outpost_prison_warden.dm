@@ -53,6 +53,8 @@
 		"alarm" = null,
 		"alarm_text" = null,
 		"extras" = null,
+		// Bounty transfers (outpost_prison_bounty.dm)
+		"bounty" = null,
 	)
 
 /obj/machinery/computer/outpost_prison_warden/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -180,4 +182,6 @@
 		"alarm_text" = alarm[2],
 		"extras" = extras_payload(user),
 		"experiment" = experiment_block(),
+		// Bounty transfers: the warden setting and the next bounty arrival (outpost_prison_bounty.dm)
+		"bounty" = bounty_console_payload(user),
 	)

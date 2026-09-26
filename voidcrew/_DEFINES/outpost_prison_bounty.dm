@@ -96,7 +96,7 @@
 #define BOUNTY_PRISON_MEEK_CLIMB_MOOD 65
 /// Seconds the climb takes them (others: PRISONER_CLIMB_TIME)
 #define BOUNTY_PRISON_MEEK_CLIMB_TIME 2
-/// Leisure weight of the climb, so it comes first like a duty. OWN.
+/// Leisure weight of the climb, so it comes first like a duty (with a member of the wing home). OWN.
 #define BOUNTY_PRISON_MEEK_CLIMB_WEIGHT 100
 /// Below this mood they hang about by the staff door, glancing at it
 #define BOUNTY_PRISON_MEEK_DART_MOOD 50
@@ -104,13 +104,13 @@
 #define BOUNTY_PRISON_MEEK_WATCH_TIME (20 SECONDS)
 /// Leisure weight of watching the door, aiming at about 30% of their time below BOUNTY_PRISON_MEEK_DART_MOOD. OWN: tune in the playtest.
 #define BOUNTY_PRISON_MEEK_WATCH_WEIGHT 30
-/// Staff opening the door while a watcher is within this many tiles of it may see them dart through
+/// A watcher stands this many tiles from the staff door (never right in front of it), and the door opening while they are that close may see them dart through
 #define BOUNTY_PRISON_MEEK_DART_RANGE 2
 /// Percent chance they dart through a door opened near them, once per watch
 #define BOUNTY_PRISON_MEEK_DART_CHANCE 25
 /// Deciseconds between the steps of a dart
 #define BOUNTY_PRISON_MEEK_DART_STEP 2
-/// Steps a dart takes at most, waiting for the door to swing open included, before they give up on it
-#define BOUNTY_PRISON_MEEK_DART_STEPS 6
+/// Steps a dart takes at most, waits for the door to swing open or for someone to get out of the way included, before they give up on it
+#define BOUNTY_PRISON_MEEK_DART_STEPS 10
 /// Their speed while loose (others keep their own, 2)
 #define BOUNTY_PRISON_MEEK_LOOSE_SPEED 1.6

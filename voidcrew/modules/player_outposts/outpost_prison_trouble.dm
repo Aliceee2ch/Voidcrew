@@ -453,7 +453,8 @@
 	if(!last_hit_justified)
 		provoker_ref = WEAKREF(attacker)
 		provoker_until = world.time + PRISONER_RETALIATE_TIME SECONDS + PRISONER_PROVOKED_TIME
-	var/reaction = prison.forced_hit_reaction || pick_weight(outpost_prisoner_hit_reaction_weights(mood, personality))
+	// Meek bounty prisoners back off more, Wanted and Most Wanted hit back more (outpost_prison_bounty.dm).
+	var/reaction = prison.forced_hit_reaction || pick_weight(bounty_hit_reaction_weights(outpost_prisoner_hit_reaction_weights(mood, personality)))
 	if(reaction == PRISONER_HIT_COWER)
 		cower_from(attacker)
 		return PRISONER_HIT_COWER
@@ -1090,7 +1091,8 @@
 		return FALSE
 	stand_up()
 	climb_ref = WEAKREF(hatch)
-	climb_left = PRISONER_CLIMB_TIME
+	// A meek bounty prisoner is quicker over it (outpost_prison_bounty.dm).
+	climb_left = bounty_climb_time() || PRISONER_CLIMB_TIME
 	face_atom(hatch)
 	// Leaning onto the counter
 	var/lean = get_dir(src, hatch)

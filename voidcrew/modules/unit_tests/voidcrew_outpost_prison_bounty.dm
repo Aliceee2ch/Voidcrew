@@ -86,6 +86,17 @@
 			return TRUE
 	return FALSE
 
+/// How many lines of the warden's log contain `text`
+/datum/unit_test/voidcrew_outpost_prison_bounty_kit/proc/log_count(datum/outpost_prison/prison, text)
+	. = 0
+	for(var/list/entry as anything in prison.entries)
+		if(findtext(entry["text"], text))
+			.++
+
+/// Whether a door watch's dart is over, or the watch is gone
+/datum/unit_test/voidcrew_outpost_prison_bounty_kit/proc/dart_over(datum/prisoner_activity/bounty_door_watch/watch)
+	return QDELETED(watch) || !watch.darting
+
 /// Living prisoners on the roster built from a record
 /datum/unit_test/voidcrew_outpost_prison_bounty_kit/proc/bounty_built(datum/outpost_prison/prison)
 	. = list()
@@ -212,9 +223,15 @@
 	TEST_ASSERT(!prison.bounty_accepts(most_wanted), "A one-lane wing with a Most Wanted would take another")
 	TEST_ASSERT(prison.bounty_accepts(wanted), "A Most Wanted in the wing kept out a Wanted")
 	TEST_ASSERT_EQUAL(bounty_pool_pick(prison), wanted, "The picker did not skip the second Most Wanted for a Wanted")
+	var/datum/bounty_record/ours_full = make_record()
+	pool(ours_full, prison, 0)
+	TEST_ASSERT_EQUAL(bounty_record_reserved_for(ours_full), prison, "The wing's own catch was not reserved for it")
 	var/mob/living/basic/outpost_prisoner/held_two = bounty_prisoner(prison, prison_spot(home, 12, 8), make_record(1, "meek"))
 	TEST_ASSERT(!prison.bounty_accepts(wanted), "A wing with half its cells in bounty prisoners would take another")
 	TEST_ASSERT_NULL(bounty_pool_pick(prison), "A wing at its bounty share picked a record")
+	// A wing that can't take its own catch holds no place for it (L1).
+	TEST_ASSERT_NULL(bounty_record_reserved_for(ours_full), "A wing at its bounty share kept a reservation it can't use")
+	bounty_pool_remove(ours_full)
 	held_two.death()
 	TEST_ASSERT(prison.bounty_accepts(wanted), "A dead bounty prisoner still counted against the wing's share")
 	held_one.death()
@@ -261,23 +278,34 @@
 	TEST_ASSERT(islist(next_block), "The console does not name the next bounty arrival")
 	TEST_ASSERT_EQUAL(next_block["name"], "Dana Notice", "The console names [next_block["name"]] as the next bounty arrival")
 	TEST_ASSERT_EQUAL(next_block["tier"], "Wanted", "The console gives the next bounty arrival's tier as [next_block["tier"]]")
-	TEST_ASSERT(next_block["in"] >= 59, "The console says the named arrival comes in [next_block["in"]] s, under a minute")
+	// The arrival 20 s off comes before the minute's notice has run: an ordinary prisoner, then them.
+	TEST_ASSERT_NULL(next_block["in"], "The console counts down to an arrival that isn't theirs")
+	TEST_ASSERT(next_block["after_next"], "The console does not say they come after the next arrival")
 	TEST_ASSERT_EQUAL(console["setting"], "all", "The console does not show the bounty setting")
 	// The lane's next arrival once the notice has run is that prisoner.
 	due.prison_notice_at = world.time - 61 SECONDS
+	next_block = prison.bounty_console_payload(null)["next"]
+	TEST_ASSERT_EQUAL(next_block["in"], 20, "Once the notice has run the console counts [next_block["in"]] s, not the 20 s to the arrival")
+	TEST_ASSERT(!next_block["after_next"], "Once the notice has run the console still puts them after the next arrival")
 	var/mob/living/basic/outpost_prisoner/arrival = prison.admit_next(FALSE, 1)
 	TEST_ASSERT_NOTNULL(arrival, "Nobody arrived into a ready cell")
 	TEST_ASSERT_EQUAL(arrival.bounty_record, due, "The named record's prisoner did not arrive")
 	TEST_ASSERT_EQUAL(arrival.real_name, "Dana Notice", "The arrival is [arrival.real_name], not the named record")
 	TEST_ASSERT(!(due in GLOB.bounty_prisoner_pool), "An arrived record stayed in the pool")
 	// Intake shut drops a name: the record is free for any wing again.
-	var/datum/bounty_record/dropped = make_record()
+	var/datum/bounty_record/dropped = make_record(3, "boss", "Rhea Twice")
 	pool(dropped, null, 0)
 	prison.arrival_gap = 20
 	TEST_ASSERT_EQUAL(prison.bounty_update_notice(), dropped, "The next bounty arrival was not named")
 	prison.set_intake(FALSE)
 	TEST_ASSERT_NULL(prison.bounty_update_notice(), "A wing with intake shut kept its named arrival")
 	TEST_ASSERT_NULL(dropped.prison_notice_ref, "The name of a wing with intake shut was not dropped")
+	// Named again once intake reopens, the wing is not told twice (L2).
+	TEST_ASSERT(prison.set_intake(TRUE), "Intake would not reopen")
+	prison.arrival_gap = 20
+	TEST_ASSERT_EQUAL(prison.bounty_update_notice(), dropped, "The record was not named again")
+	TEST_ASSERT_EQUAL(log_count(prison, "Bounty transfer due: Rhea Twice"), 1, "Naming the same record to the same wing twice logged it [log_count(prison, "Bounty transfer due: Rhea Twice")] times")
+	prison.set_intake(FALSE)
 	bounty_pool_remove(dropped)
 
 	// Records leave after 45 minutes (BOUNTY_RECORD_LIFE), closed.
@@ -330,7 +358,13 @@
 	var/list/built = bounty_built(prison)
 	TEST_ASSERT_EQUAL(length(built), 2, "[length(built)] prisoners on the roster were built from records, not the named arrival and the admitted one")
 
+	// The pool's clock sets up its next tick before it looks at any wing, and stops with the pool empty (L3).
+	bounty_pool_tick()
+	TEST_ASSERT_NOTNULL(GLOB.bounty_pool_timer, "The pool's clock stopped with records still waiting")
+	stop_pool_clock()
 	bounty_pool_clear("the test is over")
+	bounty_pool_start_tick()
+	TEST_ASSERT_NULL(GLOB.bounty_pool_timer, "The pool's clock started with nobody waiting")
 	wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_economy_kit, all_present), prison), 8 SECONDS)
 	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in prison.prisoners)
 		ADD_TRAIT(prisoner, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
@@ -412,6 +446,20 @@
 	TEST_ASSERT_EQUAL(prison.bounty_examine(boss, null), "Wanted: Most Wanted.", "The examine line with no captor reads [prison.bounty_examine(boss, null)]")
 	TEST_ASSERT_NULL(prison.bounty_examine(ordinary, null), "An ordinary prisoner has a bounty examine line")
 
+	// Bounty transfers from the warden console (extras_act() -> bounty_warden_act()): managers only.
+	var/mob/living/carbon/human/owner = make_player(prison_spot(home, 8, 5), "bountyprisonerowner")
+	var/mob/living/carbon/human/visitor = make_player(prison_spot(home, 10, 5), "bountyprisonervisitor")
+	var/list/owner_view = prison.ui_payload(owner)
+	var/list/visitor_view = prison.ui_payload(visitor)
+	TEST_ASSERT(islist(owner_view["bounty"]), "The warden console sends no bounty block")
+	TEST_ASSERT(owner_view["bounty"]["can_manage"], "The owner can't manage bounty transfers on the console")
+	TEST_ASSERT(!visitor_view["bounty"]["can_manage"], "A visitor can manage bounty transfers on the console")
+	TEST_ASSERT(prison.extras_act("set_bounty_intake", list("setting" = "none"), visitor), "The warden console did not route a visitor's bounty setting")
+	TEST_ASSERT_EQUAL(prison.prison_bounty_intake, "all", "A visitor changed bounty transfers to [prison.prison_bounty_intake]") // BOUNTY_PRISON_INTAKE_ALL
+	TEST_ASSERT(prison.extras_act("set_bounty_intake", list("setting" = "none"), owner), "The warden console did not route the owner's bounty setting")
+	TEST_ASSERT_EQUAL(prison.prison_bounty_intake, "none", "The owner could not change bounty transfers") // BOUNTY_PRISON_INTAKE_NONE
+	prison.set_bounty_intake("all")
+
 	// Pay: x1.5 / x2 / x2.5 on the rate and the release bonus; pay_percent stays a share.
 	TEST_ASSERT_EQUAL(prison.bounty_pay_mult(meek), 1.5, "A Petty prisoner pays x[prison.bounty_pay_mult(meek)]") // OUTPOST_PRISON_BOUNTY_MULT_PETTY
 	TEST_ASSERT_EQUAL(prison.bounty_pay_mult(wanted), 2, "A Wanted prisoner pays x[prison.bounty_pay_mult(wanted)]") // OUTPOST_PRISON_BOUNTY_MULT_WANTED
@@ -458,6 +506,20 @@
 	TEST_ASSERT_NULL(boss.bounty_loose_speed(), "A Most Wanted prisoner runs loose faster")
 	TEST_ASSERT_EQUAL(ordinary.bounty_back_off_mult(), 1, "An ordinary prisoner backs off more")
 
+	// Hitting back or backing off when a player hits them (hit_reaction()), at mood 50 for a quiet prisoner.
+	var/list/base_weights = outpost_prisoner_hit_reaction_weights(50, "quiet")
+	var/list/boss_weights = boss.bounty_hit_reaction_weights(outpost_prisoner_hit_reaction_weights(50, "quiet"))
+	TEST_ASSERT_EQUAL(boss_weights["fight"], round(base_weights["fight"] * 1.5), "A Most Wanted prisoner's hit-back weight is [boss_weights["fight"]]") // PRISONER_HIT_FIGHT
+	TEST_ASSERT_EQUAL(boss_weights["cower"], base_weights["cower"], "A Most Wanted prisoner's back-off weight moved") // PRISONER_HIT_COWER
+	var/list/meek_weights = meek.bounty_hit_reaction_weights(outpost_prisoner_hit_reaction_weights(50, "quiet"))
+	TEST_ASSERT_EQUAL(meek_weights["cower"], base_weights["cower"] * 2, "A meek prisoner's back-off weight is [meek_weights["cower"]]")
+	TEST_ASSERT_EQUAL(meek_weights["fight"], base_weights["fight"], "A meek prisoner's hit-back weight moved")
+	var/list/plain_weights = ordinary.bounty_hit_reaction_weights(outpost_prisoner_hit_reaction_weights(50, "quiet"))
+	TEST_ASSERT(plain_weights["fight"] == base_weights["fight"] && plain_weights["cower"] == base_weights["cower"], "An ordinary prisoner's hit reaction weights moved")
+	// A ringleader is among the first to shout when a riot starts (start_riot()).
+	var/list/shouting_order = bounty_ringleaders_first(list(meek, ordinary, boss))
+	TEST_ASSERT(length(shouting_order) == 3 && shouting_order[1] == boss, "The Most Wanted does not shout first")
+
 	// The ringleader: an awake Most Wanted in the yard adds tension, and the log says who.
 	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in prison.prisoners)
 		prisoner.set_mood(100)
@@ -465,6 +527,14 @@
 	TEST_ASSERT_EQUAL(prison.bounty_tension(), 5, "A Most Wanted in the yard adds [prison.bounty_tension()] tension") // BOUNTY_PRISON_RINGLEADER_TENSION
 	TEST_ASSERT(prison.compute_tension() >= 5, "The wing's tension leaves out the ringleader")
 	TEST_ASSERT("Oren Vask stirring them up" in prison.restless_causes(), "The restless log does not name the ringleader")
+	// Bolted into their cell, the ringleader stirs nobody.
+	var/datum/outpost_prison_cell/boss_cell = boss.cell
+	boss.forceMove(boss_cell.arrival_turf())
+	capture_bolt(prison, boss_cell)
+	TEST_ASSERT(boss.is_confined(), "The ringleader is not shut in their cell")
+	TEST_ASSERT_EQUAL(prison.bounty_tension(), 0, "A ringleader bolted in their cell still adds [prison.bounty_tension()] tension")
+	TEST_ASSERT(!("Oren Vask stirring them up" in prison.restless_causes()), "The restless log names a ringleader bolted in their cell")
+	capture_bolt(prison, boss_cell, FALSE)
 
 	// Kessler won't touch them.
 	TEST_ASSERT_EQUAL(bounty_experiment_refusal(boss), "Kessler won't touch a bounty prisoner.", "Kessler's refusal reads [bounty_experiment_refusal(boss)]")
@@ -505,9 +575,11 @@
 // ===== MEEK PRISONERS: HATCHES AND DOORS =====
 
 /**
- * A meek bounty prisoner goes for an open hatch below mood 65, and below 50 watches the staff door
- * (the tell shows on examine). Through the open door they slip out and are loose; a shut door stops
- * them short. Nobody else does either.
+ * A meek bounty prisoner, with the crew home, goes over an open hatch below mood 65 and quicker than
+ * anyone, and below 50 watches the staff door from two tiles off (the tell shows on examine). When
+ * the door opens they dart: with the far side clear, through in one go and loose; with the opener
+ * standing on the far side, they wait in the yard, give up, stay in custody and the watch ends. A
+ * shut door stops them too. With the crew away, neither happens, and nobody else does either.
  */
 /datum/unit_test/voidcrew_outpost_prison_bounty_meek
 	parent_type = /datum/unit_test/voidcrew_outpost_prison_bounty_kit
@@ -518,27 +590,55 @@
 	TEST_ASSERT_NOTNULL(home, "The meek bounty prisoner test prison did not load")
 	var/datum/outpost_prison/prison = test_prison(home)
 	prison.trouble_enabled = TRUE
+	prison.crew_home_override = TRUE
 	var/obj/machinery/door/airlock/security/prison_staff/staff_door = locate() in prison_spot(home, 9, 6)
 	TEST_ASSERT_NOTNULL(staff_door, "The staff door is not where the map puts it")
-	var/mob/living/basic/outpost_prisoner/meek = bounty_prisoner(prison, prison_spot(home, 9, 8), make_record(1, "meek", "Pim Sallow"))
+	staff_door.autoclose = FALSE
+	var/obj/structure/table/reinforced/prison_hatch/hatch = locate() in prison_spot(home, 5, 6)
+	TEST_ASSERT_NOTNULL(hatch, "The serving hatch is not where the map puts it")
+	var/mob/living/basic/outpost_prisoner/meek = bounty_prisoner(prison, prison_spot(home, 9, 9), make_record(1, "meek", "Pim Sallow"))
 	var/mob/living/basic/outpost_prisoner/ordinary = kept_prisoner(prison, prison_spot(home, 7, 8))
 
-	// The hatch: below mood 65 (BOUNTY_PRISON_MEEK_CLIMB_MOOD) for them, and only with a hatch open both ways.
+	// The hatch: below mood 65 (BOUNTY_PRISON_MEEK_CLIMB_MOOD) for them, and only with it open both ways.
 	var/datum/prisoner_activity/climb_hatch/bounty_meek/climb = new(meek)
 	meek.set_mood(70)
 	TEST_ASSERT(!climb.bounty_meek_may_climb(), "A content meek prisoner wants over the hatch")
 	meek.set_mood(60)
 	TEST_ASSERT(climb.bounty_meek_may_climb(), "A meek prisoner at mood 60 does not want over the hatch")
-	if(!prison.open_hatch_for(meek))
-		TEST_ASSERT_EQUAL(climb.get_weight(), 0, "A meek prisoner goes for a hatch that is shut")
-		TEST_ASSERT(!climb.setup(), "A meek prisoner set out for a hatch that is shut")
+	TEST_ASSERT_EQUAL(climb.get_weight(), 0, "A meek prisoner goes for a hatch that is shut")
+	TEST_ASSERT(!climb.setup(), "A meek prisoner set out for a hatch that is shut")
+	var/obj/machinery/door/window/yard_windoor = hatch.yard_windoor()
+	var/obj/machinery/door/window/staff_windoor = hatch.staff_windoor()
+	staff_windoor.open()
+	yard_windoor.open()
+	TEST_ASSERT(hatch.both_sides_open(), "The hatch did not open both ways")
+	prison.refresh_prisoner_reach(meek)
+	TEST_ASSERT_EQUAL(climb.get_weight(), 100, "A meek prisoner's climb over an open hatch weighs [climb.get_weight()]") // BOUNTY_PRISON_MEEK_CLIMB_WEIGHT
+	TEST_ASSERT(climb.setup(), "A meek prisoner at mood 60 did not set out for an open hatch")
+	TEST_ASSERT_EQUAL(climb.spot, prison_spot(home, 5, 7), "The climb does not start in front of the hatch")
+	// Nothing new starts with the crew away.
+	prison.crew_home_override = FALSE
+	TEST_ASSERT(!climb.bounty_meek_may_climb(), "A meek prisoner goes over a hatch with nobody home")
+	TEST_ASSERT_EQUAL(climb.get_weight(), 0, "A meek prisoner's climb weighs something with nobody home")
+	prison.crew_home_override = TRUE
 	qdel(climb)
 	var/datum/prisoner_activity/climb_hatch/bounty_meek/other_climb = new(ordinary)
 	ordinary.set_mood(60)
 	TEST_ASSERT(!other_climb.bounty_meek_may_climb(), "An ordinary prisoner at mood 60 wants over the hatch")
+	TEST_ASSERT_EQUAL(other_climb.get_weight(), 0, "An ordinary prisoner's meek climb weighs something")
 	qdel(other_climb)
+	// Every climb of theirs is quicker: 2 seconds (BOUNTY_PRISON_MEEK_CLIMB_TIME), not 3.
+	meek.forceMove(prison_spot(home, 5, 7))
+	TEST_ASSERT(meek.start_climb(hatch), "A meek prisoner did not start over an open hatch")
+	TEST_ASSERT_EQUAL(meek.climb_left, 2, "A meek prisoner's climb takes [meek.climb_left] s")
+	meek.stop_climb()
+	TEST_ASSERT_NULL(ordinary.bounty_climb_time(), "An ordinary prisoner climbs quicker")
+	yard_windoor.close()
+	staff_windoor.close()
+	meek.forceMove(prison_spot(home, 9, 9))
+	prison.refresh_prisoner_reach(meek)
 
-	// The door: below mood 50 (BOUNTY_PRISON_MEEK_DART_MOOD), a watch within 2 tiles of a staff door.
+	// The door: below mood 50 (BOUNTY_PRISON_MEEK_DART_MOOD), with the crew home, a watch 2 tiles from a staff door.
 	var/datum/prisoner_activity/bounty_door_watch/watch = new(meek)
 	TEST_ASSERT_EQUAL(watch.get_weight(), 0, "A meek prisoner at mood 60 watches the door")
 	TEST_ASSERT(!watch.setup(), "A meek prisoner at mood 60 set out to watch the door")
@@ -549,44 +649,75 @@
 	TEST_ASSERT(!other_watch.setup(), "An ordinary prisoner set out to watch the door")
 	qdel(other_watch)
 	meek.set_mood(40)
+	prison.crew_home_override = FALSE
+	watch = new(meek)
+	TEST_ASSERT_EQUAL(watch.get_weight(), 0, "A meek prisoner watches the door with nobody home")
+	TEST_ASSERT(!watch.setup(), "A meek prisoner set out to watch the door with nobody home")
+	qdel(watch)
+	prison.crew_home_override = TRUE
 	watch = new(meek)
 	TEST_ASSERT_EQUAL(watch.get_weight(), 30, "A sour meek prisoner's door watch weighs [watch.get_weight()]") // BOUNTY_PRISON_MEEK_WATCH_WEIGHT
 	TEST_ASSERT(watch.setup(), "A sour meek prisoner found no staff door to watch")
 	var/obj/machinery/door/airlock/watched = watch.door_ref?.resolve()
 	TEST_ASSERT(istype(watched, /obj/machinery/door/airlock/security/prison_staff), "The watch is not on a staff door")
-	TEST_ASSERT(watch.spot && get_dist(watch.spot, watched) <= 2 && meek.walkable[watch.spot], "The watch is not on a tile they can walk within 2 of the door") // BOUNTY_PRISON_MEEK_DART_RANGE
+	TEST_ASSERT(watch.spot && meek.walkable[watch.spot], "The watch is not on a tile they can walk")
+	TEST_ASSERT_EQUAL(get_dist(watch.spot, watched), 2, "The watch is [get_dist(watch.spot, watched)] tiles from the door, not 2") // BOUNTY_PRISON_MEEK_DART_RANGE, never right in front
 	TEST_ASSERT(!prison.cell_at(watch.spot), "The watch is inside a cell")
+	qdel(watch)
 
-	// Watching: glancing at the door shows on examine.
-	watch.door_ref = WEAKREF(staff_door)
-	watch.tried = TRUE
-	meek.start_activity(watch)
-	meek.forceMove(prison_spot(home, 9, 7))
-	watch.spot = null
-	watch.arrive()
+	// A shut door stops a dart: they stay put in the yard and the watch is over.
+	watch = start_watch(meek, staff_door, prison_spot(home, 9, 7))
 	TEST_ASSERT(watch.started, "The watch did not start")
 	TEST_ASSERT(findtext(prison.bounty_examine(meek, null), "glancing at the door"), "Examine does not show the door-watching tell")
-
-	// A shut door stops the dart short.
 	watch.darting = TRUE
 	watch.dart_step()
 	TEST_ASSERT(!watch.darting, "A dart went on at a shut door")
 	TEST_ASSERT_EQUAL(meek.loc, prison_spot(home, 9, 7), "A dart got past a shut door")
-	TEST_ASSERT(prison.in_cell_block(meek), "A dart at a shut door left the cell block")
+	TEST_ASSERT_EQUAL(watch.tick(1), 1, "The watch went on after the dart stopped") // ACTIVITY_DONE
+	meek.end_activity(cancel_ai = FALSE)
 
-	// Through the open door: out of the cell block, and loose.
-	staff_door.autoclose = FALSE
+	// The door opens with the opener standing on the far side: the dart waits in the yard, then gives up.
+	prison.prison_bounty_forced_dart = TRUE
+	var/mob/living/carbon/human/opener = make_player(prison_spot(home, 9, 5), "bountymeekopener")
+	watch = start_watch(meek, staff_door, prison_spot(home, 9, 8))
 	staff_door.open()
-	TEST_ASSERT(!staff_door.density, "The staff door did not open")
-	watch.darting = TRUE
-	watch.dart_steps = 0
-	watch.dart_step()
-	TEST_ASSERT_EQUAL(meek.loc, get_turf(staff_door), "The dart did not slip into the open doorway")
-	// The doorway is the cell block's edge: still inside, and still going.
-	TEST_ASSERT(watch.darting, "The dart stopped in the doorway")
-	watch.dart_step()
-	TEST_ASSERT(!prison.in_cell_block(meek), "The dart did not get past the doorway")
+	TEST_ASSERT(watch.tried, "The door opening gave them no chance at it")
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_bounty_kit, dart_over), watch), 5 SECONDS), "The dart never ended with the far side blocked")
+	TEST_ASSERT(!QDELETED(watch) && !watch.darting, "The dart went somewhere with the far side blocked")
+	TEST_ASSERT(meek.loc != get_turf(staff_door), "The dart left them standing in the doorway")
+	TEST_ASSERT(prison.in_cell_block(meek) && meek.walkable?[meek.loc], "The stopped dart left them off the yard")
+	TEST_ASSERT_NULL(meek.trouble, "A stopped dart left them in trouble")
+	TEST_ASSERT_EQUAL(watch.tick(1), 1, "The watch went on after the dart stopped") // ACTIVITY_DONE
+	meek.end_activity(cancel_ai = FALSE)
+	staff_door.close()
+	// A test key on a mob being deleted is a runtime; the fixture clears keys only at the end
+	opener.key = null
+	qdel(opener)
+
+	// With the far side clear, through in one go: out of the cell block, loose, and quicker than the others.
+	watch = start_watch(meek, staff_door, prison_spot(home, 9, 8))
+	staff_door.open()
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_bounty_kit, dart_over), watch), 5 SECONDS), "The dart never ended with the way clear")
+	TEST_ASSERT(!prison.in_cell_block(meek), "The dart did not get them out of the cell block")
+	TEST_ASSERT(meek.loc != get_turf(staff_door), "The dart left them standing in the doorway")
 	TEST_ASSERT_EQUAL(meek.trouble, "loose", "A prisoner who slipped out of the cell block is [meek.trouble || "not in trouble"]") // PRISONER_TROUBLE_LOOSE
-	TEST_ASSERT_NULL(meek.activity, "The watch went on after they got out")
+	TEST_ASSERT(meek.activity != watch, "The watch went on after they got out")
+	TEST_ASSERT_EQUAL(meek.speed, 1.6, "A loose meek prisoner runs at [meek.speed]") // BOUNTY_PRISON_MEEK_LOOSE_SPEED
+	TEST_ASSERT_EQUAL(meek.obj_damage, 25, "A loose Petty prisoner does [meek.obj_damage] damage to things") // PRISONER_LOOSE_OBJ_DAMAGE x 1
+	prison.recapture(meek)
+	TEST_ASSERT_EQUAL(meek.speed, 2, "A recaptured meek prisoner still runs at [meek.speed]") // their own speed
+	staff_door.close()
+	prison.prison_bounty_forced_dart = null
+	prison.crew_home_override = null
 	prison.trouble_enabled = FALSE
 	settle_prison_air(home)
+
+/// Puts `meek` watching `door` from `spot`, started, with its chance still to come
+/datum/unit_test/voidcrew_outpost_prison_bounty_meek/proc/start_watch(mob/living/basic/outpost_prisoner/meek, obj/machinery/door/airlock/door, turf/spot)
+	var/datum/prisoner_activity/bounty_door_watch/watch = new(meek)
+	watch.door_ref = WEAKREF(door)
+	meek.start_activity(watch)
+	meek.forceMove(spot)
+	meek.prison.refresh_prisoner_reach(meek)
+	watch.arrive()
+	return watch

@@ -75,8 +75,10 @@ type BountyIntake = {
     name?: string;
     tier?: string;
     level?: number;
-    /** seconds until it can beam in, null while no arrival is due */
+    /** seconds until it beams in, once its notice has run by the next arrival; null otherwise */
     in?: number | null;
+    /** an ordinary prisoner comes first; it arrives after that */
+    after_next?: BooleanLike;
   } | null;
 };
 
@@ -1085,7 +1087,11 @@ function BountyTransfers({ data, act }: Props) {
           >
             <Icon name="right-to-bracket" />
             {`Next: ${next.name || 'unknown'} (${next.tier || 'Bounty'})${
-              isNumber(next.in) ? `, ${clock(next.in)}` : ''
+              isNumber(next.in)
+                ? `, ${clock(next.in)}`
+                : next.after_next
+                  ? ', after the next arrival'
+                  : ''
             }`}
           </span>
         ) : null}

@@ -122,7 +122,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 
 /obj/machinery/outpost_network_pad
 	name = "network pad"
-	desc = "A teleporter pad on the outpost network. It sends one person at a time to another outpost's pad, and reaches nowhere else."
+	desc = "A teleporter pad on the outpost network."
 	icon = 'voidcrew/modules/transporter/icons/transporter.dmi'
 	icon_state = "transporter_pad"
 	base_icon_state = "transporter_pad"
@@ -183,7 +183,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 
 /obj/machinery/outpost_network_pad/trader
 	name = "public network pad"
-	desc = "The trading outpost's public teleporter pad. It sends one person at a time to player outposts on the network, free of charge."
+	desc = "The trading outpost's public teleporter pad."
 	is_trader = TRUE
 
 /// Links the pad to its outpost. Player pads are linked by their Teleporter room, trader pads by spawn_network_pad().
@@ -519,7 +519,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 		transporter_restore(traveller, charge_alpha)
 		if(reason)
 			traveller.balloon_alert(traveller, "trip cancelled")
-			to_chat(traveller, span_warning("[reason] The trip is cancelled and nothing was charged."))
+			to_chat(traveller, span_warning("[reason] Trip cancelled."))
 	playsound(src, 'sound/machines/terminal/terminal_error.ogg', 40, TRUE)
 
 /obj/machinery/outpost_network_pad/proc/on_traveller_moved(mob/living/source)
@@ -590,7 +590,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	charge_beams = null
 	if(!moved || get_turf(traveller) != arrival)
 		transporter_restore(traveller, charge_alpha)
-		to_chat(traveller, span_warning("The pad could not lock on to you. Nothing was charged."))
+		to_chat(traveller, span_warning("The pad could not lock on to you."))
 		playsound(src, 'sound/machines/terminal/terminal_error.ogg', 40, TRUE)
 		log_game("OUTPOST NETWORK: [key_name(traveller)]'s trip from [site_name()] to [destination.site_name()] was refused by the teleport")
 		return "The pad could not lock on."
@@ -611,7 +611,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	transporter_materialise(traveller, charge_alpha)
 	playsound(departure, 'sound/effects/magic/teleport_diss.ogg', 40, TRUE)
 	playsound(arrival, 'sound/effects/magic/teleport_app.ogg', 40, TRUE)
-	to_chat(traveller, span_notice("You arrive at [destination.site_name()].[paid ? " The [paid] cr fare was paid." : ""]"))
+	to_chat(traveller, span_notice("You arrive at [destination.site_name()].[paid ? " Fare: [paid] cr." : ""]"))
 	log_game("OUTPOST NETWORK: [key_name(traveller)] travelled from [site_name()] ([outpost_network_zone_name(get_zone())]) to [destination.site_name()] ([outpost_network_zone_name(destination.get_zone())]), paid [paid] cr")
 	return null
 
@@ -673,7 +673,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/obj/structure/overmap/dynamic/player_outpost/home = player_host()
 	var/fare = home?.get_price(OUTPOST_PRICE_TELEPORT_ARRIVAL)
 	if(fare)
-		. += span_notice("Visitors pay [fare] cr to arrive here. Members travel free.")
+		. += span_notice("Arrival fare: [fare] cr.")
 
 /obj/machinery/outpost_network_pad/emag_act(mob/user, obj/item/card/emag/emag_card)
 	balloon_alert(user, "no effect")

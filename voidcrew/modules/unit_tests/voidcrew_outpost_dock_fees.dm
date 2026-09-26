@@ -142,7 +142,7 @@
 	TEST_ASSERT_EQUAL(card["amount"], 500, "The helm card shows the wrong fee")
 	TEST_ASSERT_EQUAL(card["ref"], REF(home), "The helm card names the wrong outpost")
 	TEST_ASSERT_EQUAL(card["balance"], 1000, "The helm card shows the wrong ship balance")
-	TEST_ASSERT(card["expiresIn"] > 0 && card["expiresIn"] <= 120, "The helm card's expiry is not in seconds")
+	TEST_ASSERT(ship.dock_fee_quote["expires"] > world.time && ship.dock_fee_quote["expires"] <= world.time + 120 SECONDS, "The quote does not expire within two minutes")
 	TEST_ASSERT(card["canApprove"], "The captain cannot approve on the helm card")
 
 	// Item 15: helm approval

@@ -21,7 +21,7 @@
 /datum/outpost_upgrade/service/teleporter
 	id = "teleporter"
 	name = "Teleporter"
-	desc = "A network pad that sends people to the trading outposts and to other outposts with a teleporter. You set the fare visitors pay to arrive here."
+	desc = "A teleporter pad on the outpost network."
 	price = OUTPOST_TELEPORTER_COST
 	template_type = /datum/map_template/outpost_upgrade/teleporter
 	preview_name = "outpost_upgrade_teleporter"
@@ -123,7 +123,7 @@
 	switch(action)
 		if("set_teleporter_arrivals", "teleporter_allow", "teleporter_disallow")
 			if(!outpost.is_current_management_user(user))
-				to_chat(user, span_warning("Management access required."))
+				to_chat(user, span_warning("Not authorised."))
 				return TRUE
 		else
 			return FALSE

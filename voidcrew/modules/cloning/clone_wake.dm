@@ -91,13 +91,6 @@
 		return home.name
 	return get_area_name(src, format_text = TRUE) || "an unknown place"
 
-/obj/machinery/cloning_vat/proc/clone_site_kind()
-	if(get_voidcrew_ship_for_turf(get_turf(src)))
-		return "ship"
-	if(get_outpost_from_atom(src))
-		return "outpost"
-	return "other"
-
 /// Whether a claim uses the clone up instead of regrowing it
 /obj/machinery/cloning_vat/proc/is_single_use()
 	return FALSE
@@ -126,25 +119,12 @@
 /// One row of the menu
 /obj/machinery/cloning_vat/proc/clone_wake_row(mob/dead/observer/ghost)
 	var/datum/mind/mind = imprint_mind_ref?.resolve()
-	var/offline = !is_operational || !anchored
-	var/zone
-	switch(get_zone_type_for_player_turf(get_turf(src)))
-		if(ZONE_GREEN)
-			zone = "green"
-		if(ZONE_YELLOW)
-			zone = "yellow"
-		if(ZONE_RED)
-			zone = "red"
 	return list(
 		"ref" = REF(src),
 		"site" = clone_site_name(),
-		"site_kind" = clone_site_kind(),
-		"zone" = zone,
 		"ready" = body_ready,
-		"offline" = offline,
+		"offline" = !is_operational || !anchored,
 		"percent" = get_growth_percent(),
-		"eta" = (body_ready || offline) ? 0 : max(0, round((growth_time - growth_progress) / 10)),
-		"single_use" = is_single_use(),
 		"unsafe_air" = clone_wake_air_unsafe(get_turf(src)),
 		"denial" = claim_denial(ghost, mind),
 		"warning" = claim_warning(ghost),
@@ -154,7 +134,7 @@
 
 /datum/action/clone_wake
 	name = "Wake in a Clone"
-	desc = "List your grown clones and choose one to wake up in."
+	desc = "Your clones."
 	button_icon = 'voidcrew/icons/obj/machines/cloning_vat.dmi'
 	button_icon_state = "pod_ready"
 	check_flags = NONE
@@ -192,7 +172,7 @@
 
 /atom/movable/screen/alert/notify_action/clone_ready
 	name = "Clone Ready"
-	desc = "A clone of you is fully grown. Click to choose where to wake up."
+	desc = "A clone of you is fully grown."
 	timeout = 0
 
 /atom/movable/screen/alert/notify_action/clone_ready/Initialize(mapload, datum/hud/hud_owner)

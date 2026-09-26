@@ -83,7 +83,7 @@
 
 /obj/machinery/outpost_shop_stock
 	name = "shop stock unit"
-	desc = "A sealed stock cabinet for the outpost shop. The register out front sells what is inside."
+	desc = "A sealed stock cabinet for the outpost shop."
 	icon = 'icons/obj/machines/smartfridge.dmi'
 	icon_state = "smartfridge"
 	base_icon_state = "smartfridge"
@@ -113,8 +113,6 @@
 	var/releasing = FALSE
 	/// Newest last: list("when", "buyer", "name", "qty", "total", "taken")
 	var/list/sales_log = list()
-	/// Ckey -> the last refusal shown in the owner window
-	var/list/owner_errors = list()
 
 /obj/machinery/outpost_shop_stock/Initialize(mapload)
 	. = ..()
@@ -139,7 +137,6 @@
 
 /obj/machinery/outpost_shop_stock/examine(mob/user)
 	. = ..()
-	. += span_notice("It holds [length(listing_of)] of [OUTPOST_SHOP_MAX_ITEMS] items in [length(listings_by_id)] listings.")
 	. += span_notice("Staff only.")
 
 // ===== NOTHING GETS OUT BY FORCE =====
@@ -343,7 +340,7 @@
  */
 /obj/machinery/outpost_shop_stock/proc/stock_item(obj/item/item, mob/living/user, datum/storage/from_storage)
 	if(!can_stock(user))
-		return "Only management can stock the shop."
+		return "Staff only."
 	var/refusal = refusal_reason(item)
 	if(refusal)
 		return refusal
@@ -354,7 +351,7 @@
 	var/key = listing_key(item)
 	var/datum/outpost_shop_listing/listing = listing_by_key[key]
 	if(!listing && length(listings_by_id) >= OUTPOST_SHOP_MAX_LISTINGS)
-		return "Too many listings. Forget some empty ones first."
+		return "Too many listings."
 	var/item_name = item.name
 	// Stacks never merge inside machines on their own (can_merge() refuses), so top up by hand
 	if(listing?.is_stack)
@@ -738,19 +735,13 @@
 	return list(
 		"shop_name" = shop_title(),
 		"open" = !!shop?.is_open,
-		"closed_reason" = closed_reason(),
 		"can_stock" = can_stock(user),
 		"can_price" = can_price(user),
-		"used" = length(listing_of),
-		"capacity" = OUTPOST_SHOP_MAX_ITEMS,
-		"listing_count" = length(listings_by_id),
-		"listing_limit" = OUTPOST_SHOP_MAX_LISTINGS,
 		"category_limit" = OUTPOST_SHOP_MAX_CATEGORIES,
 		"max_price" = OUTPOST_SHOP_MAX_PRICE,
 		"categories" = category_rows,
 		"listings" = listing_rows,
 		"sales" = sale_rows,
-		"error" = user?.ckey ? owner_errors[user.ckey] : null,
 	)
 
 /// The listings a UI action names, or null when the list is malformed
@@ -779,11 +770,6 @@
 		return
 	var/mob/living/user = ui.user
 	var/refusal = owner_action(user, action, params)
-	if(user?.ckey)
-		if(refusal)
-			owner_errors[user.ckey] = refusal
-		else
-			owner_errors -= user.ckey
 	if(refusal)
 		balloon_alert(user, LOWER_TEXT(refusal))
 	mark_dirty()
@@ -798,7 +784,7 @@
 	switch(action)
 		if("insert_held")
 			if(!stocker)
-				return "Only management can stock the shop."
+				return "Staff only."
 			var/obj/item/held = user.get_active_held_item()
 			if(!held)
 				return "Hold something to stock it."
@@ -813,7 +799,7 @@
 
 	// Everything below is for pricing users
 	if(!pricer)
-		return "Pricing access required."
+		return "Not authorised."
 	switch(action)
 		if("set_price")
 			var/list/chosen = listings_from_ids(params["ids"])
@@ -871,7 +857,7 @@
 					continue
 				remove_listing(listing)
 				forgotten++
-			return forgotten ? null : "Only empty listings can be forgotten."
+			return forgotten ? null : "Not empty."
 		if("add_category")
 			if(length(categories) - 1 >= OUTPOST_SHOP_MAX_CATEGORIES)
 				return "Too many categories."
@@ -949,7 +935,6 @@
 				"icon" = listing.icon_file,
 				"icon_state" = listing.icon_state,
 				"price" = taker ? 0 : listing.price,
-				"list_price" = listing.price,
 				"per_unit" = listing.is_stack,
 				"available" = listing.unit_count(),
 				"max_per_buy" = listing.is_stack ? listing.max_stack : OUTPOST_SHOP_MAX_BUY,
@@ -961,9 +946,7 @@
 		"shop_name" = shop_title(),
 		"open" = !closed,
 		"closed_reason" = closed,
-		"member" = member,
 		"free_take" = taker,
-		"account_holder" = account?.account_holder,
 		"account_credits" = account?.account_balance,
 		"confirm_total" = OUTPOST_SHOP_CONFIRM_TOTAL,
 		"categories" = category_rows,

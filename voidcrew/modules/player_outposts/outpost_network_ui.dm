@@ -16,16 +16,7 @@
 	var/online = !!network_host()
 	data["padName"] = online ? site_name() : name
 	data["online"] = online
-	data["trader"] = is_trader
-	data["zone"] = get_zone()
-	data["zoneName"] = outpost_network_zone_name(get_zone())
-	data["onPad"] = isliving(user) && user.loc == get_turf(src)
 	data["blocked"] = isliving(user) ? departure_denial(traveller) : "People only."
-	var/ready_at = user.ckey && GLOB.outpost_network_ready_at[user.ckey]
-	data["cooldownLeft"] = (ready_at && ready_at > world.time) ? round((ready_at - world.time) / (1 SECONDS)) : 0
-	var/datum/bank_account/account = isliving(user) ? traveller.get_idcard(TRUE)?.registered_account : null
-	data["payer"] = account?.account_holder
-	data["balance"] = account ? account.account_balance : null
 	var/mob/living/charging = charging_ref?.resolve()
 	var/obj/machinery/outpost_network_pad/target = charge_target_ref?.resolve()
 	if(charging && target)
@@ -37,7 +28,6 @@
 		)
 	else
 		data["charging"] = null
-	data["incoming"] = is_receiving()
 	var/list/destinations = list()
 	if(online && isliving(user))
 		for(var/obj/machinery/outpost_network_pad/pad as anything in GLOB.outpost_network_pads)
@@ -53,11 +43,9 @@
 			destinations += list(list(
 				"id" = pad.network_id,
 				"name" = pad.site_name(),
-				"kind" = pad.is_trader ? "market" : "colony",
 				"zone" = pad.get_zone(),
 				"zoneName" = outpost_network_zone_name(pad.get_zone()),
 				"fee" = pad.arrival_fee(traveller),
-				"chargeTime" = charge_time_to(pad) / (1 SECONDS),
 				"available" = isnull(reason),
 				"reason" = reason,
 			))
@@ -110,10 +98,9 @@
 	var/list/lines = list("Travel to [destination.site_name()] ([outpost_network_zone_name(destination.get_zone())])?")
 	if(shown_fee > 0)
 		var/datum/bank_account/account = user.get_idcard(TRUE)?.registered_account
-		lines += "Fare: [shown_fee] cr, paid from [account?.account_holder || "your ID"]."
+		lines += "Fare: [shown_fee] cr, from [account?.account_holder ? "[account.account_holder]'s account" : "your ID"]."
 	else
 		lines += "No fare."
-	lines += "Only you and what you carry will travel."
 	var/ship_warning = trader_parked_ship_warning(user, destination)
 	if(ship_warning)
 		lines += ship_warning
@@ -136,5 +123,5 @@
 			continue
 		if(destination.host_ref?.resolve() == ship.docked)
 			continue
-		return "Your ship [ship.name] is docked at [ship.docked.name]. A ship left there with no crew is abandoned after [DisplayTimeText(SHIP_CREWLESS_ABANDON_TIME)]."
+		return "Your ship [ship.name] at [ship.docked.name] is unattended."
 	return null

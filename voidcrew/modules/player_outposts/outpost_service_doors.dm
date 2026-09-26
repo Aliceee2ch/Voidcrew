@@ -12,7 +12,7 @@
  */
 /obj/machinery/door/airlock/outpost/service
 	name = "service airlock"
-	desc = "A glass airlock on an outpost's service room. The frame is rated for a lot more than a crowbar."
+	desc = "A glass airlock on an outpost's service room."
 	icon = 'icons/obj/doors/airlocks/public/glass.dmi'
 	overlays_file = 'icons/obj/doors/airlocks/public/overlays.dmi'
 	opacity = FALSE

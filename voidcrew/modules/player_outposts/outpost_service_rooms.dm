@@ -253,7 +253,7 @@
 /// Management opens or closes the room's public doors to visitors. Null when set, else a refusal.
 /datum/outpost_upgrade/service/proc/set_visitors_allowed(mob/living/user, allowed)
 	if(QDELETED(outpost) || !outpost.is_current_management_user(user))
-		return "Management access required."
+		return "Not authorised."
 	allowed = !!allowed
 	if(allowed == visitors_allowed)
 		return null

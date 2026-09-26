@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  LabeledList,
   NoticeBox,
   ProgressBar,
   Section,
@@ -14,11 +13,9 @@ import { Window } from '../../tgui/layouts';
 type Destination = {
   id: string;
   name: string;
-  kind: 'market' | 'colony';
   zone: number | null;
   zoneName: string;
   fee: number;
-  chargeTime: number;
   available: BooleanLike;
   reason: string | null;
 };
@@ -33,16 +30,8 @@ type Charging = {
 type Data = {
   padName: string;
   online: BooleanLike;
-  trader: BooleanLike;
-  zone: number | null;
-  zoneName: string;
-  onPad: BooleanLike;
   blocked: string | null;
-  cooldownLeft: number;
-  payer: string | null;
-  balance: number | null;
   charging: Charging | null;
-  incoming: BooleanLike;
   destinations: Destination[];
 };
 
@@ -57,39 +46,16 @@ const zoneColor = (zone: number | null) =>
 
 export const OutpostTeleporter = () => {
   const { act, data } = useBackend<Data>();
-  const {
-    padName,
-    online,
-    zone,
-    zoneName,
-    blocked,
-    payer,
-    balance,
-    charging,
-    incoming,
-    destinations = [],
-  } = data;
+  const { padName, online, blocked, charging, destinations = [] } = data;
 
   return (
-    <Window width={440} height={520} title="Network pad">
+    <Window width={400} height={440} title={padName}>
       <Window.Content scrollable>
-        <Section title={padName}>
-          <LabeledList>
-            <LabeledList.Item label="Zone" color={zoneColor(zone)}>
-              {zoneName}
-            </LabeledList.Item>
-            <LabeledList.Item label="Pays">
-              {payer
-                ? `${payer} (${balance ?? 0} cr)`
-                : 'No account on your ID'}
-            </LabeledList.Item>
-          </LabeledList>
-        </Section>
         {!online ? (
-          <NoticeBox danger>This pad is not linked to the network.</NoticeBox>
+          <NoticeBox danger>Not linked to the network.</NoticeBox>
         ) : charging ? (
           <Section
-            title={`Charging for ${charging.destination}`}
+            title={`To ${charging.destination}`}
             buttons={
               charging.mine ? (
                 <Button icon="xmark" color="bad" onClick={() => act('cancel')}>
@@ -101,20 +67,10 @@ export const OutpostTeleporter = () => {
             <ProgressBar
               value={Math.max(0, charging.total - charging.secondsLeft)}
               maxValue={Math.max(charging.total, 0.1)}
-            >
-              {`${charging.secondsLeft} s`}
-            </ProgressBar>
-            <Box mt={1} color="label">
-              Stay on the pad. Moving off it, being hurt or passing out cancels
-              the trip.
-            </Box>
+            />
           </Section>
         ) : (
-          <DestinationList
-            destinations={destinations}
-            blocked={blocked}
-            incoming={incoming}
-          />
+          <DestinationList destinations={destinations} blocked={blocked} />
         )}
       </Window.Content>
     </Window>
@@ -124,20 +80,17 @@ export const OutpostTeleporter = () => {
 type ListProps = {
   destinations: Destination[];
   blocked: string | null;
-  incoming: BooleanLike;
 };
 
 const DestinationList = (props: ListProps) => {
   const { act } = useBackend<Data>();
-  const { destinations, blocked, incoming } = props;
+  const { destinations, blocked } = props;
   return (
     <Section
-      title="Destinations"
       buttons={
         blocked === 'Stand on the pad.' ? (
           <Button
             icon="person-walking-arrow-right"
-            tooltip="Moves someone idle off the pad"
             onClick={() => act('clear_pad')}
           >
             Clear pad
@@ -145,12 +98,13 @@ const DestinationList = (props: ListProps) => {
         ) : null
       }
     >
-      {blocked ? <NoticeBox>{blocked}</NoticeBox> : null}
-      {incoming ? (
-        <NoticeBox info>Someone is arriving on this pad.</NoticeBox>
+      {blocked ? (
+        <Box color="average" mb={1}>
+          {blocked}
+        </Box>
       ) : null}
       {destinations.length === 0 ? (
-        <Box color="label">No other outpost is on the network yet.</Box>
+        <Box color="label">No destinations.</Box>
       ) : (
         <Stack vertical>
           {destinations.map((dest) => (
@@ -159,7 +113,7 @@ const DestinationList = (props: ListProps) => {
                 <Stack.Item grow>
                   <Box bold>{dest.name}</Box>
                   <Box color={zoneColor(dest.zone)} fontSize={0.9}>
-                    {`${dest.kind === 'market' ? 'Trading outpost' : 'Outpost'}, ${dest.zoneName}, ${dest.chargeTime} s charge`}
+                    {dest.zoneName}
                   </Box>
                 </Stack.Item>
                 <Stack.Item>
@@ -171,7 +125,6 @@ const DestinationList = (props: ListProps) => {
                   <Button
                     icon="bolt"
                     disabled={!dest.available || !!blocked}
-                    tooltip={dest.reason || blocked || undefined}
                     onClick={() =>
                       act('depart', { id: dest.id, fee: dest.fee })
                     }

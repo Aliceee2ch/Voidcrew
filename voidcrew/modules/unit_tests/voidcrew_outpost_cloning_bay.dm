@@ -73,7 +73,7 @@
 	var/mob/dead/observer/ghost = ghost_of(player)
 	TEST_ASSERT_EQUAL(vat.claim_denial(ghost, mind), "No clone grown.", "An empty vat gave the wrong reason")
 	vat.growth_progress = vat.growth_time / 2
-	TEST_ASSERT_EQUAL(vat.claim_denial(ghost, mind), "Clone only 50% grown.", "A growing vat gave the wrong reason")
+	TEST_ASSERT_EQUAL(vat.claim_denial(ghost, mind), "Still growing.", "A growing vat gave the wrong reason")
 	grow(vat)
 	TEST_ASSERT_EQUAL(vat.claim_denial(ghost, mind), "You are still alive.", "A ghost of a living body could claim")
 	player.death()
@@ -256,11 +256,11 @@
 	var/list/rows = data["clones"]
 	TEST_ASSERT_EQUAL(length(rows), 2, "The chooser sent the wrong number of rows")
 	var/list/row = rows[1]
-	for(var/key in list("ref", "site", "site_kind", "zone", "ready", "offline", "percent", "eta", "single_use", "unsafe_air", "denial", "warning"))
+	for(var/key in list("ref", "site", "ready", "offline", "percent", "unsafe_air", "denial", "warning"))
 		TEST_ASSERT(key in row, "A chooser row has no [key]")
 	TEST_ASSERT_EQUAL(row["ref"], REF(visitor_vat), "The ready clone is not listed first")
-	TEST_ASSERT_EQUAL(row["site_kind"], "outpost", "The outpost vat's site kind is wrong")
-	TEST_ASSERT(row["single_use"], "The outpost vat is not shown as single-use")
+	TEST_ASSERT_EQUAL(row["site"], home.name, "The outpost vat's site is wrong")
+	TEST_ASSERT(visitor_vat.is_single_use(), "The outpost vat is not single-use")
 
 	// F-19: a visitor's wake is an arrival
 	home.dock_mode = "lockdown"
@@ -326,9 +326,9 @@
 
 	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "The vat is empty.", "An empty vat could be evicted")
 	TEST_ASSERT_NULL(vat.paid_imprint(visitor, home, 600), "The visitor could not imprint")
-	TEST_ASSERT_EQUAL(vat.eviction_denial(visitor), "Treasury access required.", "A visitor could evict")
+	TEST_ASSERT_EQUAL(vat.eviction_denial(visitor), "Not authorised.", "A visitor could evict")
 	treasury.account_balance = 100
-	TEST_ASSERT_EQUAL(vat.evict(owner), "The treasury cannot cover the 600 cr refund.", "A short treasury evicted")
+	TEST_ASSERT_EQUAL(vat.evict(owner), "Treasury can't cover the 600 cr refund.", "A short treasury evicted")
 	TEST_ASSERT_EQUAL(visitor_account.account_balance, 400, "A refused eviction refunded")
 	TEST_ASSERT_NOTNULL(vat.imprint_mind_ref, "A refused eviction wiped the imprint")
 	treasury.account_balance = 1000
@@ -367,7 +367,7 @@
 	home.residents += resident.mind
 	TEST_ASSERT_NULL(member_vat.paid_imprint(resident, home, 0), "A resident could not imprint free")
 	var/treasury_before = treasury.account_balance
-	TEST_ASSERT_EQUAL(member_vat.eviction_denial(visitor), "Treasury access required.", "A visitor could evict a free imprint")
+	TEST_ASSERT_EQUAL(member_vat.eviction_denial(visitor), "Not authorised.", "A visitor could evict a free imprint")
 	TEST_ASSERT_NULL(member_vat.eviction_denial(owner), "A free imprint could not be evicted: [member_vat.eviction_denial(owner)]")
 	TEST_ASSERT_NULL(member_vat.evict(owner), "A free imprint could not be evicted")
 	TEST_ASSERT_NULL(member_vat.imprint_mind_ref, "Evicting a free imprint left it")
@@ -407,9 +407,9 @@
 	TEST_ASSERT_NULL(vat.paid_imprint(visitor, home, 600), "The visitor could not imprint")
 	grow(vat)
 	var/mob/dead/observer/ghost = kill_to_ghost(visitor, FALSE)
-	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "Its owner is dead and may wake in it.", "A dead holder who was never told the clone is ready was evicted")
+	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "Its owner may still wake in it.", "A dead holder who was never told the clone is ready was evicted")
 	vat.ready_notified_at = world.time - 1 MINUTES
-	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "Its owner is dead and may wake in it.", "A dead holder was evicted a minute after the ready prompt")
+	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "Its owner may still wake in it.", "A dead holder was evicted a minute after the ready prompt")
 	vat.ready_notified_at = world.time - 11 MINUTES
 	TEST_ASSERT_NULL(vat.eviction_denial(owner), "A dead holder who let the clone sit 10 minutes could not be evicted")
 

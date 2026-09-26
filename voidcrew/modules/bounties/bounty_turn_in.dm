@@ -275,6 +275,11 @@
 	w_class = WEIGHT_CLASS_TINY
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | ACID_PROOF | UNACIDABLE
 
+/obj/item/bounty_proof/Initialize(mapload)
+	. = ..()
+	// Thrown into a chasm it is gone for good, not kept in the depths where no pad can reach it (H1): the bounty then relists
+	ADD_TRAIT(src, TRAIT_CHASM_DESTROYED, INNATE_TRAIT)
+
 /obj/item/bounty_proof/examine(mob/user)
 	. = ..()
 	var/datum/criminal_bounty/posting = posting_ref?.resolve()
@@ -293,9 +298,11 @@
 /**
  * Leaves proof of death where `criminal` was destroyed (gibbed, dusted, fallen into lava or a chasm),
  * so the dead share can still be claimed at a pad (AR-A6, D-A2). Returns the proof, or null. P2
- * calls it as the body is destroyed. It leaves nothing when the pad or the board took the criminal
- * away (TRAIT_BOUNTY_REMOVED), when its bounty is closed or relisting, or when the criminal went
- * with its site's interior (it comes back at the next load). One proof per bounty.
+ * calls it as the body is destroyed, or falls into a chasm. The proof lands on the nearest safe tile
+ * within BOUNTY_PROOF_EDGE_RADIUS, never in the chasm or the lava itself (H1), and from then on it is
+ * the only thing to bring in: the body is let go. It leaves nothing when the pad or the board took
+ * the criminal away (TRAIT_BOUNTY_REMOVED), when its bounty is closed or relisting, or when the
+ * criminal went with its site's interior (it comes back at the next load). One proof per bounty.
  */
 /proc/bounty_drop_proof(mob/living/basic/bounty_criminal/criminal)
 	if(!criminal || HAS_TRAIT(criminal, TRAIT_BOUNTY_REMOVED))
@@ -312,16 +319,35 @@
 	var/obj/structure/overmap/where = posting.site()
 	if(where && posting.board_site_unloading(where) && posting.board_site_contains(where, spot))
 		return null
+	// The body is no longer the bounty's: whatever becomes of it (the chasm's depths, a fishing line) pays nothing
+	if(current == criminal)
+		posting.board_detach_criminal()
+	ADD_TRAIT(criminal, TRAIT_BOUNTY_REMOVED, BOUNTY_PAD_TRAIT)
 	var/obj/item/bounty_proof/existing = posting.board_proof()
 	if(existing)
 		return existing
-	var/obj/item/bounty_proof/proof = new(spot)
+	var/obj/item/bounty_proof/proof = new(bounty_proof_spot(spot))
 	proof.posting_ref = WEAKREF(posting)
 	proof.record = posting.record
 	if(posting.record?.name)
 		proof.name = "evidence tag ([posting.record.name])"
 	posting.board_attach_proof(proof)
 	return proof
+
+/// Where proof of death dropped at `spot` lands: `spot` if it is safe ground, else the nearest safe tile within BOUNTY_PROOF_EDGE_RADIUS (the chasm's or lava's edge), else `spot`
+/proc/bounty_proof_spot(turf/spot)
+	if(!spot || bounty_spawn_turf_ok(spot, allow_ship = TRUE))
+		return spot
+	var/turf/best
+	var/best_distance
+	for(var/turf/candidate as anything in RANGE_TURFS(BOUNTY_PROOF_EDGE_RADIUS, spot))
+		if(!bounty_spawn_turf_ok(candidate, allow_ship = TRUE))
+			continue
+		var/distance = get_dist(candidate, spot)
+		if(!best || distance < best_distance)
+			best = candidate
+			best_distance = distance
+	return best || spot
 
 /// Makes `proof` what this bounty pays the dead share for; if it is destroyed too, the bounty relists
 /datum/criminal_bounty/proc/board_attach_proof(obj/item/bounty_proof/proof)
@@ -374,11 +400,36 @@
 
 /**
  * Called from a player bounty's approve_offer() with the items on the sender's pad: why they can't
- * be sent (one of them holds a living mob), or null if they can (AR-H1).
+ * be sent (one of them holds a living bounty criminal, decoy or companion), or null if they can
+ * (AR-H1). Brains in MMIs, positronic brains, pAIs and held pets go through as they always did.
  */
 /proc/bounty_offer_refusal(list/items)
 	for(var/obj/item/item in items)
-		for(var/mob/living/passenger in item.get_all_contents())
-			if(passenger.stat != DEAD)
-				return "living cargo can't be sent this way"
+		if(bounty_holds_living_criminal(item))
+			return "living cargo can't be sent this way"
 	return null
+
+/// Whether `thing` holds (not is) a living bounty criminal, decoy or companion anywhere inside it
+/proc/bounty_holds_living_criminal(atom/movable/thing)
+	if(QDELETED(thing))
+		return FALSE
+	for(var/mob/living/passenger in thing.get_all_contents())
+		if(passenger == thing || passenger.stat == DEAD)
+			continue
+		if(istype(passenger, /mob/living/basic/bounty_criminal) || istype(passenger, /mob/living/basic/bounty_companion))
+			return TRUE
+	return FALSE
+
+/**
+ * Called from the transporter pad's gather_payload(): TRUE keeps `thing` off the beam. A criminal
+ * refuses teleports itself (P2); this stops a locker, a crate or a bag with a living one inside
+ * riding the beam instead (the pad is the only way out, D-A10). No side effects: the console asks it
+ * every UI tick.
+ */
+/proc/bounty_blocks_transport(atom/movable/thing)
+	if(QDELETED(thing))
+		return FALSE
+	if(istype(thing, /mob/living/basic/bounty_criminal) || istype(thing, /mob/living/basic/bounty_companion))
+		var/mob/living/rider = thing
+		return rider.stat != DEAD
+	return bounty_holds_living_criminal(thing)

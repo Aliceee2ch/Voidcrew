@@ -105,6 +105,9 @@
 /// Board ticks a loaded site may fail to give a spawn turf before the bounty moves somewhere else
 #define BOUNTY_SPAWN_ATTEMPTS 12
 
+/// Tiles from where a criminal was destroyed that its proof of death may land, to keep it out of a chasm or lava (H1)
+#define BOUNTY_PROOF_EDGE_RADIUS 3
+
 /// A bounty whose criminal was destroyed with nothing left lists again at a new site after this long (AR-A6)
 #define BOUNTY_RELIST_DELAY (5 MINUTES)
 

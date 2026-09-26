@@ -17,6 +17,7 @@ import {
   TextArea,
 } from 'tgui-core/components';
 import type { KeyEvent } from 'tgui-core/events';
+import { formatMoney } from 'tgui-core/format';
 import { acquireHotKey, releaseHotKey } from 'tgui-core/hotkeys';
 import { KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP } from 'tgui-core/keycodes';
 import type { BooleanLike } from 'tgui-core/react';
@@ -173,8 +174,6 @@ type UpgradeEntry = {
   price: number;
   width: number;
   height: number;
-  /** BYOND dir of the entrance edge as authored */
-  entrance: number;
   preview: string | null;
 };
 type UpgradeStatus = {
@@ -258,7 +257,6 @@ export type OutpostData = {
   ship_bays: ShipBay[];
   upgrade_catalog: UpgradeEntry[];
   upgrades: UpgradeStatus[];
-  upgrade_error: string | null;
   upgrade_surveying: BooleanLike;
   upgrade_survey?: UpgradeSurvey | null;
 };
@@ -607,19 +605,8 @@ function Docking({ data, act }: Props) {
   );
 }
 
-const UPGRADE_STATES = {
-  available: 'Available',
-  ready: 'Ready to place',
-  installed: 'Installed',
-};
-
 function upgradePrice(price: number) {
-  return price > 0 ? `${price} cr` : 'Free';
-}
-
-/** Tooltip for Cancel purchase: the denial, else the refund when there is one. */
-function refundTooltip(price: number, denial?: string | null) {
-  return denial || (price > 0 ? `Refund ${price} cr` : undefined);
+  return price > 0 ? `${formatMoney(price)} cr` : 'Free';
 }
 
 type UpgradesProps = Props & { onPlace: (id: string) => void };
@@ -660,21 +647,7 @@ function Upgrades({ data, act, onPlace }: UpgradesProps) {
       </div>
       <div className="Outpost__quiet">{upgrade.desc}</div>
       <div className="Outpost__row">
-        <span className="Outpost__grow">Size</span>
-        <span>{`${upgrade.width}×${upgrade.height}`}</span>
-      </div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">Price</span>
-        <span>{upgradePrice(upgrade.price)}</span>
-      </div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">State</span>
-        <span>{UPGRADE_STATES[state]}</span>
-      </div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">
-          Treasury: {data.treasury_balance} cr
-        </span>
+        <span className="Outpost__grow">{upgradePrice(upgrade.price)}</span>
         {state === 'available' ? (
           <Button.Confirm
             icon="cart-shopping"
@@ -699,19 +672,15 @@ function Upgrades({ data, act, onPlace }: UpgradesProps) {
               icon="rotate-left"
               color="bad"
               disabled={!!status?.manage_denial}
-              tooltip={refundTooltip(upgrade.price, status?.manage_denial)}
+              tooltip={status?.manage_denial || undefined}
               onClick={() => act('cancel_upgrade', { id: upgrade.id })}
             >
               Cancel purchase
             </Button.Confirm>
           </>
         ) : null}
+        {state === 'installed' ? <span>Built</span> : null}
       </div>
-      {data.upgrade_error ? (
-        <div className="Outpost__research-error" role="alert">
-          {data.upgrade_error}
-        </div>
-      ) : null}
     </>
   );
 }
@@ -738,27 +707,11 @@ const CELL_COLORS: Record<string, string> = {
   m: '#8b5c34',
   x: '#5e2323',
 };
-const LEGEND: [string, string][] = [
-  ['f', 'Floor'],
-  ['w', 'Wall'],
-  ['g', 'Window'],
-  ['d', 'Door'],
-  ['m', 'Object'],
-  ['x', 'No build'],
-];
 const PAN_KEYS: Record<number, [number, number]> = {
   [KEY_LEFT]: [-1, 0],
   [KEY_RIGHT]: [1, 0],
   [KEY_UP]: [0, 1],
   [KEY_DOWN]: [0, -1],
-};
-/** Clockwise from north, as BYOND dirs. */
-const CLOCKWISE_DIRS = [1, 4, 2, 8];
-const DIR_NAMES: Record<number, string> = {
-  1: 'north',
-  2: 'south',
-  4: 'east',
-  8: 'west',
 };
 
 type Tile = { x: number; y: number };
@@ -808,7 +761,7 @@ function checkFootprint(
     }
   }
   const reason = outside
-    ? 'Out of range'
+    ? 'Too far from the outpost'
     : blocked.length > 0
       ? 'Blocked'
       : !near
@@ -964,7 +917,7 @@ for (const [cell, hex] of Object.entries(CELL_COLORS)) {
   CELL_PIXELS[cell] = hexColor(hex);
 }
 
-/** The build range border. Keep in step with $range in OutpostManagement.scss. */
+/** The build range border. */
 const RANGE_COLOR = '#e03c3c';
 /** Canvas pixels, at every zoom. */
 const RANGE_LINE = 2;
@@ -1203,17 +1156,10 @@ function usePreviewImage(name: string | null) {
 
 type PlacementProps = Props & {
   upgrade: UpgradeEntry;
-  status: UpgradeStatus | undefined;
   onBack: () => void;
 };
 
-function UpgradePlacement({
-  data,
-  act,
-  upgrade,
-  status,
-  onBack,
-}: PlacementProps) {
+function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
   const survey = data.upgrade_survey || null;
   const surveying = !!data.upgrade_surveying || !survey;
   const [rotation, setRotation] = useState(0);
@@ -1224,7 +1170,7 @@ function UpgradePlacement({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   // Input lands between renders, so the live camera and hover sit in refs. Each
-  // animation frame draws from them, then copies them to state for the panel.
+  // animation frame draws from them, then copies them to state for the Build menu.
   const cameraRef = useRef<Camera | null>(null);
   const hoverRef = useRef<Tile | null>(null);
   const pointerRef = useRef<Point | null>(null);
@@ -1253,19 +1199,12 @@ function UpgradePlacement({
     [survey?.x, survey?.y, survey?.width, survey?.height, survey?.near],
   );
 
-  const turned = rotation === 90 || rotation === 270;
-  const footWidth = turned ? upgrade.height : upgrade.width;
-  const footHeight = turned ? upgrade.width : upgrade.height;
   const footprint = ghostFootprint(
     survey,
     menu ? menu.tile : hover,
     upgrade,
     rotation,
   );
-  const entrance =
-    CLOCKWISE_DIRS[
-      (CLOCKWISE_DIRS.indexOf(upgrade.entrance) + rotation / 90) % 4
-    ];
   const menuSpot = menu && camera ? toCanvas(camera, menu.point) : null;
 
   /** At most one draw per animation frame, however many inputs asked for one. */
@@ -1535,7 +1474,7 @@ function UpgradePlacement({
           <div
             className="Outpost__map-menu"
             style={{
-              left: `clamp(0px, ${(menuSpot.x / MAP_WIDTH) * 100}%, calc(100% - 130px))`,
+              left: `clamp(0px, ${(menuSpot.x / MAP_WIDTH) * 100}%, calc(100% - 170px))`,
               top: `clamp(0px, ${(menuSpot.y / MAP_HEIGHT) * 100}%, calc(100% - 70px))`,
             }}
           >
@@ -1543,7 +1482,7 @@ function UpgradePlacement({
               icon="hammer"
               disabled={!!footprint.reason}
               tooltip={footprint.reason || undefined}
-              confirmContent="Permanent. Build?"
+              confirmContent="Permanent. Build here?"
               onClick={() => {
                 act('place_upgrade', {
                   id: upgrade.id,
@@ -1573,71 +1512,28 @@ function UpgradePlacement({
           <Icon name="map-location-dot" />
           {upgrade.name}
         </div>
-        <div className="Outpost__row">
-          <span className="Outpost__grow">Entrance</span>
-          <span>{DIR_NAMES[entrance]}</span>
+        <div className="Outpost__map-actions">
           <Button
             icon="rotate-right"
-            tooltip="Rotate"
             onClick={() => {
               setRotation((rotation + 90) % 360);
               setMenu(null);
             }}
-          />
-        </div>
-        <div className="Outpost__row">
-          <span className="Outpost__grow">Size</span>
-          <span>{`${footWidth}×${footHeight}`}</span>
-        </div>
-        <div className="Outpost__row">
-          <span className="Outpost__grow">Spot</span>
-          <span>
-            {surveying
-              ? 'Surveying'
-              : footprint
-                ? footprint.reason || 'Clear'
-                : '-'}
-          </span>
+          >
+            Rotate
+          </Button>
           <Button
             icon="arrows-rotate"
-            tooltip="Refresh survey"
             disabled={surveying}
             onClick={() => act('refresh_upgrade_map', { id: upgrade.id })}
-          />
-        </div>
-        {data.upgrade_error ? (
-          <div className="Outpost__research-error" role="alert">
-            {data.upgrade_error}
-          </div>
-        ) : null}
-        <div className="Outpost__legend">
-          {LEGEND.map(([cell, label]) => (
-            <span key={cell}>
-              <i style={{ background: CELL_COLORS[cell] }} />
-              {label}
-            </span>
-          ))}
-          <span>
-            <i className="Outpost__legend-range" />
-            Build range
-          </span>
-        </div>
-        <div className="Outpost__quiet">
-          Wheel: zoom · Middle-drag or arrows: pan
+          >
+            Rescan
+          </Button>
         </div>
         <div className="Outpost__map-actions">
           <Button icon="arrow-left" onClick={onBack}>
             Back
           </Button>
-          <Button.Confirm
-            icon="rotate-left"
-            color="bad"
-            disabled={!!status?.manage_denial}
-            tooltip={refundTooltip(upgrade.price, status?.manage_denial)}
-            onClick={() => act('cancel_upgrade', { id: upgrade.id })}
-          >
-            Cancel purchase
-          </Button.Confirm>
         </div>
       </div>
     </>
@@ -2729,7 +2625,6 @@ export function OutpostManagementPanel({ data, act }: Props) {
               data={data}
               act={act}
               upgrade={placingUpgrade}
-              status={placingStatus}
               onBack={() => {
                 act('close_upgrade_map');
                 setPlacingId(null);

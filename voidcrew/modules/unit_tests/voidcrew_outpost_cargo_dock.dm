@@ -156,7 +156,7 @@
 			cargo_console = terminal
 			break
 	TEST_ASSERT_NOTNULL(cargo_console, "The small shell has no cargo console")
-	var/no_dock = "No cargo dock. Place the cargo dock upgrade."
+	var/no_dock = "No cargo dock"
 	TEST_ASSERT_EQUAL(cargo_console.get_shuttle_error_message(), no_dock, "The cargo console did not ask for a cargo dock")
 	TEST_ASSERT(!cargo_console.can_call_cargo_shuttle(), "The cargo console could order with no cargo dock")
 	TEST_ASSERT_EQUAL(home.freight.call_shuttle(), no_dock, "Freight was dispatched with no cargo dock")
@@ -173,7 +173,8 @@
 	TEST_ASSERT_EQUAL(dock_entry["price"], 0, "The cargo dock is not free")
 	TEST_ASSERT_EQUAL(dock_entry["width"], 16, "The cargo dock's catalog width is wrong")
 	TEST_ASSERT_EQUAL(dock_entry["height"], 13, "The cargo dock's catalog height is wrong")
-	TEST_ASSERT_EQUAL(dock_entry["entrance"], SOUTH, "The cargo dock's entrance edge is wrong")
+	var/datum/outpost_upgrade/dock_prototype = GLOB.outpost_upgrade_catalog["cargo_dock"]
+	TEST_ASSERT_EQUAL(dock_prototype.entrance_side, SOUTH, "The cargo dock's entrance edge is wrong")
 	TEST_ASSERT_EQUAL(dock_entry["preview"], "outpost_upgrade_cargo_dock.png", "The cargo dock's preview is missing")
 
 	// Free, but still bought through the normal path: an empty treasury is enough, once.
@@ -430,7 +431,7 @@
 	var/balance = home.treasury.account_balance
 	obstruction.forceMove(pad_spot)
 	var/refusal = ferry.call_shuttle()
-	TEST_ASSERT(findtext(refusal, "Cargo dock is obstructed by"), "Freight was dispatched to a pad with [label] on it: [refusal || "no refusal"]")
+	TEST_ASSERT(findtext(refusal, "Landing pad blocked by"), "Freight was dispatched to a pad with [label] on it: [refusal || "no refusal"]")
 	TEST_ASSERT(findtext(refusal, obstruction.name), "The dispatch refusal does not name [label]: [refusal]")
 	TEST_ASSERT_EQUAL(ferry.state, 0, "A refused dispatch left the freight busy ([label])")
 	TEST_ASSERT_NULL(ferry.shuttle_port, "A refused dispatch prepared a ferry ([label])")
@@ -442,7 +443,7 @@
 	obstruction.forceMove(pad_spot)
 	deltimer(ferry.warmup_timer)
 	TEST_ASSERT(!ferry.complete_arrival(), "The ferry landed on [label]")
-	TEST_ASSERT(findtext(ferry.last_error, "Cargo dock is obstructed by"), "The refused landing gave the wrong reason ([label]): [ferry.last_error]")
+	TEST_ASSERT(findtext(ferry.last_error, "Landing pad blocked by"), "The refused landing gave the wrong reason ([label]): [ferry.last_error]")
 	TEST_ASSERT_EQUAL(ferry.state, 0, "The refused landing left the freight busy ([label])")
 	TEST_ASSERT_NULL(ferry.shuttle_port, "The refused landing left its ferry behind ([label])")
 	TEST_ASSERT_NULL(ferry.landing_warning_timer, "The refused landing left its alarm armed ([label])")

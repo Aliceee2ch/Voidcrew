@@ -23,7 +23,7 @@
 	if(!home?.founder_ckey)
 		return "Claim has no owner; freight is suspended"
 	if(!home.cargo_dock_port())
-		return "No cargo dock. Place the cargo dock upgrade."
+		return "No cargo dock"
 	return null
 
 /datum/voidcrew_cargo_shuttle/outpost/call_shuttle(obj/structure/overmap/ship/unused)
@@ -87,7 +87,7 @@
 	var/atom/movable/obstruction = pad?.pad_obstruction()
 	if(!obstruction)
 		return null
-	return "Cargo dock is obstructed by \the [obstruction]; clear the landing pad and retry"
+	return "Landing pad blocked by \the [obstruction]"
 
 /**
  * Timer callback, landing_warning_time before the ferry lands: the pad's alarm, and ripples
@@ -176,7 +176,7 @@
 			// anything. Checked here, with nothing yielding before the move starts.
 			error = pad_obstruction_error()
 			if(!error && shuttle_port.initiate_docking(pad) != DOCKING_SUCCESS)
-				error = "Cargo dock is obstructed; clear the landing pad and retry"
+				error = "Landing pad blocked"
 	if(QDELETED(src) || operation_generation != delivery_generation)
 		return FALSE
 	if(!error)

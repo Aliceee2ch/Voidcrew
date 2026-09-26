@@ -242,11 +242,11 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 /// Buying, placing and cancelling all need management and treasury access.
 /obj/structure/overmap/dynamic/player_outpost/proc/upgrade_access_denial(mob/user)
 	if(!is_current_management_user(user) || !can_spend(user))
-		return "Management and treasury access required."
+		return "Not authorized."
 	if(!loaded || loading)
 		return "Outpost not ready."
 	if(!treasury)
-		return "Outpost bank unavailable."
+		return "No bank link."
 	return null
 
 /// Shared by the Buy button and the purchase itself. Null when the user may buy it now.
@@ -281,6 +281,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	blueprint.paid = prototype.price
 	outpost_upgrades[upgrade_id] = blueprint
 	log_game("PLAYER OUTPOST: [key_name(user)] bought the [prototype.name] upgrade for [prototype.price] cr at '[name]'")
+	to_chat(user, span_notice(prototype.price ? "[prototype.name] ordered. [prototype.price] cr paid from the treasury." : "[prototype.name] ordered."))
 	return null
 
 /// Whether the user may place or cancel this blueprint now. Null when they may.
@@ -304,6 +305,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	if(blueprint.paid)
 		treasury.adjust_money(blueprint.paid, "Outpost upgrade refund: [blueprint.name], cancelled by [user.ckey]")
 	log_game("PLAYER OUTPOST: [key_name(user)] cancelled the [blueprint.name] upgrade at '[name]', refunding [blueprint.paid] cr")
+	to_chat(user, span_notice(blueprint.paid ? "[blueprint.name] order cancelled. [blueprint.paid] cr refunded." : "[blueprint.name] order cancelled."))
 	qdel(blueprint)
 	return null
 
@@ -661,6 +663,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	return ..()
 
 /datum/player_outpost_management_ui
+	/// Why the last upgrade action was refused, or null. The user is told in chat.
 	var/upgrade_error
 	/// Whether this panel has its placement map open and wants the survey in its static data
 	var/wants_upgrade_survey = FALSE
@@ -703,7 +706,6 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			"price" = upgrade.price,
 			"width" = template?.width || 0,
 			"height" = template?.height || 0,
-			"entrance" = upgrade.entrance_side,
 			"preview" = upgrade.preview_asset(),
 		))
 	// The survey can be tens of kilobytes: static data only, and only while a map is open. The key
@@ -727,8 +729,12 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		))
 	return states
 
-/// Upgrades tab and placement map actions. The caller has already checked management access.
+/**
+ * Upgrades tab and placement map actions. The caller has already checked management access.
+ * A refusal is kept in upgrade_error and told to the user in chat.
+ */
 /datum/player_outpost_management_ui/proc/upgrade_action(action, list/params, mob/living/user)
+	upgrade_error = null
 	switch(action)
 		if("buy_upgrade")
 			upgrade_error = outpost.buy_outpost_upgrade(user, params["id"])
@@ -738,17 +744,17 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 				close_upgrade_map()
 		if("open_upgrade_map", "refresh_upgrade_map")
 			upgrade_error = outpost.upgrade_blueprint_denial(user, params["id"])
-			if(upgrade_error)
-				return TRUE
-			wants_upgrade_survey = TRUE
-			outpost.request_upgrade_survey(src, force = (action == "refresh_upgrade_map"))
+			if(!upgrade_error)
+				wants_upgrade_survey = TRUE
+				outpost.request_upgrade_survey(src, force = (action == "refresh_upgrade_map"))
 		if("close_upgrade_map")
-			upgrade_error = null
 			close_upgrade_map()
 		if("place_upgrade")
 			upgrade_error = place_upgrade_from_map(user, params)
 			if(!upgrade_error)
 				close_upgrade_map()
+	if(upgrade_error)
+		to_chat(user, span_warning(upgrade_error))
 	return TRUE
 
 /datum/player_outpost_management_ui/proc/close_upgrade_map()

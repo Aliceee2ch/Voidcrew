@@ -39,7 +39,22 @@ The **bank machine** handles the outpost's money. Deposit from your ID account o
 
 Order supplies through the ordinary **cargo console**, or buy sheets through a **Galactic Materials Market** you build locally. Both charge the outpost bank and send a physical freight ferry, which lands on the outpost's **cargo dock**. The cargo dock is a free upgrade: buy it and place it from the **Upgrades** tab of the management console. Until it is placed, the cargo console cannot order. No player ship needs to stay docked for deliveries.
 
-Load eligible goods onto the ferry and dispatch it to export them. Payment goes to the outpost bank. Everyone must leave the ferry before it can depart. Failed deliveries refund undelivered purchases.
+Load eligible goods onto the ferry and dispatch it to export them. Payment goes to the outpost bank. Everyone must leave the ferry before it can depart. Failed deliveries refund undelivered purchases. The ferry will not land on anyone or anything left on the landing pad; clear the pad and order again.
+
+## Upgrades
+
+The **Upgrades** tab of the management console sells prefabricated rooms: the free **cargo dock** and the service rooms your outpost can sell to visiting crews, such as the cloning bay, medical lab, shop, storage and teleporter. Buying one needs management and treasury permission and is paid from the outpost bank. Until the room is placed, **Cancel purchase** refunds the full price.
+
+Press **Place** to open the placement map, a plan of the ground around the outpost:
+
+- Turn the mouse wheel to zoom. Drag with the middle mouse button, or use the arrow keys, to pan. Hold Shift with the arrows to move faster.
+- The red line is the build range: part of the room must be within 8 tiles of the outpost or one of its rooms.
+- Grey is floor, light grey is wall, blue is window, amber is door and brown is something in the way. Dark red ground can never be built on: docking berths, the hangar elevator, the arrival point, other rooms and ground outside the claim.
+- The room follows the cursor, green where it fits and red where it does not, with the blocked tiles marked. Click to bring up **Build** and **Rotate**. A greyed-out Build says why in its tooltip.
+- Lattice and loose items do not block a room. They are cleared out of its way when it is built. People do: nobody can be standing on the spot when you build.
+- **Rescan** surveys the ground again, for example after you clear something away.
+
+Placement is permanent. A built room cannot be moved or refunded.
 
 ## Research and manufacturing
 

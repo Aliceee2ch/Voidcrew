@@ -170,12 +170,12 @@
 		if(entry["id"] == "cargo_dock")
 			dock_entry = entry
 	TEST_ASSERT_NOTNULL(dock_entry, "The cargo dock is missing from the upgrade catalog")
-	for(var/key in list("id", "name", "desc", "price", "width", "height", "entrance", "preview"))
+	for(var/key in list("id", "name", "desc", "price", "width", "height", "preview"))
 		TEST_ASSERT(key in dock_entry, "The catalog entry has no [key] for the Upgrades tab")
 	TEST_ASSERT_EQUAL(dock_entry["price"], 10000, "The catalog price is wrong")
 	TEST_ASSERT_EQUAL(dock_entry["width"], 16, "The cargo dock's catalog width is wrong")
 	TEST_ASSERT_EQUAL(dock_entry["height"], 13, "The cargo dock's catalog height is wrong")
-	TEST_ASSERT_EQUAL(dock_entry["entrance"], SOUTH, "The cargo dock's entrance edge is wrong")
+	TEST_ASSERT_EQUAL(prototype.entrance_side, SOUTH, "The cargo dock's entrance edge is wrong")
 	TEST_ASSERT_EQUAL(dock_entry["preview"], "outpost_upgrade_cargo_dock.png", "The cargo dock's preview is missing")
 	TEST_ASSERT_NULL(static_data["upgrade_survey"], "The survey was sent without a placement map open")
 	var/list/status = upgrade_status(panel, owner, "cargo_dock")
@@ -191,7 +191,7 @@
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "An unfunded purchase changed the treasury")
 
 	home.treasury.adjust_money(12500, "Upgrade test")
-	TEST_ASSERT_EQUAL(home.upgrade_purchase_denial(visitor, "cargo_dock"), "Management and treasury access required.", "A visitor was not refused")
+	TEST_ASSERT_EQUAL(home.upgrade_purchase_denial(visitor, "cargo_dock"), "Not authorized.", "A visitor was not refused")
 	TEST_ASSERT_NOTNULL(home.buy_outpost_upgrade(visitor, "cargo_dock"), "A visitor bought an upgrade")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, 12500, "A refused visitor purchase charged the treasury")
 	TEST_ASSERT_EQUAL(home.buy_outpost_upgrade(owner, "not_an_upgrade"), "Unknown upgrade.", "An unknown upgrade was not refused")
@@ -225,7 +225,7 @@
 	TEST_ASSERT_EQUAL(home.outpost_upgrades["cargo_dock"], blueprint, "A second purchase replaced the blueprint")
 
 	// Cancelling refunds exactly what was paid and frees the slot; only management may do it.
-	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(visitor, "cargo_dock"), "Management and treasury access required.", "A visitor cancelled the purchase")
+	TEST_ASSERT_EQUAL(home.cancel_outpost_upgrade(visitor, "cargo_dock"), "Not authorized.", "A visitor cancelled the purchase")
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, 22500, "A refused cancel changed the treasury")
 	act(panel, owner, "cancel_upgrade", null, list("id" = "cargo_dock"))
 	TEST_ASSERT_NULL(panel.upgrade_error, "Cancelling the purchase reported an error")

@@ -155,7 +155,6 @@
 		bays += list(bay_row)
 	data["ship_bays"] = bays
 	data["upgrades"] = upgrade_ui_data(user)
-	data["upgrade_error"] = upgrade_error
 	data["upgrade_surveying"] = outpost.upgrade_surveying
 	market_ui_data(user, data, can_manage)
 	return data

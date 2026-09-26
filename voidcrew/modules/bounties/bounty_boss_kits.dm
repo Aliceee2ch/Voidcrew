@@ -542,7 +542,8 @@
 /// Throws one grenade at `spot`: it flies, lands and starts its fuse
 /datum/action/cooldown/mob_cooldown/bounty_boss/grenade/proc/throw_grenade(turf/spot)
 	var/mob/living/basic/bounty_criminal/boss/boss = owner
-	if(!istype(boss) || boss.stat != CONSCIOUS || !spot)
+	// The second grenade comes half a second later: not if it was downed, cuffed or stunned meanwhile.
+	if(!istype(boss) || !boss.boss_can_act() || !spot)
 		return
 	boss.visible_message(span_danger("[boss] throws a grenade!"))
 	new /obj/effect/temp_visual/bounty_boss_thrown(get_turf(boss), spot)

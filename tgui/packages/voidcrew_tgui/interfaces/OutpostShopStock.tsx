@@ -59,19 +59,13 @@ type Sale = {
 type Data = {
   shop_name: string;
   open: BooleanLike;
-  closed_reason: string | null;
   can_stock: BooleanLike;
   can_price: BooleanLike;
-  used: number;
-  capacity: number;
-  listing_count: number;
-  listing_limit: number;
   category_limit: number;
   max_price: number;
   categories: Category[];
   listings: Listing[];
   sales: Sale[];
-  error: string | null;
 };
 
 const ALL = '__all__';
@@ -150,19 +144,13 @@ export const OutpostShopStock = (props) => {
   const {
     shop_name,
     open,
-    closed_reason,
     can_stock,
     can_price,
-    used,
-    capacity,
-    listing_count,
-    listing_limit,
     category_limit,
     max_price,
     categories = [],
     listings = [],
     sales = [],
-    error,
   } = data;
 
   const [tab, setTab] = useState<'stock' | 'sales'>('stock');
@@ -209,9 +197,6 @@ export const OutpostShopStock = (props) => {
       }
     };
   });
-
-  const categoryCount = (id: string) =>
-    listings.filter((listing) => listing.category === id).length;
 
   const onRowPointerDown = (
     event: ReactPointerEvent<HTMLDivElement>,
@@ -289,9 +274,33 @@ export const OutpostShopStock = (props) => {
       <Window.Content>
         <Stack fill vertical>
           <Stack.Item>
-            <Section
-              title={shop_name}
-              buttons={
+            <Stack align="center">
+              <Stack.Item grow>
+                <Tabs>
+                  <Tabs.Tab
+                    icon="boxes-stacked"
+                    selected={tab === 'stock'}
+                    onClick={() => setTab('stock')}
+                  >
+                    Stock
+                  </Tabs.Tab>
+                  <Tabs.Tab
+                    icon="receipt"
+                    selected={tab === 'sales'}
+                    onClick={() => setTab('sales')}
+                  >
+                    Sales
+                  </Tabs.Tab>
+                </Tabs>
+              </Stack.Item>
+              {can_stock ? (
+                <Stack.Item>
+                  <Button icon="box-open" onClick={() => act('insert_held')}>
+                    Stock held item
+                  </Button>
+                </Stack.Item>
+              ) : null}
+              <Stack.Item>
                 <Button
                   icon={open ? 'door-open' : 'door-closed'}
                   color={open ? 'good' : 'bad'}
@@ -299,48 +308,8 @@ export const OutpostShopStock = (props) => {
                 >
                   {open ? 'Open' : 'Closed'}
                 </Button>
-              }
-            >
-              <Stack>
-                <Stack.Item grow>
-                  Stock: {used} / {capacity} items in {listing_count} /{' '}
-                  {listing_limit} listings
-                </Stack.Item>
-                <Stack.Item>
-                  {can_stock ? (
-                    <Button icon="box-open" onClick={() => act('insert_held')}>
-                      Stock held item
-                    </Button>
-                  ) : null}
-                </Stack.Item>
-              </Stack>
-              {closed_reason ? (
-                <NoticeBox mt={1}>Not selling: {closed_reason}</NoticeBox>
-              ) : null}
-              {error ? (
-                <NoticeBox danger mt={1}>
-                  {error}
-                </NoticeBox>
-              ) : null}
-            </Section>
-          </Stack.Item>
-          <Stack.Item>
-            <Tabs>
-              <Tabs.Tab
-                icon="boxes-stacked"
-                selected={tab === 'stock'}
-                onClick={() => setTab('stock')}
-              >
-                Stock
-              </Tabs.Tab>
-              <Tabs.Tab
-                icon="receipt"
-                selected={tab === 'sales'}
-                onClick={() => setTab('sales')}
-              >
-                Sales ({sales.length})
-              </Tabs.Tab>
-            </Tabs>
+              </Stack.Item>
+            </Stack>
           </Stack.Item>
           {tab === 'sales' ? (
             <Stack.Item grow>
@@ -350,11 +319,10 @@ export const OutpostShopStock = (props) => {
             <Stack.Item grow>
               <Stack fill>
                 <Stack.Item width="220px">
-                  <Section fill scrollable title="Categories">
+                  <Section fill scrollable>
                     <CategoryRow
                       id={ALL}
                       name="All"
-                      count={listings.length}
                       active={shownCategory === ALL}
                       hovered={false}
                       onClick={() => setCategory(ALL)}
@@ -364,7 +332,6 @@ export const OutpostShopStock = (props) => {
                         key={cat.id}
                         id={cat.id}
                         name={cat.name}
-                        count={categoryCount(cat.id)}
                         active={shownCategory === cat.id}
                         hovered={dragging && dragOver === cat.id}
                         onClick={() => setCategory(cat.id)}
@@ -427,7 +394,7 @@ export const OutpostShopStock = (props) => {
                   <Section
                     fill
                     scrollable
-                    title={`${selected.length} selected`}
+                    title={selected.length ? `${selected.length} selected` : undefined}
                     buttons={
                       <Input
                         placeholder="Search"
@@ -498,9 +465,7 @@ export const OutpostShopStock = (props) => {
                     >
                       {visible.length === 0 ? (
                         <NoticeBox>
-                          {listings.length
-                            ? 'Nothing matches.'
-                            : 'No stock yet.'}
+                          {listings.length ? 'Nothing matches.' : 'No stock.'}
                         </NoticeBox>
                       ) : null}
                       {visible.map((listing) => (
@@ -522,14 +487,6 @@ export const OutpostShopStock = (props) => {
               </Stack>
             </Stack.Item>
           )}
-          {dragging ? (
-            <Stack.Item>
-              <NoticeBox info>
-                Moving {dragRef.current?.ids.length ?? 0} listing(s): drop on a
-                category.
-              </NoticeBox>
-            </Stack.Item>
-          ) : null}
         </Stack>
       </Window.Content>
     </Window>
@@ -539,14 +496,13 @@ export const OutpostShopStock = (props) => {
 type CategoryRowProps = {
   id: string;
   name: string;
-  count: number;
   active: boolean;
   hovered: boolean;
   onClick: () => void;
 };
 
 const CategoryRow = (props: CategoryRowProps) => {
-  const { id, name, count, active, hovered, onClick } = props;
+  const { id, name, active, hovered, onClick } = props;
   return (
     <div data-category={id}>
       <Button
@@ -555,10 +511,7 @@ const CategoryRow = (props: CategoryRowProps) => {
         color={hovered ? 'good' : undefined}
         onClick={onClick}
       >
-        <Stack>
-          <Stack.Item grow>{name}</Stack.Item>
-          <Stack.Item color="label">{count}</Stack.Item>
-        </Stack>
+        {name}
       </Button>
     </div>
   );
@@ -636,7 +589,7 @@ const CategoryTools = (props: CategoryToolsProps) => {
       <Stack.Item>
         <Button.Confirm
           icon="trash"
-          tooltip="Delete category (its listings go to Unsorted)"
+          tooltip="Delete"
           onClick={() => act('delete_category', { id })}
         />
       </Stack.Item>
@@ -681,11 +634,7 @@ const StockRow = (props: StockRowProps) => {
         </Stack.Item>
         <Stack.Item grow>{listing.name}</Stack.Item>
         <Stack.Item width="110px" color="label">
-          {empty
-            ? 'Empty'
-            : listing.per_unit
-              ? `${listing.units} units`
-              : `${listing.units} in stock`}
+          {empty ? 'Empty' : listing.units}
         </Stack.Item>
         <Stack.Item width="120px" textAlign="right">
           {listing.price > 0 ? (
@@ -704,7 +653,7 @@ const StockRow = (props: StockRowProps) => {
 const SalesList = (props: { sales: Sale[] }) => {
   const { sales } = props;
   return (
-    <Section fill scrollable title="Recent sales">
+    <Section fill scrollable>
       {sales.length === 0 ? <NoticeBox>No sales yet.</NoticeBox> : null}
       {sales.map((sale, index) => (
         <Stack key={index} mb={0.5}>

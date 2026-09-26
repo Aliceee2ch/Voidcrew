@@ -289,7 +289,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 		return
 	death_notified = TRUE
 	ready_notified_at = world.time
-	to_chat(target, span_ghostalert("A clone of you is ready in [get_area_name(src, format_text = TRUE)]. [isobserver(target) ? "Use the Clone Ready alert, or click the vat, to wake up in it." : "Ghost, then use the Clone Ready alert to wake up in it."]"))
+	to_chat(target, span_ghostalert("A clone of you is ready in [get_area_name(src, format_text = TRUE)]."))
 	SEND_SOUND(target, sound('sound/machines/chime.ogg', volume = 50))
 	window_flash(target.client)
 	if(isobserver(target))
@@ -354,7 +354,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 	if(had_clone)
 		visible_message(span_warning("The old clone in [src] dissolves as a new pattern is imprinted."))
 	balloon_alert(user, "pattern imprinted")
-	to_chat(user, span_notice("[src] hums to life and starts growing a new body. It'll take about [DisplayTimeText(growth_time)][is_single_use() ? ", and it is used up when you wake in it" : ", and just as long to regrow after every use"]."))
+	to_chat(user, span_notice("[src] hums to life and starts growing a new body.[is_single_use() ? "" : " It'll take about [DisplayTimeText(growth_time)], and just as long to regrow after every use."]"))
 
 // ---------------------------------------------------------------------------
 // Claiming (ghosts)
@@ -413,7 +413,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 	if(!holder_matches(user, mind))
 		return "Not your clone."
 	if(!body_ready)
-		return growth_progress > 0 ? "Clone only [get_growth_percent()]% grown." : "No clone grown."
+		return growth_progress > 0 ? "Still growing." : "No clone grown."
 	if(!is_operational || !anchored)
 		return "Vat is offline."
 	if(mind.current && mind.current.stat != DEAD)

@@ -23,7 +23,7 @@
  */
 /obj/machinery/sleeper/outpost/medical_lab
 	name = "lab sleeper"
-	desc = "A sleeper bolted into the lab floor. The occupant can work its controls from inside."
+	desc = "A sleeper bolted into the lab floor."
 	possible_chems = list(
 		list(
 			/datum/reagent/medicine/epinephrine,
@@ -56,7 +56,7 @@
 /obj/machinery/sleeper/outpost/medical_lab/examine(mob/user)
 	. = ..()
 	if(!outpost_lab_access(src, user))
-		. += span_notice("It needs a lab pass from the terminal.")
+		. += span_notice("It needs a lab pass.")
 
 /obj/machinery/sleeper/outpost/medical_lab/inject_chem(chem, mob/user)
 	if(user && user != occupant && !outpost_lab_staff(src, user))
@@ -113,7 +113,7 @@
  */
 /obj/machinery/cryo_cell/outpost_lab
 	name = "lab cryo cell"
-	desc = "A cryo cell on the lab's anaesthetic loop. Climb in and it puts you to sleep and heals you, then lets you out."
+	desc = "A cryo cell on the lab's anaesthetic loop."
 	autoeject = TRUE
 	/// world.time the current occupant was closed in
 	var/entered_at = 0
@@ -137,9 +137,8 @@
 
 /obj/machinery/cryo_cell/outpost_lab/examine(mob/user)
 	. = ..()
-	. += span_notice("It lets its patient out after [DisplayTimeText(OUTPOST_LAB_CRYO_MAX_STAY)] at most.")
 	if(!outpost_lab_access(src, user))
-		. += span_notice("It needs a lab pass from the terminal.")
+		. += span_notice("It needs a lab pass.")
 
 /// Whether the beaker can still treat anyone
 /obj/machinery/cryo_cell/outpost_lab/proc/has_cryoxadone()
@@ -151,11 +150,11 @@
 	if(!patient)
 		return null
 	if(!outpost_lab_access(src, patient))
-		return "You have no lab pass. Buy one at the terminal."
+		return "No lab pass."
 	if(!has_cryoxadone())
 		return "The cell has no cryoxadone left."
 	if(entered_at && world.time >= entered_at + OUTPOST_LAB_CRYO_MAX_STAY)
-		return "The cell's time limit is up."
+		return "The cycle is over."
 	return null
 
 /// Opens the cell on its occupant, telling them why

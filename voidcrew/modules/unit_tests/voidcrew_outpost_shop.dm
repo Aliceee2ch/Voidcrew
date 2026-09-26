@@ -144,8 +144,8 @@
 	TEST_ASSERT_NULL(stock.stock_item(probe, steward), "A steward could not stock the shop")
 	var/datum/outpost_shop_listing/probe_listing = stock.listing_of[probe]
 	var/list/probe_ids = list(probe_listing.id)
-	TEST_ASSERT_EQUAL(stock.owner_action(steward, "set_price", list("ids" = probe_ids, "price" = 5)), "Pricing access required.", "A steward set a price")
-	TEST_ASSERT_EQUAL(stock.owner_action(steward, "eject", list("ids" = probe_ids)), "Pricing access required.", "A steward took stock out")
+	TEST_ASSERT_EQUAL(stock.owner_action(steward, "set_price", list("ids" = probe_ids, "price" = 5)), "Not authorised.", "A steward set a price")
+	TEST_ASSERT_EQUAL(stock.owner_action(steward, "eject", list("ids" = probe_ids)), "Not authorised.", "A steward took stock out")
 	TEST_ASSERT_NULL(stock.owner_action(pricer, "set_price", list("ids" = probe_ids, "price" = 5)), "A pricer could not set a price")
 	TEST_ASSERT_NULL(stock.owner_action(treasurer, "eject", list("ids" = probe_ids)), "A treasurer could not take stock out")
 	TEST_ASSERT(probe.loc != stock, "The eject left the wrench in stock")
@@ -379,7 +379,7 @@
 	// --- Buyer and owner data ---
 	var/list/buyer_data = register.ui_data(visitor)
 	TEST_ASSERT(buyer_data["open"], "The buyer window says the shop is closed")
-	TEST_ASSERT_EQUAL(buyer_data["account_holder"], visitor_account.account_holder, "The buyer window shows the wrong wallet")
+	TEST_ASSERT_EQUAL(buyer_data["account_credits"], visitor_account.account_balance, "The buyer window shows the wrong wallet")
 	for(var/list/row as anything in buyer_data["listings"])
 		TEST_ASSERT(row["price"] > 0, "The buyer window lists unpriced stock")
 	var/list/staff_data = register.ui_data(treasurer)

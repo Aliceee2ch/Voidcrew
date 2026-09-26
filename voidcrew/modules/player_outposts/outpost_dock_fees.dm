@@ -90,9 +90,9 @@
 			"amount" = fee,
 			"expires" = world.time + OUTPOST_DOCK_FEE_QUOTE_LIFETIME,
 		)
-		ship.ship_notify("[name] traffic control: the ship bay charges a docking fee of [fee] cr. Approve or decline it at the helm.", "DOCKING", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 40)
+		ship.ship_notify("[name] traffic control: docking fee [fee] cr.", "DOCKING", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 40)
 		ship.push_helm_frame()
-	return "[name] traffic control: docking fee [fee] cr. Approve at the helm."
+	return "[name] traffic control: docking fee [fee] cr."
 
 /// A refusal to show the helm while a docking fee waits for the captain's approval, or null to go on docking
 /obj/structure/overmap/dynamic/player_outpost/proc/dock_fee_denial(obj/structure/overmap/ship/ship, dock_variant)
@@ -244,7 +244,6 @@
 		"variant" = quote["variant"],
 		"amount" = quote["amount"],
 		"balance" = ship_account?.account_balance || 0,
-		"expiresIn" = max(0, round((quote["expires"] - world.time) / 10)),
 		"canApprove" = !!can_approve_dock_fee(user),
 	)
 
@@ -260,11 +259,11 @@
 	var/datum/weakref/outpost_ref = quote["outpost"]
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost_ref.resolve()
 	if(!istext(outpost_ref_text) || outpost_ref_text != REF(home) || !istext(variant) || variant != quote["variant"])
-		return "That docking fee quote is no longer current."
+		return "That quote has expired."
 	if(!isnum(amount) || amount != quote["amount"])
-		return "The docking fee changed to [quote["amount"]] cr. Check the new quote."
+		return "The docking fee is now [quote["amount"]] cr."
 	if(!can_approve_dock_fee(user))
-		return "Docking fees need the captain's approval."
+		return "Captain only."
 	dock_fee_consent = list(
 		"outpost" = outpost_ref,
 		"variant" = variant,
@@ -289,9 +288,9 @@
 	var/datum/weakref/outpost_ref = quote["outpost"]
 	var/obj/structure/overmap/dynamic/player_outpost/home = outpost_ref.resolve()
 	if(!istext(outpost_ref_text) || outpost_ref_text != REF(home))
-		return "That docking fee quote is no longer current."
+		return "That quote has expired."
 	if(!can_approve_dock_fee(user))
-		return "Docking fees need the captain's approval."
+		return "Captain only."
 	dock_fee_quote = null
 	ship_notify("[user.real_name] declined the [quote["amount"]] cr docking fee at [home.name].", "DOCKING", SHIP_NOTIFY_NOTICE)
 	push_helm_frame()
@@ -443,7 +442,7 @@
 	if(!istype(bay) || !(bay in bay_berths))
 		return "Unknown ship bay."
 	if(!is_current_management_user(user))
-		return "Management access required."
+		return "Not authorised."
 	if(bay.rebuild_owner)
 		return "A ship rebuild is using the bay."
 	if(!bay.is_ship_present())
@@ -491,7 +490,7 @@
 	)
 	watch_bay_ship(ship)
 	log_game("[key_name(user)] evicted [ship.name] from the ship bay at [name][refunded ? ", refunding its [refunded] cr docking fee" : ""]")
-	ship.ship_notify("Bay clearance revoked by [name]. Undock within [DisplayTimeText(OUTPOST_BAY_EVICTION_GRACE)]. Crew ashore stay at the outpost.[refunded ? " Your [refunded] cr docking fee was refunded." : ""]", "DOCKING", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 40)
+	ship.ship_notify("Bay clearance revoked by [name]. Undock within [DisplayTimeText(OUTPOST_BAY_EVICTION_GRACE)].[refunded ? " [refunded] cr docking fee refunded." : ""]", "DOCKING", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 40)
 	management_console?.on_dock_requests_changed()
 	return null
 
@@ -500,7 +499,7 @@
 	if(!istype(bay) || !(bay in bay_berths))
 		return "Unknown ship bay."
 	if(!is_current_management_user(user))
-		return "Management access required."
+		return "Not authorised."
 	var/datum/weakref/ship_ref = bay.ship ? WEAKREF(bay.ship) : null
 	if(!ship_ref || !bay_evictions[ship_ref])
 		return "No eviction is under way."
@@ -543,7 +542,7 @@
 	if(!endless && eviction["retries"] > OUTPOST_BAY_EVICTION_RETRIES)
 		log_game("BAY EVICTION: [ship?.name || "a ship"] could not be removed from the ship bay at [name] ([reason]). Eviction by [eviction["by"]] given up.")
 		message_admins("BAY EVICTION: [ship?.name || "a ship"] could not be removed from the ship bay at [name] ([reason]).")
-		notify_owner("[ship?.name || "The evicted ship"] could not be moved out of the ship bay: [reason]. Evict it again to retry.", "DOCKING")
+		notify_owner("[ship?.name || "The evicted ship"] could not be moved out of the ship bay: [reason].", "DOCKING")
 		stop_bay_eviction(ship_ref)
 		management_console?.on_dock_requests_changed()
 		return
@@ -594,7 +593,7 @@
 		return
 	var/refusal = ship.undock()
 	if(refusal)
-		ship.ship_notify("Undock from [name] refused: [refusal] The ship bay will try again shortly.", "DOCKING", SHIP_NOTIFY_WARNING)
+		ship.ship_notify("Undock from [name] refused: [refusal]", "DOCKING", SHIP_NOTIFY_WARNING)
 		retry_bay_eviction(ship_ref, refusal)
 		return
 	log_game("BAY EVICTION: [ship.name] was undocked from the ship bay at [name] (evicted by [eviction["by"]])")
@@ -642,7 +641,7 @@
 			if(!eviction["waiting_notified"])
 				eviction["waiting_notified"] = TRUE
 				ship.ship_notify("[name] is clearing its ship bay, but your hull cannot be moved: [failure]. Return to your ship and undock.", "DOCKING", SHIP_NOTIFY_WARNING, 'voidcrew/sound/warn.ogg', 40)
-				notify_owner("[ship.name] has nobody aboard to fly it while its crew is alive, so it cannot be undocked, and [failure]. The ship bay will keep trying.", "DOCKING")
+				notify_owner("[ship.name] can't be moved out of the ship bay: [failure].", "DOCKING")
 			retry_bay_eviction(ship_ref, failure, endless = TRUE)
 		return
 	// The hull now sits in the berth: hand the bay back and let the berth take the ship

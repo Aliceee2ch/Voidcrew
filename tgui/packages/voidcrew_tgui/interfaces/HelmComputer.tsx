@@ -235,8 +235,6 @@ type DockFeeQuote = {
   amount: number;
   /** The ship account's balance. */
   balance: number;
-  /** Seconds before the quote lapses. */
-  expiresIn: number;
   canApprove: BooleanLike;
 };
 
@@ -3429,9 +3427,9 @@ const DockPickerMenu = (props: {
   );
 };
 
-/** "Docking fee N cr" for a priced option, else undefined. */
+/** "N cr" for a priced option, else undefined. */
 const feeHint = (fee?: number | null) =>
-  Number(fee) > 0 ? `Docking fee ${Number(fee)} cr` : undefined;
+  Number(fee) > 0 ? `${Number(fee)} cr` : undefined;
 
 /**
  * A pending docking fee, pinned over the foot of the chart so the crew can keep
@@ -3445,12 +3443,11 @@ const DockFeeQuoteCard = () => {
   const amount = Number(quote.amount) || 0;
   const balance = Number(quote.balance) || 0;
   const short = balance < amount;
-  const expires = Math.max(0, Math.ceil(Number(quote.expiresIn) || 0));
   const approveTitle = !quote.canApprove
-    ? 'Only the captain can approve this fee'
+    ? 'Captain only'
     : short
-      ? 'The ship account cannot cover this fee yet'
-      : `Pay ${amount} cr from the ship account when the ship docks`;
+      ? 'Ship account short'
+      : undefined;
   return (
     <div
       className="Helm__menu"
@@ -3463,20 +3460,12 @@ const DockFeeQuoteCard = () => {
         maxWidth: 'none',
       }}
     >
-      <div className="Helm__menuHead">
-        Docking fee · {quote.outpost || 'Outpost'}
-      </div>
+      <div className="Helm__menuHead">{quote.outpost || 'Outpost'}</div>
       <div style={{ padding: '0.6cqw 0.7cqw' }}>
-        <div className="Helm__cardName">{amount} cr</div>
-        <div className="Helm__cardMeta">
-          Ship account {balance} cr
-          {expires > 0 ? ` · expires in ${expires}s` : ''}
-        </div>
-        <div className="Helm__cardDesc">
-          {short
-            ? 'The ship account is short. The dock is refused unless it can pay.'
-            : 'Paid into the outpost treasury when the ship docks. Refunded if the dock does not happen.'}
-        </div>
+        <div className="Helm__cardName">Docking fee {amount} cr</div>
+        {short ? (
+          <div className="Helm__cardMeta">Ship account short.</div>
+        ) : null}
         <div className="Helm__overlayActions">
           <button
             type="button"
@@ -3497,11 +3486,7 @@ const DockFeeQuoteCard = () => {
             type="button"
             className="Helm__btn"
             disabled={locked || !quote.canApprove}
-            title={
-              quote.canApprove
-                ? 'Decline the fee and stay out'
-                : 'Only the captain can decline this fee'
-            }
+            title={quote.canApprove ? undefined : 'Captain only'}
             onClick={() => act('decline_dock_fee', { ref: quote.ref })}
           >
             Decline
@@ -4691,7 +4676,7 @@ const OpsRow = () => {
     const reason = autoStopping
       ? `Auto-stop and dock with ${dockName}`
       : `Dock with ${dockName}`;
-    return fee ? `${reason}. ${fee}, approved at this helm` : reason;
+    return fee ? `${reason} (${fee})` : reason;
   };
 
   return (

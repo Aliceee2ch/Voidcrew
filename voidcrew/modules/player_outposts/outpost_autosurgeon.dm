@@ -99,7 +99,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 /datum/autosurgeon_procedure/tend
 	id = "tend"
 	name = "Tend wounds"
-	desc = "Heals bruises and burns a little each cycle, faster while the damage is heavy."
+	desc = "Heals bruises and burns."
 
 /datum/autosurgeon_procedure/tend/proc/cycle_seconds()
 	var/datum/surgery_step/heal/brute/basic/tend_step = step_prototype(/datum/surgery_step/heal/brute/basic)
@@ -148,7 +148,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 /datum/autosurgeon_procedure/wounds
 	id = "wounds"
 	name = "Treat wounds"
-	desc = "Sets bones, closes cuts and punctures and treats burns, one wound at a time."
+	desc = "Sets bones, closes cuts and treats burns."
 
 /datum/autosurgeon_procedure/wounds/proc/wound_seconds(datum/wound/wound)
 	switch(wound.severity)
@@ -193,7 +193,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 /datum/autosurgeon_procedure/shrapnel
 	id = "shrapnel"
 	name = "Remove shrapnel"
-	desc = "Pulls out anything embedded in the patient and leaves it on the slab."
+	desc = "Pulls out anything embedded in the patient."
 
 /datum/autosurgeon_procedure/shrapnel/proc/embedded_items(mob/living/carbon/patient)
 	var/list/items = list()
@@ -229,7 +229,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 /datum/autosurgeon_procedure/filter
 	id = "filter"
 	name = "Filter blood"
-	desc = "Removes a share of every chemical in the blood each cycle, medicine included."
+	desc = "Filters every chemical out of the blood."
 
 /datum/autosurgeon_procedure/filter/proc/cycle_seconds()
 	var/datum/surgery_step/filter_blood/filter_step = step_prototype(/datum/surgery_step/filter_blood)
@@ -270,7 +270,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 /datum/autosurgeon_procedure/organs
 	id = "organs"
 	name = "Repair organs"
-	desc = "Repairs a badly damaged heart, liver, lungs or stomach once each, and damaged eyes and ears."
+	desc = "Repairs damaged organs, eyes and ears."
 
 /// Seconds per organ, the tg surgeries' nominal times
 /datum/autosurgeon_procedure/organs/proc/organ_seconds(slot)
@@ -379,7 +379,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 /datum/autosurgeon_procedure/brain
 	id = "brain"
 	name = "Repair brain"
-	desc = "Heals brain damage in cycles and cures the traumas brain surgery can cure."
+	desc = "Repairs brain damage."
 
 /datum/autosurgeon_procedure/brain/proc/has_curable_trauma(mob/living/carbon/patient)
 	return !!patient.has_trauma_type(resilience = TRAUMA_RESILIENCE_SURGERY)
@@ -416,7 +416,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 /datum/autosurgeon_procedure/limb
 	id = "limb"
 	name = "Reattach limb"
-	desc = "Attaches the arm or leg the patient is holding, healed first. Limbs with implants in them are refused."
+	desc = "Reattaches an arm or leg."
 
 /// Why this held bodypart cannot go on the patient, or null
 /datum/autosurgeon_procedure/limb/proc/limb_denial(mob/living/carbon/patient, obj/item/bodypart/limb)
@@ -484,7 +484,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 
 /obj/machinery/outpost_autosurgeon
 	name = "auto-surgeon"
-	desc = "An operating slab under a ring of surgical arms. It runs a short list of safe procedures on whoever lies on it."
+	desc = "An operating slab under a ring of surgical arms."
 	icon = 'icons/obj/medical/surgery_table.dmi'
 	icon_state = "surgery_table"
 	density = FALSE
@@ -520,7 +520,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 	var/datum/outpost_upgrade/service/medical_lab/lab = outpost_medical_lab_at(src)
 	if(lab && !lab.is_exempt(user))
 		var/seconds_left = lab.pass_seconds_left(user)
-		. += span_notice(seconds_left ? "Your lab pass has [DisplayTimeText(seconds_left * (1 SECONDS))] left." : "It needs a lab pass from the terminal.")
+		. += span_notice(seconds_left ? "Lab pass: [DisplayTimeText(seconds_left * (1 SECONDS))] left." : "No lab pass.")
 
 /// Whether a player is controlling this mob. Test subtypes override it: test mobs have no client.
 /obj/machinery/outpost_autosurgeon/proc/has_player(mob/living/patient)
@@ -590,7 +590,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 	if(!istype(patient))
 		return "Nobody is on the slab."
 	if(acting != patient)
-		return "Only the patient can start a procedure."
+		return "Patient only."
 	if(patient.stat != CONSCIOUS)
 		return "The patient must be awake."
 	if(HAS_TRAIT(patient, TRAIT_RESTRAINED) || patient.handcuffed)
@@ -600,7 +600,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 	if(!has_player(patient) || patient.mind?.current != patient)
 		return "The patient must be present."
 	if(!outpost_lab_access(src, patient))
-		return "No lab pass. Buy one at the terminal."
+		return "No lab pass."
 	if(length(patient.surgeries))
 		return "Finish the open surgery first."
 	if(run)
@@ -629,7 +629,7 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 		return denial
 	var/mob/living/carbon/patient = occupant
 	if(!procedure_enabled_for(patient, procedure_id))
-		return "That procedure is switched off here."
+		return "Not offered here."
 	denial = procedure.unavailable_reason(patient)
 	if(denial)
 		return denial
@@ -725,27 +725,9 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 		ui = new(user, src, "OutpostAutosurgeon", name)
 		ui.open()
 
-/obj/machinery/outpost_autosurgeon/ui_static_data(mob/user)
-	var/list/procedures = list()
-	for(var/procedure_id in GLOB.outpost_autosurgeon_procedures)
-		var/datum/autosurgeon_procedure/procedure = GLOB.outpost_autosurgeon_procedures[procedure_id]
-		procedures += list(list("id" = procedure_id, "name" = procedure.name, "desc" = procedure.desc))
-	var/datum/outpost_upgrade/service/medical_lab/lab = outpost_medical_lab_at(src)
-	return list(
-		"procedures" = procedures,
-		"lab_name" = lab?.outpost?.name || name,
-	)
-
 /obj/machinery/outpost_autosurgeon/ui_data(mob/user)
 	var/list/data = list()
 	var/mob/living/carbon/patient = occupant
-	var/datum/outpost_upgrade/service/medical_lab/lab = outpost_medical_lab_at(src)
-	var/mob/living/pass_holder = patient || user
-	data["pass"] = list(
-		"valid" = lab ? lab.has_lab_access(pass_holder) : TRUE,
-		"exempt" = lab ? lab.is_exempt(pass_holder) : TRUE,
-		"seconds_left" = lab ? lab.pass_seconds_left(pass_holder) : 0,
-	)
 	data["powered"] = is_operational
 	data["occupant_is_user"] = !!patient && patient == user
 	data["can_unbuckle"] = !!patient && !unbuckle_denial(user)
@@ -753,22 +735,10 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 	data["occupant"] = null
 	var/list/offers = list()
 	if(istype(patient))
-		var/stat_text = "Awake"
-		switch(patient.stat)
-			if(SOFT_CRIT, UNCONSCIOUS, HARD_CRIT)
-				stat_text = "Unconscious"
-			if(DEAD)
-				stat_text = "Dead"
 		data["occupant"] = list(
 			"name" = patient.name,
-			"stat" = stat_text,
 			"health" = patient.health,
 			"maxHealth" = patient.maxHealth,
-			"brute" = round(patient.getBruteLoss(), 1),
-			"burn" = round(patient.getFireLoss(), 1),
-			"tox" = round(patient.getToxLoss(), 1),
-			"oxy" = round(patient.getOxyLoss(), 1),
-			"brain" = round(patient.get_organ_loss(ORGAN_SLOT_BRAIN), 1),
 		)
 		for(var/procedure_id in GLOB.outpost_autosurgeon_procedures)
 			if(!procedure_enabled_for(patient, procedure_id))
@@ -780,7 +750,6 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 				"name" = procedure.name,
 				"available" = !reason,
 				"reason" = reason,
-				"seconds" = reason ? 0 : round(procedure.estimate(patient)),
 			))
 	data["offers"] = offers
 	data["run"] = run ? list(

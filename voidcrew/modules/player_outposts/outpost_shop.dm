@@ -17,7 +17,7 @@
 /datum/outpost_upgrade/service/shop
 	id = "shop"
 	name = "Shop"
-	desc = "A shop front with a counter, a register and a shop bot, and a staff stock room. Staff stock and price the goods; visitors pay the treasury."
+	desc = "A shop front with a counter and a shop bot, and a stock room."
 	price = OUTPOST_SHOP_COST
 	template_type = /datum/map_template/outpost_upgrade/shop
 	preview_name = "outpost_upgrade_shop"
@@ -108,7 +108,7 @@
  */
 /obj/machinery/computer/outpost_shop_register
 	name = "shop register"
-	desc = "The outpost shop's register. It charges the ID you present and pays the outpost treasury."
+	desc = "The outpost shop's register."
 	icon_screen = "request"
 	icon_keyboard = "generic_key"
 	circuit = null
@@ -157,9 +157,7 @@
 		"shop_name" = "Shop",
 		"open" = FALSE,
 		"closed_reason" = "Shop not installed.",
-		"member" = FALSE,
 		"free_take" = FALSE,
-		"account_holder" = null,
 		"account_credits" = null,
 		"confirm_total" = OUTPOST_SHOP_CONFIRM_TOTAL,
 		"categories" = list(),

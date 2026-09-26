@@ -31,7 +31,6 @@ type Listing = {
   icon: string;
   icon_state: string;
   price: number;
-  list_price: number;
   per_unit: BooleanLike;
   available: number;
   max_per_buy: number;
@@ -41,9 +40,7 @@ type Data = {
   shop_name: string;
   open: BooleanLike;
   closed_reason: string | null;
-  member: BooleanLike;
   free_take: BooleanLike;
-  account_holder: string | null;
   account_credits: number | null;
   confirm_total: number;
   categories: Category[];
@@ -58,9 +55,6 @@ export const OutpostShop = (props) => {
     shop_name,
     open,
     closed_reason,
-    free_take,
-    account_holder,
-    account_credits,
     categories = [],
     listings = [],
   } = data;
@@ -79,42 +73,19 @@ export const OutpostShop = (props) => {
   );
 
   return (
-    <Window width={640} height={600} title={shop_name}>
+    <Window width={560} height={520} title={shop_name}>
       <Window.Content>
-        <Stack fill vertical>
-          <Stack.Item>
-            <Section title={shop_name}>
-              {free_take ? (
-                <NoticeBox info>
-                  You are shop staff: you take stock free. It is logged.
-                </NoticeBox>
-              ) : account_holder ? (
-                <Box>
-                  Paying from: <b>{account_holder}</b> ({account_credits ?? 0}{' '}
-                  cr)
-                </Box>
-              ) : (
-                <NoticeBox warning>
-                  No bank account on your ID. You can browse but not buy.
-                </NoticeBox>
-              )}
-              {open ? null : (
-                <NoticeBox danger mt={1}>
-                  {closed_reason || 'Closed.'}
-                </NoticeBox>
-              )}
-            </Section>
-          </Stack.Item>
-          <Stack.Item grow>
-            <Stack fill>
-              <Stack.Item width="170px">
+        {open ? (
+          <Stack fill>
+            {categories.length > 1 ? (
+              <Stack.Item width="150px">
                 <Section fill scrollable>
                   <Tabs vertical>
                     <Tabs.Tab
                       selected={shownCategory === ALL}
                       onClick={() => setCategory(ALL)}
                     >
-                      All ({listings.length})
+                      All
                     </Tabs.Tab>
                     {categories.map((cat) => (
                       <Tabs.Tab
@@ -122,44 +93,37 @@ export const OutpostShop = (props) => {
                         selected={shownCategory === cat.id}
                         onClick={() => setCategory(cat.id)}
                       >
-                        {cat.name} (
-                        {
-                          listings.filter(
-                            (listing) => listing.category === cat.id,
-                          ).length
-                        }
-                        )
+                        {cat.name}
                       </Tabs.Tab>
                     ))}
                   </Tabs>
                 </Section>
               </Stack.Item>
-              <Stack.Item grow>
-                <Section
-                  fill
-                  scrollable
-                  title="For sale"
-                  buttons={
-                    <Input
-                      placeholder="Search"
-                      value={search}
-                      onChange={setSearch}
-                    />
-                  }
-                >
-                  {visible.length === 0 ? (
-                    <NoticeBox>
-                      {open ? 'Nothing for sale here.' : 'The shop is closed.'}
-                    </NoticeBox>
-                  ) : null}
-                  {visible.map((listing) => (
-                    <BuyRow key={listing.id} listing={listing} />
-                  ))}
-                </Section>
-              </Stack.Item>
-            </Stack>
-          </Stack.Item>
-        </Stack>
+            ) : null}
+            <Stack.Item grow>
+              <Section
+                fill
+                scrollable
+                buttons={
+                  <Input
+                    placeholder="Search"
+                    value={search}
+                    onChange={setSearch}
+                  />
+                }
+              >
+                {visible.length === 0 ? (
+                  <Box color="label">Nothing for sale.</Box>
+                ) : null}
+                {visible.map((listing) => (
+                  <BuyRow key={listing.id} listing={listing} />
+                ))}
+              </Section>
+            </Stack.Item>
+          </Stack>
+        ) : (
+          <NoticeBox>{closed_reason || 'Closed.'}</NoticeBox>
+        )}
       </Window.Content>
     </Window>
   );
@@ -175,6 +139,7 @@ const BuyRow = (props: { listing: Listing }) => {
   const amount = Math.min(Math.max(1, quantity), limit);
   const total = listing.price * amount;
   const soldOut = listing.available < 1;
+  const noAccount = !free_take && account_credits === null;
   const cantAfford =
     !free_take && (account_credits === null || account_credits < total);
   const needsConfirm = total >= confirm_total;
@@ -207,17 +172,17 @@ const BuyRow = (props: { listing: Listing }) => {
         <Stack.Item grow>
           <Box bold>{listing.name}</Box>
           <Box color="label">
-            {soldOut ? 'Sold out' : `${listing.available} available`}
-            {' · '}
-            {free_take
-              ? `listed at ${listing.list_price} cr${listing.per_unit ? ' each' : ''}`
-              : `${listing.price} cr${listing.per_unit ? ' each' : ''}`}
+            {soldOut
+              ? 'Sold out'
+              : free_take
+                ? null
+                : `${listing.price} cr${listing.per_unit ? ' each' : ''}`}
           </Box>
         </Stack.Item>
         <Stack.Item>
           <Button
             icon="magnifying-glass"
-            tooltip="Inspect the next unit"
+            tooltip="Inspect"
             onClick={() => act('inspect', { id: listing.id })}
           />
         </Stack.Item>
@@ -241,10 +206,20 @@ const BuyRow = (props: { listing: Listing }) => {
             icon={free_take ? 'hand-holding' : 'cart-shopping'}
             color={confirming ? 'caution' : undefined}
             disabled={!open || soldOut || cantAfford}
-            tooltip={cantAfford ? 'Not enough credits.' : undefined}
+            tooltip={
+              noAccount
+                ? 'No account.'
+                : cantAfford
+                  ? 'Not enough credits.'
+                  : undefined
+            }
             onClick={buy}
           >
-            {free_take ? 'Take' : confirming ? `Confirm ${total} cr` : `${total} cr`}
+            {free_take
+              ? 'Take'
+              : confirming
+                ? `Confirm ${total} cr`
+                : `${total} cr`}
           </Button>
         </Stack.Item>
       </Stack>

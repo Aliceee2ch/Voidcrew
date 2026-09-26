@@ -44,7 +44,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 /datum/outpost_upgrade/service/storage
 	id = "storage"
 	name = "Safe Storage"
-	desc = "Thirteen rental lockers. Visitors pay the treasury to rent one for the rest of the shift; members rent free. Each locker opens only for the player renting it. You get no key."
+	desc = "Thirteen rental lockers."
 	price = OUTPOST_STORAGE_COST
 	template_type = /datum/map_template/outpost_upgrade/storage
 	preview_name = "outpost_upgrade_storage"
@@ -274,14 +274,9 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	var/obj/structure/overmap/dynamic/player_outpost/home = get_home()
 	var/fee = home.service_price_for(user, home.get_price(OUTPOST_PRICE_STORAGE_RENT))
 	var/datum/bank_account/account = user.get_idcard(TRUE)?.registered_account
-	var/cost_line = fee > 0 \
-		? "Rent: [fee] cr for the rest of the shift, paid from [account.account_holder]'s account. No refunds." \
-		: "Rent: free for the rest of the shift."
-	var/terms = "[cost_line]\n\n\
-		The lock is keyed to you, not to your ID card. The outpost owner cannot open it.\n\
-		No living creatures, bodies, explosives, trigger devices, ship keys or contract goods.\n\
-		The owner still controls who may dock here and who may arrive by teleporter. A lockdown keeps renters out too.\n\
-		If the outpost is deleted, the locker and everything in it are lost."
+	var/terms = fee > 0 \
+		? "Rent for [fee] cr from [account.account_holder]'s account. Locked to you for the shift. No refunds." \
+		: "Rent free. Locked to you for the shift."
 	if(tgui_alert(user, terms, "Rent [name]", list("Rent", "Cancel")) != "Rent")
 		return FALSE
 	var/refusal = complete_rental(user, fee)
@@ -313,7 +308,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	lock()
 	if(shown_fee > 0)
 		playsound(src, 'sound/effects/cashregister.ogg', 40, TRUE)
-	to_chat(user, span_notice("You rent [name] for the rest of the shift. It opens only for you."))
+	to_chat(user, span_notice("You rent [name] for the shift."))
 	log_game("PLAYER OUTPOST: [key_name(user)] rented [name] at '[home.name]' for [shown_fee] cr")
 	return null
 
@@ -441,7 +436,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	refused_example = null
 	. = ..()
 	if(. && user && refused_on_close)
-		to_chat(user, span_warning("[src] will not take [refused_example][refused_on_close > 1 ? " or [refused_on_close - 1] other thing\s" : ""]. No living creatures, bodies, explosives, trigger devices, ship keys or contract goods."))
+		to_chat(user, span_warning("[src] will not take [refused_example][refused_on_close > 1 ? " or [refused_on_close - 1] other thing\s" : ""]."))
 	refused_on_close = 0
 	refused_example = null
 
@@ -503,8 +498,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 		. += span_notice("Out of service.")
 		return
 	var/fee = home.service_price_for(user, home.get_price(OUTPOST_PRICE_STORAGE_RENT))
-	. += span_notice(fee > 0 ? "Vacant. Rent: [fee] cr for the rest of the shift." : "Vacant. Rent: free for the rest of the shift.")
-	. += span_notice("The lock is keyed to the renter, not to an ID card. The outpost owner has no key.")
+	. += span_notice(fee > 0 ? "Vacant. [fee] cr for the shift." : "Vacant. Free for the shift.")
 
 /obj/structure/closet/secure_closet/outpost_storage/add_context(atom/source, list/context, obj/item/held_item, mob/user)
 	. = ..()

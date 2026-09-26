@@ -22,7 +22,7 @@
 /datum/outpost_upgrade/service/cloning_bay
 	id = "cloning_bay"
 	name = "Cloning Bay"
-	desc = "Four cloning vats. Visitors pay for each imprint, which gives them one life here. Members imprint free."
+	desc = "Four cloning vats."
 	price = OUTPOST_CLONING_BAY_COST
 	template_type = /datum/map_template/outpost_upgrade/cloning_bay
 	preview_name = "outpost_upgrade_cloning_bay"
@@ -86,8 +86,7 @@
 
 /obj/machinery/cloning_vat/outpost
 	name = "outpost cloning vat"
-	desc = "A tank of murky nutrient fluid that grows a spare body from an imprinted genetic pattern. \
-		The pattern has to be taken from someone who's still alive. This one belongs to the outpost."
+	desc = "A tank of murky nutrient fluid that grows a spare body. This one belongs to the outpost."
 	circuit = null
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 	overwrite_allowed = FALSE
@@ -128,7 +127,7 @@
 	if(!home)
 		return
 	var/owed = home.service_price_for(user, home.get_price(OUTPOST_PRICE_CLONE_IMPRINT))
-	. += span_notice("Imprint fee: [owed > 0 ? "[owed] cr" : "free for you"]. Each imprint is one life.")
+	. += span_notice("Imprint: [owed > 0 ? "[owed] cr" : "free"].")
 
 /// The vat's state for the management console
 /obj/machinery/cloning_vat/outpost/proc/bay_state()
@@ -190,8 +189,8 @@
 		balloon_alert(user, "no bank account on your id!")
 		return
 	var/prompt = owed > 0 \
-		? "Imprint for [owed] cr? Paid from [account.account_holder]. One life: the clone is used up when you wake in it." \
-		: "Imprint your genetic pattern? It is free for you. One life: the clone is used up when you wake in it."
+		? "Imprint for [owed] cr from [account.account_holder]'s account? Single use." \
+		: "Imprint your genetic pattern? Single use."
 	if(tgui_alert(user, prompt, name, list("Imprint", "Cancel")) != "Imprint")
 		return
 	if(QDELETED(src) || QDELETED(user) || !user.can_perform_action(src) || host_outpost() != home)
@@ -301,7 +300,7 @@
 		return "Not on an outpost."
 	var/free = paid_amount <= 0
 	if(!home.is_current_treasury_user(user) && !(free && home.is_current_management_user(user)))
-		return "Treasury access required."
+		return "Not authorised."
 	if(!imprint_mind_ref)
 		return "The vat is empty."
 	var/datum/mind/mind = imprint_mind_ref.resolve()
@@ -310,12 +309,12 @@
 	if(mind && (!mind.current || mind.current.stat == DEAD) && !holder_banned(home, mind))
 		var/waited_out = ready_notified_at && world.time >= ready_notified_at + OUTPOST_CLONE_DEAD_EVICT_GRACE
 		if(!waited_out && dead_holder_online(mind))
-			return "Its owner is dead and may wake in it."
+			return "Its owner may still wake in it."
 	if(free)
 		return null
 	var/datum/bank_account/account = payer_account_ref?.resolve()
 	if(!QDELETED(account) && !home.treasury?.has_money(paid_amount))
-		return "The treasury cannot cover the [paid_amount] cr refund."
+		return "Treasury can't cover the [paid_amount] cr refund."
 	return null
 
 /// Whether the dead holder is connected: as a ghost, or still in their corpse
@@ -346,13 +345,13 @@
 		refund_note = "payer account closed, nothing refunded"
 	else
 		if(!home.refund_payment(account, refund, OUTPOST_PRICE_CLONE_IMPRINT, "Cloning imprint"))
-			return "The treasury cannot cover the [refund] cr refund."
+			return "Treasury can't cover the [refund] cr refund."
 		refund_note = "refunding [refund] cr to [account.account_holder]"
 	var/datum/mind/mind = imprint_mind_ref?.resolve()
 	log_game("PLAYER OUTPOST: [key_name(user)] evicted [imprint_name]'s imprint ([imprint_ckey]) from [src] at '[home.name]', [refund_note]")
 	var/mob/holder = mind?.current?.client ? mind.current : (mind && holder_ghost(mind))
 	if(holder)
-		to_chat(holder, span_warning("Your clone at [home.name] was removed by the outpost.[refund ? " [refund] cr were refunded to [account.account_holder]." : ""]"))
+		to_chat(holder, span_warning("Your clone at [home.name] was erased.[refund ? " [refund] cr refunded to [account.account_holder]." : ""]"))
 	wipe_imprint()
 	visible_message(span_notice("[src] drains as its stored pattern is erased."))
 	return null

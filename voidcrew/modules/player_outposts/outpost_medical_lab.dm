@@ -18,7 +18,7 @@
 /datum/outpost_upgrade/service/medical_lab
 	id = OUTPOST_MEDICAL_LAB_ID
 	name = "Medical Lab"
-	desc = "An auto-surgeon, two sleepers and two cryo cells. Visitors buy a 30 minute pass at the terminal; members use it free."
+	desc = "An auto-surgeon, two sleepers and two cryo cells."
 	price = OUTPOST_MEDICAL_LAB_COST
 	template_type = /datum/map_template/outpost_upgrade/medical_lab
 	preview_name = "outpost_upgrade_medical_lab"
@@ -196,7 +196,7 @@
 /// Management switches a procedure on or off. Null when done, else a refusal.
 /datum/outpost_upgrade/service/medical_lab/proc/toggle_procedure(mob/living/user, procedure_id)
 	if(QDELETED(outpost) || !outpost.is_current_management_user(user))
-		return "Management access required."
+		return "Not authorised."
 	if(!istext(procedure_id) || !GLOB.outpost_autosurgeon_procedures[procedure_id])
 		return "Unknown procedure."
 	if(disabled_procedures[procedure_id])
@@ -281,7 +281,7 @@
  */
 /obj/machinery/computer/outpost_medlab_terminal
 	name = "medical lab pass terminal"
-	desc = "Sells timed passes for the medical lab's machines."
+	desc = "Sells passes for the medical lab."
 	icon_screen = "crew"
 	icon_keyboard = "med_key"
 	circuit = null
@@ -334,7 +334,7 @@
 	var/self_denial = lab.pass_denial(user)
 	var/mob/living/carbon/patient = pulled_patient(user, lab)
 	if(patient && lab.outpost.is_outpost_member(user))
-		to_chat(user, span_warning("Members can't buy passes for visitors. [patient] must buy their own."))
+		to_chat(user, span_warning("Members can't buy passes for visitors."))
 		return
 	if(self_denial && !patient)
 		to_chat(user, span_notice(self_denial))
@@ -344,17 +344,15 @@
 	var/list/lines = list()
 	if(fee > 0)
 		var/account_holder = user.get_idcard(TRUE)?.registered_account?.account_holder
-		lines += "Medical lab pass: [fee] cr for [minutes] minutes. Paid from [account_holder || "no account"]."
+		lines += "Lab pass: [fee] cr for [minutes] minutes, from [account_holder ? "[account_holder]'s account" : "no account"]."
 	else
-		lines += "Medical lab pass: free for [minutes] minutes."
+		lines += "Lab pass: free for [minutes] minutes."
 	var/list/buttons = list()
 	if(self_denial)
 		lines += self_denial
 	else
-		lines += "The lab can treat you for: [english_list(lab.treatable_list(user))]."
 		buttons += "Pay"
 	if(patient)
-		lines += "It can treat [patient] for: [english_list(lab.treatable_list(patient))]."
 		buttons += self_denial ? "Pay for [patient]" : "Pay for both"
 	buttons += "Cancel"
 	prompting[key] = TRUE
@@ -379,6 +377,6 @@
 		return
 	playsound(src, 'sound/machines/ping.ogg', 30, TRUE)
 	for(var/mob/living/buyer as anything in patients)
-		to_chat(buyer, span_notice("Medical lab pass issued for [minutes] minutes."))
+		to_chat(buyer, span_notice("Lab pass issued for [minutes] minutes."))
 	if(length(patients) > 1 || patients[1] != user)
 		to_chat(user, span_notice("You paid for [english_list(patients)]."))

@@ -337,7 +337,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 		ai_cornered_since = 0
 		return FALSE
 	if(!ai_cornered_since)
+		// The warning, before the gun comes out
 		ai_cornered_since = world.time
+		ai_bark("cornered")
 		return FALSE
 	if(world.time - ai_cornered_since < BOUNTY_MEEK_CORNERED_TIME)
 		return FALSE
@@ -362,7 +364,8 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	visible_message(span_danger("[src] pulls out a small pistol and aims it at [target]!"))
 	to_chat(target, span_userdanger("[src] is aiming a pistol at you!"))
 	playsound(src, 'sound/items/weapons/gun/pistol/rack_small.ogg', 50, TRUE)
-	ai_bark("cornered")
+	// Forced: the draw is a one-second warning, and a meek criminal has just said "cornered" or "hurt"
+	ai_bark("draw_gun", TRUE)
 	return TRUE
 
 /**

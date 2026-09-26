@@ -279,6 +279,8 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	set_varspeed(boss_base_speed + (boss_tired ? BOUNTY_BOSS_TIRED_SLOWDOWN : 0))
 	if(boss_tired && !silent)
 		visible_message(span_warning("[src] is breathing hard and slowing down. [p_They()] look[p_s()] worn out."))
+		// The stun window is open: the balloon says so where the fight is, not only in chat (P4 polish)
+		body_alert_hunters("worn out")
 		boss_bark("exhausted")
 	return TRUE
 

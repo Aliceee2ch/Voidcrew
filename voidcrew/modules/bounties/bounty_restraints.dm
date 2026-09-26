@@ -133,8 +133,9 @@
 	update_appearance(UPDATE_OVERLAYS)
 	body_state_changed()
 	SEND_SIGNAL(src, COMSIG_BOUNTY_CRIMINAL_RESTRAINED, user)
+	// Forced: the cuffs go on 2 s after a downing or a stun, well inside the cooldown of what they said then (BUG-1).
 	if(stat == CONSCIOUS)
-		INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), "cuffed")
+		INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), "cuffed", null, TRUE)
 	return TRUE
 
 // ===== UNCUFFING =====

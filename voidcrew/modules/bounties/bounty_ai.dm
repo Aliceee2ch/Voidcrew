@@ -285,9 +285,9 @@
 		return FALSE
 	return !body_is_stunned()
 
-/// Says a line for `context`, never from inside a signal handler's stack
-/mob/living/basic/bounty_criminal/proc/ai_bark(context)
-	INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), context)
+/// Says a line for `context`, never from inside a signal handler's stack. `force` skips the cooldown, for a moment that must be heard.
+/mob/living/basic/bounty_criminal/proc/ai_bark(context, force = FALSE)
+	INVOKE_ASYNC(src, TYPE_PROC_REF(/mob/living, bounty_say), context, null, force)
 
 /// Puts `who` on the list of people they may fight, by P2's rules (the cap, never another criminal or a companion)
 /mob/living/basic/bounty_criminal/proc/ai_add_grudge(mob/living/who)
@@ -464,12 +464,11 @@
 /mob/living/basic/bounty_criminal/proc/ai_took_damage(damage, damagetype)
 	return
 
-/// Down at the downed line (P2's COMSIG_BOUNTY_CRIMINAL_DOWNED): they drop everything, a shot or a wind-up included
+/// Down at the downed line (P2's COMSIG_BOUNTY_CRIMINAL_DOWNED): they drop everything, a shot or a wind-up included. The body says the line (body_go_down()).
 /mob/living/basic/bounty_criminal/proc/ai_on_downed()
 	ai_let_go()
 	if(!QDELETED(ai_controller))
 		ai_controller.CancelActions()
-	ai_bark("downed")
 	ai_companions_lose_heart()
 
 /**
@@ -479,16 +478,14 @@
 /mob/living/basic/bounty_criminal/proc/ai_on_recovered()
 	if(blended || !ai_can_act())
 		return
-	ai_bark("recover")
 	ai_react(ai_threat() || ai_nearest_grudge(), "recover")
 
-/// Cuffed (P2's COMSIG_BOUNTY_CRIMINAL_RESTRAINED)
+/// Cuffed (P2's COMSIG_BOUNTY_CRIMINAL_RESTRAINED). The body says the line (body_apply_cuffs()).
 /mob/living/basic/bounty_criminal/proc/ai_on_restrained(mob/living/user)
 	ai_let_go()
 	if(!QDELETED(ai_controller))
 		ai_controller.CancelActions()
 	ai_add_grudge(user)
-	ai_bark("cuffed")
 	ai_companions_lose_heart()
 
 /// Cuffs off (P2's COMSIG_BOUNTY_CRIMINAL_UNRESTRAINED): if they slipped them, they make a break for it

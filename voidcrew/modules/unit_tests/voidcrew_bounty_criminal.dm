@@ -893,3 +893,98 @@
 	outpost_posting.status = "closed"
 	qdel(posting)
 	qdel(outpost_posting)
+
+// ===== MOMENT LINES AND PAY BALLOONS =====
+
+/**
+ * The capture's moment lines always land (BUG-1): going down and being cuffed are said past the bark
+ * cooldown, and once each, never a second time by the AI. The pay balloon: going down and dying show
+ * the share the pay just dropped to, once a drop, by the posting's own shares; nothing with no
+ * posting, at a trader outpost, or when the share holds.
+ */
+/datum/unit_test/voidcrew_bounty_criminal_moments
+	parent_type = /datum/unit_test/voidcrew_bounty_criminal
+	/// Everything said aloud in the test
+	var/list/heard = list()
+
+/datum/unit_test/voidcrew_bounty_criminal_moments/proc/on_say(datum/source, list/speech_args)
+	SIGNAL_HANDLER
+	heard += speech_args[SPEECH_MESSAGE]
+
+/// How many of the lines heard are in `pool` (say() html-encodes what it says: "I&#39;m done.")
+/datum/unit_test/voidcrew_bounty_criminal_moments/proc/heard_from(list/pool)
+	. = 0
+	for(var/line in heard)
+		if(html_decode(line) in pool)
+			.++
+
+/datum/unit_test/voidcrew_bounty_criminal_moments/Run()
+	var/list/lines = bounty_identity_strings("lines")
+	var/list/postings = list()
+	var/datum/criminal_bounty/posting = new
+	postings += posting
+
+	// With no record, they use the shared lines only.
+	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(__IMPLIED_TYPE__)
+	criminal.posting_ref = WEAKREF(posting)
+	RegisterSignal(criminal, COMSIG_MOB_SAY, PROC_REF(on_say))
+	var/datum/component/bounty_identity_voice/voice = criminal.LoadComponent(/datum/component/bounty_identity_voice)
+	// They just said something ("hurt"): the cooldown is running.
+	COOLDOWN_START(voice, line_cooldown, 8 SECONDS) // BOUNTY_SAY_COOLDOWN
+	criminal.adjustBruteLoss(500)
+	TEST_ASSERT(criminal.is_downed(), "The criminal did not go down")
+	TEST_ASSERT_EQUAL(heard_from(lines["downed"]["any"]), 1, "Going down inside the cooldown, they said [heard_from(lines["downed"]["any"])] downed lines, not 1")
+	TEST_ASSERT_EQUAL(criminal.body_last_alert, "downed: pays 60%", "Going down showed [criminal.body_last_alert || "nothing"]") // BOUNTY_SHARE_DOWNED
+	// Cuffed two seconds later, well inside the cooldown of the downed line
+	TEST_ASSERT(criminal.body_apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The downed criminal could not be cuffed")
+	TEST_ASSERT_EQUAL(heard_from(lines["cuffed"]["any"]), 1, "Cuffed inside the cooldown, they said [heard_from(lines["cuffed"]["any"])] cuffed lines, not 1")
+	// Killed: the pay drops again, to the dead share.
+	criminal.body_last_alert = null
+	criminal.adjustBruteLoss(500)
+	TEST_ASSERT_EQUAL(criminal.stat, DEAD, "A hit on a downed criminal did not kill it")
+	TEST_ASSERT_EQUAL(criminal.body_last_alert, "dead: pays 25%", "Dying showed [criminal.body_last_alert || "nothing"]") // BOUNTY_SHARE_DEAD
+
+	// With the cooldown over, going down is still said once: the AI no longer says it too.
+	heard.Cut()
+	var/mob/living/basic/bounty_criminal/normal/twice = allocate(__IMPLIED_TYPE__)
+	twice.posting_ref = WEAKREF(posting)
+	RegisterSignal(twice, COMSIG_MOB_SAY, PROC_REF(on_say))
+	twice.adjustBruteLoss(500)
+	TEST_ASSERT_EQUAL(heard_from(lines["downed"]["any"]), 1, "Going down, they said [heard_from(lines["downed"]["any"])] downed lines, not 1")
+	TEST_ASSERT_EQUAL(twice.body_last_alert, "downed: pays 60%", "Going down showed [twice.body_last_alert || "nothing"]")
+	// Down a second time, the pay is already the downed share: no balloon.
+	twice.body_last_alert = null
+	TEST_ASSERT(twice.body_stand_up(), "The downed criminal could not get up")
+	twice.adjustBruteLoss(500)
+	TEST_ASSERT(twice.is_downed(), "The criminal did not go down a second time")
+	TEST_ASSERT_NULL(twice.body_last_alert, "Going down a second time showed the pay drop again")
+
+	// The shares are the posting's own.
+	var/mob/living/basic/bounty_criminal/normal/sample = allocate(__IMPLIED_TYPE__)
+	sample.worst_state = "downed" // BOUNTY_STATE_DOWNED
+	TEST_ASSERT_NULL(sample.body_pay_drop_text("free"), "A criminal with no posting showed a pay drop") // BOUNTY_STATE_FREE
+	sample.posting_ref = WEAKREF(posting)
+	TEST_ASSERT_EQUAL(sample.body_pay_drop_text("free"), "downed: pays 60%", "Going down showed [sample.body_pay_drop_text("free") || "nothing"]")
+	TEST_ASSERT_NULL(sample.body_pay_drop_text("downed"), "No worse than before, it showed a pay drop")
+	var/datum/criminal_bounty/kingpin/kingpin_posting = new
+	postings += kingpin_posting
+	sample.posting_ref = WEAKREF(kingpin_posting)
+	TEST_ASSERT_NULL(sample.body_pay_drop_text("free"), "The kingpin going down showed a pay drop, but alive he pays in full")
+	sample.worst_state = "dead" // BOUNTY_STATE_DEAD
+	TEST_ASSERT_EQUAL(sample.body_pay_drop_text("downed"), "dead: pays 80%", "The kingpin dying showed [sample.body_pay_drop_text("downed") || "nothing"]") // BOUNTY_KINGPIN_PAY_DEAD
+	var/datum/criminal_bounty/kill_only/kill_posting = new
+	postings += kill_posting
+	sample.posting_ref = WEAKREF(kill_posting)
+	TEST_ASSERT_NULL(sample.body_pay_drop_text("free"), "A kill-only bounty's kill showed a pay drop")
+	// At a trader outpost the fugitive shows nothing a decoy (no posting) wouldn't (AR-C6).
+	var/datum/criminal_bounty/outpost_posting = new
+	postings += outpost_posting
+	outpost_posting.placement_kind = "trader_outpost" // BOUNTY_PLACEMENT_TRADER_OUTPOST
+	sample.posting_ref = WEAKREF(outpost_posting)
+	sample.worst_state = "downed"
+	TEST_ASSERT_NULL(sample.body_pay_drop_text("free"), "A fugitive at a trader outpost showed a pay drop")
+
+	// Marked closed first: deleting an open posting runs close(), which deletes it again (P5)
+	for(var/datum/criminal_bounty/each_posting as anything in postings)
+		each_posting.status = "closed" // BOUNTY_POSTING_CLOSED
+	QDEL_LIST(postings)

@@ -38,6 +38,11 @@
  * staff door to dart through it when staff open it. Both are leisure activities below, which the
  * prisoner's routine picks by weight like any other.
  *
+ * A bounty prisoner remembers the crew who caught them: they name that ship as they beam in
+ * (bounty_arrival_speech(), from finish_beam_in()) and now and then call its crew out in the yard
+ * (bounty_extra_speech(), from extra_speech()). Those lines are in strings/outpost_prison_bounty.json,
+ * one of the extras' dialogue files, since they name the ship through {place}.
+ *
  * The prisoner procs here are new procs, never overrides of the prisoner's own: this file is
  * included before outpost_prison_prisoner.dm, so an override here would run inside that file's
  * definition, or not at all.
@@ -46,6 +51,15 @@
 // What an activity's tick() wants next, as in outpost_prison_routine.dm (which undefines its own)
 #define BOUNTY_PRISON_ACTIVITY_CONTINUE 0
 #define BOUNTY_PRISON_ACTIVITY_DONE 1
+
+/// What a Most Wanted prisoner says they are in for in the yard ({crime}): their real crime is no line to toss off (BUG-12)
+#define BOUNTY_PRISON_MOST_WANTED_YARD_CRIME "a lot of things"
+/// Percent chance a bounty prisoner with a captor in view calls them out, when the yard's talk comes round to them
+#define BOUNTY_PRISON_CAPTOR_LINE_CHANCE 30
+/// How long a bounty prisoner waits before calling out their captors again
+#define BOUNTY_PRISON_CAPTOR_LINE_GAP (3 MINUTES)
+/// How far a bounty prisoner looks for someone off the ship that caught them
+#define BOUNTY_PRISON_CAPTOR_VIEW 5
 
 // ===== PRIVATE STATE =====
 
@@ -65,6 +79,10 @@
 	var/prison_bounty_no_cell_since
 	/// For tests: whether a meek prisoner watching the staff door darts when it opens (TRUE or FALSE) instead of rolling for it
 	var/prison_bounty_forced_dart
+
+/mob/living/basic/outpost_prisoner
+	/// Running after a bounty prisoner called out someone off the ship that caught them (bounty_extra_speech())
+	COOLDOWN_DECLARE(prison_captor_line_cooldown)
 
 /// The pool's clock (bounty_pool_tick()), while the pool holds anyone
 GLOBAL_VAR(bounty_pool_timer)
@@ -453,8 +471,11 @@ GLOBAL_VAR(bounty_pool_timer)
  * At the end of the prisoner's Initialize(), before their look is built: who their record says
  * they are (name, gender, crime, personality by archetype, arriving as hurt as they were caught,
  * but with at least BOUNTY_PRISONER_MIN_ARRIVAL_HEALTH percent of their health), with no gear. Their look comes from build_look(), which dresses them in the record's face and
- * the plain prison jumpsuit. The crime stays the plain phrase ("smuggling"), since the yard says
- * "I'm in for {crime}"; the console and examine say "wanted for".
+ * the plain prison jumpsuit, the kingpin included. The crime stays the plain phrase ("smuggling"),
+ * since the yard says "I'm in for {crime}"; the console and examine say "wanted for". A Most Wanted
+ * prisoner's crime is too grim for the yard's lines ("Got pinched for {crime}. Long story."), so the
+ * yard hears BOUNTY_PRISON_MOST_WANTED_YARD_CRIME, as a Most Wanted criminal never names theirs in
+ * its own lines (BUG-12); the console and examine still read the record's.
  */
 /mob/living/basic/outpost_prisoner/proc/apply_bounty_record(datum/bounty_record/record)
 	if(record.gender == MALE || record.gender == FEMALE)
@@ -463,7 +484,9 @@ GLOBAL_VAR(bounty_pool_timer)
 		real_name = record.name
 		name = real_name
 	var/plain_crime = bounty_plain_crime(record.crime)
-	if(plain_crime)
+	if(record.tier == BOUNTY_TIER_MOST_WANTED)
+		crime = BOUNTY_PRISON_MOST_WANTED_YARD_CRIME
+	else if(plain_crime)
 		crime = plain_crime
 	var/list/personalities = bounty_archetype_personalities(record.archetype)
 	if(length(personalities))
@@ -474,7 +497,7 @@ GLOBAL_VAR(bounty_pool_timer)
 	arrival_brute = round(maxHealth * clamp(record.hurt_fraction || 0, 0, 1 - BOUNTY_PRISONER_MIN_ARRIVAL_HEALTH / 100))
 	record.status = BOUNTY_RECORD_IMPRISONED
 
-/// The personalities a criminal of `archetype` can have in prison: meek nervous or quiet, normal grumpy or chatty, a mini-boss grumpy
+/// The personalities a criminal of `archetype` can have in prison: meek nervous or quiet, normal grumpy or chatty, a mini-boss grumpy, the kingpin calm and quiet or grumpy
 /proc/bounty_archetype_personalities(archetype)
 	switch(archetype)
 		if(BOUNTY_ARCHETYPE_MEEK)
@@ -483,6 +506,8 @@ GLOBAL_VAR(bounty_pool_timer)
 			return list("grumpy", "chatty")
 		if(BOUNTY_ARCHETYPE_BOSS)
 			return list("grumpy")
+		if(BOUNTY_ARCHETYPE_KINGPIN)
+			return list("quiet", "grumpy")
 	return null
 
 /// A record's crime as the prison's plain phrase ("smuggling"), without a leading "wanted for", or null
@@ -898,17 +923,70 @@ GLOBAL_VAR(bounty_pool_timer)
 		"wanted_for" = plain_crime ? "wanted for [plain_crime]" : null,
 	)
 
-/// An examine sentence ("Wanted: Most Wanted. Brought in by the Meridian."), and the door-watching tell, or null (examine_extra_lines())
+/**
+ * An examine sentence or two, or null (examine_extra_lines()): "A Wanted bounty. The crew of the
+ * Meridian brought them in.", and the door-watching tell. A Most Wanted names their crime here, since
+ * the yard's "In for ..." leaves it out (BUG-12).
+ */
 /datum/outpost_prison/proc/bounty_examine(mob/living/basic/outpost_prisoner/prisoner, mob/user)
 	var/datum/bounty_record/record = prisoner?.bounty_record
 	if(!record)
 		return null
-	var/text = "Wanted: [bounty_tier_name(record.tier || BOUNTY_TIER_PETTY)]."
+	var/text = "A [bounty_tier_name(record.tier || BOUNTY_TIER_PETTY)] bounty"
+	var/plain_crime = record.tier == BOUNTY_TIER_MOST_WANTED ? bounty_plain_crime(record.crime) : null
+	text += plain_crime ? ", wanted for [plain_crime]." : "."
 	if(length(record.captor_name))
-		text += " Brought in by [record.captor_name]."
+		text += " The crew of the [record.captor_name] brought [prisoner.p_them()] in."
 	if(istype(prisoner.activity, /datum/prisoner_activity/bounty_door_watch))
 		text += " [prisoner.p_They()] keep[prisoner.p_s()] glancing at the door."
 	return text
+
+// ===== WHO CAUGHT THEM =====
+
+/**
+ * Values for their lines that name the ship that caught them, list("{place}" = "Meridian"), or null
+ * for an ordinary prisoner or a record with no captor. The lines say "the {place}".
+ */
+/mob/living/basic/outpost_prisoner/proc/bounty_captor_values()
+	if(!length(bounty_record?.captor_name))
+		return null
+	return list("{place}" = bounty_record.captor_name)
+
+/**
+ * A bounty prisoner's first words as the beam ends name the crew who caught them ("So this is where
+ * the Meridian crew sends people."), in place of the usual hello. Returns TRUE if they said it.
+ * finish_beam_in() calls it before its own arrival lines.
+ */
+/mob/living/basic/outpost_prisoner/proc/bounty_arrival_speech()
+	var/list/values = bounty_captor_values()
+	return values ? say_context_with("bounty_arrival", values) : FALSE
+
+/// Someone awake off the ship that caught them, within BOUNTY_PRISON_CAPTOR_VIEW tiles and in sight, or null
+/mob/living/basic/outpost_prisoner/proc/bounty_captor_in_view()
+	var/obj/structure/overmap/ship/captor_ship = bounty_record?.captor_ship?.resolve()
+	if(QDELETED(captor_ship))
+		return null
+	for(var/mob/living/person in view(BOUNTY_PRISON_CAPTOR_VIEW, src))
+		if(person != src && person.stat == CONSCIOUS && get_crew_ship(person) == captor_ship)
+			return person
+	return null
+
+/**
+ * The yard's talk (extra_speech()): now and then, with someone off the ship that caught them in
+ * sight, a bounty prisoner turns to them and calls them out ("I know you. You're off the Meridian.").
+ * Rolled at `chance` percent, and at most once every BOUNTY_PRISON_CAPTOR_LINE_GAP each; the sight
+ * check runs only once the roll comes up. Returns list(context, null, values), or null.
+ */
+/datum/outpost_prison/proc/bounty_extra_speech(mob/living/basic/outpost_prisoner/prisoner, chance = BOUNTY_PRISON_CAPTOR_LINE_CHANCE)
+	var/list/values = prisoner?.bounty_captor_values()
+	if(!values || !COOLDOWN_FINISHED(prisoner, prison_captor_line_cooldown) || !prob(chance))
+		return null
+	var/mob/living/captor = prisoner.bounty_captor_in_view()
+	if(!captor)
+		return null
+	COOLDOWN_START(prisoner, prison_captor_line_cooldown, BOUNTY_PRISON_CAPTOR_LINE_GAP)
+	prisoner.face_atom(captor)
+	return list("bounty_captor_seen", null, values)
 
 /**
  * The warden console's bounty block (OutpostPrison.tsx), for the top-level payload: the intake
@@ -1028,3 +1106,7 @@ GLOBAL_VAR(bounty_pool_timer)
 
 #undef BOUNTY_PRISON_ACTIVITY_CONTINUE
 #undef BOUNTY_PRISON_ACTIVITY_DONE
+#undef BOUNTY_PRISON_MOST_WANTED_YARD_CRIME
+#undef BOUNTY_PRISON_CAPTOR_LINE_CHANCE
+#undef BOUNTY_PRISON_CAPTOR_LINE_GAP
+#undef BOUNTY_PRISON_CAPTOR_VIEW

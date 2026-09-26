@@ -124,8 +124,16 @@
 	var/mob/living/carbon/human/consistent/hunter = allocate(/mob/living/carbon/human/consistent, tile(1, 1))
 	TEST_ASSERT(criminal.ai_ways_out(hunter) < 2, "In the corner with the hunter on them, they have [criminal.ai_ways_out(hunter)] ways out")
 
+	// The first moment cornered: a warning, and no gun yet
+	var/list/lines = bounty_identity_strings("lines")
+	var/datum/component/bounty_identity_voice/voice = criminal.LoadComponent(/datum/component/bounty_identity_voice)
+	TEST_ASSERT(!criminal.ai_check_cornered(hunter), "Cornered for the first moment, they aimed at once")
+	TEST_ASSERT(voice.last_line in lines["cornered"]["any"], "Cornered, they warned nobody ([voice.last_line || "nothing said"])")
+	// The draw is said even inside the cooldown of that warning (BUG-2: draw_gun was never said)
+	voice.last_line = null
 	criminal.ai_update_style()
 	TEST_ASSERT(criminal.ai_start_aim(hunter), "Cornered, they did not aim")
+	TEST_ASSERT(voice.last_line in lines["draw_gun"]["any"], "Drawing the holdout, they said [voice.last_line || "nothing"]")
 	TEST_ASSERT(criminal.ai_aim_until > world.time, "The aim has no wind-up")
 	TEST_ASSERT_NOTNULL(criminal.ai_hand, "No gun in their hand while aiming")
 	TEST_ASSERT(locate(/obj/effect/temp_visual/telegraphing/bounty_aim) in get_turf(hunter), "No aim mark on the hunter")
@@ -183,7 +191,12 @@
 	QDEL_LIST(buddies)
 	TEST_ASSERT_EQUAL(criminal.ai_surrender_chance(), 60, "With no companion the chance should be 60") // BOUNTY_SURRENDER_CHANCE
 
+	// Giving up is said even right after another line, inside the cooldown (BUG-1)
+	var/datum/component/bounty_identity_voice/voice = criminal.LoadComponent(/datum/component/bounty_identity_voice)
+	COOLDOWN_START(voice, line_cooldown, 8 SECONDS) // BOUNTY_SAY_COOLDOWN
+	voice.last_line = null
 	criminal.ai_surrender()
+	TEST_ASSERT(voice.last_line in bounty_identity_strings("lines")["surrender"]["any"], "Giving up, they said [voice.last_line || "nothing"]")
 	TEST_ASSERT(HAS_TRAIT(criminal, "bounty_surrendered"), "Surrendering did not set the trait") // TRAIT_BOUNTY_SURRENDERED
 	TEST_ASSERT(!criminal.ai_can_act(), "A surrendered criminal can still act")
 	TEST_ASSERT_NOTNULL(criminal.ai_over_head, "No hands-up mark over a surrendered criminal")

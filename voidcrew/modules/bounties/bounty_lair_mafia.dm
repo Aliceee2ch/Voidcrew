@@ -29,8 +29,10 @@
  *   signet ring (/obj/item/bounty_proof/trophy/mafia_don) with the posting on it, which P10 pays on.
  *
  * For P10: a gatekeeper's death is COMSIG_LIVING_DEATH (the lieutenant is deleted right after, so watch
- * COMSIG_QDELETING too for an admin delete). The mech sends COMSIG_BOUNTY_MAFIA_DON_EJECTED with the don before
- * its own death; the don sends COMSIG_BOUNTY_MAFIA_TROPHY_DROPPED with the ring.
+ * COMSIG_QDELETING too for an admin delete). The mech hands its posting_ref to the don and sends
+ * COMSIG_BOUNTY_MAFIA_DON_EJECTED with him before its own death; the don's death drops the ring through P10's
+ * bounty_lair_drop_trophy() and sends COMSIG_BOUNTY_MAFIA_TROPHY_DROPPED with it. Everyone keeps to their room by
+ * bounty_mafia_leash_allows(), the same rule as P10's /datum/element/bounty_lair_room_leash.
  *
  * Nothing here scans turfs on a tick: targets come from SSmobs' list of players on the level, and every
  * telegraph and timer is tracked and cleaned up.
@@ -99,6 +101,19 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		playsound(shooter, fire_sound, 60, TRUE)
 	bullet.fire()
 	return QDELETED(bullet) ? null : bullet
+
+/**
+ * Whether `mover`, kept to the room (area) `home`, may step onto `new_loc` on its own: anywhere in its room, never
+ * out of it, so it fights from its doorway and a fight never drags the next room in (lairs.md 9.2). The same rule as
+ * P10's /datum/element/bounty_lair_room_leash, which a lair also puts on its mobs at load, so the two always agree:
+ * moves it doesn't make itself (pulled, thrown, dead) are never stopped, and once out of its room it walks freely.
+ */
+/proc/bounty_mafia_leash_allows(mob/living/mover, area/home, atom/new_loc)
+	if(!home || !new_loc || mover.stat == DEAD || mover.pulledby || mover.throwing)
+		return TRUE
+	if(get_area(mover) != home)
+		return TRUE
+	return get_area(new_loc) == home
 
 /// Open tiles up to `range` from `origin` within `arc` degrees (full width) of the line to `aim`, that `origin` can see
 /proc/bounty_mafia_cone_turfs(turf/origin, turf/aim, range, arc)
@@ -660,15 +675,9 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/area/home = mafia_home_ref?.resolve()
 	return !home || get_area(src) == home
 
-/**
- * Whether it may step onto `spot`: anywhere in its room, never out of it. Pushed out somehow, it may go
- * anywhere, so it can walk back.
- */
+/// Whether it may step onto `spot` on its own: anywhere in its room, never out of it (bounty_mafia_leash_allows())
 /mob/living/basic/trooper/russian/mafia/proc/mafia_leash_allows(turf/spot)
-	var/area/home = mafia_home_ref?.resolve()
-	if(!home || !spot || get_area(src) != home)
-		return TRUE
-	return get_area(spot) == home
+	return bounty_mafia_leash_allows(src, mafia_home_ref?.resolve(), spot)
 
 /mob/living/basic/trooper/russian/mafia/proc/mafia_on_pre_move(datum/source, atom/new_loc)
 	SIGNAL_HANDLER
@@ -1041,17 +1050,20 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /obj/effect/mob_spawn/corpse/human/bounty_mafia/tommy
 	name = "Tommy"
+	mob_name = "Tommy"
 	outfit = /datum/outfit/bounty_mafia_tommy
 	hairstyle = "Crewcut"
 
 /obj/effect/mob_spawn/corpse/human/bounty_mafia/brute
 	name = "Brute"
+	mob_name = "Brute"
 	outfit = /datum/outfit/bounty_mafia_brute
 	hairstyle = "Bald"
 	facial_hairstyle = "Beard (Full)"
 
 /obj/effect/mob_spawn/corpse/human/bounty_mafia/don
-	name = "the don"
+	name = BOUNTY_DON_NAME
+	mob_name = BOUNTY_DON_NAME
 	outfit = /datum/outfit/bounty_mafia_don
 	hairstyle = "Crewcut"
 	facial_hairstyle = "Beard (Full)"
@@ -1203,10 +1215,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_on_pre_move(datum/source, atom/new_loc)
 	SIGNAL_HANDLER
-	var/area/arena = mech_home_ref?.resolve()
-	if(!arena || get_area(src) != arena)
-		return NONE
-	if(get_area(new_loc) != arena)
+	if(!bounty_mafia_leash_allows(src, mech_home_ref?.resolve(), new_loc))
 		return COMPONENT_MOVABLE_BLOCK_PRE_MOVE
 	return NONE
 
@@ -1692,10 +1701,12 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
  * posting on it and leaves a corpse in his clothes.
  */
 /mob/living/basic/bounty_lair_boss/mafia_don
-	name = "the don"
-	desc = "The head of the family that runs this club: a fur coat, a gold chain, and a gold pistol in his hand. He looks furious."
+	name = BOUNTY_DON_NAME
+	desc = "The don himself, head of the family that runs this club: a fur coat, a gold chain, and a gold pistol in his hand. He looks furious."
 	icon = 'icons/mob/simple/simple_human.dmi'
 	gender = MALE
+	// Nobody drags the don out of his garage
+	move_resist = MOVE_FORCE_STRONG
 	mob_biotypes = MOB_ORGANIC|MOB_HUMANOID
 	maxHealth = BOUNTY_DON_HEALTH
 	health = BOUNTY_DON_HEALTH
@@ -1839,21 +1850,26 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	if(!spot)
 		return null
 	don_trophy_dropped = TRUE
-	var/obj/item/bounty_proof/trophy/mafia_don/ring = new(spot)
-	ring.posting_ref = posting_ref
-	var/datum/criminal_bounty/posting = posting_ref?.resolve()
-	if(posting)
-		ring.record = posting.record
+	var/obj/item/bounty_proof/trophy/ring
+#ifdef BOUNTY_LAIR_TROPHY_GRACE
+	// INTEGRATION (P10): with P10's lair framework in the build (its defines present), its API drops the ring and binds
+	// it to the kill-only bounty as its proof of death. Null when he is wanted on no open bounty (an admin spawn).
+	ring = bounty_lair_drop_trophy(src, /obj/item/bounty_proof/trophy/mafia_don)
+#endif
+	if(!ring)
+		// Without it, the ring still carries his posting and its record; P10's lair picks up a loose trophy bound to it
+		ring = new /obj/item/bounty_proof/trophy/mafia_don(spot)
+		ring.posting_ref = posting_ref
+		var/datum/criminal_bounty/posting = posting_ref?.resolve()
+		if(posting)
+			ring.record = posting.record
 	visible_message(span_notice("A heavy gold ring slips off [src]'s finger."))
 	SEND_SIGNAL(src, COMSIG_BOUNTY_MAFIA_TROPHY_DROPPED, ring)
 	return ring
 
 /mob/living/basic/bounty_lair_boss/mafia_don/proc/don_on_pre_move(datum/source, atom/new_loc)
 	SIGNAL_HANDLER
-	var/area/arena = don_home_ref?.resolve()
-	if(!arena || get_area(src) != arena)
-		return NONE
-	if(get_area(new_loc) != arena)
+	if(!bounty_mafia_leash_allows(src, don_home_ref?.resolve(), new_loc))
 		return COMPONENT_MOVABLE_BLOCK_PRE_MOVE
 	return NONE
 

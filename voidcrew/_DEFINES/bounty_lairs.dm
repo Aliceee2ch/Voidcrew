@@ -143,6 +143,8 @@
 
 // ----- the don on foot -----
 
+/// His name when his posting's record gives none: the name P10's card shows for Club Volga
+#define BOUNTY_DON_NAME "Arkady Sokolov"
 #define BOUNTY_DON_HEALTH 150
 #define BOUNTY_DON_DAMAGE_MIN 14
 #define BOUNTY_DON_DAMAGE_MAX 17

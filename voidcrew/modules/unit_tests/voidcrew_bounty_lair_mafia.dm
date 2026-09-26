@@ -277,6 +277,10 @@
 	TEST_ASSERT_EQUAL(ring.record, posting.record, "The ring doesn't carry the record")
 	TEST_ASSERT_EQUAL(ring.icon_state, "signet_ring", "The ring doesn't look like a ring")
 
+	// Wanted on nothing (an admin spawn), he goes by the name on Club Volga's card
+	var/mob/living/basic/bounty_lair_boss/mafia_don/stray = allocate(/mob/living/basic/bounty_lair_boss/mafia_don, spot(4, 4))
+	TEST_ASSERT_EQUAL(stray.name, "Arkady Sokolov", "A don with no posting has no name") // BOUNTY_DON_NAME
+
 // ===== LIEUTENANTS =====
 
 /datum/unit_test/voidcrew_bounty_lair_mafia/lieutenants

@@ -56,6 +56,8 @@
 #define BOUNTY_FACIAL_HAIR_CHANCE 55
 /// Most built looks (record and outfit) kept at once; the oldest go first
 #define BOUNTY_LOOK_CACHE_MAX 64
+/// Most hair re-rolls for an old look or a decoy to find hair that matches nothing it must not match
+#define BOUNTY_HAIR_ROLL_ATTEMPTS 50
 
 // ===== MUGSHOTS =====
 // Head and shoulders out of a 32x32 front view (BYOND icon coordinates: 1,1 is the bottom left).

@@ -286,10 +286,11 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 		return "cornrows"
 	if(findtext(style, "braid"))
 		return "braided"
+	// Before "tail": pigtails and twintails aren't ponytails.
+	if(findtext(style, "pigtail") || findtext(style, "twintail") || findtext(style, "odango") || findtext(style, "drill"))
+		return "pigtails"
 	if(findtext(style, "ponytail") || findtext(style, "tail"))
 		return "ponytail"
-	if(findtext(style, "pigtail") || findtext(style, "odango") || findtext(style, "drill"))
-		return "pigtails"
 	if(findtext(style, "bun") || findtext(style, "updo") || findtext(style, "beehive") || findtext(style, "topknot"))
 		return "tied up in a bun"
 	if(findtext(style, "bob"))
@@ -306,12 +307,13 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 		return "slicked back"
 	if(findtext(style, "bedhead") || findtext(style, "messy") || findtext(style, "unkept"))
 		return "messy"
+	// Before "long", "bangs" and "over eye": short bangs and a short hime cut are short.
+	if(findtext(style, "short") || findtext(style, "pixie"))
+		return "short"
 	if(findtext(style, "long") || findtext(style, "shoulder") || findtext(style, "hime") || findtext(style, "tress"))
 		return "long"
 	if(findtext(style, "emo") || findtext(style, "over eye") || findtext(style, "fringe") || findtext(style, "bangs"))
 		return "long fringe"
-	if(findtext(style, "short") || findtext(style, "pixie"))
-		return "short"
 	return "medium length"
 
 /// The nearest plain name for a hair colour: "black", "auburn", "platinum blonde"
@@ -360,6 +362,26 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 	if(!bounty_species_own_hair_colour(look.species))
 		return shape
 	return "[shape]|[bounty_hair_colour_name(look.hair_color)]"
+
+/**
+ * Whether `one` and `other` (the same species and sex) have nothing in their hair in common that
+ * anyone could match on: another shape (so another style), another colour where the colour is the
+ * hair's own, and another beard where the sex and species grow one. Traits nobody of that species
+ * and sex can differ in (no hair at all, body-coloured hair, no beard) count as different: everyone
+ * shares them, so they tell nobody apart.
+ */
+/proc/bounty_hair_nothing_alike(datum/bounty_look/one, datum/bounty_look/other)
+	if(!one || !other)
+		return FALSE
+	var/species = one.species
+	if(bounty_species_has_hair(species))
+		if((bounty_hair_shape(one.hairstyle) || "none") == (bounty_hair_shape(other.hairstyle) || "none"))
+			return FALSE
+		if(bounty_species_own_hair_colour(species) && bounty_hair_colour_name(one.hair_color) == bounty_hair_colour_name(other.hair_color))
+			return FALSE
+	if(one.physique == MALE && bounty_species_has_facial_hair(species) && (one.facial_hairstyle || "Shaved") == (other.facial_hairstyle || "Shaved"))
+		return FALSE
+	return TRUE
 
 // ===== DISTINGUISHING FEATURES =====
 
@@ -552,17 +574,23 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 			decoy.features[kind] = value
 	return decoy
 
-/// New hair for a decoy's `look` that reads differently from `wanted`'s hair now and in their mugshot
+/**
+ * New hair for a decoy's `look`: it reads differently from `wanted`'s current hair (they don't share
+ * the Hair feature), and has nothing in common with the hair in `wanted`'s old-look mugshot, just as
+ * the fugitive's own current hair has nothing in common with it (make_old_look()). So the mugshot's
+ * hair matches no patron and picks out nobody.
+ */
 /proc/bounty_reroll_decoy_hair(datum/bounty_look/look, datum/bounty_record/wanted)
 	if(!bounty_species_has_hair(look.species))
 		return
-	var/list/avoid = list(bounty_hair_key(wanted.look))
-	if(wanted.old_look)
-		avoid += bounty_hair_key(wanted.old_look)
-	for(var/attempt in 1 to 12)
+	var/current_hair = bounty_hair_key(wanted.look)
+	for(var/attempt in 1 to BOUNTY_HAIR_ROLL_ATTEMPTS)
 		bounty_roll_hair(look)
-		if(!(bounty_hair_key(look) in avoid))
-			return
+		if(bounty_hair_key(look) == current_hair)
+			continue
+		if(wanted.old_look && !bounty_hair_nothing_alike(look, wanted.old_look))
+			continue
+		return
 
 // ===== WHAT THEY SAY =====
 
@@ -633,18 +661,23 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 /**
  * Says a line for `context` (the contexts in strings/bounty_criminals.json) through a per-mob
  * cooldown (BOUNTY_SAY_COOLDOWN) and a no-repeat window per line (BOUNTY_SAY_NO_REPEAT). Returns
- * TRUE if they said something.
+ * TRUE only if they said something; when they can't speak (dead, unconscious, mute) or no line
+ * fits, it returns FALSE and neither uses a line nor starts the cooldown, so callers can fall back.
  *
  * - `values`: placeholders for the line, list("{other}" = "Sal"). A line naming a placeholder with
- *   no value is skipped. A criminal fills "{crime}" itself.
+ *   no value is skipped. A criminal fills "{crime}" itself, below Most Wanted only.
  * - `force`: skips the cooldown, and may repeat a recent line when nothing fresh is left. For
  *   answers that must come (a warrant shown, the beam out).
  *
  * Criminals pick from their archetype's own lines first (identity_voice()); a blended fugitive and
- * its decoys use the shared lines only, so nothing they say tells them apart.
+ * every decoy use the shared lines only, so nothing they say tells them apart.
+ *
+ * The line goes out as forced speech (no chat filter or prompt, even for a possessed mob), so it
+ * doesn't wait on anyone; say() is still marked as able to sleep, so a signal handler calls this
+ * through INVOKE_ASYNC.
  */
 /mob/living/proc/bounty_say(context, list/values, force = FALSE)
-	if(QDELETED(src) || stat == DEAD || !istext(context))
+	if(QDELETED(src) || !istext(context) || !identity_can_bark())
 		return FALSE
 	var/datum/component/bounty_identity_voice/voice = LoadComponent(/datum/component/bounty_identity_voice)
 	if(!voice)
@@ -660,8 +693,14 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 	voice.recent_lines[picked[1]] = world.time
 	voice.last_line = picked[2]
 	COOLDOWN_START(voice, line_cooldown, BOUNTY_SAY_COOLDOWN)
-	say(picked[2])
+	say(picked[2], forced = "bounty line")
 	return TRUE
+
+/// Whether say() would let them speak out loud now: awake enough, and not mute
+/mob/living/proc/identity_can_bark()
+	if(stat == DEAD || stat == UNCONSCIOUS || stat == HARD_CRIT)
+		return FALSE
+	return can_speak()
 
 /// Whose lines they pick first in bounty_say(): an archetype, or null for the shared lines only
 /mob/living/proc/identity_voice()
@@ -678,6 +717,15 @@ GLOBAL_LIST_INIT(bounty_species_weights, list(
 	return record?.archetype
 
 /mob/living/basic/bounty_criminal/identity_line_values()
-	if(!record?.crime)
+	// A Most Wanted crime is no line to toss off ("All this over the Halcyon massacre?").
+	if(!record?.crime || record.tier == BOUNTY_TIER_MOST_WANTED)
 		return null
 	return list("{crime}" = record.crime)
+
+/// A decoy is an innocent patron: always the shared, neutral lines, whether or not it is blended in
+/mob/living/basic/bounty_criminal/decoy/identity_voice()
+	return null
+
+/// A decoy has no crime to own up to
+/mob/living/basic/bounty_criminal/decoy/identity_line_values()
+	return null

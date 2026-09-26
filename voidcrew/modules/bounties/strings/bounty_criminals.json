@@ -305,16 +305,22 @@
 		"hurt": {
 			"any": [
 				"Agh! That hurt!",
-				"Ow! You'll pay for that.",
-				"Is that all you've got?",
-				"That's going to bruise.",
+				"Ow! Stop that!",
+				"Hey! What was that for?",
 				"Hey!",
-				"Ugh. Lucky shot."
+				"Ow, ow, ow!",
+				"Ugh. Watch it!"
 			],
 			"meek": [
 				"Ow! Stop!",
 				"Please stop hitting me!",
-				"Ow, ow, ow!"
+				"Why are you doing this?"
+			],
+			"normal": [
+				"Ow! You'll pay for that.",
+				"Is that all you've got?",
+				"Ugh. Lucky shot.",
+				"That's going to bruise."
 			],
 			"boss": [
 				"Barely felt it.",
@@ -354,14 +360,25 @@
 			"any": [
 				"Right. Where was I?",
 				"Still here.",
-				"That all you had?",
-				"Okay. Round two.",
-				"You should've cuffed me.",
-				"Back on my feet."
+				"Back on my feet.",
+				"Ugh. My head.",
+				"Okay. Okay. I'm up.",
+				"Where did everyone go?"
 			],
 			"meek": [
 				"I have to get out of here.",
-				"Now's my chance."
+				"Now's my chance.",
+				"Please, just let me go."
+			],
+			"normal": [
+				"That all you had?",
+				"Okay. Round two.",
+				"You should've cuffed me."
+			],
+			"boss": [
+				"You should have finished it.",
+				"My turn.",
+				"Round two."
 			]
 		},
 		"cuffed": {
@@ -371,12 +388,17 @@
 				"My lawyer's going to hear about this.",
 				"You've got the wrong guy.",
 				"Watch the wrists!",
-				"I want a real bed in that cell.",
-				"All this over {crime}? Really?"
+				"I want a real bed in that cell."
 			],
 			"meek": [
 				"Please, I didn't mean it.",
-				"Can I at least call someone?"
+				"Can I at least call someone?",
+				"All this over {crime}? Really?"
+			],
+			"normal": [
+				"All this over {crime}? Really?",
+				"Fine. You got me.",
+				"I'll be out in a week."
 			],
 			"boss": [
 				"These won't hold me forever.",
@@ -417,11 +439,14 @@
 			"any": [
 				"How did you find me?",
 				"Damn it.",
-				"You're making a mistake.",
-				"Took you long enough.",
+				"This is a mistake.",
 				"Okay. Okay. Let's talk about this.",
 				"Who told you?",
 				"Is this about {crime}? I can explain."
+			],
+			"normal": [
+				"Took you long enough.",
+				"You're making a mistake, friend."
 			],
 			"meek": [
 				"No! Not me! Not me!",
@@ -485,7 +510,7 @@
 				"Catch!",
 				"Here, warm up!",
 				"Stay still!",
-				"Hot, hot, hot!",
+				"It's about to get hot in here.",
 				"Light them up!"
 			]
 		},
@@ -515,7 +540,7 @@
 				"Heads up!",
 				"Duck!",
 				"Catch this!",
-				"Here's a present!",
+				"Grenade!",
 				"Cover your ears!"
 			]
 		},
@@ -545,7 +570,7 @@
 				"Too slow.",
 				"Missed me.",
 				"Behind you.",
-				"Catch me if you can.",
+				"You keep missing.",
 				"Try to keep up."
 			]
 		},
@@ -573,7 +598,7 @@
 			"any": [
 				"Suppressing fire!",
 				"Get down!",
-				"Eat lead!",
+				"Here it comes!",
 				"Stay down!",
 				"Covering fire!",
 				"Keep your heads down!"

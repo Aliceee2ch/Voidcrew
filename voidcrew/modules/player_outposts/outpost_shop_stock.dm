@@ -206,7 +206,10 @@
 		return "Living things can't be sold."
 	if(item.GetID() || length(item.get_all_contents_type(/obj/item/card/id)))
 		return "IDs can't be sold."
-	if(istype(item, /obj/item/storage) || (item.atom_storage && length(item.atom_storage.real_location?.contents)))
+	// Containers only go in empty, or one listing would hide a bag of other goods
+	if(item.atom_storage && length(item.atom_storage.real_location?.contents))
+		return "Empty it first."
+	if(istype(item, /obj/item/storage) && length(item.contents))
 		return "Empty it first."
 	if(istype(item, /obj/item/bodybag) && length(item.contents))
 		return "Empty it first."

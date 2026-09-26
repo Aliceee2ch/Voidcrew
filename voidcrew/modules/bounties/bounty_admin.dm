@@ -7,39 +7,46 @@
  * What it owns: the "Bounty Panel" admin verb, with tgui input lists and no .tsx (spec section 11):
  * spawn any archetype, kit or tier at your feet; spawn a decoy beside a criminal; post a bounty now;
  * list, close, relist, jump to and fetch bounties; force capture states; list the prisoner pool, admit
- * a record into a chosen prison, drop a record or add a test one; run the board forward. It works
- * through the other packages' procs only (bounty_types.dm and the spec's API table), never through
- * vars[] or call().
+ * a record into a chosen prison, drop or clear records or add a test one; run the board forward.
+ *
+ * It changes other packages' state only through their procs:
+ * - P1: generate_bounty_record(), make_decoy_record();
+ * - P2: spawn_bounty_criminal(), body_apply_cuffs(), body_remove_cuffs(), body_downed_line(),
+ *   body_stand_up(), capture_state();
+ * - P3: start_activity();
+ * - P5: post_criminal_bounty(), close(), relist(), SScriminal_bounties.board_fast_forward() and
+ *   admin_skip_post_gap(), board_site_zone(), board_kind_allowed(), board_postings_at();
+ * - P6: the decoy's outpost_become() and the outpost's display name, description and outfit;
+ * - P7: bounty_pool_add(), bounty_pool_remove(), bounty_pool_clear(), the prison's
+ *   bounty_admit_record().
+ * The one direct write is a criminal's worst_state back to free (force_free()): no package has a
+ * proc that makes a worst state better, and the admin's "Free" exists to try a full-pay turn-in again.
  *
  * Everything goes through /datum/bounty_admin_panel. The menu procs (menu_*) ask the questions; the
  * action procs (admin_*) take plain arguments, check the admin again, act and log, so a unit test can
- * call either with no admin client (voidcrew_bounty_admin.dm overrides authorized(), log_action(), tell()
- * and the ask_* prompts). An action that is refused returns null or FALSE and leaves the reason in
- * `error`.
+ * call either with no admin client (voidcrew_bounty_admin.dm overrides authorized(), log_action(),
+ * tell() and the ask_* prompts). An action that is refused returns null or FALSE and leaves the reason
+ * in `error`. Nothing is held across a prompt but weakrefs.
  *
- * The shared vars are declared in bounty_types.dm and nowhere else; a var only P8 uses goes here
- * with an `admin_` prefix.
+ * EXTENSION POINT for the kingpin and the lairs (P9, P10, P12): /datum/bounty_admin_post_action at
+ * the end of this file. A subtype with a name in your own file adds an entry to "Post a bounty now";
+ * this file doesn't change.
  */
 
-/// Most board ticks one fast-forward runs
-#define BOUNTY_ADMIN_MAX_TICKS 60
-/// Most minutes one clock skip takes off the postings
+/// Most minutes one fast-forward runs the board on
 #define BOUNTY_ADMIN_MAX_MINUTES 120
+/// Most board ticks (10 s of board time each) one fast-forward runs
+#define BOUNTY_ADMIN_MAX_TICKS 60
+/// Board time one tick stands for, in seconds (SScriminal_bounties' wait)
+#define BOUNTY_ADMIN_TICK_SECONDS 10
 /// How long a forced stun lasts
 #define BOUNTY_ADMIN_STUN_TIME (30 SECONDS)
 /// Most questions one opening of the panel asks before it closes itself: a guard, never reached by hand
 #define BOUNTY_ADMIN_MAX_STEPS 200
-/// What an admin-spawned decoy wears: the concourse loiterers' clothes
-#define BOUNTY_ADMIN_DECOY_OUTFIT /datum/outfit/job/assistant
 /// Who the pool's test records say brought them in
 #define BOUNTY_ADMIN_TEST_CAPTOR "Admin test"
-
-// The downed line is P2's number. If P2 renames it, the panel falls back to the spec's 25%.
-#ifdef BOUNTY_DOWNED_FRACTION
-#define BOUNTY_ADMIN_DOWNED_FRACTION BOUNTY_DOWNED_FRACTION
-#else
-#define BOUNTY_ADMIN_DOWNED_FRACTION 0.25
-#endif
+/// The reason hunters are told when an admin relists a bounty: "WANTED: <name>: moved on."
+#define BOUNTY_ADMIN_RELIST_REASON "moved on"
 
 // The main menu, in the order it shows
 #define BOUNTY_ADMIN_MENU_SPAWN "Spawn a criminal at my feet"
@@ -49,6 +56,9 @@
 #define BOUNTY_ADMIN_MENU_FORCE "Force a capture state"
 #define BOUNTY_ADMIN_MENU_POOL "Prisoner pool"
 #define BOUNTY_ADMIN_MENU_BOARD "Fast-forward the board"
+
+/// "Post a bounty now"'s first entry when there are extra post actions: an ordinary criminal
+#define BOUNTY_ADMIN_POST_CRIMINAL "A criminal (pick the tier and place)"
 
 ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force bounty criminals, manage the prisoner pool and run the bounty board forward.", ADMIN_CATEGORY_SHUTTLE)
 	var/datum/bounty_admin_panel/panel = new(user.mob)
@@ -180,26 +190,46 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	admin_spawn_criminal(user, tier, archetype, variant, activities[activity_choice], get_turf(user))
 
 /datum/bounty_admin_panel/proc/menu_decoy(mob/user)
-	var/mob/living/basic/bounty_criminal/wanted = pick_criminal(user, "Spawn a decoy next to whom?")
-	if(!wanted)
+	var/datum/weakref/wanted_ref = WEAKREF(pick_criminal(user, "Spawn a decoy next to whom?"))
+	if(!wanted_ref)
 		return
 	var/static/list/shares = list("One of their features" = 1, "Two of their features" = 2)
 	var/share_choice = ask_list(user, "The decoy shares how much of their look?", "Spawn a decoy", shares)
 	if(!share_choice || !authorized(user))
 		return
+	var/mob/living/basic/bounty_criminal/wanted = wanted_ref.resolve()
+	if(QDELETED(wanted))
+		refuse(user, "That criminal is gone.")
+		return
 	admin_spawn_decoy(user, wanted, shares[share_choice])
 
 /datum/bounty_admin_panel/proc/menu_post(mob/user)
+	// Extra kinds of posting (the kingpin, the lairs) come first when there are any
+	var/list/extras = post_actions()
+	if(length(extras))
+		var/list/kinds_of_bounty = list(BOUNTY_ADMIN_POST_CRIMINAL)
+		for(var/datum/bounty_admin_post_action/action as anything in extras)
+			kinds_of_bounty[unique_label(kinds_of_bounty, action.name)] = action
+		var/bounty_choice = ask_list(user, "What kind of bounty?", "Post a bounty", kinds_of_bounty)
+		if(!bounty_choice || !authorized(user))
+			return
+		if(bounty_choice != BOUNTY_ADMIN_POST_CRIMINAL)
+			admin_run_post_action(user, kinds_of_bounty[bounty_choice])
+			return
 	var/tier = ask_tier(user, "Post a bounty")
 	if(!tier)
 		return
-	var/list/kinds = placement_choices()
-	var/kind_choice = ask_list(user, "Where?", "Post a bounty", kinds)
+	var/list/kinds = list()
+	var/list/all_kinds = placement_choices()
+	for(var/label in all_kinds)
+		if(SScriminal_bounties.board_kind_allowed(all_kinds[label], tier, null))
+			kinds[label] = all_kinds[label]
+	var/kind_choice = ask_list(user, "Where? Only the places a [bounty_tier_name(tier)] bounty may go.", "Post a bounty", kinds)
 	if(!kind_choice || !authorized(user))
 		return
 	var/kind = kinds[kind_choice]
 	var/list/sites = list("Let the board pick" = null) + site_choices(kind)
-	var/site_choice = ask_list(user, "Which site? Only loaded ones are listed.", "Post a bounty", sites)
+	var/site_choice = ask_list(user, "Which site? Only those the board would pick are listed.", "Post a bounty", sites)
 	if(!site_choice || !authorized(user))
 		return
 	var/list/audiences = list("Public" = null) + ship_choices()
@@ -254,23 +284,27 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 			admin_bring(user, posting.criminal())
 
 /datum/bounty_admin_panel/proc/menu_force(mob/user)
-	var/mob/living/basic/bounty_criminal/criminal = pick_criminal(user, "Force a capture state on whom?")
-	if(!criminal)
+	var/datum/weakref/criminal_ref = WEAKREF(pick_criminal(user, "Force a capture state on whom?"))
+	if(!criminal_ref)
 		return
 	var/static/list/states = list(
 		"Downed" = BOUNTY_STATE_DOWNED,
 		"Stunned" = BOUNTY_STATE_STUNNED,
 		"Restrained (cuffs on)" = BOUNTY_STATE_RESTRAINED,
 		"Dead" = BOUNTY_STATE_DEAD,
-		"Free (healed, uncuffed, worst state cleared)" = BOUNTY_STATE_FREE,
+		"Free (up, healed, uncuffed, worst state cleared)" = BOUNTY_STATE_FREE,
 	)
 	var/state_choice = ask_list(user, "Which state?", "Force a capture state", states)
 	if(!state_choice || !authorized(user))
 		return
+	var/mob/living/basic/bounty_criminal/criminal = criminal_ref.resolve()
+	if(QDELETED(criminal))
+		refuse(user, "That criminal is gone.")
+		return
 	admin_force_state(user, criminal, states[state_choice])
 
 /datum/bounty_admin_panel/proc/menu_pool(mob/user)
-	var/static/list/actions = list("List the records", "Admit a record into a prison now", "Drop a record", "Add a test record")
+	var/static/list/actions = list("List the records", "Admit a record into a prison now", "Drop a record", "Add a test record", "Clear the whole pool")
 	var/action = ask_list(user, "The pool holds [length(GLOB.bounty_prisoner_pool)] record\s.", "Prisoner pool", actions)
 	if(!action || !authorized(user))
 		return
@@ -278,17 +312,21 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		if("List the records")
 			var/list/lines = list()
 			for(var/list/row as anything in pool_rows())
-				lines += "<b>[row["name"]]</b>: [row["tier"]] [row["archetype"]], [row["status"]], for [row["prison"]], [row["age"]]"
+				lines += "<b>[row["name"]]</b>: [row["tier"]] [row["archetype"]], [row["status"]], for [row["prison"]][row["reserved"] ? "" : " (not reserved)"], [row["age"]]"
 			if(!length(lines))
 				tell(user, span_notice("The prisoner pool is empty."))
 				return
 			tell(user, boxed_message("<b>Prisoner pool</b><br>[jointext(lines, "<br>")]"))
 		if("Admit a record into a prison now")
-			var/datum/bounty_record/record = pick_record(user, "Admit which record?")
-			if(!record)
+			var/datum/weakref/record_ref = WEAKREF(pick_record(user, "Admit which record?"))
+			if(!record_ref)
 				return
 			var/datum/outpost_prison/prison = pick_prison(user, "Into which prison?")
 			if(!prison)
+				return
+			var/datum/bounty_record/record = record_ref.resolve()
+			if(!record)
+				refuse(user, "That record is gone.")
 				return
 			admin_pool_admit(user, record, prison)
 		if("Drop a record")
@@ -314,25 +352,33 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 				refuse(user, "That prison is gone.")
 				return
 			admin_pool_add(user, tier, archetypes[archetype_choice], prison)
+		if("Clear the whole pool")
+			admin_pool_clear(user)
 
 /datum/bounty_admin_panel/proc/menu_board(mob/user)
-	var/static/list/actions = list("Run the board's tick several times", "Skip the post gap: post a public bounty now", "Take minutes off every open bounty's clock")
-	var/action = ask_list(user, "The board ticks every 10 seconds of the round.", "Fast-forward the board", actions)
+	var/static/list/actions = list("Run the board forward by ticks", "Run the board forward by minutes", "Skip the post gap: post a public bounty now")
+	var/action = ask_list(user, "The board ticks every [BOUNTY_ADMIN_TICK_SECONDS] seconds of the round. Running it forward brings every clock on it that much closer.", "Fast-forward the board", actions)
 	if(!action || !authorized(user))
 		return
 	switch(action)
-		if("Run the board's tick several times")
-			var/count = ask_number(user, "How many ticks?", "Fast-forward the board", 1, BOUNTY_ADMIN_MAX_TICKS, 1)
+		if("Run the board forward by ticks")
+			var/count = ask_number(user, "How many ticks, [BOUNTY_ADMIN_TICK_SECONDS] seconds each?", "Fast-forward the board", 1, BOUNTY_ADMIN_MAX_TICKS, 1)
 			if(isnull(count) || !authorized(user))
 				return
-			admin_board_ticks(user, count)
-		if("Skip the post gap: post a public bounty now")
-			admin_skip_post_gap(user)
-		if("Take minutes off every open bounty's clock")
+			if(!isnum(count) || count != round(count) || count < 1 || count > BOUNTY_ADMIN_MAX_TICKS)
+				refuse(user, "Run 1 to [BOUNTY_ADMIN_MAX_TICKS] whole ticks.")
+				return
+			admin_fast_forward(user, count * BOUNTY_ADMIN_TICK_SECONDS)
+		if("Run the board forward by minutes")
 			var/minutes = ask_number(user, "How many minutes?", "Fast-forward the board", 5, BOUNTY_ADMIN_MAX_MINUTES, 1)
 			if(isnull(minutes) || !authorized(user))
 				return
-			admin_skip_clocks(user, minutes)
+			if(!isnum(minutes) || minutes != round(minutes) || minutes < 1 || minutes > BOUNTY_ADMIN_MAX_MINUTES)
+				refuse(user, "Run 1 to [BOUNTY_ADMIN_MAX_MINUTES] whole minutes.")
+				return
+			admin_fast_forward(user, minutes * 60)
+		if("Skip the post gap: post a public bounty now")
+			admin_skip_post_gap(user)
 
 // ===== PICKERS =====
 
@@ -364,7 +410,7 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 /datum/bounty_admin_panel/proc/pick_record(mob/user, message)
 	var/list/choices = list()
 	for(var/datum/bounty_record/record in GLOB.bounty_prisoner_pool)
-		choices[unique_label(choices, "[record.name] ([record_kind(record)])")] = WEAKREF(record)
+		choices[unique_label(choices, record_label(record))] = WEAKREF(record)
 	if(!length(choices))
 		return refuse(user, "The prisoner pool is empty.")
 	var/choice = ask_list(user, message, "Prisoner pool", choices)
@@ -462,30 +508,75 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		"Trader outpost" = BOUNTY_PLACEMENT_TRADER_OUTPOST,
 	)
 
-/// The loaded sites of `kind`, labelled with their zone and overmap position
+/**
+ * Why the board would never place a criminal at `site` as a `kind` site, or null if it might. The
+ * same rules as P5's pickers (board_pick_planet(), _ruin(), _npc_ship() and _trader_outpost() in
+ * bounty_placement.dm), because board_post() checks only the kind when it is handed a site (L5).
+ */
+/datum/bounty_admin_panel/proc/site_refusal(kind, obj/structure/overmap/site)
+	if(QDELETED(site))
+		return "gone"
+	if(SScriminal_bounties.board_kind_of_site(site) != kind)
+		return "not a [kind]"
+	if(!istype(get_turf(site), /turf/open/overmap))
+		return "not on the chart"
+	switch(kind)
+		if(BOUNTY_PLACEMENT_PLANET)
+			var/obj/structure/overmap/planet/planet = site
+			if(planet.unloading || !planet.is_terrain_planet())
+				return "not a terrain planet"
+		if(BOUNTY_PLACEMENT_RUIN)
+			var/obj/structure/overmap/space_ruin/ruin = site
+			if(ruin.type != /obj/structure/overmap/space_ruin || ruin.rare || ruin.mission_locked || ruin.mission_exclusive || ruin.concerned)
+				return "a special ruin"
+		if(BOUNTY_PLACEMENT_NPC_SHIP)
+			var/obj/structure/overmap/ship/npc/pirate/npc_ship = site
+			if(npc_ship.player_controlled || npc_ship.abandoned || npc_ship.spawner_resolved || !npc_ship.crew_ever_spawned)
+				return "claimed, abandoned or cleared"
+			if(!length(npc_ship.shuttle?.shuttle_areas) || !length(npc_ship.tracked_crew))
+				return "no crew aboard"
+			if(SScriminal_bounties.board_postings_at(npc_ship) >= BOUNTY_MAX_PER_NPC_SHIP)
+				return "already holding a criminal"
+		if(BOUNTY_PLACEMENT_TRADER_OUTPOST)
+			if(SScriminal_bounties.board_postings_at(site) >= BOUNTY_MAX_FUGITIVES_PER_OUTPOST || !bounty_outpost_has_room(site))
+				return "full of fugitives"
+	return null
+
+/// The sites of `kind` the board would place a criminal at, labelled with the zone they pay for, where they are, and whether they are loaded
 /datum/bounty_admin_panel/proc/site_choices(kind)
-	var/list/sites = list()
+	var/list/candidates = list()
 	switch(kind)
 		if(BOUNTY_PLACEMENT_PLANET)
 			for(var/obj/structure/overmap/planet/planet in GLOB.overmap_planets)
-				if(!QDELETED(planet) && planet.loaded)
-					sites += planet
+				candidates += planet
 		if(BOUNTY_PLACEMENT_RUIN)
 			for(var/obj/structure/overmap/space_ruin/ruin in GLOB.space_ruin_signals)
-				if(!QDELETED(ruin) && ruin.loaded)
-					sites += ruin
+				candidates += ruin
 		if(BOUNTY_PLACEMENT_NPC_SHIP)
-			for(var/obj/structure/overmap/ship/npc/ship in SSnpc_ships.active_ships)
-				if(!QDELETED(ship) && !ship.abandoned)
-					sites += ship
+			for(var/obj/structure/overmap/ship/npc/pirate/npc_ship in SSnpc_ships?.active_ships)
+				candidates += npc_ship
 		if(BOUNTY_PLACEMENT_TRADER_OUTPOST)
 			for(var/obj/structure/overmap/trader_outpost/outpost in GLOB.trader_outposts)
-				if(!QDELETED(outpost) && outpost.loaded)
-					sites += outpost
+				candidates += outpost
 	var/list/choices = list()
-	for(var/obj/structure/overmap/site as anything in sites)
-		choices[unique_label(choices, "[site_name(site)] ([site_where(site)])")] = WEAKREF(site)
+	for(var/obj/structure/overmap/site as anything in candidates)
+		if(site_refusal(kind, site))
+			continue
+		choices[unique_label(choices, "[site_name(site)] ([site_where(site)][site_loaded(site) ? ", loaded" : ""])")] = WEAKREF(site)
 	return choices
+
+/// Whether a site's interior is loaded now (a pirate ship's always is)
+/datum/bounty_admin_panel/proc/site_loaded(obj/structure/overmap/site)
+	if(istype(site, /obj/structure/overmap/planet))
+		var/obj/structure/overmap/planet/planet = site
+		return planet.loaded
+	if(istype(site, /obj/structure/overmap/space_ruin))
+		var/obj/structure/overmap/space_ruin/ruin = site
+		return ruin.loaded
+	if(istype(site, /obj/structure/overmap/trader_outpost))
+		var/obj/structure/overmap/trader_outpost/outpost = site
+		return outpost.loaded
+	return istype(site, /obj/structure/overmap/ship)
 
 /// Every player ship, for a private offer
 /datum/bounty_admin_panel/proc/ship_choices()
@@ -502,8 +593,7 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	for(var/datum/outpost_prison/prison in GLOB.outpost_prisons)
 		if(QDELETED(prison))
 			continue
-		var/free = prison.free_slots()
-		choices[unique_label(choices, "[prison_name(prison)]: [free] free cell\s")] = WEAKREF(prison)
+		choices[unique_label(choices, prison_label(prison))] = WEAKREF(prison)
 	return choices
 
 // ===== DESCRIPTIONS =====
@@ -524,24 +614,31 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	var/area/place = get_area(criminal)
 	return "[criminal_name(criminal)]: [record_kind(criminal.record)], [criminal.capture_state()], in [place?.name || "nowhere"]"
 
+/// How a pool record is offered in a pick list
+/datum/bounty_admin_panel/proc/record_label(datum/bounty_record/record)
+	return "[record.name] ([record_kind(record)])"
+
+/// How a prison is offered in a pick list
+/datum/bounty_admin_panel/proc/prison_label(datum/outpost_prison/prison)
+	return "[prison_name(prison)]: [prison.free_slots()] free cell\s"
+
 /datum/bounty_admin_panel/proc/site_name(obj/structure/overmap/site)
 	if(QDELETED(site))
 		return "no site"
 	return site.display_name || site.name
 
-/// "red, 12,4": the site's zone band and overmap position
-/datum/bounty_admin_panel/proc/site_where(obj/structure/overmap/site)
-	var/turf/spot = get_turf(site)
-	if(!spot)
-		return "off the map"
-	var/zone = "unknown zone"
-	switch(SSovermap.get_zone_band_for_turf(spot))
-		if(ZONE_GREEN)
-			zone = "green"
+/// The name of zone band `zone`, as a posting pays for it
+/datum/bounty_admin_panel/proc/zone_word(zone)
+	switch(zone)
 		if(ZONE_YELLOW)
-			zone = "yellow"
+			return "yellow"
 		if(ZONE_RED)
-			zone = "red"
+			return "red"
+	return "green"
+
+/// "red pay, 12,4": the zone band a posting there pays for (P5's board_site_zone()) and the overmap position
+/datum/bounty_admin_panel/proc/site_where(obj/structure/overmap/site)
+	var/zone = "[zone_word(SScriminal_bounties.board_site_zone(site))] pay"
 	var/list/coords = site.get_relative_overmap_coords()
 	return length(coords) >= 2 ? "[zone], [coords[1]],[coords[2]]" : zone
 
@@ -551,27 +648,23 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	return prison.outpost?.name || "an unnamed prison"
 
 /**
- * One posting as the panel shows it: tier, name, placement kind, place, status, who it is for,
- * hunters, where the criminal is (with a jump link), time left and value.
+ * One posting as the panel shows it: tier, name, placement kind, place and the zone it pays for,
+ * status, who it is for, hunters, where the criminal is (with a jump link), time left and value.
  */
 /datum/bounty_admin_panel/proc/posting_row(datum/criminal_bounty/posting)
 	var/datum/bounty_record/record = posting.record
-	var/obj/structure/overmap/site = posting.site_ref?.resolve()
-	var/obj/structure/overmap/ship/private_ship = posting.private_to?.resolve()
-	var/hunters = 0
-	for(var/datum/weakref/claimant in posting.claimants)
-		if(!QDELETED(claimant.resolve()))
-			hunters++
+	var/obj/structure/overmap/site = posting.site()
+	var/obj/structure/overmap/ship/private_ship = posting.offered_to()
 	var/mob/living/basic/bounty_criminal/criminal = posting.criminal()
-	var/location = criminal ? "[ADMIN_VERBOSEJMP(criminal)], [criminal.capture_state()]" : "not spawned (its site is not loaded)"
+	var/location = criminal ? "[ADMIN_VERBOSEJMP(criminal)], [criminal.capture_state()]" : (posting.board_relisting ? "none while it relists" : "not spawned (its site is not loaded)")
 	return list(
 		"tier" = bounty_tier_name(record?.tier),
 		"name" = record?.name || "nobody",
 		"kind" = posting.placement_kind || "no placement",
-		"place" = site ? "[site_name(site)] ([site_where(site)])" : "no site",
-		"status" = posting.status,
+		"place" = "[site ? site_name(site) : (posting.board_relisting ? "relisting" : "no site")] ([posting.board_zone_name()])",
+		"status" = posting.status == BOUNTY_POSTING_OPEN ? posting.board_status() : posting.status,
 		"for" = posting.private_to ? "private to [site_name(private_ship)]" : "public",
-		"hunters" = hunters,
+		"hunters" = length(posting.hunter_ships()),
 		"location" = location,
 		"time_left" = time_left_text(posting),
 		"value" = posting.value,
@@ -588,24 +681,30 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 /datum/bounty_admin_panel/proc/posting_line(list/row)
 	return "<b>[row["tier"]]: [row["name"]]</b> ([row["kind"]]) at [row["place"]]. [capitalize(row["status"])], [row["for"]], [row["hunters"]] hunting, [row["time_left"]], [row["value"]] cr. Criminal: [row["location"]]"
 
-/// The pool's records as the panel shows them: name, tier, archetype, status, the prison they wait for, and age
+/**
+ * The pool's records as the panel shows them: name, tier, archetype, status, the prison it waits
+ * for and whether that reservation still holds (P7's rules), and how long it has been in the pool.
+ */
 /datum/bounty_admin_panel/proc/pool_rows()
 	var/list/rows = list()
 	for(var/datum/bounty_record/record in GLOB.bounty_prisoner_pool)
+		var/datum/outpost_prison/preferred = record.preferred_prison?.resolve()
+		var/since = record.prison_pooled_at || record.created_at
 		rows += list(list(
 			"id" = record.id,
 			"name" = record.name || "nobody",
 			"tier" = bounty_tier_name(record.tier),
 			"archetype" = record.archetype || "criminal",
 			"status" = record.status,
-			"prison" = prison_name(record.preferred_prison?.resolve()),
-			"age" = age_text(world.time - record.created_at),
+			"prison" = prison_name(preferred),
+			"reserved" = !preferred || bounty_record_reserved_for(record) == preferred,
+			"age" = age_text(world.time - since),
 		))
 	return rows
 
-/// "new" or "5 minutes old", for a record made `age` deciseconds ago
+/// "new" or "5 minutes in the pool", for a record pooled `age` deciseconds ago
 /datum/bounty_admin_panel/proc/age_text(age)
-	return age >= 1 SECONDS ? "[DisplayTimeText(age, 1)] old" : "new"
+	return age >= 1 SECONDS ? "[DisplayTimeText(age, 1)] in the pool" : "new"
 
 // ===== SPAWNING =====
 
@@ -655,17 +754,12 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	tell(user, span_notice("Spawned [criminal_name(criminal)]: [record_kind(record)], wanted for [record.crime || "nothing yet"]."))
 	return criminal
 
-/// A free open tile next to `center` for a decoy to stand on, or `center` itself
-/datum/bounty_admin_panel/proc/decoy_spot(turf/center)
-	for(var/turf/open/candidate in orange(1, center))
-		if(isspaceturf(candidate) || candidate.is_blocked_turf(FALSE))
-			continue
-		return candidate
-	return center
-
 /**
- * Spawns a decoy next to `wanted` who shares `shared` of their features (P1's decoy record), on
- * their posting if they have one, blending in (P3). Returns the decoy, or null.
+ * Spawns a decoy next to `wanted` through P6's decoy builder (outpost_become()): a record sharing
+ * `shared` of its features, its body and routine, and the outpost's generic name, clothes and
+ * leash. At a trader outpost the decoy belongs to the wanted criminal's posting, so hits on it raise
+ * the alert and it walks out when the posting ends; anywhere else it stands alone, with the black
+ * market's look. A decoy is never linked to a posting through posting_ref (P6). Returns the decoy.
  */
 /datum/bounty_admin_panel/proc/admin_spawn_decoy(mob/user, mob/living/basic/bounty_criminal/wanted, shared = 1)
 	error = null
@@ -678,20 +772,36 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	var/turf/center = get_turf(wanted)
 	if(!center)
 		return refuse(user, "[criminal_name(wanted)] is nowhere.")
-	var/datum/bounty_record/decoy_record = make_decoy_record(wanted.record, isnum(shared) ? clamp(round(shared), 1, 2) : 1)
+	// One or two of its features, never all of them (as P6's setup_outpost_blend() does)
+	var/feature_count = length(wanted.record.features)
+	shared = isnum(shared) ? clamp(round(shared), 1, 2) : 1
+	if(feature_count)
+		shared = clamp(shared, 1, max(1, feature_count - 1))
+	var/datum/bounty_record/decoy_record = make_decoy_record(wanted.record, shared)
 	if(!decoy_record)
 		return refuse(user, "No decoy record was made.")
-	var/mob/living/basic/bounty_criminal/decoy/decoy = new(decoy_spot(center))
-	decoy.record = decoy_record
-	decoy.posting_ref = wanted.posting_ref
+	var/obj/structure/overmap/trader_outpost/outpost = get_trader_outpost_for_turf(center)
 	var/datum/criminal_bounty/posting = wanted.posting()
+	if(posting && (posting.placement_kind != BOUNTY_PLACEMENT_TRADER_OUTPOST || posting.outpost_site?.resolve() != outpost))
+		posting = null
+	var/mob/living/basic/bounty_criminal/decoy/decoy = new(decoy_spot(center))
+	decoy.outpost_become(wanted, decoy_record, posting, outpost, bounty_outpost_display_name(outpost), bounty_outpost_display_desc(outpost), bounty_outpost_outfit(outpost))
 	if(posting)
 		posting.decoys += WEAKREF(decoy)
-	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(apply_bounty_look), decoy, decoy_record, BOUNTY_ADMIN_DECOY_OUTFIT)
-	decoy.start_activity(BOUNTY_ACTIVITY_BLEND, null)
-	log_action(user, "spawn a decoy of [criminal_name(wanted)] at [AREACOORD(decoy)]")
-	tell(user, span_notice("Spawned a decoy of [criminal_name(wanted)]."))
+	log_action(user, "spawn a decoy of [criminal_name(wanted)] at [AREACOORD(decoy)][posting ? ", on its posting" : ""]")
+	if(outpost)
+		tell(user, span_notice("Spawned a decoy of [criminal_name(wanted)][posting ? "" : ". It is on no posting, so hits on it raise no alert"]."))
+	else
+		tell(user, span_notice("Spawned a decoy of [criminal_name(wanted)]. Away from a trader outpost it has no leash and no posting, and [criminal_name(wanted)] is not blending in."))
 	return decoy
+
+/// A free open tile next to `center` for a decoy to stand on, or `center` itself
+/datum/bounty_admin_panel/proc/decoy_spot(turf/center)
+	for(var/turf/open/candidate in orange(1, center))
+		if(isspaceturf(candidate) || candidate.is_blocked_turf(FALSE))
+			continue
+		return candidate
+	return center
 
 // ===== POSTINGS =====
 
@@ -704,8 +814,12 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		return refuse(user, "Pick Petty, Wanted or Most Wanted.")
 	if(!(kind in choice_values(placement_choices())))
 		return refuse(user, "Pick a planet, a ruin, a pirate ship or a trader outpost.")
-	if(site && QDELETED(site))
-		return refuse(user, "That site is gone.")
+	if(!SScriminal_bounties.board_kind_allowed(kind, tier, null))
+		return refuse(user, "A [bounty_tier_name(tier)] bounty never goes to a [kind].")
+	if(site)
+		var/refusal = site_refusal(kind, site)
+		if(refusal)
+			return refuse(user, "The board would never put a criminal there: [refusal].")
 	if(private_to && QDELETED(private_to))
 		return refuse(user, "That ship is gone.")
 	var/datum/criminal_bounty/posting = post_criminal_bounty(tier, kind, site, private_to)
@@ -731,7 +845,7 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	tell(user, span_notice("Closed the bounty on [wanted_name]."))
 	return TRUE
 
-/// Takes `posting` off its site and lists it again elsewhere (P5's relist()). Returns TRUE if asked.
+/// Takes `posting` off its site and lists it again elsewhere (P5's relist()). Returns TRUE if it started relisting.
 /datum/bounty_admin_panel/proc/admin_relist_posting(mob/user, datum/criminal_bounty/posting)
 	error = null
 	if(!authorized(user))
@@ -741,9 +855,10 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	if(posting.status != BOUNTY_POSTING_OPEN)
 		return refuse(user, "Only an open bounty can be relisted.")
 	var/wanted_name = posting.record?.name || "nobody"
-	posting.relist("the board moved it")
+	if(!posting.relist(BOUNTY_ADMIN_RELIST_REASON))
+		return refuse(user, "The bounty on [wanted_name] did not relist: it is already relisting.")
 	log_action(user, "relist the bounty on [wanted_name]")
-	tell(user, span_notice("Relisted the bounty on [wanted_name]."))
+	tell(user, span_notice("The bounty on [wanted_name] is relisting."))
 	return TRUE
 
 /// Moves the admin to `criminal`. Returns TRUE if they moved.
@@ -777,14 +892,10 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 
 // ===== CAPTURE STATES =====
 
-/// Health at or below which `criminal` counts as downed (P2's line)
-/datum/bounty_admin_panel/proc/downed_line(mob/living/basic/bounty_criminal/criminal)
-	return FLOOR(criminal.maxHealth * BOUNTY_ADMIN_DOWNED_FRACTION, 1)
-
 /**
- * Puts `criminal` in capture state `state` (BOUNTY_STATE_*) by the means the game itself uses: damage
- * to the downed line, a stun, real handcuffs, death, or a heal that takes all of it off again. P2's
- * capture_state() then reads the result. Returns TRUE if done.
+ * Puts `criminal` in capture state `state` (BOUNTY_STATE_*) through P2's own procs: damage to its
+ * downed line, a stun, real handcuffs put on by nobody (so nobody lands on its grudge list), death,
+ * or taking all of that off again. Returns TRUE if capture_state() now reads `state`.
  */
 /datum/bounty_admin_panel/proc/admin_force_state(mob/user, mob/living/basic/bounty_criminal/criminal, state)
 	error = null
@@ -810,22 +921,24 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		return FALSE
 	var/now = criminal.capture_state()
 	log_action(user, "force [criminal_name(criminal)] to [state] (capture state now [now], worst [criminal.worst_state])")
-	var/note = ""
-	if(state == BOUNTY_STATE_FREE && criminal.is_downed())
-		note = " They still count as downed until they get back up."
-	tell(user, span_notice("[criminal_name(criminal)] is now [now].[note]"))
+	if(now != state)
+		// Stunned or cuffed while down still reads as downed, as the pad would pay it
+		tell(user, span_notice("[criminal_name(criminal)] is [state], but reads as [now]: [now] comes first."))
+	else
+		tell(user, span_notice("[criminal_name(criminal)] is now [now]."))
 	return TRUE
 
-/// Damage straight to the downed line, past armour and multipliers; P2's downed state follows from the health
+/// Damage straight to P2's downed line, past the mercy rule and armour; P2 downs it from there
 /datum/bounty_admin_panel/proc/force_downed(mob/user, mob/living/basic/bounty_criminal/criminal)
 	if(criminal.stat == DEAD)
 		return refuse(user, "[criminal_name(criminal)] is dead.")
-	var/line = downed_line(criminal)
-	var/excess = criminal.health - line
+	if(criminal.is_downed())
+		return refuse(user, "[criminal_name(criminal)] is already down.")
+	var/excess = criminal.health - criminal.body_downed_line()
 	if(excess > 0)
 		criminal.adjust_health(excess, TRUE, TRUE)
-	if(criminal.health > line)
-		return refuse(user, "Something kept [criminal_name(criminal)] above the downed line ([criminal.health] health, line [line]).")
+	if(!criminal.is_downed())
+		return refuse(user, "[criminal_name(criminal)] did not go down ([criminal.health] health, line [criminal.body_downed_line()]).")
 	return TRUE
 
 /// A long paralysis, past stun immunity
@@ -837,20 +950,17 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		return refuse(user, "[criminal_name(criminal)] shrugged the stun off.")
 	return TRUE
 
-/**
- * A new pair of real handcuffs in their contents, held as their `restraints`, as P2's restraints put
- * them; COMSIG_BOUNTY_CRIMINAL_RESTRAINED tells whoever listens. Admin cuffs never slip.
- */
+/// A new pair of real handcuffs, put on at once through P2's body_apply_cuffs() by nobody: held still, its AI paused, and no one on its grudge list
 /datum/bounty_admin_panel/proc/force_restrained(mob/user, mob/living/basic/bounty_criminal/criminal)
 	if(criminal.stat == DEAD)
 		return refuse(user, "[criminal_name(criminal)] is dead: the cuffs would only fall off.")
-	if(!QDELETED(criminal.restraints))
+	if(criminal.is_restrained())
 		return refuse(user, "[criminal_name(criminal)] is already cuffed.")
-	var/obj/item/restraints/handcuffs/cuffs = new(criminal)
-	criminal.restraints = cuffs
-	criminal.ai_controller?.CancelActions()
-	SEND_SIGNAL(criminal, COMSIG_BOUNTY_CRIMINAL_RESTRAINED, user)
-	criminal.update_appearance(UPDATE_OVERLAYS)
+	var/obj/item/restraints/handcuffs/cuffs = new(criminal.drop_location())
+	if(!criminal.body_apply_cuffs(cuffs, null))
+		if(!QDELETED(cuffs) && cuffs.loc != criminal)
+			qdel(cuffs)
+		return refuse(user, "The cuffs did not go on [criminal_name(criminal)].")
 	return TRUE
 
 /datum/bounty_admin_panel/proc/force_dead(mob/user, mob/living/basic/bounty_criminal/criminal)
@@ -862,35 +972,37 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	return TRUE
 
 /**
- * Takes every capture state off: the cuffs drop, the surrender ends, stuns end, all damage heals, and
- * the worst state goes back to free so a full-pay turn-in can be tried again. The dead stay dead (a
- * criminal can't be revived). P2's own downed state ends when they get back up.
+ * Takes every capture state off: the cuffs come off through P2's body_remove_cuffs() (they drop at
+ * its feet), the surrender ends, stuns end, all damage heals, a downed one gets back up through P2's
+ * body_stand_up() (a mini-boss rallies, as it would), and the worst state goes back to free, so a
+ * full-pay turn-in can be tried again. The dead stay dead: a criminal can't be revived.
  */
 /datum/bounty_admin_panel/proc/force_free(mob/user, mob/living/basic/bounty_criminal/criminal)
 	if(criminal.stat == DEAD)
 		return refuse(user, "[criminal_name(criminal)] is dead, and the dead stay dead.")
-	var/obj/item/restraints/handcuffs/cuffs = criminal.restraints
-	if(cuffs)
-		criminal.restraints = null
-		if(!QDELETED(cuffs) && cuffs.loc == criminal)
-			cuffs.forceMove(criminal.drop_location())
-		SEND_SIGNAL(criminal, COMSIG_BOUNTY_CRIMINAL_UNRESTRAINED, user)
+	criminal.body_remove_cuffs(null)
 	REMOVE_TRAIT(criminal, TRAIT_BOUNTY_SURRENDERED, BOUNTY_TRAIT)
 	criminal.SetParalyzed(0, TRUE)
 	criminal.SetKnockdown(0, TRUE)
 	criminal.SetStun(0, TRUE)
 	criminal.SetImmobilized(0, TRUE)
+	criminal.remove_status_effect(/datum/status_effect/incapacitating/stamcrit)
 	criminal.fully_heal(HEAL_DAMAGE)
+	if(criminal.is_downed())
+		criminal.body_cancel_recovery()
+		criminal.body_stand_up()
+	// No proc makes a worst state better: this is the panel's one direct write (see the file's header)
 	criminal.worst_state = BOUNTY_STATE_FREE
-	criminal.update_appearance(UPDATE_OVERLAYS)
+	if(criminal.capture_state() != BOUNTY_STATE_FREE)
+		return refuse(user, "[criminal_name(criminal)] still reads as [criminal.capture_state()].")
 	return TRUE
 
 // ===== THE PRISONER POOL =====
 
 /**
- * Admits `record` from the pool into `prison` now, in its lowest free cell, past the cell's ready
- * time, the intake setting and the bounty caps, as the manipulator's own spawn is. The record leaves
- * the pool before the prisoner is built, with no sleep between (AR-F7). Returns the prisoner, or null.
+ * Admits `record` from the pool into `prison` now, in its first free cell, past the cell's ready
+ * time, the intake setting and the bounty caps (P7's bounty_admit_record()). Returns the prisoner,
+ * or null.
  */
 /datum/bounty_admin_panel/proc/admin_pool_admit(mob/user, datum/bounty_record/record, datum/outpost_prison/prison)
 	error = null
@@ -900,42 +1012,36 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		return refuse(user, "That record is no longer in the pool.")
 	if(QDELETED(prison) || !(prison in GLOB.outpost_prisons))
 		return refuse(user, "That prison is gone.")
-	var/datum/outpost_prison_cell/free_cell
-	var/turf/spot
-	if(prison.free_slots())
-		for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
-			if(cell.occupant)
-				continue
-			spot = cell.arrival_turf()
-			if(spot)
-				free_cell = cell
-				break
-	if(!free_cell)
+	if(!prison.free_slots())
 		return refuse(user, "[prison_name(prison)] has no free cell.")
-	GLOB.bounty_prisoner_pool -= record
-	var/mob/living/basic/outpost_prisoner/prisoner = new(spot, record)
+	var/mob/living/basic/outpost_prisoner/prisoner = prison.bounty_admit_record(record)
 	if(QDELETED(prisoner))
-		return refuse(user, "The prisoner was not made, and [record.name]'s record is out of the pool.")
-	prison.admit(prisoner, free_cell)
-	prisoner.beam_in()
-	if(record.status == BOUNTY_RECORD_POOLED || record.status == BOUNTY_RECORD_WANTED)
-		record.status = BOUNTY_RECORD_IMPRISONED
-	log_action(user, "admit bounty record [record.name] ([record_kind(record)]) into cell [free_cell.number] of [prison_name(prison)]")
-	tell(user, span_notice("[record.name] is beaming into cell [free_cell.number] of [prison_name(prison)]."))
+		return refuse(user, "[prison_name(prison)] took nobody: no cell there has room for an arrival.")
+	log_action(user, "admit bounty record [record.name] ([record_kind(record)]) into cell [prisoner.cell?.number] of [prison_name(prison)]")
+	tell(user, span_notice("[record.name] is beaming into cell [prisoner.cell?.number] of [prison_name(prison)]."))
 	return prisoner
 
-/// Takes `record` out of the pool and closes it. Returns TRUE if dropped.
+/// Takes `record` out of the pool and closes it (P7's bounty_pool_remove()). Returns TRUE if dropped.
 /datum/bounty_admin_panel/proc/admin_pool_drop(mob/user, datum/bounty_record/record)
 	error = null
 	if(!authorized(user))
 		return FALSE
 	if(!record || !(record in GLOB.bounty_prisoner_pool))
 		return refuse(user, "That record is no longer in the pool.")
-	GLOB.bounty_prisoner_pool -= record
-	record.status = BOUNTY_RECORD_CLOSED
+	bounty_pool_remove(record, BOUNTY_RECORD_CLOSED, "dropped by an admin")
 	log_action(user, "drop bounty record [record.name] ([record_kind(record)]) from the prisoner pool")
 	tell(user, span_notice("Dropped [record.name] from the pool."))
 	return TRUE
+
+/// Closes every record in the pool (P7's bounty_pool_clear()). Returns how many there were.
+/datum/bounty_admin_panel/proc/admin_pool_clear(mob/user)
+	error = null
+	if(!authorized(user))
+		return 0
+	var/count = bounty_pool_clear("cleared by an admin")
+	log_action(user, "clear the prisoner pool ([count] record\s)")
+	tell(user, span_notice("Cleared [count] record\s from the pool."))
+	return count
 
 /**
  * Makes a record of `tier` and `archetype` as if a crew had just caught them alive and unhurt, and
@@ -960,80 +1066,128 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		record.kit = pick(choice_values(kit_choices()))
 	record.captor_name = BOUNTY_ADMIN_TEST_CAPTOR
 	record.hurt_fraction = 0
-	if(!bounty_pool_add(record))
-		return refuse(user, "The pool refused the record.")
-	if(record.status == BOUNTY_RECORD_WANTED)
-		record.status = BOUNTY_RECORD_POOLED
+	// Before the add, so P7 logs and reserves it for that prison (it keeps a running prison's reservation)
 	if(preferred)
 		record.preferred_prison = WEAKREF(preferred)
-	log_action(user, "add test record [record.name] ([record_kind(record)]) to the prisoner pool, for [prison_name(preferred)]")
-	tell(user, span_notice("Added [record.name] to the pool, for [prison_name(preferred)]."))
+	if(!bounty_pool_add(record))
+		return refuse(user, "The pool refused the record.")
+	var/datum/outpost_prison/reserved = record.preferred_prison?.resolve()
+	log_action(user, "add test record [record.name] ([record_kind(record)]) to the prisoner pool, for [prison_name(reserved)]")
+	tell(user, span_notice("Added [record.name] to the pool, for [prison_name(reserved)][preferred && reserved != preferred ? ": [prison_name(preferred)] is not running, so it is open to all" : ""]."))
 	return record
 
 // ===== THE BOARD CLOCK =====
 
-/// Runs the board's tick `count` times now. Returns how many ran.
-/datum/bounty_admin_panel/proc/admin_board_ticks(mob/user, count)
+/**
+ * Runs the board `seconds` forward (P5's board_fast_forward()): every posting's expiry, relist and
+ * sighting, every ship's next private offer and the next public posting come that much sooner, and
+ * the board ticks once. Returns TRUE if it ran.
+ */
+/datum/bounty_admin_panel/proc/admin_fast_forward(mob/user, seconds)
 	error = null
 	if(!authorized(user))
-		return 0
-	if(!isnum(count) || count != round(count) || count < 1 || count > BOUNTY_ADMIN_MAX_TICKS)
-		refuse(user, "Run 1 to [BOUNTY_ADMIN_MAX_TICKS] whole ticks.")
-		return 0
-	for(var/ran in 1 to count)
-		SScriminal_bounties.board_tick()
-		CHECK_TICK
-	log_action(user, "run the bounty board's tick [count] time\s")
-	tell(user, span_notice("Ran the board's tick [count] time\s."))
-	return count
+		return FALSE
+	if(!isnum(seconds) || seconds != round(seconds) || seconds < 1 || seconds > BOUNTY_ADMIN_MAX_MINUTES * 60)
+		return refuse(user, "Run the board 1 second to [BOUNTY_ADMIN_MAX_MINUTES] minutes forward.")
+	SScriminal_bounties.board_fast_forward(seconds)
+	log_action(user, "run the bounty board [DisplayTimeText(seconds SECONDS)] forward")
+	tell(user, span_notice("Ran the board [DisplayTimeText(seconds SECONDS)] forward."))
+	return TRUE
 
 /**
- * What the board does once its gap between public bounties runs out: posts one public bounty now, of
- * a random tier at a placement that tier allows, at a site the board picks. Returns the posting.
+ * What the board does once its gap between public bounties runs out (P5's admin_skip_post_gap()):
+ * a public bounty of the tier and at the place the board rolls, held to the public cap, and the
+ * next gap starts from now. Returns the posting, or null.
  */
 /datum/bounty_admin_panel/proc/admin_skip_post_gap(mob/user)
 	error = null
 	if(!authorized(user))
 		return null
-	var/tier = pick(BOUNTY_TIER_PETTY, BOUNTY_TIER_WANTED, BOUNTY_TIER_MOST_WANTED)
-	var/list/kinds = list(BOUNTY_PLACEMENT_PLANET, BOUNTY_PLACEMENT_RUIN)
-	if(tier != BOUNTY_TIER_MOST_WANTED)
-		kinds += BOUNTY_PLACEMENT_TRADER_OUTPOST
-	if(tier != BOUNTY_TIER_PETTY)
-		kinds += BOUNTY_PLACEMENT_NPC_SHIP
-	var/kind = pick(kinds)
-	var/datum/criminal_bounty/posting = post_criminal_bounty(tier, kind)
+	var/datum/criminal_bounty/posting = SScriminal_bounties.admin_skip_post_gap(FALSE)
 	if(QDELETED(posting))
-		return refuse(user, "The board posted nothing for a [bounty_tier_name(tier)] bounty at a [kind]: no site fits, or the board refused.")
-	log_action(user, "skip the board's post gap: a [bounty_tier_name(tier)] bounty on [posting.record?.name || "nobody"] at a [kind]")
+		var/count = SScriminal_bounties.board_public_count()
+		var/cap = SScriminal_bounties.board_public_cap()
+		if(count >= cap)
+			return refuse(user, "The board is at its public cap ([count] of [cap]). Close one, or post one yourself.")
+		return refuse(user, "The board posted nothing: no site fits right now.")
+	log_action(user, "skip the board's post gap: a [bounty_tier_name(posting.record?.tier)] bounty on [posting.record?.name || "nobody"] at a [posting.placement_kind]")
 	tell(user, span_notice("Posted: [posting_line(posting_row(posting))]"))
 	return posting
 
-/// Takes `minutes` off every open posting's time left. Returns how many postings changed.
-/datum/bounty_admin_panel/proc/admin_skip_clocks(mob/user, minutes)
-	error = null
-	if(!authorized(user))
-		return 0
-	if(!isnum(minutes) || minutes != round(minutes) || minutes < 1 || minutes > BOUNTY_ADMIN_MAX_MINUTES)
-		refuse(user, "Take 1 to [BOUNTY_ADMIN_MAX_MINUTES] whole minutes off.")
-		return 0
-	var/count = 0
-	for(var/datum/criminal_bounty/posting in GLOB.criminal_bounties)
-		if(QDELETED(posting) || posting.status != BOUNTY_POSTING_OPEN || !posting.expires_at)
-			continue
-		posting.expires_at -= minutes MINUTES
-		count++
-	log_action(user, "take [minutes] min off [count] open bount[count == 1 ? "y" : "ies"]")
-	tell(user, span_notice("Took [minutes] min off [count] open bount[count == 1 ? "y" : "ies"]. The board expires them on its next tick."))
-	return count
+// ===== EXTRA POST ACTIONS (the extension point) =====
 
-#undef BOUNTY_ADMIN_MAX_TICKS
+/**
+ * EXTENSION POINT for P9 (kingpin), P10 and P12 (lairs): an extra entry in "Post a bounty now".
+ *
+ * Add a subtype in your own file, with a `name`, and override post(). The panel lists every
+ * subtype with a name (sort_order, then name), asks "What kind of bounty?" first when there are any,
+ * and runs the one picked. Nothing in this file needs to change. Example:
+ *
+ *     /datum/bounty_admin_post_action/kingpin
+ *         name = "The kingpin"
+ *
+ *     /datum/bounty_admin_post_action/kingpin/post(datum/bounty_admin_panel/panel, mob/user)
+ *         var/datum/criminal_bounty/posting = post_kingpin_bounty()
+ *         if(!posting)
+ *             return panel.refuse(user, "The kingpin is already on the board.")
+ *         return "post the kingpin bounty on [posting.record?.name]"
+ */
+/datum/bounty_admin_post_action
+	/// What "Post a bounty now" calls it ("The kingpin", "A mafia lair"); a subtype without one is not listed
+	var/name
+	/// Where it is listed, lowest first
+	var/sort_order = 100
+
+/**
+ * Posts it: asks whatever it needs through `panel`'s prompts (panel.ask_list(), panel.ask_tier(),
+ * panel.ask_number()), each answer checked with panel.authorized(user) after, then posts. Returns a
+ * short phrase for the admin log ("post the kingpin bounty on Vito Russo"), or null after
+ * panel.refuse() or a cancel. The panel checks the admin before it runs and logs the phrase.
+ */
+/datum/bounty_admin_post_action/proc/post(datum/bounty_admin_panel/panel, mob/user)
+	return null
+
+/// One of each extra post action with a name, in their order
+/datum/bounty_admin_panel/proc/post_actions()
+	var/static/list/actions
+	if(isnull(actions))
+		actions = list()
+		for(var/action_type in subtypesof(/datum/bounty_admin_post_action))
+			var/datum/bounty_admin_post_action/action = new action_type
+			if(!action.name)
+				qdel(action)
+				continue
+			var/placed = FALSE
+			for(var/index in 1 to length(actions))
+				var/datum/bounty_admin_post_action/other = actions[index]
+				// sorttext(a, b) > 0: a comes first alphabetically
+				if(action.sort_order < other.sort_order || (action.sort_order == other.sort_order && sorttext(action.name, other.name) > 0))
+					actions.Insert(index, action)
+					placed = TRUE
+					break
+			if(!placed)
+				actions += action
+	return actions
+
+/// Runs one extra post action and logs what it did. Returns its log phrase, or null.
+/datum/bounty_admin_panel/proc/admin_run_post_action(mob/user, datum/bounty_admin_post_action/action)
+	error = null
+	if(!authorized(user) || !istype(action))
+		return null
+	var/done = action.post(src, user)
+	if(!istext(done) || !authorized(user))
+		return null
+	log_action(user, done)
+	tell(user, span_notice("Done: [done]."))
+	return done
+
 #undef BOUNTY_ADMIN_MAX_MINUTES
+#undef BOUNTY_ADMIN_MAX_TICKS
+#undef BOUNTY_ADMIN_TICK_SECONDS
 #undef BOUNTY_ADMIN_STUN_TIME
 #undef BOUNTY_ADMIN_MAX_STEPS
-#undef BOUNTY_ADMIN_DECOY_OUTFIT
 #undef BOUNTY_ADMIN_TEST_CAPTOR
-#undef BOUNTY_ADMIN_DOWNED_FRACTION
+#undef BOUNTY_ADMIN_RELIST_REASON
 #undef BOUNTY_ADMIN_MENU_SPAWN
 #undef BOUNTY_ADMIN_MENU_DECOY
 #undef BOUNTY_ADMIN_MENU_POST
@@ -1041,3 +1195,4 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 #undef BOUNTY_ADMIN_MENU_FORCE
 #undef BOUNTY_ADMIN_MENU_POOL
 #undef BOUNTY_ADMIN_MENU_BOARD
+#undef BOUNTY_ADMIN_POST_CRIMINAL

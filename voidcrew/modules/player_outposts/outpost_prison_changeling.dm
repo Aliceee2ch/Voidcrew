@@ -24,8 +24,9 @@
  *    there is another.
  * 4. The horror, until it dies for good. At 0 health it goes down regenerating and gets up again
  *    unless its body is destroyed or put out into open space off the outpost (in_open_space());
- *    the first time, the outpost is told how to finish it (horror_collapsed()). Prisoners shout
- *    when it gets back up.
+ *    the first time, the outpost is told it is down and still moving (horror_collapsed()), and a
+ *    Kessler recovery agent who is about says once that it won't stay down while it has a body
+ *    (kessler_agent_warning()). Prisoners shout when it gets back up.
  *
  * Every clock pauses while no member of the wing is home (crew_home()), except a dead host's last
  * three seconds. When it ends, prisoners who saw a death lose mood, each prisoner the creature
@@ -131,8 +132,10 @@
 	var/strain_left = 0
 	/// The horror has left the wing, and the outpost has been told
 	var/breach_announced = FALSE
-	/// The horror has gone down regenerating once, and the outpost has been told how to finish it
+	/// The horror has gone down regenerating once, and the outpost has been told
 	var/regen_announced = FALSE
+	/// A Kessler recovery agent has said the horror won't stay down while it has a body
+	var/agent_warned = FALSE
 
 	/// Deaths seen so far (REF = TRUE), prisoners the creature killed, and who saw a death (weakrefs)
 	var/list/counted_deaths = list()
@@ -801,6 +804,7 @@
 		horror.regen_tick(seconds, home)
 		if(QDELETED(horror) || horror.stat == DEAD)
 			return
+		kessler_agent_warning()
 	if(!home)
 		return
 	remark_left -= seconds
@@ -823,17 +827,38 @@
 		return TRUE
 	return FALSE
 
-/// The horror went down regenerating (outpost_prison_horror.dm). The first time, the outpost is told how to finish it.
+/**
+ * The horror went down regenerating (outpost_prison_horror.dm). The first time, the outpost is told
+ * it is down and still moving; how to finish it is for the crew to work out, from what they see and
+ * hear (the prisoners' shouts, its examine, a Kessler agent's word if one is about).
+ */
 /datum/outpost_changeling_event/proc/horror_collapsed()
 	if(stage != "horror" || QDELETED(prison))
 		return
 	prison.add_log("The horror went down, but it is regenerating.")
 	// A prisoner remarks on it soon.
 	remark_left = min(remark_left, 2)
+	kessler_agent_warning()
 	if(regen_announced)
 		return
 	regen_announced = TRUE
-	prison.announce("Prison wing: the specimen is regenerating. Destroy the body, or drag it off the outpost into space.", SHIP_NOTIFY_DANGER)
+	prison.announce("Prison wing: the specimen is down, but it's still moving.", SHIP_NOTIFY_DANGER)
+
+/**
+ * While the horror is down, a Kessler recovery agent who can see it (one of a team beamed in for
+ * another creature) says once that it won't stay down while it still has a body. Nobody is sent to
+ * say it. Returns TRUE if one did.
+ */
+/datum/outpost_changeling_event/proc/kessler_agent_warning()
+	if(agent_warned || QDELETED(horror) || !horror.regenerating)
+		return FALSE
+	for(var/mob/living/basic/outpost_kessler_staff/agent/agent in view(7, horror))
+		if(agent.beaming || agent.departing)
+			continue
+		if(agent.say_line("kessler_horror_down"))
+			agent_warned = TRUE
+			return TRUE
+	return FALSE
 
 /// The horror is pushing itself back up: a prisoner who can see it shouts about it
 /datum/outpost_changeling_event/proc/horror_rising()

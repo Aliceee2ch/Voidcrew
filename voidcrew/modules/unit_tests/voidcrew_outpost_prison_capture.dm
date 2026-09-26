@@ -101,7 +101,7 @@
 	TEST_ASSERT_EQUAL(runner.trouble, "loose", "A prisoner outside the wing is not loose")
 	TEST_ASSERT(!runner.escaped_rioting, "A prisoner who walked out on their own counts as a rioter")
 	var/obj/item/restraints/handcuffs/cable/zipties/ties = allocate(__IMPLIED_TYPE__)
-	TEST_ASSERT_EQUAL(runner.cuff_refusal(warden, ties), "put [runner.p_them()] down first", "A runner on their feet could be cuffed")
+	TEST_ASSERT_EQUAL(runner.cuff_refusal(warden, ties), "won't hold still", "A runner on their feet could be cuffed")
 	runner.adjustStaminaLoss(200)
 	TEST_ASSERT_NULL(runner.cuff_refusal(warden, ties), "A downed runner could not be cuffed")
 	TEST_ASSERT(runner.apply_cuffs(ties), "The downed runner could not be cuffed")
@@ -143,7 +143,7 @@
 	TEST_ASSERT_EQUAL(prisoner.cuff_time(), 40, "Cuffing a prisoner on their feet takes [prisoner.cuff_time()], not 4 s") // PRISONER_CUFF_TIME_STANDING
 	for(var/state in list("riot", "breakout", "loose", "fight", "wreck"))
 		prisoner.trouble = state
-		TEST_ASSERT_EQUAL(prisoner.cuff_refusal(warden, cuffs), "put [prisoner.p_them()] down first", "A prisoner on their feet in [state] trouble could be cuffed")
+		TEST_ASSERT_EQUAL(prisoner.cuff_refusal(warden, cuffs), "won't hold still", "A prisoner on their feet in [state] trouble could be cuffed")
 	prisoner.trouble = null
 	prisoner.threaten(warden)
 	TEST_ASSERT(prisoner.cuff_refusal(warden, cuffs), "A prisoner squaring up to staff could be cuffed")
@@ -430,7 +430,8 @@
 	prison.tick(1)
 	TEST_ASSERT(!prison.riot_active, "The riot went on with its only rioter shut in a cell")
 	TEST_ASSERT_EQUAL(inmate.lockdown_left, 239, "The captured rioter owes [inmate.lockdown_left] s of lockdown, not 239")
-	TEST_ASSERT(capture_logged(prison, "owes 4 minutes of lockdown"), "The lockdown was not logged")
+	TEST_ASSERT(capture_logged(prison, "[inmate.real_name] is on lockdown."), "The lockdown was not logged")
+	TEST_ASSERT(!capture_logged(prison, "minutes of lockdown"), "The log gives the lockdown's length")
 	inmate.setStaminaLoss(0)
 
 	// While they owe it, being shut in or cuffed costs nothing, and it counts down shut in.

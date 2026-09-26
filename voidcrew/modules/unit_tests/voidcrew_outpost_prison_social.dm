@@ -499,7 +499,7 @@
 	// A visitor gets no menu, and a pick does nothing.
 	TEST_ASSERT(!(SEND_SIGNAL(prisoner, COMSIG_ATOM_ATTACK_HAND, visitor, list()) & COMPONENT_CANCEL_ATTACK_CHAIN), "A visitor's click was taken as the talk menu")
 	TEST_ASSERT(!prisoner.talk_menu_allowed(visitor), "A visitor may use the talk menu")
-	TEST_ASSERT(!prisoner.talk_menu_act(visitor, "Crime"), "A visitor's pick did something") // PRISON_TALK_CRIME
+	TEST_ASSERT(!prisoner.talk_menu_act(visitor, "What are you in for?"), "A visitor's pick did something") // PRISON_TALK_CRIME
 	TEST_ASSERT(!prisoner.asked_crime && abs(prisoner.mood - 70) < 0.01, "A visitor's pick changed the prisoner")
 
 	var/mob/living/basic/outpost_prisoner/talk_menu_stub/stubbed = new(prison_spot(home, 10, 8))
@@ -544,8 +544,8 @@
 	TEST_ASSERT(length(choices) >= 5, "The menu has [length(choices)] choices, not its own four and the extra")
 	TEST_ASSERT_EQUAL(choices[1], "Calm down", "The menu's first choice is [choices[1]]") // PRISON_TALK_CALM
 	TEST_ASSERT_EQUAL(choices[2], "How are you doing?", "The menu's second choice is [choices[2]]") // PRISON_TALK_HOW
-	TEST_ASSERT_EQUAL(choices[3], "Crime", "The menu's third choice is [choices[3]]") // PRISON_TALK_CRIME
-	TEST_ASSERT_EQUAL(choices[4], "Home", "The menu's fourth choice is [choices[4]]") // PRISON_TALK_CELL
+	TEST_ASSERT_EQUAL(choices[3], "What are you in for?", "The menu's third choice is [choices[3]]") // PRISON_TALK_CRIME
+	TEST_ASSERT_EQUAL(choices[4], "Back to your cell", "The menu's fourth choice is [choices[4]]") // PRISON_TALK_CELL
 	TEST_ASSERT(!("Uncuff" in choices), "A prisoner without cuffs was offered them off") // PRISON_TALK_UNCUFF
 	TEST_ASSERT(choices.Find("Stub choice") > 4, "Another package's choice is missing or ahead of the menu's own")
 	TEST_ASSERT(stubbed.talk_menu_act(owner, "Stub choice"), "Another package's choice was not run")
@@ -602,14 +602,14 @@
 	TEST_ASSERT(!prisoner.talk_menu_ask_how(owner), "Asking again inside 30 seconds got an answer")
 	TEST_ASSERT(abs(prisoner.mood - 70) < 0.01, "Asking how they were changed mood to [prisoner.mood]")
 
-	// "Crime": +3 the first time in a stay (PRISON_TALK_CRIME_MOOD), not after.
+	// "What are you in for?": +3 the first time in a stay (PRISON_TALK_CRIME_MOOD), not after.
 	TEST_ASSERT(prisoner.talk_menu_ask_crime(owner), "Asking what they were in for did nothing")
 	TEST_ASSERT(abs(prisoner.mood - 73) < 0.01, "Asking what they were in for left mood at [prisoner.mood], not 73")
 	prisoner.ask_crime_cooldown = 0
 	TEST_ASSERT(prisoner.talk_menu_ask_crime(owner), "Asking again after the wait did nothing")
 	TEST_ASSERT(abs(prisoner.mood - 73) < 0.01, "Asking twice in a stay lifted mood again, to [prisoner.mood]")
 
-	// "Home": the line by personality (PRISON_TALK_ORDER_LINE_*), moved by who asks.
+	// "Back to your cell": the line by personality (PRISON_TALK_ORDER_LINE_*), moved by who asks.
 	var/datum/prison_staff_record/record = rep_known_record(prison, owner, 2)
 	var/list/lines = list("grumpy" = 55, "chatty" = 45, "quiet" = 40, "cheerful" = 35, "nervous" = 30)
 	for(var/personality in lines)
@@ -732,11 +732,11 @@
 	TEST_ASSERT(first.talk_menu_act(owner, "Calm down"), "Picking the talk-down on an arguing prisoner did nothing")
 	TEST_ASSERT(isnull(first.fight) && isnull(second.fight), "The talk-down from the menu did not end the argument")
 
-	// The cuffs off: offered only in cuffs, in place of Home, and picked it takes them off into the member's hand.
+	// The cuffs off: offered only in cuffs, in place of Back to your cell, and picked it takes them off into the member's hand.
 	owner.forceMove(prison_spot(home, 9, 8))
 	prisoner.set_mood(70)
 	var/list/choices = prisoner.talk_menu_choices(owner)
-	TEST_ASSERT(("Home" in choices) && !("Uncuff" in choices), "A free prisoner's menu has [english_list(choices)]") // PRISON_TALK_CELL, PRISON_TALK_UNCUFF
+	TEST_ASSERT(("Back to your cell" in choices) && !("Uncuff" in choices), "A free prisoner's menu has [english_list(choices)]") // PRISON_TALK_CELL, PRISON_TALK_UNCUFF
 	var/obj/item/restraints/handcuffs/cuffs = allocate(/obj/item/restraints/handcuffs)
 	TEST_ASSERT(prisoner.apply_cuffs(cuffs), "The prisoner could not be cuffed")
 	choices = prisoner.talk_menu_choices(owner)

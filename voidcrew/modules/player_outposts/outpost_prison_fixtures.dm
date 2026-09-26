@@ -77,7 +77,8 @@
 
 /obj/structure/table/reinforced/prison_hatch/examine(mob/user)
 	. = ..()
-	. += span_notice("It holds [stock_count()] of [OUTPOST_PRISON_HATCH_CAPACITY] items.")
+	if(room_left() <= 0)
+		. += span_notice("It's full.")
 	. += windoor_examine()
 
 /// Items on the counter
@@ -217,7 +218,7 @@
  * Uniforms and dressings come with the room: the uniforms, the first aid kit and the washing machine.
  */
 /obj/machinery/vending/sustenance/outpost_prison
-	desc = "The prison wing's food vendor. It bills the outpost treasury for every item and slowly restocks itself."
+	desc = "The prison wing's food vendor. It bills the outpost for everything it hands out."
 	contraband = list()
 	refill_canister = null
 	all_products_free = FALSE
@@ -249,7 +250,7 @@
 
 /obj/machinery/vending/sustenance/outpost_prison/examine(mob/user)
 	. = ..()
-	. += span_notice("Each item is [OUTPOST_PRISON_RATION_COST] cr, from the outpost treasury. Only members of the wing can use it.")
+	. += span_notice("Everything is [OUTPOST_PRISON_RATION_COST] cr, billed to the outpost.")
 
 /// Whether `user` may buy on the treasury: a member of the wing, or without a wing, a manager, treasurer or resident
 /obj/machinery/vending/sustenance/outpost_prison/proc/may_vend(mob/user)
@@ -304,7 +305,6 @@
 		return "insufficient funds"
 	if(limited)
 		prison.note_resident_orders(1)
-	prison?.note_spending(record.price, "Prison vendor: [record.name]")
 	return null
 
 /// The treasury stands in for the buyer's ID, so the vendor shows its balance and greys out what it can't afford

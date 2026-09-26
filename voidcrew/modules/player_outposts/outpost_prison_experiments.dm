@@ -329,7 +329,7 @@
 				experiment.bonus_paid = bonus
 				add_log("[creature.name] was [subdued ? "subdued" : "put down"]. Kessler Biolabs paid a [bonus] cr containment bonus.")
 		else
-			add_log("[creature.name] was [subdued ? "subdued" : "put down"], but most of the damage was not the crew's. No containment bonus.")
+			add_log("[creature.name] was [subdued ? "subdued" : "put down"]. Kessler Biolabs paid no bonus.")
 	addtimer(CALLBACK(src, PROC_REF(kessler_collect), WEAKREF(creature), FALSE), OUTPOST_EXPERIMENT_PICKUP SECONDS, TIMER_DELETE_ME)
 	if(!experiment.resolved && !length(experiment.live_creatures()))
 		resolve_experiment("contained")

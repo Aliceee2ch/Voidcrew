@@ -16,7 +16,8 @@
  * their captor's own running prison, and leaves it closed after BOUNTY_RECORD_LIFE if no prison
  * takes them. While the pool holds anyone its clock (bounty_pool_tick()) runs: once a wing's next
  * arrival is BOUNTY_PRISON_NOTICE_WINDOW seconds off, it picks the wing's next bounty arrival and
- * names it on the warden's console and in the log. The wing's arrival lanes take that record only
+ * names it in the log, and on the warden's console once it is the arrival due next. The wing's
+ * arrival lanes take that record only
  * once it has been named for BOUNTY_PRISON_NOTICE_TIME (bounty_pool_take()); until then, and
  * whenever no record is named, an arrival is an ordinary prisoner, exactly as before. The picker
  * takes records reserved for the wing first, oldest first, then open records. A record is open when
@@ -395,7 +396,7 @@ GLOBAL_VAR(bounty_pool_timer)
 	if(REF(src) in named.prison_announced_to)
 		return named
 	LAZYADD(named.prison_announced_to, REF(src))
-	add_log("Bounty transfer due: [named.name], [bounty_tier_name(named.tier)].")
+	add_log(named.tier == BOUNTY_TIER_MOST_WANTED ? "Bounty transfer due: [named.name], Most Wanted." : "Bounty transfer due: [named.name].")
 	if(named.tier == BOUNTY_TIER_MOST_WANTED)
 		announce("Prison wing: a Most Wanted prisoner, [named.name], is being transferred in.", SHIP_NOTIFY_WARNING)
 	return named
@@ -910,33 +911,40 @@ GLOBAL_VAR(bounty_pool_timer)
 
 // ===== CONSOLES =====
 
-/// The roster row's "bounty" entry for the warden console: tier, pay multiplier and the "wanted for" line, or null for an ordinary prisoner
+/**
+ * The roster row's "bounty" entry for the warden console, or null for an ordinary prisoner: the
+ * "wanted for" line and whether they are Most Wanted, the one tier a wanted poster names. Petty and
+ * Wanted show nothing more, and no pay multiplier.
+ */
 /datum/outpost_prison/proc/bounty_roster_badge(mob/living/basic/outpost_prisoner/prisoner)
 	var/datum/bounty_record/record = prisoner?.bounty_record
 	if(!record)
 		return null
 	var/plain_crime = bounty_plain_crime(record.crime) || prisoner.crime
 	return list(
-		"tier" = bounty_tier_name(record.tier || BOUNTY_TIER_PETTY),
-		"level" = record.tier || BOUNTY_TIER_PETTY,
-		"mult" = bounty_pay_mult(prisoner),
 		"wanted_for" = plain_crime ? "wanted for [plain_crime]" : null,
+		"most_wanted" = record.tier == BOUNTY_TIER_MOST_WANTED,
 	)
 
 /**
- * An examine sentence or two, or null (examine_extra_lines()): "A Wanted bounty. The crew of the
- * Meridian brought them in.", and the door-watching tell. A Most Wanted names their crime here, since
- * the yard's "In for ..." leaves it out (BUG-12).
+ * An examine sentence or two, or null (examine_extra_lines()): "Brought in on a bounty by the crew
+ * of the Meridian.", and the door-watching tell. A Most Wanted is named as one, with their crime,
+ * since the yard's "In for ..." leaves it out (BUG-12): "Most Wanted, for smuggling. The crew of the
+ * Meridian brought him in."
  */
 /datum/outpost_prison/proc/bounty_examine(mob/living/basic/outpost_prisoner/prisoner, mob/user)
 	var/datum/bounty_record/record = prisoner?.bounty_record
 	if(!record)
 		return null
-	var/text = "A [bounty_tier_name(record.tier || BOUNTY_TIER_PETTY)] bounty"
-	var/plain_crime = record.tier == BOUNTY_TIER_MOST_WANTED ? bounty_plain_crime(record.crime) : null
-	text += plain_crime ? ", wanted for [plain_crime]." : "."
-	if(length(record.captor_name))
-		text += " The crew of the [record.captor_name] brought [prisoner.p_them()] in."
+	var/has_captor = length(record.captor_name)
+	var/text
+	if(record.tier == BOUNTY_TIER_MOST_WANTED)
+		var/plain_crime = bounty_plain_crime(record.crime)
+		text = plain_crime ? "Most Wanted, for [plain_crime]." : "Most Wanted."
+		if(has_captor)
+			text += " The crew of the [record.captor_name] brought [prisoner.p_them()] in."
+	else
+		text = has_captor ? "Brought in on a bounty by the crew of the [record.captor_name]." : "Brought in on a bounty."
 	if(istype(prisoner.activity, /datum/prisoner_activity/bounty_door_watch))
 		text += " [prisoner.p_They()] keep[prisoner.p_s()] glancing at the door."
 	return text
@@ -990,9 +998,10 @@ GLOBAL_VAR(bounty_pool_timer)
 
 /**
  * The warden console's bounty block (OutpostPrison.tsx), for the top-level payload: the intake
- * setting, how many bounty prisoners the wing holds and may hold, and the next bounty arrival once
- * it is named. The next arrival is theirs only once the notice has run: "in" is the seconds until it
- * beams in when it is; otherwise an ordinary prisoner comes first and "after_next" says so.
+ * setting, and the next bounty arrival once it is theirs, which the console puts on the intake line
+ * ("Next transfer 0:20: Dana Notice"). It is theirs once the notice has run by the time the lane's
+ * next arrival is due; "in" is the seconds until it beams in. Until then an ordinary prisoner comes
+ * first, and the console names nobody.
  */
 /datum/outpost_prison/proc/bounty_console_payload(mob/user)
 	var/datum/bounty_record/next = bounty_next_record()
@@ -1000,19 +1009,15 @@ GLOBAL_VAR(bounty_pool_timer)
 	if(next)
 		var/notice_left = max(0, (next.prison_notice_at + BOUNTY_PRISON_NOTICE_TIME - world.time) / (1 SECONDS))
 		var/due = next_arrival_in()
-		var/theirs = !isnull(due) && due >= notice_left
-		next_block = list(
-			"name" = next.name,
-			"tier" = bounty_tier_name(next.tier || BOUNTY_TIER_PETTY),
-			"level" = next.tier || BOUNTY_TIER_PETTY,
-			"in" = theirs ? round(due) : null,
-			"after_next" = !isnull(due) && !theirs,
-		)
+		if(!isnull(due) && due >= notice_left)
+			next_block = list(
+				"name" = next.name,
+				"most_wanted" = next.tier == BOUNTY_TIER_MOST_WANTED,
+				"in" = round(due),
+			)
 	return list(
 		"setting" = prison_bounty_intake,
 		"can_manage" = !!outpost?.can_manage(user),
-		"count" = bounty_prisoner_count(),
-		"max" = bounty_prisoner_max(),
 		"next" = next_block,
 	)
 
@@ -1024,7 +1029,7 @@ GLOBAL_VAR(bounty_pool_timer)
 	if(action != "set_bounty_intake")
 		return FALSE
 	if(!outpost?.can_manage(user))
-		to_chat(user, span_warning("Only the outpost's managers can change bounty transfers."))
+		user?.balloon_alert(user, "managers only")
 		return TRUE
 	set_bounty_intake(params?["setting"], user)
 	return TRUE

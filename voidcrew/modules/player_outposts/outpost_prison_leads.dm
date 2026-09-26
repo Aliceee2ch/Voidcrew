@@ -3,7 +3,7 @@
  *
  * Owner: XG (extras-plan.md 4.16). Some prisoners know where an uncharted wreck sits: 30% of
  * arrivals carry a lead, and hint at it now and then while a member is near and the wing is ready
- * to give one. A member asks from the talk menu ("Rumour", offered on every prisoner so the
+ * to give one. A member asks from the talk menu ("Heard anything?", offered on every prisoner so the
  * question gives nothing away); the answer lands on the asker's ship helm as a Rumors waypoint.
  *
  * A content prisoner tells the truth: a real space ruin the ship has not charted, seen or been told
@@ -13,7 +13,7 @@
  * - mood shows who might lie, and a prisoner under OUTPOST_PRISON_LEAD_REFUSE_MOOD refuses outright;
  * - a liar usually shows a tell when answering (an honest teller now and then does too);
  * - a content prisoner who saw it may call it out a few seconds later;
- * - any other prisoner who was in the wing can be asked about the tip for a while ("Tip");
+ * - any other prisoner who was in the wing can be asked about the tip for a while ("About that tip");
  * - true tips never point at anything the ship has charted, seen or flown past, so a tip at a spot
  *   the helm already knows is empty is a lie;
  * - flying within sight of a lie renames its waypoint "nothing there", and the liar owns up when
@@ -23,9 +23,9 @@
  */
 
 /// The talk menu's question, offered on every prisoner
-#define LEAD_ASK_CHOICE "Rumour"
+#define LEAD_ASK_CHOICE "Heard anything?"
 /// The talk menu's question about the newest tip a prisoner saw given
-#define LEAD_TIP_CHOICE "Tip"
+#define LEAD_TIP_CHOICE "About that tip"
 /// This package's dialogue file (tells and fake names; its "lines" are found by context name)
 #define LEAD_DIALOGUE_FILE "outpost_prison_leads.json"
 
@@ -122,7 +122,7 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 
 // ===== THE TALK MENU =====
 
-/// "Rumour" on every prisoner, and "Tip" on those who saw a recent one given; members only
+/// "Heard anything?" on every prisoner, and "About that tip" on those who saw a recent one given; members only
 /datum/outpost_prison/proc/leads_talk_choices(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	var/list/choices = list()
 	if(!prisoner || !user || !is_member(user))
@@ -203,7 +203,7 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 	prisoner.face_atom(user)
 	return TRUE
 
-/// "Rumour": the checks and the talk, then give_lead() for the asker's ship
+/// "Heard anything?": the checks and the talk, then give_lead() for the asker's ship
 /datum/outpost_prison/proc/lead_ask(mob/living/basic/outpost_prisoner/prisoner, mob/living/user)
 	if(!lead_can_ask(prisoner, user))
 		return FALSE
@@ -225,7 +225,7 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 	give_lead(prisoner, ship, user)
 	return TRUE
 
-/// "Tip": the checks and the talk, then lead_vouch()
+/// "About that tip": the checks and the talk, then lead_vouch()
 /datum/outpost_prison/proc/lead_ask_about(mob/living/basic/outpost_prisoner/prisoner, mob/living/user, datum/outpost_prison_lead/lead)
 	if(!lead_can_ask(prisoner, user))
 		return FALSE
@@ -265,7 +265,7 @@ GLOBAL_VAR_INIT(outpost_prison_lead_lies, 0)
 	return clamp(chance, 0, 100)
 
 /**
- * The answer to "Rumour", once the talk is done. They refuse (after a recent unprovoked
+ * The answer to "Heard anything?", once the talk is done. They refuse (after a recent unprovoked
  * hit by the asker, or under OUTPOST_PRISON_LEAD_REFUSE_MOOD, keeping the lead either way), have
  * nothing (not a carrier, or the wing's gap is running: the same line for both), have nothing left
  * (no ruin to tell of: the lead and the gap are kept), or tell: the truth, or a lie by

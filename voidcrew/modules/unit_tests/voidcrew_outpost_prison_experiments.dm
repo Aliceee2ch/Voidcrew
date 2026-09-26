@@ -743,7 +743,8 @@
 	TEST_ASSERT(fly.flying_freely(), "A fly person alone in the yard is not flying freely")
 	TEST_ASSERT(fly.speed < 1.5, "The fly person moves at [fly.speed], no faster than a running person")
 	var/list/looked = fly.examine(owner)
-	TEST_ASSERT(findtext(jointext(looked, " "), "Knock it out of the air"), "The fly person's examine does not say how to put it down")
+	TEST_ASSERT(findtext(jointext(looked, " "), "It never lands for long."), "The fly person's examine has no tell")
+	TEST_ASSERT(!findtext(jointext(looked, " "), "Knock it out"), "The fly person's examine says how to put it down")
 
 	// Its darts: two to five tiles, always in the cell block.
 	for(var/i in 1 to 30)

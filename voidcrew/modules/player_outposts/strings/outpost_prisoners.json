@@ -2636,6 +2636,18 @@
 				"Right, let's get it out of here."
 			]
 		},
+		"kessler_horror_down": {
+			"any": [
+				"That one won't stay down while it still has a body.",
+				"It gets back up as long as there's a body to get up in.",
+				"Down isn't dead with that one, not while the body's whole.",
+				"We can't take it while there's still a body to knit back together.",
+				"It'll keep getting up until there's nothing left of it.",
+				"Leave that body in one piece and it'll be back on its feet.",
+				"That thing doesn't stay down while it's got a body.",
+				"It isn't finished while the body's still there."
+			]
+		},
 		"vent_noise": {
 			"any": [
 				"Something's in the walls!",

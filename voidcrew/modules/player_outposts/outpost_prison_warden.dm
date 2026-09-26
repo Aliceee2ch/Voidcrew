@@ -1,10 +1,12 @@
 /**
  * # Warden's console
  *
- * The prison wing's roster, money and switches (OutpostPrison.tsx). Anyone may look. The outpost's
+ * The prison wing's roster and switches (OutpostPrison.tsx). Anyone may look. The outpost's
  * managers open and close intake and let visitors through the staff doors; managers and treasurers
  * pay the treasury's debt. It has no circuit board, so it only exists where a prison wing was
- * placed. What it shows comes from the prison's ui_payload(), below.
+ * placed. What it shows comes from the prison's ui_payload(), below: what a warden would see on
+ * the screen (names, cells, clocks, a price or two, the yard's mood in a word), never the pay
+ * model, the conditions scores or the rule clocks behind them.
  */
 /obj/machinery/computer/outpost_prison_warden
 	name = "warden's console"
@@ -32,22 +34,16 @@
 	return list(
 		"linked" = FALSE,
 		"powered" = FALSE,
+		"on_battery" = FALSE,
 		"intake_open" = FALSE,
 		"intake_state" = "closed",
-		"intake_note" = null,
 		"next_arrival" = null,
 		"capacity" = 0,
-		"pay_rate" = 0,
-		"pay_percent" = 0,
-		"paid_total" = 0,
-		"money" = list("paid" = 0, "spent" = 0, "fined" = 0, "net" = 0),
 		"debt" = 0,
 		"visitors_allowed" = FALSE,
 		"can_manage" = FALSE,
 		"can_pay_debt" = FALSE,
-		"conditions" = list("clean" = 0, "lit" = 0, "powered" = 0, "score" = 0, "mess_spots" = 0, "dark_cells" = list(), "battery" = null),
-		"hatch" = list("meals" = 0, "clean_suits" = 0, "dirty_suits" = 0, "capacity" = 0, "lasts_minutes" = null),
-		"trouble" = list("stage" = PRISON_STAGE_CALM, "tension" = 0, "subdued_left" = null, "riot_imminent" = FALSE, "breakout_in" = null, "loose" = list()),
+		"trouble" = list("stage" = PRISON_STAGE_CALM),
 		"prisoners" = list(),
 		"log" = list(),
 		"alarm" = null,
@@ -115,7 +111,8 @@
 
 /**
  * What the roster calls a prisoner: dead, arriving or beaming out first, then loose, rioting, an
- * experiment's subject or confined to their cell without pay, and otherwise present or leaving.
+ * experiment's subject or shut in their cell ("confined", whatever the reason), and otherwise
+ * present or leaving.
  */
 /datum/outpost_prison/proc/roster_status(mob/living/basic/outpost_prisoner/prisoner)
 	var/status = prisoner.console_status()
@@ -127,7 +124,7 @@
 		return "rioting"
 	if(prisoner.experiment_subject)
 		return "subject"
-	if(confined_unpaid(prisoner))
+	if(prisoner.is_confined())
 		return "confined"
 	return status
 
@@ -142,46 +139,49 @@
 			"crime" = prisoner.crime,
 			"sentence_left" = prisoner.stat == DEAD ? 0 : max(0, round(prisoner.sentence_left)),
 			"status" = roster_status(prisoner),
-			// Their birthday is today and the yard has not had the cake yet (outpost_prison_life.dm)
-			"birthday" = prisoner.has_birthday && !prisoner.party_done && prisoner.stat != DEAD,
-			// Brought in on a bounty: the badge's tier and multiplier, or null (outpost_prison_bounty.dm)
+			// Brought in on a bounty: their "wanted for" line and whether they are Most Wanted, or null (outpost_prison_bounty.dm)
 			"bounty" = bounty_roster_badge(prisoner),
 		))
 	var/list/alarm = alarm_state()
-	var/list/conditions = conditions_payload()
-	// Every key the console reads, whether or not the conditions block sends it yet.
-	if(!("mess_spots" in conditions))
-		conditions["mess_spots"] = 0
-	if(!("dark_cells" in conditions))
-		conditions["dark_cells"] = list()
-	if(!("battery" in conditions))
-		conditions["battery"] = null
 	var/next_arrival = next_arrival_in()
 	return list(
 		"linked" = TRUE,
 		"powered" = is_powered(),
+		// The wing's APC running down its cell, as a panel would show it
+		"on_battery" = !isnull(battery_percent()),
 		"intake_open" = intake_open,
+		// The admin panel reads this too (outpost_admin_prison.dm)
 		"intake_state" = intake_state(),
-		"intake_note" = intake_note(),
 		"next_arrival" = isnull(next_arrival) ? null : round(next_arrival),
 		"capacity" = capacity,
-		"pay_rate" = round(pay_rate(), 0.1),
-		"pay_percent" = pay_percent(),
-		"paid_total" = paid_total,
-		"money" = list("paid" = paid_total, "spent" = spent_total, "fined" = fined_total, "net" = paid_total - spent_total - fined_total),
 		"debt" = treasury_debt(),
 		"visitors_allowed" = !!visitors_allowed,
 		"can_manage" = !!outpost?.can_manage(user),
 		"can_pay_debt" = treasury_debt() > 0 && may_pay_debt(user),
-		"conditions" = conditions,
-		"hatch" = hatch_stock(),
-		"trouble" = trouble_payload(),
+		// The yard's mood in a word; who is loose is in the alarm
+		"trouble" = list("stage" = stage),
 		"prisoners" = roster,
 		"log" = entries.Copy(),
 		"alarm" = alarm[1],
 		"alarm_text" = alarm[2],
 		"extras" = extras_payload(user),
-		"experiment" = experiment_block(),
+		"experiment" = console_experiment(),
 		// Bounty transfers: the warden setting and the next bounty arrival (outpost_prison_bounty.dm)
 		"bounty" = bounty_console_payload(user),
+	)
+
+/**
+ * The console's experiment line, or null: the form, the stage, the subject, and whether a creature
+ * that was put down lies waiting for Kessler. No clocks and no money; experiment_payload() keeps
+ * those for the admin panel.
+ */
+/datum/outpost_prison/proc/console_experiment()
+	var/list/block = experiment_block()
+	if(!islist(block))
+		return null
+	return list(
+		"form" = block["form"],
+		"stage" = block["stage"],
+		"subject" = block["subject"],
+		"pickup" = !!block["pickup"],
 	)

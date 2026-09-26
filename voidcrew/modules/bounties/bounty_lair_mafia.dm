@@ -12,21 +12,26 @@
  * - **Goons** (/mob/living/basic/trooper/russian/mafia: knife, /pistol, /smg) keep to the room (area) they
  *   spawned in: they never walk out of it, and come to its door to get a line. A room is alerted by what its
  *   own goons see or what hits them: the one who spots a hunter shouts, the room's first shots follow a
- *   second later and spread over another second. At most BOUNTY_MOBSTER_MAX_ON_ONE goons of a room go after
- *   one hunter standing in a doorway. Nobody in the club targets a hunter who is down. They leave a corpse in
- *   club clothes and never a gun.
+ *   second later and spread over another second, and gunmen kick a wood table over for cover. At most
+ *   BOUNTY_MOBSTER_MAX_ON_ONE goons of a room go after one hunter standing in a doorway, however many are shot at.
+ *   Grabbed, a goon breaks free and fights its grabber; dragged or thrown out of its room it still fights, and
+ *   only walks back once there's nobody to fight. Nobody in the club targets a hunter who is down. Polymorph and
+ *   type changes are refused. They leave a corpse in club clothes and never a gun.
  * - **Lieutenants** (/lieutenant, /lieutenant/tommy, /lieutenant/brute) are tougher goons that hold the
  *   arena gate. The base type takes whichever role its room doesn't have yet, so two plain gatekeeper
  *   landmarks give one of each. They die like any trooper: COMSIG_LIVING_DEATH, then deletion.
  * - **The mech** (/mob/living/basic/bounty_lair_boss/mafia_mech) is a mob that looks like a Mauler, not a tg
- *   mecha and not /mob/living/basic/boss. Its health follows the hunters engaged (P4's posse rule). Every
+ *   mecha and not /mob/living/basic/boss. Its health follows the hunters engaged (P4's posse rule), counting
+ *   exosuit pilots and harmless shots such as ion bolts. Anyone who hurts it is fair game at any range: it closes
+ *   in as far as its arena lets it and answers from there, so it can't be sniped from past its sight. Every
  *   ability winds up where everyone can see it: the rocket volley puts a marker under each hunter it sees,
- *   then fires one non-breaching rocket per marker; the LMG shows a red cone, then sprays it. An EMP stalls it
- *   rather than killing it. With nobody left to fight for BOUNTY_MECH_RESET_AFTER it resets. It never leaves
- *   its arena.
+ *   then fires one non-breaching rocket per marker; the LMG shows a red cone out to its target that stays until
+ *   the burst ends. An EMP stalls it (the ability it cut off is ready again as the stall ends) rather than
+ *   killing it. With nobody left to fight for BOUNTY_MECH_RESET_AFTER it resets. It never leaves its arena.
  * - **The don** (/mob/living/basic/bounty_lair_boss/mafia_don) climbs out when the mech breaks, next to a
- *   burnt-out wreck he uses for cover. He can't be cuffed and fights to the death; his death drops the gold
- *   signet ring (/obj/item/bounty_proof/trophy/mafia_don) with the posting on it, which P10 pays on.
+ *   burnt-out wreck he uses for cover, holding the mech's grudges. He can't be cuffed and fights to the death;
+ *   his death drops the gold signet ring (/obj/item/bounty_proof/trophy/mafia_don) with the posting on it, which
+ *   P10 pays on.
  *
  * For P10: a gatekeeper's death is COMSIG_LIVING_DEATH (the lieutenant is deleted right after, so watch
  * COMSIG_QDELETING too for an admin delete). The mech hands its posting_ref to the don and sends
@@ -60,6 +65,22 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		return FALSE
 	return !HAS_TRAIT(target, TRAIT_GODMODE)
 
+/**
+ * The hunters behind `attacker`: the player themself, or the pilots of an exosuit, whose guns fire as the suit and
+ * whose punches land as the suit. Empty for anything else (a turret, a mob with no player).
+ */
+/proc/bounty_mafia_attackers(atom/attacker)
+	. = list()
+	if(ismecha(attacker))
+		var/obj/vehicle/sealed/mecha/suit = attacker
+		for(var/mob/living/pilot in suit.occupants)
+			if(bounty_mafia_is_hunter(pilot))
+				. += pilot
+		return
+	var/mob/living/person = attacker
+	if(bounty_mafia_is_hunter(person))
+		. += person
+
 /// A line for `context` from the club's dialogue, or null
 /proc/bounty_mafia_line(context)
 	if(!fexists("[BOUNTY_MAFIA_STRINGS_DIR]/[BOUNTY_MAFIA_STRINGS_FILE]"))
@@ -79,10 +100,11 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	return TRUE
 
 /**
- * Fires one `projectile_type` from `shooter` at `target` (a mob or a turf) for `damage`, `spread` degrees wide.
- * The club's own faction is never hit by it. Returns the projectile, or null.
+ * Fires one `projectile_type` from `shooter` at `target` (a mob or a turf) for `damage`, `spread` degrees wide, and
+ * no farther than `max_range` tiles if given. The club's own faction is never hit by it. Returns the projectile, or
+ * null.
  */
-/proc/bounty_mafia_shoot(mob/living/shooter, projectile_type, atom/target, damage, spread = 0, fire_sound)
+/proc/bounty_mafia_shoot(mob/living/shooter, projectile_type, atom/target, damage, spread = 0, fire_sound, max_range)
 	var/turf/start = get_turf(shooter)
 	var/turf/aim = get_turf(target)
 	if(!start || !aim || start == aim)
@@ -90,6 +112,9 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/obj/projectile/bullet = new projectile_type(start)
 	if(!isnull(damage))
 		bullet.damage = damage
+	if(max_range)
+		bullet.range = max_range
+		bullet.maximum_range = max_range
 	bullet.firer = shooter
 	bullet.fired_from = shooter
 	bullet.ignored_factions = shooter.faction?.Copy()
@@ -182,18 +207,24 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 /datum/bounty_mafia_room
 	/// Its key in GLOB.bounty_mafia_rooms
 	var/room_key
+	/// Its area
+	var/datum/weakref/area_ref
 	/// Weakrefs to its goons (/mob/living/basic/trooper/russian/mafia)
 	var/list/members = list()
 	/// Someone has seen or been hit by a hunter: the shout has gone up
 	var/alerted = FALSE
 	/// The hunter the room knows about
 	var/datum/weakref/hunter_ref
+	/// Its tiles at its doors (a door on them, or one beside them in the next room), worked out once when first needed
+	var/list/turf/room_exits
 
 /datum/bounty_mafia_room/Destroy()
 	if(GLOB.bounty_mafia_rooms[room_key] == src)
 		GLOB.bounty_mafia_rooms -= room_key
 	members = null
 	hunter_ref = null
+	area_ref = null
+	room_exits = null
 	return ..()
 
 /// The room for `where`, made if `create` and there is none yet
@@ -205,8 +236,36 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	if(!room && create)
 		room = new
 		room.room_key = key
+		room.area_ref = WEAKREF(where)
 		GLOB.bounty_mafia_rooms[key] = room
 	return room
+
+/**
+ * Its tiles at its doors: where a goon comes to get a line on someone outside (lairs.md: "the knives rush the
+ * door"). Worked out once, from the area's own tiles; a room of more than BOUNTY_MOBSTER_ROOM_MAX_TILES has none.
+ */
+/datum/bounty_mafia_room/proc/exits()
+	if(room_exits)
+		return room_exits
+	room_exits = list()
+	var/area/room_area = area_ref?.resolve()
+	if(!room_area)
+		return room_exits
+	var/list/turfs = room_area.get_turfs_from_all_zlevels()
+	if(length(turfs) > BOUNTY_MOBSTER_ROOM_MAX_TILES)
+		return room_exits
+	for(var/turf/spot as anything in turfs)
+		if(isclosedturf(spot))
+			continue
+		if(locate(/obj/machinery/door) in spot)
+			room_exits += spot
+			continue
+		for(var/direction in GLOB.cardinals)
+			var/turf/beside = get_step(spot, direction)
+			if(beside && get_area(beside) != room_area && (locate(/obj/machinery/door) in beside))
+				room_exits += spot
+				break
+	return room_exits
 
 /datum/bounty_mafia_room/proc/join(mob/living/basic/trooper/russian/mafia/goon)
 	members |= WEAKREF(goon)
@@ -248,7 +307,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		return FALSE
 	alerted = TRUE
 	for(var/mob/living/basic/trooper/russian/mafia/goon as anything in goons())
-		goon.mafia_on_alarm(spotter, goon == spotter ? 0 : rand(0, BOUNTY_MOBSTER_FIRST_SHOT_SPREAD))
+		goon.mafia_on_alarm(spotter, goon == spotter ? 0 : rand(0, BOUNTY_MOBSTER_FIRST_SHOT_SPREAD), hunter)
 	return TRUE
 
 // ===== GUNS =====
@@ -464,8 +523,9 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 /**
  * The mech's rocket: the cyberware buster's pattern, never tg's rocket and never explosion(). It flies through
  * people to the marker it was fired at, and there does BOUNTY_MECH_ROCKET_DAMAGE brute and a knockdown to each
- * hunter still standing on it, once a volley each. It bursts harmlessly on a wall, a pillar or anything else
- * in its way; it breaks tables, windows and doors only inside the mech's arena.
+ * hunter still standing on it, once a volley each. A player's exosuit in its way takes
+ * BOUNTY_MECH_ROCKET_EXOSUIT_DAMAGE, never the anti-structure multiplier. It bursts harmlessly on a wall, a pillar
+ * or anything else in its way; it breaks tables, windows and doors only inside the club's garage.
  */
 /obj/projectile/bullet/bounty_mafia_rocket
 	name = "micro-rocket"
@@ -499,10 +559,26 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		rocket_detonate(loc)
 
 /obj/projectile/bullet/bounty_mafia_rocket/prehit_pierce(atom/target)
+	if(ismecha(target))
+		rocket_hit_exosuit(target)
+		return PROJECTILE_DELETE_WITHOUT_HITTING
 	if(!isliving(target) && !isturf(target) && !rocket_in_arena(get_turf(target)))
 		rocket_burst(get_turf(target))
 		return PROJECTILE_DELETE_WITHOUT_HITTING
 	return ..()
+
+/**
+ * A player's exosuit took the rocket: BOUNTY_MECH_ROCKET_EXOSUIT_DAMAGE against its bullet armour, not the 8x meant
+ * for furniture, and its pilots count as hit for this volley. Returns the damage done.
+ */
+/obj/projectile/bullet/bounty_mafia_rocket/proc/rocket_hit_exosuit(obj/vehicle/sealed/mecha/suit)
+	if(rocket_done || QDELETED(suit))
+		return 0
+	rocket_burst(get_turf(suit))
+	for(var/mob/living/pilot in suit.occupants)
+		if(rocket_volley)
+			rocket_volley[REF(pilot)] = TRUE
+	return suit.take_damage(BOUNTY_MECH_ROCKET_EXOSUIT_DAMAGE, BRUTE, BULLET, TRUE, get_dir(suit, src))
 
 /obj/projectile/bullet/bounty_mafia_rocket/on_hit(atom/target, blocked = 0, pierce_hit)
 	. = ..()
@@ -512,10 +588,12 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	rocket_burst(get_turf(src))
 	return ..()
 
-/// Whether `spot` is in its arena (anywhere, with none)
+/// Whether `spot` is in its arena, the club's garage it was fired in. Nowhere, for a mech anywhere else (an admin spawn).
 /obj/projectile/bullet/bounty_mafia_rocket/proc/rocket_in_arena(turf/spot)
 	var/area/arena = rocket_area_ref?.resolve()
-	return !arena || get_area(spot) == arena
+	if(!istype(arena, /area/ruin/space/has_grav/powered/mafia_club/garage))
+		return FALSE
+	return get_area(spot) == arena
 
 /// The bang, and nothing else: the fake explosion and its sound
 /obj/projectile/bullet/bounty_mafia_rocket/proc/rocket_burst(turf/spot)
@@ -587,6 +665,10 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/mafia_next_bark_at = 0
 	/// Prefix of its dialogue contexts; lines it has none of come from "goon"
 	var/mafia_voice = "goon"
+	/// world.time it first found itself out of its room with nobody to fight, or 0
+	var/mafia_away_since = 0
+	/// It has kicked a table over for cover this fight
+	var/mafia_took_cover = FALSE
 
 /mob/living/basic/trooper/russian/mafia/Initialize(mapload)
 	. = ..()
@@ -601,8 +683,12 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		room.join(src)
 	AddElement(/datum/element/relay_attackers)
 	RegisterSignal(src, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(mafia_on_attacked))
+	RegisterSignal(src, COMSIG_ATOM_BULLET_ACT, PROC_REF(mafia_on_bullet_act))
 	RegisterSignal(src, COMSIG_MOVABLE_PRE_MOVE, PROC_REF(mafia_on_pre_move))
 	RegisterSignal(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, PROC_REF(mafia_on_damaged))
+	// A polymorph or a type change deletes it without a death: a free kill, and for a lieutenant a free gate
+	RegisterSignal(src, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(mafia_refuse_polymorph))
+	RegisterSignal(src, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(mafia_refuse_type_change))
 
 /mob/living/basic/trooper/russian/mafia/Destroy()
 	var/datum/bounty_mafia_room/room = mafia_room()
@@ -646,12 +732,52 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	mafia_next_bark_at = world.time + BOUNTY_MAFIA_BARK_COOLDOWN
 	return TRUE
 
-/// Its room was alerted by `spotter`; it may attack `delay` after the shout
-/mob/living/basic/trooper/russian/mafia/proc/mafia_on_alarm(mob/living/basic/trooper/russian/mafia/spotter, delay = 0)
+/mob/living/basic/trooper/russian/mafia/proc/mafia_refuse_polymorph(datum/source, what_to_randomize)
+	SIGNAL_HANDLER
+	return STOP_WABBAJACK
+
+/mob/living/basic/trooper/russian/mafia/proc/mafia_refuse_type_change(datum/source)
+	SIGNAL_HANDLER
+	return COMPONENT_BLOCK_MOB_CHANGE
+
+/// Its room was alerted by `spotter` over `hunter`; it may attack `delay` after the shout, and a gunman takes cover
+/mob/living/basic/trooper/russian/mafia/proc/mafia_on_alarm(mob/living/basic/trooper/russian/mafia/spotter, delay = 0, mob/living/hunter)
 	mafia_ready_at = world.time + BOUNTY_MOBSTER_ALERT + delay
 	if(spotter == src)
 		do_alert_animation()
 		mafia_bark("alert", force = TRUE)
+	if(hunter)
+		mafia_take_cover(hunter)
+
+/**
+ * A gunman kicks over a wood table beside it, on its side toward `hunter`, once a fight (lairs.md 3.1). The table's
+ * top faces the hunter, so their shots hit it and the gunman's pass over it. Returns the table, or null.
+ */
+/mob/living/basic/trooper/russian/mafia/proc/mafia_take_cover(mob/living/hunter)
+	if(mafia_took_cover || !mafia_gun || stat != CONSCIOUS || QDELETED(hunter))
+		return null
+	var/turf/here = get_turf(src)
+	var/toward = here ? get_dir(here, hunter) : NONE
+	if(!toward)
+		return null
+	var/area/home = mafia_home_ref?.resolve()
+	var/obj/structure/table/cover
+	for(var/direction in list(toward, turn(toward, 45), turn(toward, -45)))
+		var/turf/spot = get_step(here, direction)
+		if(!spot || (home && get_area(spot) != home))
+			continue
+		for(var/obj/structure/table/table in spot)
+			if(table.can_flip && !table.is_flipped && !(table.resistance_flags & INDESTRUCTIBLE))
+				cover = table
+				break
+		if(cover)
+			break
+	if(!cover)
+		return null
+	mafia_took_cover = TRUE
+	cover.visible_message(span_warning("[src] kicks [cover] over for cover!"))
+	INVOKE_ASYNC(cover, TYPE_PROC_REF(/obj/structure/table, flip_table), get_dir(here, get_turf(cover)))
+	return cover
 
 /// Raises its room's alarm over `hunter`, or just its own with no room. TRUE if this raised it.
 /mob/living/basic/trooper/russian/mafia/proc/mafia_raise_alarm(mob/living/hunter)
@@ -690,6 +816,47 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/turf/next = get_step_towards(src, target)
 	return next && mafia_leash_allows(next)
 
+/// Its room's door tile nearest `target`: where it goes to get a line on someone outside, when a straight step won't do
+/mob/living/basic/trooper/russian/mafia/proc/mafia_exit_toward(atom/target)
+	var/datum/bounty_mafia_room/room = mafia_room()
+	if(!room || !target)
+		return null
+	var/turf/best
+	var/best_distance = INFINITY
+	for(var/turf/exit as anything in room.exits())
+		var/distance = get_dist(exit, target)
+		if(distance < best_distance)
+			best = exit
+			best_distance = distance
+	return best
+
+/**
+ * Out of its room with nobody to fight: it walks back. If it hasn't made it in BOUNTY_MOBSTER_ROOM_GIVE_UP (another
+ * leash keeps it where it is), the room it stands in becomes its room. Returns the turf it walks to, or null.
+ */
+/mob/living/basic/trooper/russian/mafia/proc/mafia_head_home()
+	if(mafia_at_home())
+		mafia_away_since = 0
+		return null
+	if(!mafia_away_since)
+		mafia_away_since = world.time
+	if(!mafia_home_turf || world.time >= mafia_away_since + BOUNTY_MOBSTER_ROOM_GIVE_UP)
+		mafia_adopt_room(get_area(src))
+		return null
+	return mafia_home_turf
+
+/// `new_home` is its room from now on: its leash, its shout and its doorway cap
+/mob/living/basic/trooper/russian/mafia/proc/mafia_adopt_room(area/new_home)
+	if(!new_home)
+		return
+	var/datum/bounty_mafia_room/old_room = mafia_room()
+	old_room?.leave(src)
+	mafia_home_ref = WEAKREF(new_home)
+	mafia_room_key = REF(new_home)
+	mafia_home_turf = get_turf(src)
+	mafia_away_since = 0
+	bounty_mafia_room_for(new_home).join(src)
+
 // ----- targets -----
 
 /// Whether it may go after `target`: a hunter on their feet, on its level and near
@@ -726,7 +893,8 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	if(!controller)
 		return null
 	var/mob/living/current = controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
-	if(mafia_target_ok(current))
+	// Kept while fair game, and while the doorway cap still has room for it (someone grabbing it is always fair game)
+	if(mafia_target_ok(current) && (current == pulledby || mafia_room_has_space(current)))
 		return current
 	if(current)
 		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
@@ -736,7 +904,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/mob/living/best
 	var/best_distance = INFINITY
 	for(var/mob/living/person in SSmobs.clients_by_zlevel[here.z])
-		if(!mafia_target_ok(person))
+		if(person == current || !mafia_target_ok(person))
 			continue
 		var/distance = get_dist(here, person)
 		if(distance > BOUNTY_MOBSTER_SIGHT || distance >= best_distance)
@@ -755,6 +923,19 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	if(best)
 		controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, best)
 	return best
+
+/**
+ * A hunter is pulling or grabbing it: that's an attack. The room is alerted and the grabber is its target, doorway cap
+ * or not. Returns TRUE while it is held, so it resists before anything else.
+ */
+/mob/living/basic/trooper/russian/mafia/proc/mafia_answer_grab()
+	var/mob/living/grabber = pulledby
+	if(!bounty_mafia_is_hunter(grabber) || faction_check_atom(grabber))
+		return FALSE
+	mafia_raise_alarm(grabber)
+	if(ai_controller && ai_controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET] != grabber && mafia_target_ok(grabber))
+		ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, grabber)
+	return TRUE
 
 /// Whether it's past the shout and may attack
 /mob/living/basic/trooper/russian/mafia/proc/mafia_is_ready()
@@ -780,14 +961,26 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /mob/living/basic/trooper/russian/mafia/proc/mafia_on_attacked(datum/source, atom/attacker, attack_flags)
 	SIGNAL_HANDLER
-	if(stat == DEAD || !(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
+	if(!(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
 		return
-	var/mob/living/hunter = attacker
-	if(!bounty_mafia_is_hunter(hunter))
+	mafia_answer_attack(attacker)
+
+// Every shot that hits it, the ones relay_attackers skips too: an exosuit's guns fire as the suit
+/mob/living/basic/trooper/russian/mafia/proc/mafia_on_bullet_act(datum/source, obj/projectile/shot, def_zone, piercing_hit, blocked)
+	SIGNAL_HANDLER
+	mafia_answer_attack(shot?.firer)
+
+/**
+ * `attacker` (a player, or an exosuit's pilots) went for it: its room is alerted, and it turns on them if it has no
+ * one else, and only while the doorway cap has room (so shooting a goon held back never pulls it in).
+ */
+/mob/living/basic/trooper/russian/mafia/proc/mafia_answer_attack(atom/attacker)
+	if(stat == DEAD || !attacker)
 		return
-	mafia_raise_alarm(hunter)
-	if(ai_controller && !ai_controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET) && mafia_target_ok(hunter))
-		ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, hunter)
+	for(var/mob/living/hunter as anything in bounty_mafia_attackers(attacker))
+		mafia_raise_alarm(hunter)
+		if(ai_controller && !ai_controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET) && mafia_target_ok(hunter) && mafia_room_has_space(hunter))
+			ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, hunter)
 
 /mob/living/basic/trooper/russian/mafia/proc/mafia_on_damaged(datum/source, damage, damagetype)
 	SIGNAL_HANDLER
@@ -1153,6 +1346,10 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/turf/mech_home_turf
 	/// The don is out: the wreck and the don have been made
 	var/mech_ejected = FALSE
+	/// Weakrefs to the hunters who have hurt it: fair game at any range, in its sight or not, until the reset
+	var/list/mech_grudge = list()
+	/// How far its machine gun's cone and rounds reach this burst
+	var/mech_lmg_range = BOUNTY_MECH_LMG_RANGE
 
 /mob/living/basic/bounty_lair_boss/mafia_mech/Initialize(mapload)
 	. = ..()
@@ -1160,6 +1357,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	AddElement(/datum/element/footstep, FOOTSTEP_MOB_HEAVY)
 	AddElement(/datum/element/relay_attackers)
 	RegisterSignal(src, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(mech_on_attacked))
+	RegisterSignal(src, COMSIG_ATOM_BULLET_ACT, PROC_REF(mech_on_bullet_act))
 	RegisterSignal(src, COMSIG_MOVABLE_PRE_MOVE, PROC_REF(mech_on_pre_move))
 	RegisterSignal(src, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(mech_refuse_polymorph))
 	RegisterSignal(src, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(mech_refuse_type_change))
@@ -1174,6 +1372,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	deltimer(mech_busy_timer)
 	mech_busy_timer = null
 	mech_engaged = null
+	mech_grudge = null
 	mech_home_ref = null
 	mech_home_turf = null
 	return ..()
@@ -1344,14 +1543,31 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_on_attacked(datum/source, atom/attacker, attack_flags)
 	SIGNAL_HANDLER
-	if(stat == DEAD || !(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
+	if(!(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
 		return
-	var/mob/living/hunter = attacker
-	if(!bounty_mafia_is_hunter(hunter))
+	mech_answer_attack(attacker)
+
+// Every shot that hits it, the ones relay_attackers skips too: a harmless ion bolt, an exosuit's guns (fired as the suit)
+/mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_on_bullet_act(datum/source, obj/projectile/shot, def_zone, piercing_hit, blocked)
+	SIGNAL_HANDLER
+	mech_answer_attack(shot?.firer)
+
+/**
+ * `attacker` (a player, or an exosuit's pilots) went for it, from any range: they join its posse, it holds a grudge
+ * (fair game at any range until the reset), the reset clock starts over, and it turns on them if it has no one else.
+ */
+/mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_answer_attack(atom/attacker)
+	if(stat == DEAD || !attacker)
 		return
-	mech_turn_hostile(hunter)
-	if(ai_controller && !ai_controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET) && mech_target_ok(hunter))
-		ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, hunter)
+	for(var/mob/living/hunter as anything in bounty_mafia_attackers(attacker))
+		mech_grudge |= WEAKREF(hunter)
+		mech_turn_hostile(hunter)
+		if(ai_controller && !ai_controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET) && mech_target_ok(hunter))
+			ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, hunter)
+
+/// Whether `hunter` has hurt it since the last reset
+/mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_holds_grudge(mob/living/hunter)
+	return !isnull(hunter?.weak_reference) && (hunter.weak_reference in mech_grudge)
 
 // ----- the reset -----
 
@@ -1394,6 +1610,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	mech_interrupt()
 	mech_hostile = FALSE
 	mech_engaged = list()
+	mech_grudge = list()
 	adjust_health(-getBruteLoss())
 	setMaxHealth(BOUNTY_MECH_HEALTH_1)
 	updatehealth()
@@ -1402,17 +1619,26 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 // ----- targets -----
 
-/// Whether it may go after `target`: a hunter on their feet, in its arena or in its sight
+/**
+ * Whether it may go after `target`: a hunter on their feet who is in its arena, in its sight, or has hurt it. One who
+ * hurt it counts at any range up to BOUNTY_MECH_GRUDGE_RANGE, seen or not: it closes in on a sniper as far as its
+ * arena lets it, and answers from there.
+ */
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_target_ok(mob/living/target)
 	if(!bounty_mafia_may_hurt(target) || faction_check_atom(target))
 		return FALSE
 	var/turf/spot = get_turf(target)
-	if(!spot || spot.z != z || get_dist(src, spot) > BOUNTY_MECH_SIGHT)
+	if(!spot || spot.z != z)
+		return FALSE
+	var/distance = get_dist(src, spot)
+	if(distance <= BOUNTY_MECH_GRUDGE_RANGE && mech_holds_grudge(target))
+		return TRUE
+	if(distance > BOUNTY_MECH_SIGHT)
 		return FALSE
 	var/area/arena = mech_home_ref?.resolve()
 	return (arena && get_area(spot) == arena) || can_see(src, target, BOUNTY_MECH_SIGHT)
 
-/// Every hunter it may go after, from SSmobs' list of players on its level
+/// Every hunter it may go after: the players on its level (SSmobs' list), and anyone it holds a grudge against
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_hunters_nearby()
 	. = list()
 	var/turf/here = get_turf(src)
@@ -1420,9 +1646,16 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		return
 	for(var/mob/living/person in SSmobs.clients_by_zlevel[here.z])
 		if(mech_target_ok(person))
-			. += person
+			. |= person
+	for(var/datum/weakref/ref as anything in mech_grudge)
+		var/mob/living/person = ref.resolve()
+		if(person && mech_target_ok(person))
+			. |= person
 
-/// Its target: the one it has while they're fair game and in sight, else the nearest in sight, else the nearest in its arena
+/**
+ * Its target: the one it has while they're fair game and in sight, else the nearest in sight, else the nearest in its
+ * arena or holding its grudge.
+ */
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_find_target()
 	var/datum/ai_controller/controller = ai_controller
 	if(!controller)
@@ -1549,8 +1782,9 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /**
  * The machine gun's spin-up: a whirr and a red cone toward `target` for BOUNTY_MECH_LMG_WINDUP, then
- * BOUNTY_MECH_LMG_ROUNDS rounds sprayed over the cone (mech_fire_lmg()). Nothing is hurt before then. Returns
- * the serial the burst checks, or 0 if it didn't start.
+ * BOUNTY_MECH_LMG_ROUNDS rounds sprayed over the cone (mech_fire_lmg()). The cone reaches as far as the target (at
+ * least BOUNTY_MECH_LMG_RANGE), stays on the floor until the burst ends, and no round flies past it. Nothing is hurt
+ * before the spin-up ends. Returns the serial the burst checks, or 0 if it didn't start.
  */
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_start_lmg(mob/living/target)
 	if(!mech_can_start_ability() || !bounty_mafia_may_hurt(target) || !can_see(src, target, BOUNTY_MECH_SIGHT))
@@ -1561,9 +1795,10 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		return 0
 	var/serial = mech_set_busy("lmg_windup", BOUNTY_MECH_LMG_WINDUP + 1 SECONDS)
 	mech_lmg_aim = aim
+	mech_lmg_range = clamp(get_dist(origin, aim), BOUNTY_MECH_LMG_RANGE, BOUNTY_MECH_SIGHT)
 	face_atom(target)
-	for(var/turf/spot as anything in bounty_mafia_cone_turfs(origin, aim, BOUNTY_MECH_LMG_RANGE, BOUNTY_MECH_LMG_ARC))
-		mech_add_telegraph(new /obj/effect/temp_visual/bounty_mafia_mark(spot, BOUNTY_MECH_LMG_WINDUP, COLOR_RED))
+	for(var/turf/spot as anything in bounty_mafia_cone_turfs(origin, aim, mech_lmg_range, BOUNTY_MECH_LMG_ARC))
+		mech_add_telegraph(new /obj/effect/temp_visual/bounty_mafia_mark(spot, BOUNTY_MECH_LMG_WINDUP + BOUNTY_MECH_LMG_FIRE_TIME, COLOR_RED))
 	mech_lmg_ready_at = world.time + BOUNTY_MECH_LMG_COOLDOWN
 	mech_next_ability_at = world.time + BOUNTY_MECH_LMG_WINDUP + BOUNTY_MECH_LMG_FIRE_TIME + BOUNTY_MECH_ABILITY_GAP
 	playsound(src, 'sound/items/weapons/gun/l6/l6_rack.ogg', 80, TRUE)
@@ -1572,11 +1807,10 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	addtimer(CALLBACK(src, PROC_REF(mech_fire_lmg), serial), BOUNTY_MECH_LMG_WINDUP, TIMER_DELETE_ME)
 	return serial
 
-/// The spin-up under `serial` is over: the rounds go out across the cone. Returns the burst's serial, or 0.
+/// The spin-up under `serial` is over: the rounds go out across the cone, which stays marked. Returns the burst's serial, or 0.
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_fire_lmg(serial)
 	if(!mech_still("lmg_windup", serial))
 		return 0
-	mech_clear_telegraphs()
 	var/fire_serial = mech_set_busy("lmg_fire", BOUNTY_MECH_LMG_FIRE_TIME)
 	var/interval = BOUNTY_MECH_LMG_FIRE_TIME / BOUNTY_MECH_LMG_ROUNDS
 	mech_lmg_round(fire_serial)
@@ -1588,7 +1822,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_lmg_round(serial)
 	if(!mech_still("lmg_fire", serial) || !mech_lmg_aim)
 		return null
-	return bounty_mafia_shoot(src, mech_lmg_type, mech_lmg_aim, BOUNTY_MECH_LMG_DAMAGE, BOUNTY_MECH_LMG_ARC, 'sound/items/weapons/gun/l6/shot.ogg')
+	return bounty_mafia_shoot(src, mech_lmg_type, mech_lmg_aim, BOUNTY_MECH_LMG_DAMAGE, BOUNTY_MECH_LMG_ARC, 'sound/items/weapons/gun/l6/shot.ogg', mech_lmg_range + 1)
 
 /// A stomp on someone right next to it. TRUE if it landed.
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_stomp(mob/living/target)
@@ -1603,14 +1837,23 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	mech_emp_stall()
 
 /**
- * A BOUNTY_MECH_EMP_STALL stall and BOUNTY_MECH_EMP_DAMAGE_PERCENT of its max health, cutting off whatever it
- * was winding up. Another EMP in the next BOUNTY_MECH_EMP_IMMUNITY after the stall does nothing, so an ion gun
- * can't hold it still. TRUE if it stalled.
+ * A BOUNTY_MECH_EMP_STALL stall and BOUNTY_MECH_EMP_DAMAGE_PERCENT of its max health, cutting off whatever it was
+ * winding up. What it cut off is ready again the moment the stall ends, so an EMP buys a pause, never a free cancel
+ * of the volley's or the gun's cooldown. Another EMP in the next BOUNTY_MECH_EMP_IMMUNITY after the stall does
+ * nothing, so an ion gun can't hold it still. TRUE if it stalled.
  */
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_emp_stall()
 	if(stat == DEAD || world.time < mech_emp_immune_until)
 		return FALSE
 	mech_emp_immune_until = world.time + BOUNTY_MECH_EMP_STALL + BOUNTY_MECH_EMP_IMMUNITY
+	var/stall_ends = world.time + BOUNTY_MECH_EMP_STALL
+	switch(mech_busy)
+		if("rockets")
+			mech_rockets_ready_at = stall_ends
+		if("lmg_windup", "lmg_fire")
+			mech_lmg_ready_at = stall_ends
+	if(mech_busy)
+		mech_next_ability_at = stall_ends
 	mech_interrupt()
 	mech_set_busy("stall", BOUNTY_MECH_EMP_STALL)
 	adjust_health(maxHealth * BOUNTY_MECH_EMP_DAMAGE_PERCENT / 100)
@@ -1647,6 +1890,8 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/mob/living/basic/bounty_lair_boss/mafia_don/don = new(exit || spot)
 	don.posting_ref = posting_ref
 	don.don_wreck_ref = WEAKREF(wreck)
+	// Whoever broke his machine, he knows
+	don.don_grudge = mech_grudge.Copy()
 	if(mech_home_ref)
 		don.don_home_ref = mech_home_ref
 		don.don_home_turf = mech_home_turf
@@ -1742,6 +1987,8 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/don_trophy_dropped = FALSE
 	/// world.time he may say another line
 	var/don_next_bark_at = 0
+	/// Weakrefs to the hunters who have hurt him or his mech: fair game at any range, seen or not
+	var/list/don_grudge = list()
 
 /mob/living/basic/bounty_lair_boss/mafia_don/Initialize(mapload)
 	. = ..()
@@ -1751,6 +1998,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SHOE)
 	AddElement(/datum/element/relay_attackers)
 	RegisterSignal(src, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(don_on_attacked))
+	RegisterSignal(src, COMSIG_ATOM_BULLET_ACT, PROC_REF(don_on_bullet_act))
 	RegisterSignal(src, COMSIG_MOVABLE_PRE_MOVE, PROC_REF(don_on_pre_move))
 	RegisterSignal(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, PROC_REF(don_on_damaged))
 	RegisterSignal(src, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(don_refuse_polymorph))
@@ -1768,6 +2016,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	don_home_ref = null
 	don_home_turf = null
 	don_wreck_ref = null
+	don_grudge = null
 	return ..()
 
 /mob/living/basic/bounty_lair_boss/mafia_don/Life(seconds_per_tick = SSMOBS_DT, times_fired)
@@ -1851,13 +2100,10 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		return null
 	don_trophy_dropped = TRUE
 	var/obj/item/bounty_proof/trophy/ring
-#ifdef BOUNTY_LAIR_TROPHY_GRACE
-	// INTEGRATION (P10): with P10's lair framework in the build (its defines present), its API drops the ring and binds
-	// it to the kill-only bounty as its proof of death. Null when he is wanted on no open bounty (an admin spawn).
+	// P10's API drops the ring and binds it to the kill-only bounty as its proof of death (one per bounty)
 	ring = bounty_lair_drop_trophy(src, /obj/item/bounty_proof/trophy/mafia_don)
-#endif
 	if(!ring)
-		// Without it, the ring still carries his posting and its record; P10's lair picks up a loose trophy bound to it
+		// Wanted on no open kill-only bounty (an admin spawn, or a closed one): a ring carrying whatever posting he has
 		ring = new /obj/item/bounty_proof/trophy/mafia_don(spot)
 		ring.posting_ref = posting_ref
 		var/datum/criminal_bounty/posting = posting_ref?.resolve()
@@ -1875,23 +2121,40 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /mob/living/basic/bounty_lair_boss/mafia_don/proc/don_on_attacked(datum/source, atom/attacker, attack_flags)
 	SIGNAL_HANDLER
-	if(stat == DEAD || !(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
+	if(!(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK)))
 		return
-	var/mob/living/hunter = attacker
-	if(ai_controller && !ai_controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET) && don_target_ok(hunter))
-		ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, hunter)
+	don_answer_attack(attacker)
+
+// Every shot that hits him, the ones relay_attackers skips too (an exosuit's guns fire as the suit)
+/mob/living/basic/bounty_lair_boss/mafia_don/proc/don_on_bullet_act(datum/source, obj/projectile/shot, def_zone, piercing_hit, blocked)
+	SIGNAL_HANDLER
+	don_answer_attack(shot?.firer)
+
+/// `attacker` (a player, or an exosuit's pilots) went for him, from any range: a grudge, and his target if he has none
+/mob/living/basic/bounty_lair_boss/mafia_don/proc/don_answer_attack(atom/attacker)
+	if(stat == DEAD || !attacker)
+		return
+	for(var/mob/living/hunter as anything in bounty_mafia_attackers(attacker))
+		don_grudge |= WEAKREF(hunter)
+		if(ai_controller && !ai_controller.blackboard_key_exists(BB_BASIC_MOB_CURRENT_TARGET) && don_target_ok(hunter))
+			ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, hunter)
 
 /mob/living/basic/bounty_lair_boss/mafia_don/proc/don_on_damaged(datum/source, damage, damagetype)
 	SIGNAL_HANDLER
 	if(damage > 0 && stat == CONSCIOUS && prob(15))
 		don_bark("hurt")
 
-/// Whether he may go after `target`: a hunter on their feet, in his arena or in his sight
+/// Whether he may go after `target`: a hunter on their feet in his arena, in his sight, or who has hurt him or his mech (any range up to BOUNTY_MECH_GRUDGE_RANGE)
 /mob/living/basic/bounty_lair_boss/mafia_don/proc/don_target_ok(mob/living/target)
 	if(!bounty_mafia_may_hurt(target) || faction_check_atom(target))
 		return FALSE
 	var/turf/spot = get_turf(target)
-	if(!spot || spot.z != z || get_dist(src, spot) > BOUNTY_MECH_SIGHT)
+	if(!spot || spot.z != z)
+		return FALSE
+	var/distance = get_dist(src, spot)
+	if(distance <= BOUNTY_MECH_GRUDGE_RANGE && !isnull(target.weak_reference) && (target.weak_reference in don_grudge))
+		return TRUE
+	if(distance > BOUNTY_MECH_SIGHT)
 		return FALSE
 	var/area/arena = don_home_ref?.resolve()
 	return (arena && get_area(spot) == arena) || can_see(src, target, BOUNTY_MECH_SIGHT)
@@ -1909,7 +2172,12 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	if(here && here.z <= length(SSmobs.clients_by_zlevel))
 		var/best_seen = FALSE
 		var/best_distance = INFINITY
-		for(var/mob/living/person in SSmobs.clients_by_zlevel[here.z])
+		var/list/candidates = SSmobs.clients_by_zlevel[here.z].Copy()
+		for(var/datum/weakref/ref as anything in don_grudge)
+			var/mob/living/grudged = ref.resolve()
+			if(grudged)
+				candidates |= grudged
+		for(var/mob/living/person in candidates)
 			if(!don_target_ok(person))
 				continue
 			var/seen = can_see(src, person, BOUNTY_MECH_SIGHT)
@@ -2006,24 +2274,40 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /datum/ai_planning_subtree/bounty_mafia_goon/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
 	var/mob/living/basic/trooper/russian/mafia/goon = controller.pawn
-	if(!istype(goon) || !goon.mafia_can_act())
+	if(!istype(goon) || goon.stat != CONSCIOUS)
 		return SUBTREE_RETURN_FINISH_PLANNING
-	if(!goon.mafia_at_home())
-		if(goon.mafia_home_turf)
-			controller.set_blackboard_key(BB_BOUNTY_MAFIA_MOVE_TO, goon.mafia_home_turf)
-			controller.queue_behavior(/datum/ai_behavior/bounty_mafia_approach/onto, BB_BOUNTY_MAFIA_MOVE_TO)
+	// Grabbed by a hunter: that's a fight. He's the target, and it breaks free first.
+	if(goon.mafia_answer_grab())
+		controller.queue_behavior(/datum/ai_behavior/resist)
 		return SUBTREE_RETURN_FINISH_PLANNING
+	if(!goon.mafia_can_act())
+		return SUBTREE_RETURN_FINISH_PLANNING
+	var/at_home = goon.mafia_at_home()
+	// It fights wherever it is; out of its room it only walks back once there's nobody to fight
 	var/mob/living/target = goon.mafia_find_target()
-	if(!target)
-		return SUBTREE_RETURN_FINISH_PLANNING
-	if(!goon.mafia_is_ready())
+	if(target && !goon.mafia_is_ready())
 		goon.face_atom(target)
 		return SUBTREE_RETURN_FINISH_PLANNING
-	var/has_line = goon.mafia_gun ? can_see(goon, target, BOUNTY_MOBSTER_SIGHT) : goon.Adjacent(target)
-	if(has_line)
-		controller.queue_behavior(/datum/ai_behavior/bounty_mafia_goon_attack, BB_BASIC_MOB_CURRENT_TARGET)
-	else if(goon.mafia_step_ok(target))
-		controller.queue_behavior(/datum/ai_behavior/bounty_mafia_approach, BB_BASIC_MOB_CURRENT_TARGET)
+	if(target)
+		var/has_line = goon.mafia_gun ? can_see(goon, target, BOUNTY_MOBSTER_SIGHT) : goon.Adjacent(target)
+		if(has_line)
+			goon.mafia_away_since = 0
+			controller.queue_behavior(/datum/ai_behavior/bounty_mafia_goon_attack, BB_BASIC_MOB_CURRENT_TARGET)
+			return SUBTREE_RETURN_FINISH_PLANNING
+		if(at_home)
+			if(goon.mafia_step_ok(target))
+				controller.queue_behavior(/datum/ai_behavior/bounty_mafia_approach, BB_BASIC_MOB_CURRENT_TARGET)
+				return SUBTREE_RETURN_FINISH_PLANNING
+			// A wall between it and them: to the room's door nearest them
+			var/turf/exit = goon.mafia_exit_toward(target)
+			if(exit && exit != get_turf(goon))
+				controller.set_blackboard_key(BB_BOUNTY_MAFIA_MOVE_TO, exit)
+				controller.queue_behavior(/datum/ai_behavior/bounty_mafia_approach/onto, BB_BOUNTY_MAFIA_MOVE_TO)
+			return SUBTREE_RETURN_FINISH_PLANNING
+	var/turf/home = goon.mafia_head_home()
+	if(home)
+		controller.set_blackboard_key(BB_BOUNTY_MAFIA_MOVE_TO, home)
+		controller.queue_behavior(/datum/ai_behavior/bounty_mafia_approach/onto, BB_BOUNTY_MAFIA_MOVE_TO)
 	return SUBTREE_RETURN_FINISH_PLANNING
 
 /datum/ai_behavior/bounty_mafia_goon_attack

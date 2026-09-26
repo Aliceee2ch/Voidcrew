@@ -1,0 +1,106 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"f" = (
+/turf/open/indestructible/dark,
+/area/template_noop)
+"l" = (
+/obj/structure/chair{
+	dir = 8
+	},
+/turf/open/indestructible/dark,
+/area/template_noop)
+"r" = (
+/obj/machinery/door/airlock/outpost/service{
+	name = "Teleporter"
+	},
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/dark,
+/area/template_noop)
+"v" = (
+/obj/machinery/outpost_network_pad,
+/turf/open/indestructible/dark,
+/area/template_noop)
+"H" = (
+/obj/structure/chair{
+	dir = 4
+	},
+/turf/open/indestructible/dark,
+/area/template_noop)
+"K" = (
+/turf/closed/indestructible/reinforced,
+/area/template_noop)
+"M" = (
+/obj/effect/landmark/outpost_network_arrival,
+/obj/effect/turf_decal/box/white,
+/turf/open/indestructible/dark,
+/area/template_noop)
+"W" = (
+/obj/machinery/light/cold/directional/north,
+/turf/open/indestructible/dark,
+/area/template_noop)
+
+(1,1,1) = {"
+K
+K
+K
+K
+K
+K
+K
+"}
+(2,1,1) = {"
+K
+W
+f
+H
+f
+f
+K
+"}
+(3,1,1) = {"
+K
+f
+f
+f
+f
+f
+K
+"}
+(4,1,1) = {"
+K
+f
+v
+f
+M
+f
+r
+"}
+(5,1,1) = {"
+K
+f
+f
+f
+f
+f
+K
+"}
+(6,1,1) = {"
+K
+W
+f
+l
+f
+f
+K
+"}
+(7,1,1) = {"
+K
+K
+K
+K
+K
+K
+K
+"}

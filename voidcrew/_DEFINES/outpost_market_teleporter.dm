@@ -22,3 +22,5 @@
 #define OUTPOST_NETWORK_ARRIVALS_MEMBERS "members"
 #define OUTPOST_NETWORK_ARRIVALS_ALLOWLIST "allowlist"
 #define OUTPOST_NETWORK_ARRIVALS_CLOSED "closed"
+/// An idle occupant (no client, or inactive this long) is stepped off a pad someone else wants
+#define OUTPOST_NETWORK_IDLE_CLEAR (15 SECONDS)

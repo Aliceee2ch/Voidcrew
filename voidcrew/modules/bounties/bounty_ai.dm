@@ -182,7 +182,7 @@
 	if(!holder)
 		holder = new(null)
 		owner.vis_contents += holder
-	var/list/inhand_look = over_head ? null : bounty_ai_inhand_look(look)
+	var/list/inhand_look = over_head ? null : npc_inhand_look(look)
 	if(inhand_look)
 		holder.appearance = mutable_appearance(inhand_look[1], inhand_look[2])
 	else if(ispath(look, /atom))
@@ -205,8 +205,12 @@
 	bounty_ai_place_held(owner, holder)
 	return holder
 
-/// The right-hand sprite of `look` (an item or item typepath) as list(file, state), or null when it has none
-/proc/bounty_ai_inhand_look(look)
+/**
+ * The right-hand sprite of `look` (an item or item typepath) as list(file, state), or null when it
+ * has none: what a player holding it shows. Drawn on an NPC's body it turns with them, as a player's
+ * does. Used by bounty NPCs and the prison's prisoners and guards.
+ */
+/proc/npc_inhand_look(look)
 	var/hand_file
 	var/state
 	if(ispath(look, /obj/item))

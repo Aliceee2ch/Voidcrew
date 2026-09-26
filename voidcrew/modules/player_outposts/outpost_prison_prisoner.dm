@@ -656,17 +656,25 @@
 		// tg's own cuff overlay, as people wear it
 		. += mutable_appearance('icons/mob/simple/mob.dmi', "handcuff1")
 	if(held_item)
-		var/mutable_appearance/carried = new(held_item.appearance)
-		carried.plane = FLOAT_PLANE
-		carried.layer = FLOAT_LAYER
-		carried.dir = SOUTH
-		carried.pixel_x = 0
-		carried.pixel_y = 0
-		// The same hand whichever way they face: to the right facing south or east, the left facing north or west
-		carried.pixel_w = ((dir & WEST) || dir == NORTH) ? -7 : 7
-		carried.pixel_z = -4
-		carried.transform = matrix().Scale(0.6)
-		. += carried
+		// In hand the way a player holds it, turning with them (npc_inhand_look() in bounty_ai.dm)
+		var/list/inhand = npc_inhand_look(held_item)
+		if(inhand)
+			var/mutable_appearance/carried = mutable_appearance(inhand[1], inhand[2])
+			carried.plane = FLOAT_PLANE
+			carried.layer = FLOAT_LAYER
+			. += carried
+		else
+			// No in-hand sprite: the item itself, small, in the same hand whichever way they face
+			var/mutable_appearance/carried = new(held_item.appearance)
+			carried.plane = FLOAT_PLANE
+			carried.layer = FLOAT_LAYER
+			carried.dir = SOUTH
+			carried.pixel_x = 0
+			carried.pixel_y = 0
+			carried.pixel_w = ((dir & WEST) || dir == NORTH) ? -7 : 7
+			carried.pixel_z = -4
+			carried.transform = matrix().Scale(0.6)
+			. += carried
 
 /// Turning moves what they carry to the other side
 /mob/living/basic/outpost_prisoner/setDir(newdir)

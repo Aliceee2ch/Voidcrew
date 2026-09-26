@@ -168,13 +168,10 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	. = ..()
 	if(!baton_out || phase == OUTPOST_GUARD_DOWN)
 		return
-	// Held like a prisoner holds what they carry (outpost_prison_prisoner.dm)
-	var/mutable_appearance/baton = mutable_appearance('icons/obj/weapons/baton.dmi', "stunbaton_active")
+	// The lit baton in hand, the way a security officer holds one, turning with them
+	var/mutable_appearance/baton = mutable_appearance('icons/mob/inhands/equipment/security_righthand.dmi', "stunbaton_active")
 	baton.plane = FLOAT_PLANE
 	baton.layer = FLOAT_LAYER
-	baton.pixel_w = 7
-	baton.pixel_z = -4
-	baton.transform = matrix().Scale(0.6)
 	. += baton
 
 /// Draws or puts away the baton

@@ -746,7 +746,8 @@
 	stage = PRISON_STAGE_RIOT
 	open_incident()
 	var/shouts = 0
-	for(var/mob/living/basic/outpost_prisoner/rioter as anything in joining)
+	// A Most Wanted ringleader is among the first to shout (outpost_prison_bounty.dm).
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in bounty_ringleaders_first(joining))
 		rioter.start_rioting(shouts++ < 2)
 	send_bystanders_home(joining)
 	add_log("Riot in the yard: [length(joining)] prisoner\s.")
@@ -1311,7 +1312,10 @@
 	trouble = PRISONER_TROUBLE_LOOSE
 	if(loose_left <= 0)
 		loose_left = OUTPOST_PRISON_LOOSE_TIME
-	obj_damage = PRISONER_LOOSE_OBJ_DAMAGE
+	// Wanted and Most Wanted bounty prisoners hit harder, and a meek one runs faster (outpost_prison_bounty.dm).
+	obj_damage = PRISONER_LOOSE_OBJ_DAMAGE * bounty_breakout_mult()
+	if(bounty_loose_speed())
+		set_varspeed(bounty_base_speed())
 	update_melee()
 	update_bubble()
 	// The outpost patrol AI (voidcrew/modules/npc_ships/code/outpost_patrol.dm). Finding the doors
@@ -1340,6 +1344,9 @@
 	escaped_rioting = FALSE
 	note_trouble_ended()
 	obj_damage = initial(obj_damage)
+	// A meek bounty prisoner slows back down (outpost_prison_bounty.dm).
+	if(bounty_loose_speed())
+		set_varspeed(bounty_base_speed())
 	drop_shiv()
 	set_mood(PRISONER_RECAPTURED_MOOD)
 	swap_basic_ai_controller(src, /datum/ai_controller/basic_controller/outpost_prisoner)

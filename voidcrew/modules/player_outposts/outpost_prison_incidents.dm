@@ -245,7 +245,8 @@
 		if(!wildcard_can_act(prisoner) || !prisoner.can_join_riot())
 			continue
 		options += prisoner
-		weights += 1 + (100 - prisoner.mood) / 50
+		// A Most Wanted ringleader snaps more often (outpost_prison_bounty.dm).
+		weights += (1 + (100 - prisoner.mood) / 50) * prisoner.bounty_snap_weight_mult()
 	var/index = outpost_prison_weighted_index(weights)
 	return index ? options[index] : null
 

@@ -55,12 +55,16 @@
 	/// Weakref to the prison they are named to as its next bounty arrival (/datum/outpost_prison), and the world.time they were
 	var/datum/weakref/prison_notice_ref
 	var/prison_notice_at = 0
+	/// REF() of every prison they have been named to, so a wing's log and crew hear about them once however often the name drops and comes back
+	var/list/prison_announced_to
 
 /datum/outpost_prison
 	/// Which bounty prisoners the warden takes: BOUNTY_PRISON_INTAKE_ALL, _NO_MOST_WANTED or _NONE
 	var/prison_bounty_intake = BOUNTY_PRISON_INTAKE_ALL
 	/// world.time since which the wing has had no cell ready for an arrival, while the pool holds anyone; null while it has one
 	var/prison_bounty_no_cell_since
+	/// For tests: whether a meek prisoner watching the staff door darts when it opens (TRUE or FALSE) instead of rolling for it
+	var/prison_bounty_forced_dart
 
 /// The pool's clock (bounty_pool_tick()), while the pool holds anyone
 GLOBAL_VAR(bounty_pool_timer)
@@ -157,13 +161,18 @@ GLOBAL_VAR(bounty_pool_timer)
 			ahead++
 	return ahead < prison.arrival_lanes() ? prison : null
 
-/// Whether `record`'s wait for `prison` has not run out: it would take them, they have not waited BOUNTY_RECORD_RESERVE, and it has not been without a ready cell for BOUNTY_RECORD_RESERVE_NO_CELL
+/**
+ * Whether `record`'s wait for `prison` has not run out: the wing would take them now (its setting,
+ * its share of bounty prisoners, one Most Wanted a lane), they have not waited BOUNTY_RECORD_RESERVE,
+ * and it has not been without a ready cell for BOUNTY_RECORD_RESERVE_NO_CELL. A wing that can't take
+ * them holds no place for them in the "ahead" tally either.
+ */
 /proc/bounty_reservation_holds(datum/bounty_record/record, datum/outpost_prison/prison)
-	if(!prison.bounty_setting_allows(record))
-		return FALSE
 	if(world.time - record.prison_pooled_at >= BOUNTY_RECORD_RESERVE)
 		return FALSE
-	return isnull(prison.prison_bounty_no_cell_since) || world.time - prison.prison_bounty_no_cell_since < BOUNTY_RECORD_RESERVE_NO_CELL
+	if(!isnull(prison.prison_bounty_no_cell_since) && world.time - prison.prison_bounty_no_cell_since >= BOUNTY_RECORD_RESERVE_NO_CELL)
+		return FALSE
+	return prison.bounty_accepts(record)
 
 /// The prison `record` is named to as its next bounty arrival, while that stands (the wing runs and would still take them), or null
 /proc/bounty_record_named_to(datum/bounty_record/record)
@@ -261,12 +270,17 @@ GLOBAL_VAR(bounty_pool_timer)
  * The pool's clock, every BOUNTY_POOL_TICK while it holds anyone: old records leave, and each
  * running wing, in a random order so the first wing built gets no head start (AR-F6), updates its
  * no-ready-cell clock and its named next bounty arrival. With the pool empty the clock stops, and
- * the wings' no-ready-cell clocks start afresh with the next record.
+ * the wings' no-ready-cell clocks start afresh with the next record. The next tick is set up first,
+ * so a runtime in one wing can't stop the clock.
  */
 /proc/bounty_pool_tick()
 	GLOB.bounty_pool_timer = null
+	bounty_pool_start_tick()
 	bounty_pool_prune()
 	if(!length(GLOB.bounty_prisoner_pool))
+		if(GLOB.bounty_pool_timer)
+			deltimer(GLOB.bounty_pool_timer)
+			GLOB.bounty_pool_timer = null
 		for(var/datum/outpost_prison/prison as anything in GLOB.outpost_prisons)
 			prison.prison_bounty_no_cell_since = null
 		return
@@ -275,7 +289,6 @@ GLOBAL_VAR(bounty_pool_timer)
 			continue
 		prison.bounty_note_ready_cells()
 		prison.bounty_update_notice()
-	bounty_pool_start_tick()
 
 // ===== THE WING'S INTAKE =====
 
@@ -339,8 +352,8 @@ GLOBAL_VAR(bounty_pool_timer)
  * Keeps the wing's named next bounty arrival up to date. A name that no longer stands (the wing
  * stopped taking arrivals, or would refuse them now) is dropped, and the record is free for any
  * wing again. With no name, once the wing's next arrival is BOUNTY_PRISON_NOTICE_WINDOW seconds
- * off, the picker's record is named: on the console, in the log, and to the crew for a Most Wanted.
- * Returns the named record, or null.
+ * off, the picker's record is named: on the console, and the first time it is named to this wing,
+ * in the log and to the crew for a Most Wanted. Returns the named record, or null.
  */
 /datum/outpost_prison/proc/bounty_update_notice()
 	var/due = next_arrival_in()
@@ -360,6 +373,10 @@ GLOBAL_VAR(bounty_pool_timer)
 		return null
 	named.prison_notice_ref = WEAKREF(src)
 	named.prison_notice_at = world.time
+	// Told once per wing: a name dropped when the wing filled up and named again says nothing new.
+	if(REF(src) in named.prison_announced_to)
+		return named
+	LAZYADD(named.prison_announced_to, REF(src))
 	add_log("Bounty transfer due: [named.name], [bounty_tier_name(named.tier)].")
 	if(named.tier == BOUNTY_TIER_MOST_WANTED)
 		announce("Prison wing: a Most Wanted prisoner, [named.name], is being transferred in.", SHIP_NOTIFY_WARNING)
@@ -451,6 +468,7 @@ GLOBAL_VAR(bounty_pool_timer)
 	var/list/personalities = bounty_archetype_personalities(record.archetype)
 	if(length(personalities))
 		personality = pick(personalities)
+	// The plain jumpsuit: the glasses and beanie variants would hide their hair or fake their eyewear
 	outfit_path = /datum/outfit/outpost_prisoner
 	// As hurt as they were caught, but never below BOUNTY_PRISONER_MIN_ARRIVAL_HEALTH percent
 	arrival_brute = round(maxHealth * clamp(record.hurt_fraction || 0, 0, 1 - BOUNTY_PRISONER_MIN_ARRIVAL_HEALTH / 100))
@@ -556,38 +574,66 @@ GLOBAL_VAR(bounty_pool_timer)
 /mob/living/basic/outpost_prisoner/proc/bounty_is_meek()
 	return bounty_record?.archetype == BOUNTY_ARCHETYPE_MEEK
 
-/**
- * Multiplier on how likely they are to back off when a player hits them: twice as likely for a
- * meek bounty prisoner. For hit_reaction()'s back-off weight, which has no hook yet (INTEGRATION).
- */
+/// Multiplier on how likely they are to back off when a player hits them: twice as likely for a meek bounty prisoner (hit_reaction(), through bounty_hit_reaction_weights())
 /mob/living/basic/outpost_prisoner/proc/bounty_back_off_mult()
 	return bounty_is_meek() ? BOUNTY_PRISON_MEEK_BACK_OFF_MULT : 1
 
-/**
- * Multiplier on how likely they are to hit back when a player hits them: a Wanted or Most Wanted
- * prisoner who is not meek hits back like a grumpy one. For hit_reaction()'s hit-back weight, which
- * has no hook yet (INTEGRATION).
- */
+/// Multiplier on how likely they are to hit back when a player hits them: a Wanted or Most Wanted prisoner who is not meek hits back like a grumpy one (hit_reaction(), through bounty_hit_reaction_weights())
 /mob/living/basic/outpost_prisoner/proc/bounty_hit_back_mult()
 	if(!bounty_record || bounty_is_meek())
 		return 1
 	return bounty_by_tier(bounty_record.tier, 1, BOUNTY_PRISON_HIT_BACK_MULT_WANTED, BOUNTY_PRISON_HIT_BACK_MULT_MOST_WANTED)
 
-/// Their speed while loose, or null for the usual: a meek bounty prisoner runs faster than the others. For go_loose(), which has no hook yet (INTEGRATION).
+/**
+ * A calm prisoner's hit-back and back-off weights (outpost_prisoner_hit_reaction_weights()'s list,
+ * which is theirs to change), scaled for a bounty prisoner. Returns the same list. hit_reaction() rolls on it.
+ */
+/mob/living/basic/outpost_prisoner/proc/bounty_hit_reaction_weights(list/weights)
+	if(!bounty_record || !islist(weights))
+		return weights
+	weights[PRISONER_HIT_FIGHT] = max(1, round(weights[PRISONER_HIT_FIGHT] * bounty_hit_back_mult()))
+	weights[PRISONER_HIT_COWER] = max(1, round(weights[PRISONER_HIT_COWER] * bounty_back_off_mult()))
+	return weights
+
+/// Their speed while loose, or null for the usual: a meek bounty prisoner runs faster than the others (go_loose())
 /mob/living/basic/outpost_prisoner/proc/bounty_loose_speed()
 	return bounty_is_meek() ? BOUNTY_PRISON_MEEK_LOOSE_SPEED : null
 
-/// Multiplier on their weight as the wildcard "snap" prisoner: a Most Wanted ringleader's is doubled. For pick_snapper(), which has no hook yet (INTEGRATION).
+/// The speed they go back to when not running from anything: a loose meek bounty prisoner keeps their loose speed (update_flee_speed(), back_in_custody())
+/mob/living/basic/outpost_prisoner/proc/bounty_base_speed()
+	if(trouble == PRISONER_TROUBLE_LOOSE)
+		var/loose_speed = bounty_loose_speed()
+		if(loose_speed)
+			return loose_speed
+	return initial(speed)
+
+/// How long going over a serving hatch takes them, or null for the usual: a meek bounty prisoner is quicker (start_climb())
+/mob/living/basic/outpost_prisoner/proc/bounty_climb_time()
+	return bounty_is_meek() ? BOUNTY_PRISON_MEEK_CLIMB_TIME : null
+
+/// Multiplier on their weight as the wildcard "snap" prisoner: a Most Wanted ringleader's is doubled (pick_snapper())
 /mob/living/basic/outpost_prisoner/proc/bounty_snap_weight_mult()
 	return bounty_record?.tier == BOUNTY_TIER_MOST_WANTED ? BOUNTY_PRISON_RINGLEADER_SNAP_MULT : 1
 
-/// An awake, uncuffed Most Wanted prisoner in the yard, who stirs the others up, or null
+/// `rioters` with any Most Wanted first, so a ringleader is among the first to shout when a riot starts (start_riot()). Returns a new list.
+/proc/bounty_ringleaders_first(list/rioters)
+	var/list/leaders = list()
+	var/list/others = list()
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in rioters)
+		if(rioter.bounty_record?.tier == BOUNTY_TIER_MOST_WANTED)
+			leaders += rioter
+		else
+			others += rioter
+	return leaders + others
+
+/// An awake, uncuffed Most Wanted prisoner out in the yard, not shut in a cell, who stirs the others up, or null
 /datum/outpost_prison/proc/bounty_ringleader()
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
 		if(prisoner.bounty_record?.tier != BOUNTY_TIER_MOST_WANTED || !counts_for_tension(prisoner))
 			continue
-		if(prisoner.stat == CONSCIOUS && !prisoner.cuffs)
-			return prisoner
+		if(prisoner.stat != CONSCIOUS || prisoner.cuffs || !in_cell_block(prisoner) || prisoner.is_confined())
+			continue
+		return prisoner
 	return null
 
 /// Tension the wing's bounty prisoners add: a Most Wanted ringleader (compute_tension())
@@ -605,9 +651,9 @@ GLOBAL_VAR(bounty_pool_timer)
 
 /**
  * A meek bounty prisoner goes over a serving hatch left open on both sides sooner than the others
- * (below BOUNTY_PRISON_MEEK_CLIMB_MOOD) and faster (BOUNTY_PRISON_MEEK_CLIMB_TIME). Below
+ * (below BOUNTY_PRISON_MEEK_CLIMB_MOOD), while a member of the wing is home. Below
  * PRISONER_CLIMB_MOOD the routine's own climb duty comes first anyway. Picked as leisure, with a
- * weight that puts it ahead of anything else.
+ * weight that puts it ahead of anything else. Every climb of theirs is quicker (bounty_climb_time()).
  */
 /datum/prisoner_activity/climb_hatch/bounty_meek
 	leisure = TRUE
@@ -628,23 +674,20 @@ GLOBAL_VAR(bounty_pool_timer)
 	spot = hatch.yard_side_turf()
 	return !!spot
 
-/datum/prisoner_activity/climb_hatch/bounty_meek/arrive()
-	var/mob/living/basic/outpost_prisoner/climber = prisoner
-	. = ..()
-	if(climber?.climb_ref)
-		climber.climb_left = min(climber.climb_left, BOUNTY_PRISON_MEEK_CLIMB_TIME)
-
-/// Whether they are a meek bounty prisoner in a mood to go over an open hatch
+/// Whether they are a meek bounty prisoner in a mood to go over an open hatch, with the crew home (nothing new starts in an empty wing)
 /datum/prisoner_activity/climb_hatch/bounty_meek/proc/bounty_meek_may_climb()
-	return prisoner?.bounty_is_meek() && prisoner.mood < BOUNTY_PRISON_MEEK_CLIMB_MOOD && prisoner.prison?.trouble_enabled
+	return prisoner?.bounty_is_meek() && prisoner.mood < BOUNTY_PRISON_MEEK_CLIMB_MOOD && prisoner.prison?.trouble_enabled && prisoner.prison.crew_home()
 
 /**
- * A meek bounty prisoner below BOUNTY_PRISON_MEEK_DART_MOOD hangs about within
- * BOUNTY_PRISON_MEEK_DART_RANGE tiles of a staff door for BOUNTY_PRISON_MEEK_WATCH_TIME, glancing
- * at it: the tell, which examine shows too. If staff open that door while they are that close, at
- * BOUNTY_PRISON_MEEK_DART_CHANCE (once a watch) they dart for it. Past it and out of the cell block
- * they are an ordinary runner (prisoner_escaped()), with the usual loose clock. A shut door or
- * someone in the doorway stops them short.
+ * A meek bounty prisoner below BOUNTY_PRISON_MEEK_DART_MOOD, with a member of the wing home, hangs
+ * about BOUNTY_PRISON_MEEK_DART_RANGE tiles from a staff door (never right in front of it) for
+ * BOUNTY_PRISON_MEEK_WATCH_TIME, glancing at it: the tell, which examine shows too. If the door opens
+ * while they are that close, at BOUNTY_PRISON_MEEK_DART_CHANCE (once a watch) they dart for it: up to
+ * the door, and through the doorway to the far side in one go once the door is open and both are
+ * clear, so they are never left standing in the doorway. Past it they are an ordinary runner
+ * (prisoner_escaped()), with the usual loose clock. Stopped short (the door shut, someone in the
+ * way until the dart runs out, knocked down, grabbed, the crew gone) they stay in the yard and the
+ * watch is over.
  */
 /datum/prisoner_activity/bounty_door_watch
 	name = "watching the door"
@@ -683,7 +726,8 @@ GLOBAL_VAR(bounty_pool_timer)
 		var/obj/machinery/door/airlock/security/prison_staff/door = pick_n_take(doors)
 		var/list/options = list()
 		for(var/turf/tile as anything in RANGE_TURFS(BOUNTY_PRISON_MEEK_DART_RANGE, door))
-			if(!prisoner.walkable[tile] || prisoner.prison.cell_at(tile) || !prisoner.may_loiter(tile))
+			// Not right in front of the door, where they would stand in the way of staff coming in
+			if(get_dist(tile, door) <= 1 || !prisoner.walkable[tile] || prisoner.prison.cell_at(tile) || !prisoner.may_loiter(tile))
 				continue
 			if(tile != prisoner.loc && prisoner.tile_taken(tile))
 				continue
@@ -707,7 +751,8 @@ GLOBAL_VAR(bounty_pool_timer)
 	if(darting)
 		return BOUNTY_PRISON_ACTIVITY_CONTINUE
 	var/obj/machinery/door/airlock/door = door_ref?.resolve()
-	if(!door || !prisoner.bounty_may_watch_door())
+	// Their chance came and went: the watch is over
+	if(!door || tried || !prisoner.bounty_may_watch_door())
 		return BOUNTY_PRISON_ACTIVITY_DONE
 	prisoner.face_atom(door)
 	return ..()
@@ -732,10 +777,11 @@ GLOBAL_VAR(bounty_pool_timer)
 	SIGNAL_HANDLER
 	if(tried || darting || !started || prisoner?.activity != src)
 		return
-	if(get_dist(prisoner, door) > BOUNTY_PRISON_MEEK_DART_RANGE || !prisoner.routine_allowed())
+	if(get_dist(prisoner, door) > BOUNTY_PRISON_MEEK_DART_RANGE || !prisoner.routine_allowed() || !prisoner.prison?.crew_home())
 		return
 	tried = TRUE
-	if(prob(BOUNTY_PRISON_MEEK_DART_CHANCE))
+	var/forced_dart = prisoner.prison.prison_bounty_forced_dart
+	if(isnull(forced_dart) ? prob(BOUNTY_PRISON_MEEK_DART_CHANCE) : forced_dart)
 		start_dart()
 
 /// Off they go: a step every BOUNTY_PRISON_MEEK_DART_STEP, through the door and out of the cell block. Returns TRUE if they went.
@@ -751,58 +797,73 @@ GLOBAL_VAR(bounty_pool_timer)
 	return TRUE
 
 /**
- * One step of a dart: up to the doorway, into it while the door stands open, then out the far side.
- * A staff door never lets a prisoner through on their own feet (outpost_prison_doors.dm), so the
- * slip into the open doorway is a hop past that rule: this is the one way a prisoner gets through.
- * Out of the cell block they have escaped. Stopped (the door shut, someone in the doorway, knocked
- * down, grabbed, or out of steps) they give up on it and go back to watching until the watch runs out.
+ * One step of a dart. Up to the tile in front of the door, waiting a step while it is in the way;
+ * then, once the door stands open and both the doorway and the tile past it are clear, through to
+ * that far tile in one go. A staff door never lets a prisoner through on their own feet
+ * (outpost_prison_doors.dm), so the hop is the one way a prisoner gets past it, and they are never
+ * left standing in the doorway, where they could be swapped or walk into the office. Out of the cell
+ * block they have escaped. Anything else ends the dart (dart_stopped()): the door shut, knocked down,
+ * grabbed, in trouble, the crew gone, or the steps run out with the way still blocked.
  */
 /datum/prisoner_activity/bounty_door_watch/proc/dart_step()
 	var/obj/machinery/door/airlock/door = door_ref?.resolve()
 	var/datum/outpost_prison/prison = prisoner?.prison
-	if(!darting || !door || !prison || prisoner.activity != src)
+	if(!darting || !prison || prisoner.activity != src)
 		darting = FALSE
 		return
-	if(prisoner.stat != CONSCIOUS || prisoner.can_be_dragged() || prisoner.pulledby || prisoner.in_trouble())
-		darting = FALSE
+	if(!door || prisoner.stat != CONSCIOUS || prisoner.can_be_dragged() || prisoner.pulledby || prisoner.in_trouble() || !prison.crew_home())
+		dart_stopped(door)
 		return
 	if(++dart_steps > BOUNTY_PRISON_MEEK_DART_STEPS)
 		dart_stopped(door)
 		return
 	var/turf/here = get_turf(prisoner)
 	var/turf/door_turf = get_turf(door)
-	if(here == door_turf)
-		var/turf/beyond = dart_beyond(door_turf)
-		if(!beyond || !prisoner.Move(beyond, get_dir(here, beyond)))
+	if(get_dist(here, door_turf) == 1 && (get_dir(here, door_turf) in GLOB.cardinals))
+		if(door.density && !door.operating)
 			dart_stopped(door)
 			return
-	else if(get_dist(here, door_turf) == 1 && (get_dir(here, door_turf) in GLOB.cardinals))
-		if(door.density)
-			// Still swinging open: wait a step for it
-			if(!door.operating)
-				dart_stopped(door)
+		var/turf/beyond = get_step(door_turf, get_dir(here, door_turf))
+		// Open, with the doorway and the far side clear: through in one go
+		if(!door.density && beyond && !prison.in_cell_block(beyond) && !door_turf.is_blocked_turf(exclude_mobs = FALSE) && !beyond.is_blocked_turf(exclude_mobs = FALSE))
+			darting = FALSE
+			prisoner.hop_to(beyond)
+			if(!prison.in_cell_block(prisoner))
+				prison.prisoner_escaped(prisoner)
 				return
-		else if(door_turf.is_blocked_turf(exclude_mobs = FALSE))
 			dart_stopped(door)
 			return
-		else
-			prisoner.hop_to(door_turf)
+		// Still swinging open, or someone in the way: wait a step
 	else
 		var/turf/approach = dart_approach(door_turf, here)
 		var/turf/next = approach ? get_step_towards(prisoner, approach) : null
-		if(!next || !prisoner.Move(next, get_dir(here, next)))
+		if(!next)
 			dart_stopped(door)
 			return
-	if(!prison.in_cell_block(prisoner))
-		darting = FALSE
-		prison.prisoner_escaped(prisoner)
-		return
+		// Someone in the way: wait a step
+		prisoner.Move(next, get_dir(here, next))
 	addtimer(CALLBACK(src, PROC_REF(dart_step)), BOUNTY_PRISON_MEEK_DART_STEP, TIMER_DELETE_ME)
 
-/// The dart failed: they pull up short and go back to watching
+/**
+ * The dart is over without them getting out: they stay in the yard (back off the door's tile if they
+ * are somehow on it), what they can reach is worked out afresh, and the watch ends.
+ */
 /datum/prisoner_activity/bounty_door_watch/proc/dart_stopped(obj/machinery/door/airlock/door)
 	darting = FALSE
-	prisoner.visible_message(span_notice("[prisoner] pulls up short of [door]."))
+	tried = TRUE
+	ends_at = min(ends_at, world.time)
+	var/datum/outpost_prison/prison = prisoner?.prison
+	if(!prison)
+		return
+	var/turf/here = get_turf(prisoner)
+	var/turf/door_turf = get_turf(door)
+	if(door_turf && here == door_turf && !prisoner.pulledby)
+		var/turf/back = dart_approach(door_turf, here)
+		if(back)
+			prisoner.hop_to(back)
+	prison.refresh_prisoner_reach(prisoner)
+	if(prisoner.stat == CONSCIOUS && door)
+		prisoner.visible_message(span_notice("[prisoner] pulls up short of [door]."))
 
 /// The tile straight in front of the door on their side (one they can walk), nearest to `from`, or null
 /datum/prisoner_activity/bounty_door_watch/proc/dart_approach(turf/door_turf, turf/from)
@@ -818,17 +879,9 @@ GLOBAL_VAR(bounty_pool_timer)
 			best_distance = distance
 	return best
 
-/// A tile beside the door that is out of the cell block and open, or null
-/datum/prisoner_activity/bounty_door_watch/proc/dart_beyond(turf/door_turf)
-	for(var/direction in GLOB.cardinals)
-		var/turf/beyond = get_step(door_turf, direction)
-		if(beyond && !prisoner.prison.in_cell_block(beyond) && !beyond.is_blocked_turf(exclude_mobs = FALSE))
-			return beyond
-	return null
-
-/// Whether they are a meek bounty prisoner in a mood to watch the staff door for their chance
+/// Whether they are a meek bounty prisoner in a mood to watch the staff door for their chance, with a member of the wing home (nothing new starts in an empty wing)
 /mob/living/basic/outpost_prisoner/proc/bounty_may_watch_door()
-	return bounty_is_meek() && mood < BOUNTY_PRISON_MEEK_DART_MOOD && !!prison?.trouble_enabled
+	return bounty_is_meek() && mood < BOUNTY_PRISON_MEEK_DART_MOOD && !!prison?.trouble_enabled && prison.crew_home()
 
 // ===== CONSOLES =====
 
@@ -860,7 +913,8 @@ GLOBAL_VAR(bounty_pool_timer)
 /**
  * The warden console's bounty block (OutpostPrison.tsx), for the top-level payload: the intake
  * setting, how many bounty prisoners the wing holds and may hold, and the next bounty arrival once
- * it is named, with the seconds until it can beam in.
+ * it is named. The next arrival is theirs only once the notice has run: "in" is the seconds until it
+ * beams in when it is; otherwise an ordinary prisoner comes first and "after_next" says so.
  */
 /datum/outpost_prison/proc/bounty_console_payload(mob/user)
 	var/datum/bounty_record/next = bounty_next_record()
@@ -868,11 +922,13 @@ GLOBAL_VAR(bounty_pool_timer)
 	if(next)
 		var/notice_left = max(0, (next.prison_notice_at + BOUNTY_PRISON_NOTICE_TIME - world.time) / (1 SECONDS))
 		var/due = next_arrival_in()
+		var/theirs = !isnull(due) && due >= notice_left
 		next_block = list(
 			"name" = next.name,
 			"tier" = bounty_tier_name(next.tier || BOUNTY_TIER_PETTY),
 			"level" = next.tier || BOUNTY_TIER_PETTY,
-			"in" = isnull(due) ? null : round(max(notice_left, due)),
+			"in" = theirs ? round(due) : null,
+			"after_next" = !isnull(due) && !theirs,
 		)
 	return list(
 		"setting" = prison_bounty_intake,
@@ -884,7 +940,7 @@ GLOBAL_VAR(bounty_pool_timer)
 
 /**
  * A warden console action for bounty prisoners: "set_bounty_intake" {setting}, managers only.
- * Returns TRUE if it was one. The console reaches it through extras_act() (INTEGRATION).
+ * Returns TRUE if it was one. The console reaches it through extras_act().
  */
 /datum/outpost_prison/proc/bounty_warden_act(action, list/params, mob/user)
 	if(action != "set_bounty_intake")
@@ -895,13 +951,8 @@ GLOBAL_VAR(bounty_pool_timer)
 	set_bounty_intake(params?["setting"], user)
 	return TRUE
 
-/// The admin panel's bounty actions. INTEGRATION: these belong in GLOB.outpost_admin_prison_actions (outpost_admin_prison.dm); until they are listed there, bounty_admin_payload() adds them.
-#define BOUNTY_PRISON_ADMIN_ACTIONS list("prison_bounty_admit", "prison_bounty_make", "prison_bounty_intake", "prison_bounty_clear")
-
-/// The admin panel's "bounty" block in the extras (extras_admin_payload()): the wing's intake, its named next arrival and the whole pool
+/// The admin panel's "bounty" block in the extras (extras_admin_payload()): the wing's intake, its named next arrival and the whole pool. Its actions are listed in GLOB.outpost_admin_prison_actions (outpost_admin_prison.dm).
 /datum/outpost_prison/proc/bounty_admin_payload()
-	// The manipulator routes only listed actions to the prison (outpost_admin.dm), and its panel is open before any of these is sent.
-	GLOB.outpost_admin_prison_actions |= BOUNTY_PRISON_ADMIN_ACTIONS
 	bounty_pool_prune()
 	var/datum/bounty_record/next = bounty_next_record()
 	var/list/rows = list()
@@ -975,6 +1026,5 @@ GLOBAL_VAR(bounty_pool_timer)
 			return "clear the prisoner pool ([count] record\s)"
 	return null
 
-#undef BOUNTY_PRISON_ADMIN_ACTIONS
 #undef BOUNTY_PRISON_ACTIVITY_CONTINUE
 #undef BOUNTY_PRISON_ACTIVITY_DONE

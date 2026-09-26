@@ -105,6 +105,8 @@
 			continue
 		if(mission.link_gps_unit(gps_unit))
 			linked++
+	// The last sightings of the criminals this ship hunts (voidcrew/modules/bounties/bounty_placement.dm)
+	linked += bounty_link_gps(ship, gps_unit)
 
 	var/live_beacons = LAZYLEN(gps_unit.linked_mission_signals)
 	if(live_beacons)
@@ -169,6 +171,9 @@
 	data["has_created_bounty"] = SSbounty?.ship_has_active_player_bounty(ship) || FALSE
 	data["has_claimed_player_bounty"] = SSbounty?.ship_has_claimed_player_bounty(ship) || FALSE
 	data["ship_balance"] = ship.ship_account?.account_balance || 0
+
+	// Wanted criminals: `wanted` and `wanted_hunt`. Mugshots are in ui_static_data(). (voidcrew/modules/bounties/bounty_board.dm)
+	board_add_wanted_data(data, ship, user)
 
 	// Live player-outpost advertisements (see voidcrew/modules/player_outposts/outpost_adverts.dm)
 	data["outpost_adverts"] = list()
@@ -244,6 +249,11 @@
 			SSmissions.force_refresh_ship_missions(ship)
 			balloon_alert(usr, "missions refreshed!")
 			return TRUE
+
+		// ========== WANTED CRIMINALS (voidcrew/modules/bounties/bounty_board.dm) ==========
+
+		if("hunt_wanted", "abandon_wanted", "print_warrant", "turn_in_wanted")
+			return board_wanted_act(action, params, ship, ui.user)
 
 		// ========== BOUNTY ACTIONS ==========
 

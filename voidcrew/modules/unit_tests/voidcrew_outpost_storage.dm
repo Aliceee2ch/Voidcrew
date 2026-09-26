@@ -1,4 +1,3 @@
-// MARKET-OWNER: P6
 /**
  * Outpost safe storage (outpost_storage.dm): the room at every rotation, renting and paying,
  * the ckey lock, giving a locker up, admin release, what a locker refuses and what it survives,

@@ -1,4 +1,3 @@
-// MARKET-OWNER: P3
 /**
  * Outpost cloning bay (outpost_cloning_bay.dm) and the ghost clone chooser (clone_wake.dm).
  *

@@ -1,4 +1,3 @@
-// MARKET-OWNER: P1
 // Outpost marketplace: shared price keys, the income ledger and service doors (outpost_market.dm)
 
 // Price keys of the shared price table (GLOB.outpost_price_table). Also the ledger's service keys.

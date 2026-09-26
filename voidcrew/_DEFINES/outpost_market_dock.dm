@@ -1,4 +1,3 @@
-// MARKET-OWNER: P2
 // Ship bay docking fee and bay eviction (outpost_dock_fees.dm)
 
 #define OUTPOST_DOCK_FEE_DEFAULT 0

@@ -1,4 +1,3 @@
-// MARKET-OWNER: P1
 /**
  * # Outpost marketplace: prices, roles and payments
  *

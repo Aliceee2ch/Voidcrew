@@ -1,4 +1,3 @@
-// MARKET-OWNER: P6
 /**
  * # Outpost safe storage
  *

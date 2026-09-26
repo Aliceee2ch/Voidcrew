@@ -1,4 +1,3 @@
-// MARKET-OWNER: P4
 // Outpost owner shop (outpost_shop.dm, outpost_shop_stock.dm)
 
 #define OUTPOST_SHOP_COST 2000

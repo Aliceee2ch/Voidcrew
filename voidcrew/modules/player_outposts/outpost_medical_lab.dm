@@ -1,4 +1,3 @@
-// MARKET-OWNER: P5
 /**
  * # Medical lab
  *

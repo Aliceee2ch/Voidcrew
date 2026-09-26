@@ -1,4 +1,3 @@
-// MARKET-OWNER: P3
 /**
  * # Cloning bay
  *

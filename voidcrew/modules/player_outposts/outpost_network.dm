@@ -1,4 +1,3 @@
-// MARKET-OWNER: P8
 /**
  * # Outpost teleporter network
  *

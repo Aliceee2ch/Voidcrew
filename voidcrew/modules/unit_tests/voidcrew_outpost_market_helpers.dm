@@ -1,4 +1,3 @@
-// MARKET-OWNER: P0
 /**
  * Shared helpers for the outpost marketplace tests. Frozen after P0: packages add their own
  * helpers to their own test files.

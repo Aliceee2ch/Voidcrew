@@ -1,4 +1,3 @@
-// MARKET-OWNER: P1
 /**
  * Outpost marketplace core: prices, the pricer role, membership, the one charge proc, the playtest
  * billing toggle, service rooms (area, protection, power, doors) and service doors.

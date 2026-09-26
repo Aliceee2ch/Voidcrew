@@ -1,4 +1,3 @@
-// MARKET-OWNER: P3
 /**
  * # Waking in a clone (ghost side)
  *

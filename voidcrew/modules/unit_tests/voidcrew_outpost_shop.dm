@@ -1,4 +1,3 @@
-// MARKET-OWNER: P4
 /**
  * Outpost owner shop (spec 3.3, R1, abuse review F-25 to F-27): the room at every rotation, what
  * the stock unit refuses, who may stock, price and take, listings, sales and their refusals,

@@ -1,4 +1,3 @@
-// MARKET-OWNER: P8
 /**
  * The network pad's traveller window (OutpostTeleporter.tsx). Everything is in ui_data: the list
  * is one row per linked pad (a handful), and it changes every second while a charge runs.

@@ -1,4 +1,3 @@
-// MARKET-OWNER: P5
 // Outpost medical lab (outpost_medical_lab.dm, outpost_autosurgeon.dm, outpost_medical_lab_machines.dm)
 
 #define OUTPOST_MEDICAL_LAB_COST 2000

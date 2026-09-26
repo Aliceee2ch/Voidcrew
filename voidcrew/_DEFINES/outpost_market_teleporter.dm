@@ -1,4 +1,3 @@
-// MARKET-OWNER: P8
 // Outpost teleporter network (outpost_network.dm, outpost_teleporter.dm, outpost_network_ui.dm)
 
 /// do_teleport() channel of network pad trips

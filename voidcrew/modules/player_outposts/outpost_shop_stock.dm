@@ -1,4 +1,3 @@
-// MARKET-OWNER: P4
 /**
  * # Owner shop stock
  *

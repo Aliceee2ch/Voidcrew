@@ -1,4 +1,3 @@
-// MARKET-OWNER: P3
 // Outpost cloning bay (outpost_cloning_bay.dm, clone_wake.dm)
 
 #define OUTPOST_CLONING_BAY_COST 3000

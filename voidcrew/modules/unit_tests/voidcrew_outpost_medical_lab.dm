@@ -1,4 +1,3 @@
-// MARKET-OWNER: P5
 /**
  * Medical lab tests (spec 3.4, abuse review F-28 to F-31). Voidcrew defines are not visible here,
  * so prices, ids and times are literals: pass 300 cr for 30 minutes, room "medical_lab" at 2000 cr.

@@ -1,4 +1,3 @@
-// MARKET-OWNER: P0
 /**
  * Outpost marketplace foundation hardening: the charge compares effective prices, service rooms
  * survive a singularity, a room cannot be sealed at placement and reports a blocked or airless

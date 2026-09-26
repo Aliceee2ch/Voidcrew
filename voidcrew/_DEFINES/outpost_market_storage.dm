@@ -1,4 +1,3 @@
-// MARKET-OWNER: P6
 // Outpost safe storage (outpost_storage.dm)
 
 #define OUTPOST_STORAGE_COST 1000

@@ -1,4 +1,3 @@
-// MARKET-OWNER: P8
 /**
  * The outpost teleporter network (outpost_network.dm, outpost_teleporter.dm). Two claims with
  * Teleporter rooms; trips are driven by calling start_trip() and finish_trip() directly.

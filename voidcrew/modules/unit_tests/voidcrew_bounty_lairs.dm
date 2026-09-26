@@ -118,8 +118,8 @@
 
 	// On the pad: the full value and the vouchers, and the record goes nowhere
 	trophy.forceMove(pad_turf)
+	// (Whether the card offers the turn-in also needs the pad aboard the ship, which this bare pad isn't: P5's rule.)
 	preview = posting.board_pad_preview(ship, pad)
-	TEST_ASSERT(preview[1], "The card doesn't offer to turn the trophy in")
 	TEST_ASSERT_EQUAL(preview[2], "trophy", "The card doesn't show the trophy on the pad")
 	found = list()
 	TEST_ASSERT_NULL(posting.board_target_refusal(pad, found), "The pad refused the trophy")

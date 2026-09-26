@@ -667,6 +667,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 
 	if(acting.shuttle.height > dock_to_use.height || acting.shuttle.width > dock_to_use.width)
 		berth?.release(force = TRUE) // nothing has landed yet, safe to free immediately
+		acting.release_berth_flags(src) // and hand back a reserve pad claimed above
 		acting.state = prev_state
 		concerned = FALSE
 		to_chat(user, span_warning("Ship is too large to dock at this location."))
@@ -677,6 +678,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	var/dock_result = acting.dock(src, dock_to_use)
 	if(dock_result)
 		berth?.release(force = TRUE)
+		acting.release_berth_flags(src)
 		acting.state = prev_state
 		to_chat(user, span_notice("[dock_result]"))
 	concerned = FALSE

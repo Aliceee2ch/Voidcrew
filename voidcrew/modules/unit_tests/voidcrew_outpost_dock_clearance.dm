@@ -71,3 +71,51 @@
 				TEST_ASSERT(home.is_upgrade_ground_reserved(corner), "[label] lands on ([corner.x],[corner.y]), where an upgrade may be placed")
 		reset_reserve_dock_to_home(dock)
 	TEST_ASSERT_EQUAL(landings, 20, "Not every test hull could land at the claim's two docks")
+
+/// A dock the outpost refuses after claiming a reserve pad hands the pad back.
+/datum/unit_test/voidcrew_outpost_reserve_pad_release
+	parent_type = /datum/unit_test/voidcrew_outpost_dock_clearance
+	/// The bare ship fixture, unhooked from its fake port before cleanup
+	var/obj/structure/overmap/ship/visitor_ship
+	/// The pad this test shrank, and the home level it hid from reset_reserve_dock_to_home()
+	var/obj/docking_port/stationary/shrunk_dock
+	var/saved_home_z
+
+/datum/unit_test/voidcrew_outpost_reserve_pad_release/Destroy()
+	if(visitor_ship)
+		visitor_ship.shuttle = null
+		visitor_ship.dock_index = 0
+	if(shrunk_dock && !QDELETED(shrunk_dock))
+		shrunk_dock.reserve_home_z = saved_home_z
+		reset_reserve_dock_to_home(shrunk_dock)
+	return ..()
+
+/datum/unit_test/voidcrew_outpost_reserve_pad_release/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim("reservepadowner")
+	TEST_ASSERT_NOTNULL(home, "The reserve pad outpost did not load")
+	TEST_ASSERT(!home.has_hangar_elevator(), "The fresh claim already has a hangar elevator; the reserve pads are not in use")
+	shrunk_dock = home.reserve_dock
+	TEST_ASSERT_NOTNULL(shrunk_dock, "The claim has no reserve dock")
+	saved_home_z = shrunk_dock.reserve_home_z
+	// Too small for the hull, and kept that way: the outpost resets free pads before choosing one.
+	shrunk_dock.reserve_home_z = 0
+	shrunk_dock.width = 3
+	shrunk_dock.height = 3
+
+	var/obj/docking_port/mobile/voidcrew/port = new(run_loc_floor_bottom_left)
+	fake_ports += port
+	port.width = 5
+	port.height = 5
+	port.dwidth = 2
+	port.dheight = 2
+	port.port_direction = NORTH
+	visitor_ship = allocate(/obj/structure/overmap/ship)
+	visitor_ship.shuttle = port
+	var/previous_state = visitor_ship.state
+	var/mob/living/carbon/human/pilot = make_player(run_loc_floor_bottom_left, "reservepadpilot")
+
+	home.ship_act(pilot, visitor_ship)
+	TEST_ASSERT(!home.first_dock_taken, "A refused dock left its reserve pad claimed")
+	TEST_ASSERT_EQUAL(visitor_ship.dock_index, 0, "A refused dock left the ship holding a pad index")
+	TEST_ASSERT_EQUAL(visitor_ship.state, previous_state, "A refused dock did not restore the ship's state")
+	TEST_ASSERT(!home.concerned, "A refused dock left the outpost busy")

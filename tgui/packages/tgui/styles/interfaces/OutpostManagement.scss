@@ -157,6 +157,23 @@ $range: #e03c3c;
 .Outpost__readout { display: flex; flex-direction: column; gap: 3px; strong { color: $amber; font: 18px 'Consolas', monospace; } small { color: $muted; font-size: 10px; } }
 .Outpost__readout .Outpost__broadcast-error { color: $amber; }
 .Outpost__ownership { display: flex; align-items: center; flex: 1; min-width: 0; gap: 6px; padding-top: 8px; > .Dropdown { flex: 1; min-width: 0; } }
+// Marketplace: Pricing and Services tabs, bay eviction, visitor billing banner.
+.Outpost__banner {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 7px;
+  padding: 6px 12px;
+  background: rgba($amber, 0.12);
+  border-bottom: 1px solid rgba($amber, 0.3);
+  color: $amber;
+  font-size: 11px;
+}
+.Outpost__countdown { flex: 0 0 auto; color: $amber; font: 12px 'Consolas', monospace; }
+.Outpost__amount { flex: 0 0 auto; color: #9fbd85; font: 12px 'Consolas', monospace; }
+.Outpost__time { flex: 0 0 38px; color: $muted; font: 10px 'Consolas', monospace; }
+.Outpost__service { margin-bottom: 6px; }
+.Outpost__allow-add { margin-top: 8px; > .Dropdown { flex: 1; min-width: 0; } }
 .Outpost__carousel {
   display: flex;
   align-items: center;

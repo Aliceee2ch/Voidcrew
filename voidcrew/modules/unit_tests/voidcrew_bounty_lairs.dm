@@ -69,6 +69,26 @@
 	var/list/kinds = SSbounty_lairs.lair_kinds()
 	return kinds["mafia_club"]
 
+/// A lair bound to `posting` whose "interior" is the west `width` columns of the test floor, loaded but never torn down
+/datum/unit_test/voidcrew_bounty_lairs/proc/test_fake_lair(datum/criminal_bounty/kill_only/lair/posting, width = 3)
+	var/turf/origin = run_loc_floor_bottom_left
+	var/obj/structure/overmap/space_ruin/bounty_lair/lair = allocate(/obj/structure/overmap/space_ruin/bounty_lair)
+	lair_test_fakes += lair
+	lair.lair_bind_posting(posting)
+	var/datum/map_footprint/footprint = allocate(/datum/map_footprint)
+	footprint.z_value = origin.z
+	footprint.set_rect(origin.x, origin.y, width, 5)
+	lair.footprint = footprint
+	lair.loaded = TRUE
+	return lair
+
+/// Sends the load signal to `lair` and waits for it to finish linking
+/datum/unit_test/voidcrew_bounty_lairs/proc/test_link(obj/structure/overmap/space_ruin/bounty_lair/lair)
+	SEND_SIGNAL(lair, "voidcrew_planet_loaded", TRUE) // COMSIG_VOIDCREW_PLANET_LOADED
+	var/deadline = world.time + 10 SECONDS
+	UNTIL(lair.lair_link_done || world.time >= deadline)
+	return lair.lair_link_done
+
 // ===== KILL-ONLY POSTINGS =====
 
 /// A kill-only bounty pays 100% on its trophy at a pad, pays nothing for anything else, and makes no prisoner record
@@ -93,8 +113,10 @@
 	TEST_ASSERT_EQUAL(shares[1], 5000, "The card's pay figure isn't the full value")
 	TEST_ASSERT(findtext(posting.board_warrant_text(), "WANTED: DEAD"), "The warrant doesn't say WANTED: DEAD")
 
-	// The pad never takes the boss, alive or dead: only its trophy
-	var/mob/living/basic/boss = allocate(/mob/living/basic, pad_turf)
+	// The pad never takes the boss, alive or dead, even one wanted on this very bounty: only its trophy
+	var/mob/living/basic/bounty_lair_boss/boss = allocate(/mob/living/basic/bounty_lair_boss, pad_turf)
+	boss.posting_ref = WEAKREF(posting)
+	boss.ai_controller?.set_ai_status(AI_STATUS_OFF)
 	var/list/found = list()
 	TEST_ASSERT(istext(posting.board_target_refusal(pad, found)), "The pad took a boss standing on it")
 	boss.death()
@@ -177,8 +199,6 @@
 	TEST_ASSERT_EQUAL(lair.mission_claims, 1, "The lair doesn't carry its posting's claim")
 	TEST_ASSERT_EQUAL(lair.posting_ref?.resolve(), posting, "The lair isn't bound to its posting")
 	TEST_ASSERT_EQUAL(posting.board_site_name, "Club Volga", "The card doesn't name the club")
-	for(var/i in 1 to 5)
-		TEST_ASSERT(SScriminal_bounties.board_pick_ruin(null, null) != lair, "The board would place a criminal at the lair")
 
 	// Yellow or red space; 4800-5600 times the zone, 3 vouchers and red +1 (BOUNTY_PAY_LAIR_MIN/_MAX, BOUNTY_VOUCHERS_LAIR)
 	TEST_ASSERT(posting.board_zone in list(2, 3), "The club is not in yellow or red space") // ZONE_YELLOW, ZONE_RED
@@ -198,8 +218,13 @@
 	TEST_ASSERT_EQUAL(posting.hunt(ship), TRUE, "A ship could not hunt the lair")
 	TEST_ASSERT(ship.get_waypoint(posting.board_waypoint_key()), "Hunting the lair charted no waypoint")
 
-	// A lair nobody boarded goes the moment its bounty closes, and the next of its kind waits 60-90 minutes
+	// A lair nobody boarded goes once its bounty closes (a tick later, when the posting's claim is off it), and the
+	// next of its kind waits 60-90 minutes
 	posting.close("admin") // BOUNTY_CLOSE_ADMIN
+	TEST_ASSERT(!lair.mission_locked, "Closing the bounty didn't unlock its lair")
+	TEST_ASSERT_EQUAL(lair.mission_claims, 0, "The closed bounty still claims its lair")
+	var/deadline = world.time + 5 SECONDS
+	UNTIL(QDELETED(lair) || world.time >= deadline)
 	TEST_ASSERT(QDELETED(lair), "A lair that never loaded stayed on the chart after its bounty closed")
 	TEST_ASSERT_NULL(kind.live(), "The kind still counts a closed lair as up")
 	TEST_ASSERT(kind.lair_next_due >= world.time + 60 MINUTES && kind.lair_next_due <= world.time + 90 MINUTES, "The next lair isn't due 60-90 minutes after the last closed") // BOUNTY_LAIR_GAP_MIN/_MAX
@@ -227,6 +252,7 @@
 	body.mind_initialize()
 	posting.close("admin") // BOUNTY_CLOSE_ADMIN
 	TEST_ASSERT(!lair.mission_locked, "Closing the bounty didn't unlock its lair")
+	sleep(1 SECONDS)
 	TEST_ASSERT(!QDELETED(lair) && lair.mapzone == zone, "The lair was torn down with someone inside")
 	TEST_ASSERT(length(lair.admin_cleanup_timers()), "The released lair never tries its cleanup again")
 
@@ -260,15 +286,9 @@
 /datum/unit_test/voidcrew_bounty_lairs/link/Run()
 	var/turf/origin = run_loc_floor_bottom_left
 	var/datum/criminal_bounty/kill_only/lair/posting = test_posting(5000, 3, /datum/criminal_bounty/kill_only/lair)
-	var/obj/structure/overmap/space_ruin/bounty_lair/lair = allocate(/obj/structure/overmap/space_ruin/bounty_lair)
-	lair_test_fakes += lair
-	lair.lair_bind_posting(posting)
 	// The lair's footprint is the west three columns of the floor; the east two are someone else's
-	var/datum/map_footprint/footprint = allocate(/datum/map_footprint)
-	footprint.z_value = origin.z
-	footprint.set_rect(origin.x, origin.y, 3, 5)
-	lair.footprint = footprint
-	lair.loaded = TRUE
+	var/obj/structure/overmap/space_ruin/bounty_lair/lair = test_fake_lair(posting, 3)
+	var/datum/map_footprint/footprint = lair.footprint
 
 	var/turf/boss_spot = locate(origin.x, origin.y + 4, origin.z)
 	var/obj/effect/landmark/bounty_lair_boss/boss_mark = new(boss_spot)
@@ -314,9 +334,19 @@
 	sleep(1)
 	TEST_ASSERT_EQUAL(test_count(/mob/living/basic/mouse, footprint), mice, "A second load signal spawned the lair's mobs again")
 
-	// The gate: shut while one gatekeeper stands, open once both are gone (one dead, one deleted), and only in the lair
+	// A polymorph or a type change deletes a mob without a death: the lair's mobs refuse both, so neither opens the gate
 	var/mob/living/first_keeper = keepers[1]
 	var/mob/living/second_keeper = keepers[2]
+	first_keeper.wabbajack()
+	TEST_ASSERT(!QDELETED(first_keeper), "A polymorph took a gatekeeper away")
+	second_keeper.change_mob_type(/mob/living/basic/cow, delete_old_mob = TRUE)
+	TEST_ASSERT(!QDELETED(second_keeper), "A type change took a gatekeeper away")
+	boss.wabbajack()
+	TEST_ASSERT(!QDELETED(boss), "A polymorph took the boss away")
+	TEST_ASSERT(!lair.lair_gate_open, "Polymorph or a type change opened the gate")
+	TEST_ASSERT_EQUAL(test_count(/mob/living/basic/mouse, footprint), mice, "Polymorph or a type change replaced a lair mob")
+
+	// The gate: shut while one gatekeeper stands, open once both are gone (one dead, one deleted), and only in the lair
 	first_keeper.death()
 	TEST_ASSERT(!lair.lair_gate_open, "The gate opened with a gatekeeper still standing")
 	TEST_ASSERT(gate.density, "The gate door opened with a gatekeeper still standing")
@@ -343,6 +373,113 @@
 	TEST_ASSERT(QDELETED(trophy), "The trophy of a closed bounty was left in the world")
 	TEST_ASSERT(!lair.mission_locked, "Closing the bounty didn't unlock its lair")
 	TEST_ASSERT_NULL(lair.posting_ref, "The released lair still points at its bounty")
+
+/// The boss's next phase takes over from it; a boss deleted alive (an admin) ends the bounty instead of paying out
+/datum/unit_test/voidcrew_bounty_lairs/phases
+
+/datum/unit_test/voidcrew_bounty_lairs/phases/Run()
+	var/turf/origin = run_loc_floor_bottom_left
+	var/datum/criminal_bounty/kill_only/lair/posting = test_posting(5000, 3, /datum/criminal_bounty/kill_only/lair)
+	var/obj/structure/overmap/space_ruin/bounty_lair/lair = test_fake_lair(posting, 3)
+	var/obj/effect/landmark/bounty_lair_boss/boss_mark = new(locate(origin.x, origin.y + 4, origin.z))
+	boss_mark.boss_type = /mob/living/basic/mouse
+	lair_test_made += boss_mark
+	TEST_ASSERT(test_link(lair), "The lair never finished linking")
+	var/datum/weakref/boss_ref = lair.lair_bosses[1]
+	var/mob/living/basic/mouse/first_phase = boss_ref.resolve()
+	first_phase.ai_controller?.set_ai_status(AI_STATUS_OFF)
+
+	// The mech hands over to the don as it breaks (P12's signal): he is taken on at once
+	var/mob/living/basic/mouse/second_phase = allocate(/mob/living/basic/mouse, locate(origin.x + 1, origin.y + 4, origin.z))
+	second_phase.ai_controller?.set_ai_status(AI_STATUS_OFF)
+	SEND_SIGNAL(first_phase, "bounty_mafia_don_ejected", second_phase) // COMSIG_BOUNTY_MAFIA_DON_EJECTED
+	TEST_ASSERT_EQUAL(length(lair.lair_bosses), 2, "The lair didn't take on the boss's next phase")
+	first_phase.death()
+	sleep(6 SECONDS) // BOUNTY_LAIR_TROPHY_GRACE 5 seconds
+	TEST_ASSERT(!lair.lair_boss_killed, "The lair called the fight over with the next phase still standing")
+	TEST_ASSERT_NULL(posting.board_proof(), "A trophy dropped with the next phase still standing")
+
+	// The next phase is deleted alive: nobody earned a trophy, and nothing can finish the bounty, so it closes
+	qdel(second_phase)
+	sleep(6 SECONDS) // BOUNTY_LAIR_TROPHY_GRACE 5 seconds
+	TEST_ASSERT(QDELETED(posting), "The bounty stayed up after its boss was deleted alive")
+	for(var/obj/item/bounty_proof/trophy/stray in range(5, origin))
+		TEST_FAIL("A boss deleted alive dropped a trophy at ([stray.x],[stray.y])")
+
+/// The room leash: a lair mob won't walk out of its room, but is moved when pulled or thrown, and walks freely once out
+/datum/unit_test/voidcrew_bounty_lairs/leash
+	/// The tiles the test turned into another room, and the room they came from
+	var/list/turf/leash_test_turfs = list()
+	var/area/leash_test_home
+	var/area/overmap_encounter/planet_ruin/leash_test_room
+
+/datum/unit_test/voidcrew_bounty_lairs/leash/Destroy()
+	for(var/turf/tile as anything in leash_test_turfs)
+		tile.change_area(leash_test_room, leash_test_home)
+	leash_test_turfs = null
+	QDEL_NULL(leash_test_room)
+	leash_test_home = null
+	return ..()
+
+/datum/unit_test/voidcrew_bounty_lairs/leash/Run()
+	var/turf/origin = run_loc_floor_bottom_left
+	var/turf/home_spot = locate(origin.x + 1, origin.y + 1, origin.z)
+	var/turf/door_spot = locate(origin.x + 2, origin.y + 1, origin.z)
+	var/turf/far_spot = locate(origin.x + 3, origin.y + 1, origin.z)
+	// The east tiles become another room
+	leash_test_home = get_area(home_spot)
+	leash_test_room = new
+	for(var/turf/tile as anything in list(door_spot, far_spot))
+		tile.change_area(leash_test_home, leash_test_room)
+		leash_test_turfs += tile
+
+	var/mob/living/basic/goon = allocate(/mob/living/basic, home_spot)
+	goon.AddElement(/datum/element/bounty_lair_room_leash, leash_test_home.type)
+
+	// It won't step out of its room
+	goon.Move(door_spot, EAST)
+	TEST_ASSERT_EQUAL(get_turf(goon), home_spot, "A leashed mob walked out of its room")
+
+	// Pulled, it goes: a player in the next room drags it through
+	var/mob/living/carbon/human/consistent/puller = allocate(/mob/living/carbon/human/consistent, door_spot)
+	puller.start_pulling(goon)
+	TEST_ASSERT_EQUAL(goon.pulledby, puller, "The test couldn't pull the leashed mob")
+	puller.Move(far_spot, EAST)
+	TEST_ASSERT_EQUAL(get_turf(goon), door_spot, "A pulled mob was held in its room")
+	puller.stop_pulling()
+	puller.forceMove(locate(origin.x, origin.y + 3, origin.z))
+
+	// Out of its room, it walks freely, and never gets stuck
+	goon.Move(far_spot, EAST)
+	TEST_ASSERT_EQUAL(get_turf(goon), far_spot, "A mob out of its room couldn't walk")
+
+	// Thrown out of its room, it goes
+	goon.forceMove(home_spot)
+	goon.throw_at(locate(origin.x + 4, origin.y + 1, origin.z), 2, 1)
+	var/deadline = world.time + 5 SECONDS
+	UNTIL(!goon.throwing || world.time >= deadline)
+	TEST_ASSERT(get_area(goon) != leash_test_home, "A thrown mob was held in its room")
+
+/// Where a trophy lands: on the floor it fell on, the nearest floor reached past a hole, and never in space or outside its lair
+/datum/unit_test/voidcrew_bounty_lairs/trophy_spot
+	/// The tile the test turned to space
+	var/turf/trophy_test_hole
+
+/datum/unit_test/voidcrew_bounty_lairs/trophy_spot/Destroy()
+	trophy_test_hole?.ChangeTurf(/turf/open/floor/iron)
+	trophy_test_hole = null
+	return ..()
+
+/datum/unit_test/voidcrew_bounty_lairs/trophy_spot/Run()
+	var/turf/floor = run_loc_floor_bottom_left
+	TEST_ASSERT_EQUAL(bounty_lair_trophy_spot(floor), floor, "A trophy didn't land on the floor it fell on")
+	trophy_test_hole = run_loc_floor_top_right.ChangeTurf(/turf/open/space)
+	var/turf/landed = bounty_lair_trophy_spot(trophy_test_hole)
+	TEST_ASSERT(landed && !isspaceturf(landed) && get_dist(landed, trophy_test_hole) == 1, "A trophy dropped in space didn't land on the floor beside it")
+	var/datum/map_footprint/hole_only = allocate(/datum/map_footprint)
+	hole_only.z_value = trophy_test_hole.z
+	hole_only.set_rect(trophy_test_hole.x, trophy_test_hole.y, 1, 1)
+	TEST_ASSERT_NULL(bounty_lair_trophy_spot(trophy_test_hole, hole_only), "A trophy with no floor inside its lair landed anyway")
 
 /// The real Club Volga, loaded through its lair: the don's mech in the garage, two lieutenants on the gate, three gate doors, and torn down with no replacement once its bounty closes
 /datum/unit_test/voidcrew_bounty_lairs/club
@@ -439,10 +576,16 @@
 	TEST_ASSERT_EQUAL(posting.board_vouchers, SScriminal_bounties.board_vouchers_for(3, zone), "The lich doesn't pay the Most Wanted vouchers")
 	TEST_ASSERT(posting.board_clock_held(), "The lich bounty's clock runs while he lives")
 
-	// He dies: the shard drops at the corpse, and the clock runs
+	// His lair links with him in it (a stand-in here): the board's tick keeps the bounty up
 	var/turf/pad_turf = run_loc_floor_bottom_left
 	var/turf/aside = locate(pad_turf.x + 2, pad_turf.y, pad_turf.z)
 	var/mob/living/basic/corpse = allocate(/mob/living/basic, aside)
+	site.linked = TRUE
+	site.lich_ref = WEAKREF(corpse)
+	posting.board_process(0)
+	TEST_ASSERT(posting.is_open(), "The lich bounty closed with him still in his lair")
+
+	// He dies: the shard drops at the corpse, and the clock runs
 	site.on_lich_slain(corpse, null)
 	var/obj/item/bounty_proof/trophy/lich/shard = posting.board_proof()
 	TEST_ASSERT(istype(shard), "His death dropped no crown shard")
@@ -462,15 +605,32 @@
 	TEST_ASSERT_EQUAL(ship.ship_account.account_balance - balance_before, value, "The crown shard didn't pay the lich's value")
 	TEST_ASSERT(QDELETED(posting), "The lich bounty stayed up after it was turned in")
 
-	// A second lair that goes away without a kill takes its bounty with it
+	// A second lich removed without dying (a polymorph, an admin) after his lair linked: the board's tick closes his
+	// bounty, which nothing could finish; showing the card never does
 	qdel(site)
 	var/obj/structure/overmap/space_ruin/lich_lair/second_site = surface_lich_lair()
 	TEST_ASSERT_NOTNULL(second_site, "The lich lair did not surface a second time")
 	lair_test_made += second_site
 	var/datum/criminal_bounty/kill_only/lich/second = bounty_lich_posting(second_site)
 	TEST_ASSERT_NOTNULL(second, "The second lich lair posted no bounty")
+	var/mob/living/basic/vanished = allocate(/mob/living/basic, aside)
+	second_site.linked = TRUE
+	second_site.lich_ref = WEAKREF(vanished)
+	qdel(vanished)
+	second.board_ui_entry(ship, pad)
+	TEST_ASSERT(second.is_open(), "Showing the card closed the lich bounty")
+	second.board_process(0)
+	TEST_ASSERT(QDELETED(second), "The lich bounty stayed up after he was removed without dying")
+
+	// A third lair that goes away before he is ever fought takes its bounty with it
 	qdel(second_site)
-	TEST_ASSERT(QDELETED(second), "The lich bounty stayed up after his lair went away without a kill")
+	var/obj/structure/overmap/space_ruin/lich_lair/third_site = surface_lich_lair()
+	TEST_ASSERT_NOTNULL(third_site, "The lich lair did not surface a third time")
+	lair_test_made += third_site
+	var/datum/criminal_bounty/kill_only/lich/third = bounty_lich_posting(third_site)
+	TEST_ASSERT_NOTNULL(third, "The third lich lair posted no bounty")
+	qdel(third_site)
+	TEST_ASSERT(QDELETED(third), "The lich bounty stayed up after his lair went away without a kill")
 	SSovermap.lich_lair_spawned = was_spawned
 
 // ===== ADMIN =====

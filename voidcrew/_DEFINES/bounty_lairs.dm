@@ -53,6 +53,8 @@
 
 /// After a lair boss falls, how long to wait for its next phase (the don out of his mech) before the trophy drops
 #define BOUNTY_LAIR_TROPHY_GRACE (5 SECONDS)
+/// Tiles the trophy's flood fill looks through for a safe floor, from where the boss fell, before giving up
+#define BOUNTY_LAIR_TROPHY_SEARCH 60
 /// A second pass that keeps the goons in their rooms, once every zone_mobs marker has had time to spawn (its resolver retries for up to a minute)
 #define BOUNTY_LAIR_GOON_LEASH_DELAY (65 SECONDS)
 

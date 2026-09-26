@@ -1479,7 +1479,13 @@ SUBSYSTEM_DEF(overmap)
 		qdel(planet_type)
 
 	if(ruin && ruin_list && !ruin_type)
-		ruin_type = ruin_list[pick(ruin_list)]
+		// BOUNTY (P10 review L7): never an unpickable template (a bounty lair, the lich lair, the contested cache)
+		var/list/pickable_ruins = list()
+		for(var/ruin_name in ruin_list)
+			var/datum/map_template/ruin/candidate = ruin_list[ruin_name]
+			if(!istype(candidate) || !candidate.unpickable)
+				pickable_ruins += ruin_name
+		ruin_type = ruin_list[pick(length(pickable_ruins) ? pickable_ruins : ruin_list)]
 		if(ispath(ruin_type))
 			ruin_type = new ruin_type
 

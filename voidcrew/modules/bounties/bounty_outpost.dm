@@ -1471,7 +1471,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/bounty_wanted_board, 32)
 /obj/structure/bounty_wanted_board/examine(mob/user)
 	. = ..()
 	var/count = length(bounty_public_postings())
-	. += span_notice(count ? "[count] wanted notice\s posted." : "No wanted notices posted right now.")
+	. += span_notice((count ? "[count] wanted notice\s posted." : "No wanted notices posted right now."))
 
 /obj/structure/bounty_wanted_board/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if(istype(tool, /obj/item/paper) || istype(tool, /obj/item/photo))

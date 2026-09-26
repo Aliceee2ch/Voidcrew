@@ -359,7 +359,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	blueprint.key = upgrade_key
 	outpost_upgrades[upgrade_key] = blueprint
 	log_game("PLAYER OUTPOST: [key_name(user)] bought the [prototype.name] upgrade for [prototype.price] cr at '[name]'")
-	to_chat(user, span_notice(prototype.price ? "[prototype.name] ordered. [prototype.price] cr paid from the treasury." : "[prototype.name] ordered."))
+	to_chat(user, span_notice((prototype.price ? "[prototype.name] ordered. [prototype.price] cr paid from the treasury." : "[prototype.name] ordered.")))
 	return null
 
 /// Whether the user may place or cancel the blueprint of this id now. Null when they may.
@@ -383,7 +383,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	if(blueprint.paid)
 		treasury.adjust_money(blueprint.paid, "Outpost upgrade refund: [blueprint.name], cancelled by [user.ckey]")
 	log_game("PLAYER OUTPOST: [key_name(user)] cancelled the [blueprint.name] upgrade at '[name]', refunding [blueprint.paid] cr")
-	to_chat(user, span_notice(blueprint.paid ? "[blueprint.name] order cancelled. [blueprint.paid] cr refunded." : "[blueprint.name] order cancelled."))
+	to_chat(user, span_notice((blueprint.paid ? "[blueprint.name] order cancelled. [blueprint.paid] cr refunded." : "[blueprint.name] order cancelled.")))
 	qdel(blueprint)
 	return null
 

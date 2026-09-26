@@ -878,13 +878,16 @@
 	outpost_posting.placement_kind = "trader_outpost" // BOUNTY_PLACEMENT_TRADER_OUTPOST
 	TEST_ASSERT_EQUAL(bounty_criminal_type(boss_record, outpost_posting), /mob/living/basic/bounty_criminal/normal, "A mini-boss was placed at a trader outpost")
 
-	// Examine: how hurt, and the downed hint; blending in, one layout only.
+	// Examine: how hurt, and that it is down, never whether it gets back up; blending in, one layout only.
 	var/mob/living/basic/bounty_criminal/normal/examined = allocate(__IMPLIED_TYPE__)
 	TEST_ASSERT(findtext(examine_text(examined, hunter), "unhurt"), "Examining an unhurt criminal does not say so")
 	examined.adjustBruteLoss(500)
-	TEST_ASSERT(findtext(examine_text(examined, hunter), "will get back up"), "Examining a downed criminal does not say it will get up")
+	var/downed_text = examine_text(examined, hunter)
+	var/down_line = "[examined.p_They()] [examined.p_are()] down."
+	TEST_ASSERT(findtextEx(downed_text, down_line), "Examining a downed criminal does not say it is down: [downed_text]")
+	TEST_ASSERT(!findtext(downed_text, "get back up") && !findtext(downed_text, "while cuffed"), "Examining a downed criminal explains its recovery: [downed_text]")
 	examined.blended = TRUE
-	TEST_ASSERT(!findtext(examine_text(examined, hunter), "will get back up"), "Examining a criminal blending in shows more than a decoy's layout")
+	TEST_ASSERT(!findtextEx(examine_text(examined, hunter), down_line), "Examining a criminal blending in shows more than a decoy's layout")
 
 	for(var/mob/living/basic/bounty_criminal/criminal as anything in spawned)
 		qdel(criminal)

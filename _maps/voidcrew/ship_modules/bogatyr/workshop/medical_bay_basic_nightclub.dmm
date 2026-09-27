@@ -1,11 +1,15 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "cnt" = (
-/obj/structure/bed,
+/obj/machinery/chem_master,
 /turf/open/floor/mineral/titanium/blue,
 /area/template_noop)
 "cBn" = (
 /obj/structure/bed,
 /obj/item/radio/intercom/directional/north,
+/obj/item/storage/pill_bottle/lsd,
+/obj/item/toy/plush/moth{
+	name = "emotional support moth plushie"
+	},
 /turf/open/floor/mineral/titanium/blue,
 /area/template_noop)
 "dbh" = (
@@ -29,12 +33,9 @@
 /turf/open/floor/mineral/titanium/blue,
 /area/template_noop)
 "lUG" = (
-/obj/structure/table,
-/obj/item/toy/plush/moth{
-	name = "emotional support moth plushie"
-	},
-/obj/item/storage/pill_bottle/happy,
-/obj/item/storage/pill_bottle/lsd,
+/obj/machinery/chem_dispenser,
+/obj/item/reagent_containers/cup/beaker/large,
+/obj/item/reagent_containers/cup/beaker/large,
 /turf/open/floor/mineral/titanium/blue,
 /area/template_noop)
 "qrb" = (
@@ -65,7 +66,7 @@ ieo
 ltb
 "}
 (2,1,1) = {"
-dbh
+cnt
 ieo
 qVm
 ieo
@@ -75,6 +76,6 @@ wrk
 kQi
 cBn
 qrb
-cnt
+dbh
 dsC
 "}

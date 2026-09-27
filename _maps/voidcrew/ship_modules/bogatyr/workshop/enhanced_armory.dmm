@@ -23,6 +23,7 @@
 "eMt" = (
 /obj/structure/window/reinforced/spawner,
 /obj/machinery/power/smes,
+/obj/structure/cable,
 /turf/open/floor/mineral/plastitanium/red,
 /area/template_noop)
 "gJF" = (
@@ -52,6 +53,10 @@
 /area/template_noop)
 "iRc" = (
 /turf/closed/wall/r_wall,
+/area/template_noop)
+"kbJ" = (
+/obj/structure/cable,
+/turf/open/floor/mineral/plastitanium/red,
 /area/template_noop)
 "kZr" = (
 /obj/structure/table/reinforced,
@@ -104,19 +109,21 @@
 	},
 /obj/item/ammo_box/magazine/smgm45,
 /obj/machinery/power/apc/auto_name/directional/west,
+/obj/structure/cable,
 /turf/open/floor/mineral/plastitanium/red,
 /area/template_noop)
 "pom" = (
 /obj/machinery/light/small{
 	dir = 4
 	},
-/obj/structure/closet/secure_closet/security,
+/obj/machinery/power/port_gen/pacman/pre_loaded{
+	anchored = 1
+	},
+/obj/structure/cable/layer3,
 /turf/open/floor/mineral/plastitanium/red,
 /area/template_noop)
 "prD" = (
 /obj/structure/window/reinforced/spawner,
-/obj/structure/cable,
-/obj/machinery/power/port_gen/pacman/pre_loaded,
 /obj/effect/turf_decal/box,
 /turf/open/floor/mineral/plastitanium/red,
 /area/template_noop)
@@ -146,13 +153,20 @@
 /obj/structure/window/reinforced/spawner{
 	dir = 1
 	},
-/obj/machinery/power/rtg/advanced,
 /turf/open/floor/mineral/plastitanium/red,
 /area/template_noop)
 "qtb" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/structure/cable,
+/turf/open/floor/mineral/plastitanium/red,
+/area/template_noop)
+"rRR" = (
+/obj/structure/cable/layer3,
+/obj/machinery/power/terminal,
+/obj/machinery/power/port_gen/pacman/pre_loaded{
+	anchored = 1
+	},
 /turf/open/floor/mineral/plastitanium/red,
 /area/template_noop)
 "sge" = (
@@ -166,6 +180,7 @@
 	dir = 1
 	},
 /obj/modular_map_connector,
+/obj/structure/cable,
 /turf/open/floor/plating,
 /area/template_noop)
 "uwU" = (
@@ -203,7 +218,7 @@ pDR
 kZr
 sge
 mSL
-pzi
+kbJ
 mxD
 gJF
 "}
@@ -225,7 +240,7 @@ dAL
 dAL
 gVK
 pom
-pzi
+rRR
 eMt
 gJF
 "}

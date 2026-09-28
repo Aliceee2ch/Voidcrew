@@ -120,6 +120,22 @@
 	TEST_ASSERT(istype(runner.ai_controller, /datum/ai_controller/basic_controller/outpost_prisoner), "A recaptured runner is not back on the prisoner AI")
 	TEST_ASSERT(runner.cuffs, "Recapture took the cuffs off")
 	TEST_ASSERT_EQUAL(runner.lockdown_left, 0, "A runner who walked out on their own owes lockdown")
+
+	// Loose in the office, a prisoner is past the staff doors: the open entrance lets them out and
+	// their pathing goes through it. Shut, it still won't open for them.
+	var/obj/machinery/door/airlock/security/prison_staff/entrance = locate() in prison_spot(home, 9, 1)
+	TEST_ASSERT_NOTNULL(entrance, "The entrance is not where the map puts it")
+	var/mob/living/basic/outpost_prisoner/bolter = trouble_prisoner(prison, prison_spot(home, 10, 8))
+	bolter.forceMove(prison_spot(home, 9, 3))
+	prison.tick(1)
+	TEST_ASSERT_EQUAL(bolter.trouble, "loose", "A prisoner loose in the office is [bolter.trouble]") // PRISONER_TROUBLE_LOOSE
+	entrance.autoclose = FALSE
+	entrance.open()
+	TEST_ASSERT(!entrance.density, "The entrance did not open")
+	TEST_ASSERT(entrance.CanAllowThrough(bolter, NORTH), "The open entrance held a loose prisoner in")
+	TEST_ASSERT(entrance.CanAStarPass(SOUTH, new /datum/can_pass_info(bolter)), "A loose prisoner's pathing does not go through the open entrance")
+	TEST_ASSERT(!entrance.allowed(bolter), "The entrance opens for a loose prisoner")
+	TEST_ASSERT(!staff_door.CanAllowThrough(prisoner, NORTH), "Another prisoner's escape let a prisoner in custody through a staff door")
 	settle_prison_air(home)
 
 // ===== CUFFS =====

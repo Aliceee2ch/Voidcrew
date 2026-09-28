@@ -27,7 +27,7 @@ GLOBAL_LIST_INIT(outpost_admin_prison_actions, list(
 	"prison_fight", // {ref}: that prisoner and the nearest other who can
 	"prison_riot", // {}: everyone able joins
 	"prison_calm", // {}: ends riots and fights, moods back to PRISONER_MOOD_START
-	"prison_breakout", // {ref}: out of the cell block and loose
+	"prison_breakout", // {ref}: that prisoner riots alone and goes for the ways out of the cell block
 	"prison_crew_home", // {mode: auto|home|away}: crew_home_override
 	"prison_debt", // {amount}: the treasury's debt, 0 clears it
 	"prison_transfer", // {}: transfers the rioters out now, as a sit-in nobody came back for
@@ -135,20 +135,16 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 						return
 					record(user, home, "start a prison fight between [prisoner.real_name] and [partner.real_name]")
 				if("prison_breakout")
-					if(prisoner.trouble == PRISONER_TROUBLE_LOOSE)
-						error = "That prisoner is already loose."
+					if(prisoner.trouble == PRISONER_TROUBLE_LOOSE || prisoner.trouble == PRISONER_TROUBLE_BREAKOUT)
+						error = "That prisoner is already breaking out."
 						return
 					if(prisoner.stat == DEAD || prisoner.phase != PRISONER_PRESENT)
 						error = "Only a living prisoner in the wing can break out."
 						return
-					var/turf/outside = prison.outside_spot_near(prisoner)
-					if(!outside)
-						error = "There is nowhere outside the cell block to put them."
+					if(!prison.start_breakout(prisoner))
+						error = "That prisoner can't break out now: shut in a cell, down, cuffed, or outside the cell block."
 						return
-					prisoner.pulledby?.stop_pulling()
-					prisoner.forceMove(outside)
-					prison.prisoner_escaped(prisoner, breakout = TRUE)
-					record(user, home, "break prisoner [prisoner.real_name] out of the cell block")
+					record(user, home, "have prisoner [prisoner.real_name] break out of the cell block")
 				if("prison_release")
 					if(prisoner.phase != PRISONER_PRESENT || prisoner.stat == DEAD)
 						error = "Only a living prisoner in the wing can be released."

@@ -723,16 +723,16 @@
 
 /**
  * Starts a riot. `everyone` pulls in every prisoner able to riot, as the admin button does, and
- * ignores the quiet after a riot; `forced` joins whatever their mood. `ignore_quiet` starts it in
- * the quiet after a riot too, for a prisoner let out of lockdown early. An experiment under way
- * stops nothing.
+ * ignores the quiet after a riot; `forced` joins whatever their mood, and with `alone` nobody else
+ * does. `ignore_quiet` starts it in the quiet after a riot too, for a prisoner let out of lockdown
+ * early. An experiment under way stops nothing.
  */
-/datum/outpost_prison/proc/start_riot(reason, everyone = FALSE, mob/living/basic/outpost_prisoner/forced, ignore_quiet = FALSE)
+/datum/outpost_prison/proc/start_riot(reason, everyone = FALSE, mob/living/basic/outpost_prisoner/forced, ignore_quiet = FALSE, alone = FALSE)
 	if(!trouble_enabled || riot_active)
 		return FALSE
 	if(!everyone && subdued_left > 0 && !ignore_quiet)
 		return FALSE
-	var/list/joining = riot_candidates(everyone, forced)
+	var/list/joining = (alone && forced) ? list(forced) : riot_candidates(everyone, forced)
 	if(!length(joining))
 		return FALSE
 	for(var/datum/outpost_prison_fight/brawl as anything in fights.Copy())
@@ -878,6 +878,31 @@
 		prisoner.loose_left = OUTPOST_PRISON_LOOSE_TIME
 	add_log("The riot is turning into a breakout.")
 	announce("The prison riot is turning into a breakout!", SHIP_NOTIFY_DANGER)
+
+/**
+ * `prisoner` breaks out on their own, the admin panel's hook: they riot (alone, if no riot is on) and
+ * go straight for the ways out of the cell block with their loose clock running, as every rioter does
+ * once a riot turns into a breakout. Anyone else in a riot already on carries on as before. Returns
+ * TRUE if they are breaking out.
+ */
+/datum/outpost_prison/proc/start_breakout(mob/living/basic/outpost_prisoner/prisoner)
+	if(!trouble_enabled || QDELETED(prisoner) || !(prisoner in prisoners))
+		return FALSE
+	if(!prisoner.is_rioting())
+		if(!prisoner.can_join_riot())
+			return FALSE
+		if(riot_active)
+			if(prisoner.fight)
+				end_fight(prisoner.fight)
+			prisoner.start_rioting()
+		else if(!start_riot("a breakout started by an admin", forced = prisoner, ignore_quiet = TRUE, alone = TRUE))
+			return FALSE
+	prisoner.trouble = PRISONER_TROUBLE_BREAKOUT
+	prisoner.riot_target_ref = null
+	prisoner.riot_target_hits = 0
+	prisoner.loose_left = OUTPOST_PRISON_LOOSE_TIME
+	add_log("[prisoner.real_name] is breaking out.")
+	return TRUE
 
 /**
  * A sit-in nobody dealt with: the corrections service beams every rioter still at large out, with

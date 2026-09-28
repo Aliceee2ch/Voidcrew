@@ -244,20 +244,24 @@
 	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in list(first, second, third))
 		TEST_ASSERT(isnull(prisoner.trouble) && !istype(prisoner.held_item, /obj/item/knife/shiv), "[prisoner] kept rioting after the calm")
 
-	// A breakout: out of the cell block and loose; refused for someone already loose.
-	panel.manage_outpost(home, operator, "prison_breakout", list("ref" = REF(second)))
-	TEST_ASSERT_EQUAL(second.trouble, "loose", "The admin breakout did not set the prisoner loose")
-	TEST_ASSERT(!prison.in_cell_block(second), "The admin breakout left the prisoner in the cell block")
-	TEST_ASSERT_EQUAL(prison.alarm_state()[1], "breakout", "An admin breakout shows the [prison.alarm_state()[1]] alarm")
-	var/list/loose_row
-	for(var/list/prisoner_row as anything in panel.ui_data(operator)["selected"]["prison"]["prisoners"])
-		if(prisoner_row["ref"] == REF(second))
-			loose_row = prisoner_row
-	TEST_ASSERT_EQUAL(loose_row["state"], "loose", "A loose prisoner's state is [loose_row["state"]]")
-	TEST_ASSERT_EQUAL(loose_row["loose_left"], 300, "A loose prisoner shows [loose_row["loose_left"]] s left")
+	// A breakout: that prisoner alone riots and goes for the ways out, from where they stand, in the
+	// quiet after the calm too; refused for someone already breaking out.
 	var/turf/breakout_spot = get_turf(second)
 	panel.manage_outpost(home, operator, "prison_breakout", list("ref" = REF(second)))
-	TEST_ASSERT(panel.error, "Breaking out a loose prisoner was accepted")
+	TEST_ASSERT(!panel.error, "The admin breakout was refused: [panel.error]")
+	TEST_ASSERT_EQUAL(second.trouble, "breakout", "The admin breakout left the prisoner [second.trouble]") // PRISONER_TROUBLE_BREAKOUT
+	TEST_ASSERT_EQUAL(get_turf(second), breakout_spot, "The admin breakout moved the prisoner")
+	TEST_ASSERT(prison.in_cell_block(second), "The admin breakout put the prisoner outside the cell block")
+	TEST_ASSERT(prison.riot_active, "The admin breakout started no riot")
+	TEST_ASSERT(isnull(first.trouble) && isnull(third.trouble), "Others joined a breakout of one")
+	TEST_ASSERT_EQUAL(second.loose_left, 300, "The breakout's loose clock is [second.loose_left] s, not 300") // OUTPOST_PRISON_LOOSE_TIME
+	var/list/breakout_row
+	for(var/list/prisoner_row as anything in panel.ui_data(operator)["selected"]["prison"]["prisoners"])
+		if(prisoner_row["ref"] == REF(second))
+			breakout_row = prisoner_row
+	TEST_ASSERT_EQUAL(breakout_row["state"], "breaking out", "A prisoner breaking out shows [breakout_row["state"]]")
+	panel.manage_outpost(home, operator, "prison_breakout", list("ref" = REF(second)))
+	TEST_ASSERT(panel.error, "Breaking out a prisoner already breaking out was accepted")
 	TEST_ASSERT_EQUAL(get_turf(second), breakout_spot, "A refused breakout moved the prisoner")
 	panel.manage_outpost(home, operator, "prison_breakout", list("ref" = "not a ref"))
 	TEST_ASSERT(panel.error, "A breakout for a bad reference was accepted")

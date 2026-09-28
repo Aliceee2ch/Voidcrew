@@ -7,9 +7,11 @@
  * (outpost_prison_breakout.dm); the airlocks can be broken, and one built where a staff or cell door
  * stood becomes that door again, as does a window door fitted to a hatch. Staff doors and the office side of a
  * hatch open for members of the wing, or for anyone but prisoners while the warden lets visitors
- * in; bolt buttons work for members only. A prisoner passes a staff door only dragged by a member,
- * down or cuffed (outpost_prisoner_escorted()). Who counts as a member, where prisoners can stand
- * and what counts as their cell are in outpost_prison_containment.dm.
+ * in; bolt buttons work for members only. A prisoner in custody passes a staff door only dragged by
+ * a member, down or cuffed (outpost_prisoner_escorted()). A loose one (out of the cell block and on
+ * the run) goes through an open one like anyone else, and has to break a shut one down. Who counts
+ * as a member, where prisoners can stand and what counts as their cell are in
+ * outpost_prison_containment.dm.
  */
 
 // ===== SERVING HATCH WINDOW DOORS =====
@@ -82,18 +84,25 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/door/window/brigdoor/outpost_prison_s
 		if(!(frame in frames_before) && !QDELETED(frame))
 			frame.deconstruct(FALSE)
 
-// Open or closed, a prisoner cannot walk through on their own. A member of the wing may drag one
-// through who is down or cuffed; nobody else may, visitors let in included.
+// Open or closed, a prisoner in custody cannot walk through on their own. A member of the wing may
+// drag one through who is down or cuffed; nobody else may, visitors let in included. A loose
+// prisoner is out already: an open staff door is only a door to them.
 /obj/machinery/door/airlock/security/prison_staff/CanAllowThrough(atom/movable/mover, border_dir)
-	if(is_outpost_prisoner(mover) && !outpost_prisoner_escorted(src, mover))
+	if(is_outpost_prisoner(mover) && !outpost_prisoner_loose(mover) && !outpost_prisoner_escorted(src, mover))
 		return FALSE
 	return ..()
 
-// Their own AI never paths through, dragged or not.
+// Their own AI never paths through, dragged or not, until they are loose.
 /obj/machinery/door/airlock/security/prison_staff/CanAStarPass(to_dir, datum/can_pass_info/pass_info)
-	if(is_outpost_prisoner(pass_info.requester_ref?.resolve()))
+	var/atom/requester = pass_info.requester_ref?.resolve()
+	if(is_outpost_prisoner(requester) && !outpost_prisoner_loose(requester))
 		return FALSE
 	return ..()
+
+/// Whether `thing` is a loose prisoner: out of the cell block and on the run
+/proc/outpost_prisoner_loose(atom/thing)
+	var/mob/living/basic/outpost_prisoner/prisoner = thing
+	return istype(prisoner) && prisoner.trouble == PRISONER_TROUBLE_LOOSE
 
 /obj/machinery/door/airlock/security/prison_staff/glass
 	opacity = FALSE

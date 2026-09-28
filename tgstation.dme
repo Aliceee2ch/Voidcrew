@@ -2907,6 +2907,7 @@
 #include "code\game\objects\structures\crates_lockers\closets\l3closet.dm"
 #include "code\game\objects\structures\crates_lockers\closets\syndicate.dm"
 #include "code\game\objects\structures\crates_lockers\closets\utility_closets.dm"
+#include "code\game\objects\structures\crates_lockers\closets\wallmount.dm"
 #include "code\game\objects\structures\crates_lockers\closets\wardrobe.dm"
 #include "code\game\objects\structures\crates_lockers\closets\secure\bar.dm"
 #include "code\game\objects\structures\crates_lockers\closets\secure\cargo.dm"

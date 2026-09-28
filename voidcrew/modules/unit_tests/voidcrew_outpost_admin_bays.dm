@@ -22,7 +22,7 @@
 
 /datum/unit_test/voidcrew_outpost_admin_bays/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "anotherowner"
 	TEST_ASSERT(home.load_level(), "The admin bay outpost could not load")
 	var/mob/living/operator = make_player(run_loc_floor_bottom_left, "bayadministrator")

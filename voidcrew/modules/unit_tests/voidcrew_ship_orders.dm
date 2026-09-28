@@ -16,7 +16,7 @@
 /// An outpost with its ship bay, and its shipyard console.
 /datum/unit_test/voidcrew_checkpoints/proc/order_outpost(founder)
 	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(/obj/structure/overmap/dynamic/player_outpost/registry_test)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = founder
 	TEST_ASSERT(home.load_level(), "The outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")

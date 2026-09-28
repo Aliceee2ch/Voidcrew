@@ -10,3 +10,6 @@
 #define OUTPOST_STYLE_CLEAN "clean"
 /// The style a room falls back to when it has no map for an outpost's style
 #define OUTPOST_STYLE_DEFAULT OUTPOST_STYLE_RUNDOWN
+
+/// Where the baked preview pictures of outpost shells and rooms live (tools/outpost_upgrade_previews)
+#define OUTPOST_PREVIEW_DIR "voidcrew/modules/player_outposts/previews/"

@@ -12,7 +12,14 @@
 /// Authored with its entrance on the south edge; placement rotates it.
 /datum/map_template/outpost_upgrade/teleporter
 	name = "Outpost Teleporter"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_teleporter.dmm"
+
+/datum/map_template/outpost_upgrade/teleporter/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_teleporter_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/teleporter/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_teleporter_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /// Marks where pad arrivals land. Removed once the room is installed.
 /obj/effect/landmark/outpost_network_arrival
@@ -24,7 +31,6 @@
 	desc = "A teleporter pad on the outpost network."
 	price = OUTPOST_TELEPORTER_COST
 	template_type = /datum/map_template/outpost_upgrade/teleporter
-	preview_name = "outpost_upgrade_teleporter"
 	visitors_toggleable = FALSE
 	/// Who may arrive by pad: OUTPOST_NETWORK_ARRIVALS_*
 	var/arrival_policy = OUTPOST_NETWORK_ARRIVALS_OPEN

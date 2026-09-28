@@ -4,7 +4,7 @@
 
 /datum/unit_test/voidcrew_checkpoints/every_ship/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "everyshipfounder"
 	TEST_ASSERT(home.load_level(), "The outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
@@ -270,7 +270,7 @@
 
 /datum/unit_test/voidcrew_checkpoints/every_ship/every_variant/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "everyvariantfounder"
 	TEST_ASSERT(home.load_level(), "The outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")

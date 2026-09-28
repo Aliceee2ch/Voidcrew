@@ -68,7 +68,7 @@
 
 /datum/unit_test/voidcrew_checkpoints/spread_load/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "spreadloadfounder"
 	TEST_ASSERT(home.load_level(), "The outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
@@ -323,7 +323,7 @@
 		if(length(homes) <= length(snapshots))
 			index++
 			var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(__IMPLIED_TYPE__)
-			home.shell_template = allocate(/datum/map_template/player_outpost/small)
+			home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 			home.founder_ckey = "stressfounder[index]"
 			TEST_ASSERT(home.load_level(), "Outpost [index] did not load")
 			TEST_ASSERT_NULL(home.enable_ship_bays(), "Outpost [index] has no ship bay")
@@ -453,7 +453,7 @@
 			smallest = template_type
 		qdel(measured)
 	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "queuedfounder"
 	TEST_ASSERT(home.load_level(), "The outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")

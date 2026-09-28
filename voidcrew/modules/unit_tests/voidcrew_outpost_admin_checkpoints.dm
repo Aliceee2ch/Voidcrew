@@ -42,7 +42,7 @@
 
 /datum/unit_test/voidcrew_outpost_admin_checkpoints/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "checkpointfounder"
 	TEST_ASSERT(home.load_level(), "The outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")

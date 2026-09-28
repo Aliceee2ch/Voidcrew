@@ -111,7 +111,9 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 	return tgui_alert(user, prompt, home.name, list("Confirm", "Cancel")) == "Confirm" && valid_selection(home, user)
 
 /datum/outpost_manipulator/proc/create_outpost(mob/user)
-	var/list/templates = list("Compact Habitat" = /datum/map_template/player_outpost/small, "Waystation Frame" = /datum/map_template/player_outpost/medium)
+	var/list/templates = list()
+	for(var/datum/map_template/player_outpost/shell_type as anything in outpost_selectable_shells())
+		templates[initial(shell_type.name)] = shell_type
 	var/template_choice = tgui_input_list(user, "Habitat", "Create Outpost", templates)
 	if(!authorized(user) || !template_choice)
 		return
@@ -159,7 +161,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 /datum/outpost_manipulator/proc/create_home(mob/user, turf/destination, shell_type, outpost_name)
 	if(!authorized(user))
 		return null
-	if(!(shell_type in list(/datum/map_template/player_outpost/small, /datum/map_template/player_outpost/medium)) || !length(outpost_name) || !reject_bad_text(outpost_name, MAX_CHARTER_LEN))
+	if(!(shell_type in outpost_selectable_shells()) || !length(outpost_name) || !reject_bad_text(outpost_name, MAX_CHARTER_LEN))
 		error = "Invalid habitat or name."
 		return null
 	if(!istype(destination, /turf/open/overmap) || SSovermap.jump_mode != BS_JUMP_IDLE)

@@ -133,7 +133,7 @@
 /// A loaded small-shell claim owned by `owner_key`, with a management console panel for that owner.
 /datum/unit_test/voidcrew_outpost_management/proc/upgrade_test_claim(owner_key)
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = owner_key
 	if(!home.load_level())
 		return null
@@ -454,33 +454,42 @@
 	act(panel, owner, "close_upgrade_map", null, list("id" = "cargo_dock"))
 	TEST_ASSERT_NULL(panel.ui_static_data(owner)["upgrade_survey"], "The survey was still sent after the map closed")
 
-/// The Upgrades tab shows baked art; it must be regenerated whenever an upgrade's map changes.
+/// The Upgrades tab and the founding catalog show baked art; it must be regenerated whenever a map changes.
 /datum/unit_test/voidcrew_outpost_upgrade_previews
 
 /datum/unit_test/voidcrew_outpost_upgrade_previews/Run()
 	var/checked = 0
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
 		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
-		var/datum/map_template/template_type = upgrade.template_type
-		var/map_path = initial(template_type.mappath)
-		TEST_ASSERT(fexists(map_path), "The [upgrade.name] map [map_path] is missing")
-		TEST_ASSERT(upgrade.preview_name, "The [upgrade.name] upgrade has no preview")
-		var/json_path = "voidcrew/modules/player_outposts/previews/[upgrade.preview_name].preview.json"
-		TEST_ASSERT(fexists(json_path), "[json_path] is missing. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py")
-		var/list/meta = json_decode(file2text(json_path))
-		TEST_ASSERT(islist(meta), "[json_path] is not valid JSON")
-		TEST_ASSERT_EQUAL(meta["png"], "[upgrade.preview_name].png", "[json_path] names the wrong image")
-		TEST_ASSERT(fexists("voidcrew/modules/player_outposts/previews/[meta["png"]]"), "The [upgrade.name] preview image is missing")
-		var/datum/map_template/template = upgrade.get_template()
-		TEST_ASSERT_NOTNULL(template, "The [upgrade.name] template did not load its map")
-		TEST_ASSERT_EQUAL(meta["width"], template.width, "The [upgrade.name] preview has the wrong width")
-		TEST_ASSERT_EQUAL(meta["height"], template.height, "The [upgrade.name] preview has the wrong height")
-		if(meta["src_md5"] != rustg_hash_file(RUSTG_HASH_MD5, map_path))
-			TEST_FAIL("The [upgrade.name] preview was rendered from a different version of [map_path] than the one on disk, so the Upgrades \
-				tab shows a room that no longer exists. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py and commit \
-				the new PNG and .preview.json with the map change.")
-		checked++
-	TEST_ASSERT(checked, "The upgrade catalog is empty")
+		var/list/maps = outpost_style_maps(upgrade.template_type)
+		TEST_ASSERT(length(maps), "The [upgrade.name] upgrade has no map")
+		for(var/datum/map_template/map_type as anything in maps)
+			checked += check_preview(map_type, "The [upgrade.name] ([initial(map_type.outpost_style)])")
+	for(var/datum/map_template/player_outpost/shell_type as anything in outpost_selectable_shells())
+		checked += check_preview(shell_type, "The [initial(shell_type.name)] shell")
+	TEST_ASSERT(checked, "No previews were checked")
+
+/// Checks one map's baked preview. Returns 1 when it was checked.
+/datum/unit_test/voidcrew_outpost_upgrade_previews/proc/check_preview(datum/map_template/map_type, label)
+	var/map_path = initial(map_type.mappath)
+	var/preview = outpost_map_preview_name(map_type)
+	var/json_path = "voidcrew/modules/player_outposts/previews/[preview].preview.json"
+	if(!fexists(json_path))
+		TEST_FAIL("[json_path] is missing. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py")
+		return 0
+	var/list/meta = json_decode(file2text(json_path))
+	if(!islist(meta))
+		TEST_FAIL("[json_path] is not valid JSON")
+		return 0
+	TEST_ASSERT_EQUAL(meta["png"], "[preview].png", "[json_path] names the wrong image")
+	TEST_ASSERT(fexists("voidcrew/modules/player_outposts/previews/[meta["png"]]"), "[label] preview image is missing")
+	var/datum/map_template/template = allocate(map_type)
+	TEST_ASSERT(template.width, "[label] template did not load its map")
+	TEST_ASSERT_EQUAL(meta["width"], template.width, "[label] preview has the wrong width")
+	TEST_ASSERT_EQUAL(meta["height"], template.height, "[label] preview has the wrong height")
+	if(meta["src_md5"] != rustg_hash_file(RUSTG_HASH_MD5, map_path))
+		TEST_FAIL("[label] preview was rendered from a different version of [map_path] than the one on disk, so players 			see a room that no longer exists. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py and commit 			the new PNG and .preview.json with the map change.")
+	return 1
 
 // ===== LOOSE ITEMS AND THE SURVEY WINDOW =====
 

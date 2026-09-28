@@ -1,8 +1,27 @@
-GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_bay)
-
+/// The permanent ship bay: one map per outpost style (outpost_styles.dm). The base has none.
 /datum/map_template/outpost_hangar/ship_bay
 	name = "Outpost Ship Bay"
+	mappath = null
+
+/// The Grease Pit
+/datum/map_template/outpost_hangar/ship_bay/rundown
 	mappath = "voidcrew/_maps/map_files/outposts/outpost_ship_bay_greasepit.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_hangar/ship_bay/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_ship_bay_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
+
+/// The shared ship bay template for `style`, or null when no bay map loads
+/proc/outpost_ship_bay_template(style)
+	var/static/list/templates = list()
+	var/map_type = outpost_style_map(/datum/map_template/outpost_hangar/ship_bay, style || OUTPOST_STYLE_DEFAULT)
+	if(!map_type)
+		return null
+	if(!(map_type in templates))
+		templates[map_type] = new map_type
+	var/datum/map_template/template = templates[map_type]
+	return template?.width ? template : null
 
 /obj/structure/overmap/dynamic/player_outpost
 	var/ship_bay_installed = FALSE
@@ -118,9 +137,10 @@ GLOBAL_DATUM(outpost_ship_bay_template, /datum/map_template/outpost_hangar/ship_
 	var/datum/outpost_berth/ship_bay/bay = new(src, next_bay_floor_id++, null)
 	bay.bay_number = 1
 	bay_berths = list(bay)
-	if(!GLOB.outpost_ship_bay_template)
-		GLOB.outpost_ship_bay_template = new
-	var/datum/map_template/outpost_hangar/ship_bay/template = GLOB.outpost_ship_bay_template
+	var/datum/map_template/outpost_hangar/ship_bay/template = outpost_ship_bay_template(outpost_style)
+	if(!template)
+		qdel(bay)
+		return null
 	var/datum/turf_reservation/reserved = SSmapping.request_turf_block_reservation(template.width, template.height, 1, requester = "permanent ship bay at '[name]'")
 	if(!reserved)
 		qdel(bay)

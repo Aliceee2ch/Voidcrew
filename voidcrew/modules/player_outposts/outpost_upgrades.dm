@@ -11,11 +11,10 @@
  * character per tile, made by the same rules placement enforces, so the client's green and red
  * agree with the server. Mobs are left out of the survey; the server re-checks them at Build.
  *
- * Subtypes set the catalog fields and a map template. The cargo dock is the first
+ * Subtypes set the catalog fields and a family of map templates, one map per outpost style: the
+ * outpost's style picks which one it builds (outpost_styles.dm). The cargo dock is the first
  * (outpost_cargo_dock.dm).
  */
-
-#define OUTPOST_UPGRADE_PREVIEW_DIR "voidcrew/modules/player_outposts/previews/"
 
 // Survey cell classes. The first three are ground an upgrade may cover.
 #define UPGRADE_CELL_SPACE "s"
@@ -32,9 +31,20 @@
 /// A placement still claiming its blueprint this long after it started, with no map loading, has died
 #define UPGRADE_PLACEMENT_WATCHDOG (60 SECONDS)
 
-/// Base for upgrade rooms. Loaded with load_rotated(), never centered or cached.
+/// Base for upgrade rooms. Loaded with load_rotated(), never centered or cached. Each room is an
+/// abstract subtype with one map-carrying subtype per outpost style.
 /datum/map_template/outpost_upgrade
 	name = "Outpost Upgrade"
+
+/// The shared template instance for one room map type. Null when the map did not load.
+/proc/outpost_upgrade_template(map_type)
+	var/static/list/templates = list()
+	if(!map_type)
+		return null
+	if(!(map_type in templates))
+		templates[map_type] = new map_type
+	var/datum/map_template/template = templates[map_type]
+	return template?.width ? template : null
 
 /// Upgrade prototypes by id, in catalog order. They carry no outpost state; buying copies one.
 GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
@@ -54,12 +64,10 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/name = "Outpost Upgrade"
 	var/desc = ""
 	var/price = 0
-	/// The room this upgrade stamps
+	/// The room family this upgrade stamps: an abstract template with one map per outpost style
 	var/datum/map_template/template_type
 	/// Area type the template uses; the installed instance is found by it
 	var/area_type
-	/// Base name of the baked preview under OUTPOST_UPGRADE_PREVIEW_DIR (png and .preview.json)
-	var/preview_name
 	/// Edge of the template as authored that holds the entrance
 	var/entrance_side = SOUTH
 
@@ -128,22 +136,23 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		outpost.upgrade_survey = null
 	log_game("PLAYER OUTPOST: the [name] placement at '[outpost?.name]' never finished; its blueprint was released")
 
-/// One shared, uncached template per upgrade type. Null when the map file is missing.
-/datum/outpost_upgrade/proc/get_template()
-	var/static/list/templates = list()
+/**
+ * The room's template for `style`, shared and uncached; by default the style of this blueprint's
+ * outpost. Null when the family has no map.
+ */
+/datum/outpost_upgrade/proc/get_template(style)
 	if(!template_type)
 		return null
-	if(!(template_type in templates))
-		var/map_path = initial(template_type.mappath)
-		templates[template_type] = (map_path && fexists(map_path)) ? new template_type : null
-	var/datum/map_template/template = templates[template_type]
-	return template?.width ? template : null
+	style ||= outpost?.outpost_style || OUTPOST_STYLE_DEFAULT
+	return outpost_upgrade_template(outpost_style_map(template_type, style))
 
-/// The baked preview's asset name, or null until it exists
-/datum/outpost_upgrade/proc/preview_asset()
-	if(!preview_name || !fexists("[OUTPOST_UPGRADE_PREVIEW_DIR][preview_name].png"))
+/// The baked preview's asset name for `style` (as get_template()), or null until it exists
+/datum/outpost_upgrade/proc/preview_asset(style)
+	var/datum/map_template/template = get_template(style)
+	var/preview = template && outpost_map_preview_name(template.type)
+	if(!preview || !fexists("[OUTPOST_PREVIEW_DIR][preview].png"))
 		return null
-	return "[preview_name].png"
+	return "[preview].png"
 
 /// Which edge of the placed footprint the entrance faces for a clockwise rotation
 /datum/outpost_upgrade/proc/rotated_entrance(rotation)
@@ -262,7 +271,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/denial = upgrade_access_denial(user)
 	if(denial)
 		return denial
-	if(!prototype.get_template())
+	if(!prototype.get_template(outpost_style))
 		return "Upgrade unavailable."
 	if(prototype.price && !treasury.has_money(prototype.price))
 		return "Insufficient outpost funds."
@@ -516,14 +525,15 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		return UPGRADE_CELL_WINDOW
 	return UPGRADE_CELL_OBJECT
 
-/// The largest side of any catalog room, so the map reaches every legal spot
+/// The largest side of any catalog room in any style, so the map reaches every legal spot
 /proc/largest_outpost_upgrade_side()
 	var/largest = 1
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
 		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
-		var/datum/map_template/template = upgrade.get_template()
-		if(template)
-			largest = max(largest, template.width, template.height)
+		for(var/map_type in outpost_style_maps(upgrade.template_type))
+			var/datum/map_template/template = outpost_upgrade_template(map_type)
+			if(template)
+				largest = max(largest, template.width, template.height)
 	return largest
 
 /// The middle of the outpost's shell, or its arrival point, which the placement survey is centred on
@@ -655,11 +665,12 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	assets = list()
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
 		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
-		var/asset_name = upgrade.preview_asset()
-		if(asset_name)
-			assets[asset_name] = file("[OUTPOST_UPGRADE_PREVIEW_DIR][asset_name]")
-		else if(upgrade.preview_name)
-			log_asset("outpost_upgrade_previews: missing preview image for [upgrade.id]")
+		for(var/map_type in outpost_style_maps(upgrade.template_type))
+			var/preview = outpost_map_preview_name(map_type)
+			if(fexists("[OUTPOST_PREVIEW_DIR][preview].png"))
+				assets["[preview].png"] = file("[OUTPOST_PREVIEW_DIR][preview].png")
+			else
+				log_asset("outpost_upgrade_previews: missing preview image [preview].png for [upgrade.id]")
 	return ..()
 
 /datum/player_outpost_management_ui
@@ -696,9 +707,11 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 
 /datum/player_outpost_management_ui/ui_static_data(mob/user)
 	var/list/catalog = list()
+	// The catalog shows each room as this outpost would build it
+	var/style = outpost?.outpost_style || OUTPOST_STYLE_DEFAULT
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
 		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
-		var/datum/map_template/template = upgrade.get_template()
+		var/datum/map_template/template = upgrade.get_template(style)
 		catalog += list(list(
 			"id" = upgrade_id,
 			"name" = upgrade.name,
@@ -706,7 +719,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 			"price" = upgrade.price,
 			"width" = template?.width || 0,
 			"height" = template?.height || 0,
-			"preview" = upgrade.preview_asset(),
+			"preview" = upgrade.preview_asset(style),
 		))
 	// The survey can be tens of kilobytes: static data only, and only while a map is open. The key
 	// is always sent, because tgui merges static data into the old state and would keep a stale one.
@@ -794,4 +807,3 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 #undef UPGRADE_CELL_RESERVED
 #undef UPGRADE_SURVEY_WINDOW
 #undef UPGRADE_PLACEMENT_WATCHDOG
-#undef OUTPOST_UPGRADE_PREVIEW_DIR

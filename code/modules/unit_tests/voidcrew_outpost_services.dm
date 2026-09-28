@@ -113,7 +113,7 @@
 /datum/unit_test/voidcrew_launch_cargo_fixture/outpost_home/Run()
 	save_economy()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "outpostfounder"
 	TEST_ASSERT(home.load_level(), "Purchased home bundle failed to load")
 	TEST_ASSERT(home.home_bundle_installed, "Founding did not install the included services")
@@ -562,21 +562,6 @@
 	home.founder_ckey = null
 	TEST_ASSERT(!home.can_spend(resident), "Abandoned claim allowed new spending")
 
-/datum/unit_test/voidcrew_outpost_medium_bundle
-	var/template_type = /datum/map_template/player_outpost/medium
-
-/datum/unit_test/voidcrew_outpost_medium_bundle/small
-	template_type = /datum/map_template/player_outpost/small
-
-/datum/unit_test/voidcrew_outpost_medium_bundle/Run()
-	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
-	home.shell_template = allocate(template_type)
-	TEST_ASSERT(home.load_level(), "Habitat failed to install its purchased home services")
-	TEST_ASSERT(home.home_bundle_installed, "Habitat omitted the included bundle")
-	assert_outpost_cargo_bundle(home)
-	TEST_ASSERT_NOTNULL(home.available_resident_pod(), "Habitat has no resident arrival point")
-	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "A new home received an unpurchased allowance")
-
 /// Material/research checks can run after a buffered endpoint leaves the map.
 /datum/unit_test/voidcrew_service_site_nullspace/Run()
 	var/obj/item/first = allocate(/obj/item)
@@ -652,7 +637,7 @@
 /datum/unit_test/voidcrew_launch_cargo_fixture/outpost_home/cancel_during_generation/Run()
 	save_economy()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "outpostcancelrace"
 	TEST_ASSERT(home.load_level(), "Cancellation race home failed to load")
 	var/cargo_dock = place_test_cargo_dock(home)
@@ -712,7 +697,7 @@
 /datum/unit_test/voidcrew_launch_cargo_fixture/outpost_home/cancel_during_generation/partial_refund/Run()
 	save_economy()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "outpostpartialcancel"
 	TEST_ASSERT(home.load_level(), "Partial cancellation home failed to load")
 	var/cargo_dock = place_test_cargo_dock(home)

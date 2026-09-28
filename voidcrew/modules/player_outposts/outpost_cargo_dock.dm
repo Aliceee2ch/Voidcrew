@@ -78,7 +78,14 @@
 /// Authored with its entrance on the south edge; placement rotates it.
 /datum/map_template/outpost_upgrade/cargo_dock
 	name = "Outpost Cargo Dock"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_cargo_dock.dmm"
+
+/datum/map_template/outpost_upgrade/cargo_dock/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_cargo_dock_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/cargo_dock/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_cargo_dock_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /datum/outpost_upgrade/cargo_dock
 	id = "cargo_dock"
@@ -87,7 +94,6 @@
 	price = 0
 	template_type = /datum/map_template/outpost_upgrade/cargo_dock
 	area_type = /area/voidcrew/player_outpost/cargo_dock
-	preview_name = "outpost_upgrade_cargo_dock"
 	entrance_side = SOUTH
 	/// The pad's docking port, once placement has finished
 	var/obj/docking_port/stationary/outpost_cargo_dock/pad

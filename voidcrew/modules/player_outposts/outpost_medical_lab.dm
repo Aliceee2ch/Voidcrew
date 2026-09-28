@@ -13,7 +13,14 @@
 
 /datum/map_template/outpost_upgrade/medical_lab
 	name = "Outpost Medical Lab"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_medical_lab.dmm"
+
+/datum/map_template/outpost_upgrade/medical_lab/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_medical_lab_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/medical_lab/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_medical_lab_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /datum/outpost_upgrade/service/medical_lab
 	id = OUTPOST_MEDICAL_LAB_ID
@@ -21,7 +28,6 @@
 	desc = "An auto-surgeon, two sleepers and two cryo cells."
 	price = OUTPOST_MEDICAL_LAB_COST
 	template_type = /datum/map_template/outpost_upgrade/medical_lab
-	preview_name = "outpost_upgrade_medical_lab"
 	/// Pass key (ckey) -> list("expiry" = world.time, "menu" = procedure ids enabled when it was bought)
 	var/list/passes = list()
 	/// Procedure id -> TRUE for each procedure management switched off

@@ -24,7 +24,7 @@
 	var/datum/outpost_manipulator/unit_test/panel = allocate(/datum/outpost_manipulator/unit_test, operator)
 	var/turf/sector = SSovermap.get_unused_overmap_square()
 	TEST_ASSERT_NOTNULL(sector, "No free overmap sector for admin creation")
-	home = panel.create_home(operator, sector, /datum/map_template/player_outpost/small, "Admin Fixture")
+	home = panel.create_home(operator, sector, /datum/map_template/player_outpost/rundown, "Admin Fixture")
 	TEST_ASSERT_NOTNULL(home, "Admin creation did not produce a physical home")
 	allocated += home
 	panel.selected = home
@@ -32,7 +32,7 @@
 	TEST_ASSERT(home.treasury && home.freight && length(home.resident_pods), "Admin-created home lacks bank, freight or cryo services")
 	TEST_ASSERT_NULL(home.founder_ckey, "Unowned admin creation silently assigned an owner")
 	TEST_ASSERT_EQUAL(home.resident_mode, "closed", "Unowned admin creation allowed resident arrivals")
-	TEST_ASSERT_NULL(panel.create_home(operator, sector, /datum/map_template/player_outpost/small, "Duplicate"), "Admin creation accepted an occupied sector")
+	TEST_ASSERT_NULL(panel.create_home(operator, sector, /datum/map_template/player_outpost/rundown, "Duplicate"), "Admin creation accepted an occupied sector")
 	TEST_ASSERT_NULL(panel.create_home(operator, SSovermap.get_unused_overmap_square(), /datum/map_template/player_outpost/nothing, "Bare Claim"), "Admin creation accepted an unsupported shell")
 
 	// The public override parameter must not be an authorization bypass for players.

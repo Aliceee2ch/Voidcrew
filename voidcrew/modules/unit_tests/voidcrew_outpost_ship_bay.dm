@@ -13,7 +13,7 @@
 
 /datum/unit_test/voidcrew_outpost_ship_bay/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "bayowner"
 	TEST_ASSERT(home.load_level(), "Could not load the bay test outpost")
 	var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "bayowner")
@@ -192,7 +192,7 @@
 
 /datum/unit_test/voidcrew_outpost_ship_bay_capacity/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	TEST_ASSERT(home.load_level(), "Capacity test outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "Permanent bay installation failed")
 	var/list/visitors = list()

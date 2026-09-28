@@ -1098,9 +1098,10 @@
 	berth_dock = null
 
 	// The ship bay: the same deck under the base hangar area keeps full construction.
-	var/ship_bay_map = file2text(GLOB.outpost_ship_bay_template?.mappath || /datum/map_template/outpost_hangar/ship_bay::mappath)
-	TEST_ASSERT(findtext(ship_bay_map, "/area/voidcrew/outpost_hangar"), "The ship bay map no longer uses the hangar area")
-	TEST_ASSERT(!findtext(ship_bay_map, "/area/voidcrew/outpost_hangar/berth"), "The ship bay map uses the standard berth area, which refuses construction")
+	for(var/datum/map_template/bay_type as anything in outpost_style_maps(/datum/map_template/outpost_hangar/ship_bay))
+		var/ship_bay_map = file2text(initial(bay_type.mappath))
+		TEST_ASSERT(findtext(ship_bay_map, "/area/voidcrew/outpost_hangar"), "The [bay_type] map no longer uses the hangar area")
+		TEST_ASSERT(!findtext(ship_bay_map, "/area/voidcrew/outpost_hangar/berth"), "The [bay_type] map uses the standard berth area, which refuses construction")
 	for(var/turf/deck as anything in block(spot(2, 2), spot(10, 10)))
 		if(get_area(deck) == berth_area)
 			deck.change_area(berth_area, hangar_area)

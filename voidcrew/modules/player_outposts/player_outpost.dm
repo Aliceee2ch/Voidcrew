@@ -51,6 +51,8 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	var/datum/outpost_advert/current_advert
 	/// The shell template instance that was loaded at founding
 	var/datum/map_template/player_outpost/shell_template
+	/// The style every room this outpost builds is drawn in, from its shell (outpost_styles.dm)
+	var/outpost_style = OUTPOST_STYLE_DEFAULT
 	// template_bottom_left (the shell footprint origin) lives on /obj/structure/overmap
 	/// Buildable region on the outpost z-level: list(x1, y1, x2, y2)
 	var/list/build_bounds
@@ -376,6 +378,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 		log_mapping("PLAYER OUTPOST: Shell template '[shell_template?.name]' has no dimensions, cannot load.")
 		loading = FALSE
 		return FALSE
+	outpost_style = shell_template.outpost_style || OUTPOST_STYLE_DEFAULT
 
 	// MAP_TENANT_CLASS_OUTPOST, never FLAT: an outpost is a long-lived, preserve_level-shaped
 	// tenant that would pin a lattice slot for the whole round, so it gets its own class and

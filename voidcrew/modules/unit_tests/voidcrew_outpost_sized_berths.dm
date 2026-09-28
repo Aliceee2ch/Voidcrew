@@ -33,7 +33,7 @@
 	test_layout_formula()
 
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "sizedberthowner"
 	TEST_ASSERT(home.load_level(), "Could not load the berth test outpost")
 	TEST_ASSERT(home.has_hangar_elevator(), "The berth test outpost has no hangar elevator")
@@ -373,7 +373,7 @@
 /// Deleting the host frees every berth it holds.
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/check_host_deletion()
 	var/obj/structure/overmap/dynamic/player_outpost/doomed = new
-	doomed.shell_template = allocate(/datum/map_template/player_outpost/small)
+	doomed.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	TEST_ASSERT(doomed.load_level(), "Could not load the deletion test outpost")
 	var/list/datum/turf_reservation/reservations = list()
 	for(var/size in list(5, 20))

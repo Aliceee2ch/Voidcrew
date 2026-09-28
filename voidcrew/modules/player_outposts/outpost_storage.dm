@@ -39,7 +39,14 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 /// Authored with its entrance on the south edge; placement rotates it.
 /datum/map_template/outpost_upgrade/storage
 	name = "Outpost Safe Storage"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_storage.dmm"
+
+/datum/map_template/outpost_upgrade/storage/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_storage_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/storage/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_storage_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /datum/outpost_upgrade/service/storage
 	id = "storage"
@@ -47,7 +54,6 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	desc = "Thirteen rental lockers."
 	price = OUTPOST_STORAGE_COST
 	template_type = /datum/map_template/outpost_upgrade/storage
-	preview_name = "outpost_upgrade_storage"
 	/// Weakrefs to the room's lockers, in number order
 	var/list/datum/weakref/lockers
 

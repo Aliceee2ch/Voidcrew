@@ -5,7 +5,7 @@
 /datum/unit_test/voidcrew_player_outpost
 
 /datum/unit_test/voidcrew_player_outpost/Run()
-	var/datum/map_template/player_outpost/shell = allocate(/datum/map_template/player_outpost/small)
+	var/datum/map_template/player_outpost/shell = allocate(/datum/map_template/player_outpost/test_fixture)
 	var/obj/structure/overmap/dynamic/player_outpost/outpost = allocate(/obj/structure/overmap/dynamic/player_outpost)
 	outpost.shell_template = shell
 	TEST_ASSERT(outpost.load_level(), "Could not load the purchased outpost")

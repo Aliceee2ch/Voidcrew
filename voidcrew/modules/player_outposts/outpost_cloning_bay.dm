@@ -17,7 +17,14 @@
 
 /datum/map_template/outpost_upgrade/cloning_bay
 	name = "Outpost Cloning Bay"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_cloning_bay.dmm"
+
+/datum/map_template/outpost_upgrade/cloning_bay/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_cloning_bay_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/cloning_bay/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_cloning_bay_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /datum/outpost_upgrade/service/cloning_bay
 	id = "cloning_bay"
@@ -25,7 +32,6 @@
 	desc = "Four cloning vats."
 	price = OUTPOST_CLONING_BAY_COST
 	template_type = /datum/map_template/outpost_upgrade/cloning_bay
-	preview_name = "outpost_upgrade_cloning_bay"
 	/// The room's vats, found at install
 	var/list/datum/weakref/vat_refs
 

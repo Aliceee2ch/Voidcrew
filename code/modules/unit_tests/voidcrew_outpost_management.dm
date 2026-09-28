@@ -61,7 +61,7 @@
 
 /datum/unit_test/voidcrew_outpost_management/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(__IMPLIED_TYPE__)
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "managementowner"
 	TEST_ASSERT(home.load_level(), "The management test home failed to load.")
 	var/turf/console_turf = get_turf(home.management_console)

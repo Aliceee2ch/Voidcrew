@@ -12,7 +12,14 @@
 
 /datum/map_template/outpost_upgrade/shop
 	name = "Outpost Shop"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_shop.dmm"
+
+/datum/map_template/outpost_upgrade/shop/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_shop_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/shop/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_shop_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /datum/outpost_upgrade/service/shop
 	id = "shop"
@@ -20,7 +27,6 @@
 	desc = "A shop front with a counter and a shop bot, and a stock room."
 	price = OUTPOST_SHOP_COST
 	template_type = /datum/map_template/outpost_upgrade/shop
-	preview_name = "outpost_upgrade_shop"
 	/// Closed shops sell nothing, to anyone
 	var/is_open = TRUE
 	var/datum/weakref/stock_ref

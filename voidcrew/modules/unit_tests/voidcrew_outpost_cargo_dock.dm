@@ -321,7 +321,7 @@
 	save_economy()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
 	test_home = home
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "cargodockdelivery"
 	TEST_ASSERT(home.load_level(), "The cargo dock delivery outpost did not load")
 	var/datum/voidcrew_cargo_shuttle/outpost/ferry = home.freight
@@ -459,7 +459,7 @@
 	save_economy()
 	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
 	test_home = home
-	home.shell_template = allocate(/datum/map_template/player_outpost/small)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	home.founder_ckey = "cargodockobstruction"
 	TEST_ASSERT(home.load_level(), "The cargo pad obstruction outpost did not load")
 	var/result = place_test_cargo_dock(home, list(0))

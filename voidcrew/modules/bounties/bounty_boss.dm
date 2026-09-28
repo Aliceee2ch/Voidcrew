@@ -80,6 +80,8 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 	ai_controller = /datum/ai_controller/basic_controller/bounty_boss
 	/// BOUNTY_KIT_*: which kit it is, and the prefix of its dialogue contexts
 	var/boss_kit
+	/// The real item in its hand it strikes with (bounty_real_weapon()): its blows are that item's. Null keeps the kit's own blow.
+	var/boss_weapon
 	/// The ability types it is given
 	var/list/boss_ability_types = list()
 	/// Its abilities (/datum/action/cooldown/mob_cooldown/bounty_boss), granted at Initialize
@@ -120,6 +122,8 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
 
 /mob/living/basic/bounty_criminal/boss/Initialize(mapload)
 	. = ..()
+	if(boss_weapon)
+		bounty_real_weapon(boss_weapon).apply_melee(src)
 	damage_coeff = damage_coeff.Copy()
 	boss_brute_coeff = damage_coeff[BRUTE]
 	boss_burn_coeff = damage_coeff[BURN]
@@ -176,6 +180,9 @@ GLOBAL_LIST_EMPTY(bounty_boss_barricades)
  * smashes, and a boss smashes nothing, so every blow would do nothing.
  */
 /mob/living/basic/bounty_criminal/boss/melee_attack(atom/target, list/modifiers, ignore_cooldown = FALSE)
+	// Each swing picks one of the weapon's own verbs, as a player's does
+	if(boss_weapon)
+		bounty_real_weapon(boss_weapon).pick_verb(src)
 	if(!ismecha(target))
 		return ..()
 	if(!early_melee_attack(target, modifiers, ignore_cooldown))

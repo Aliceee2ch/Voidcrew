@@ -6,13 +6,13 @@
  * What it owns: /mob/living/basic/bounty_companion (its body, its built-in values and its AI) and
  * spawn_companions(). Companions (0-2, spec C7) keep a criminal company: they sit at the bar with
  * them, take turns in their talk, sit round their camp, and fight beside them with a style of their
- * own (BOUNTY_COMPANION_HEALTH x the style's health, BOUNTY_COMPANION_DAMAGE x its damage). The
+ * own (BOUNTY_COMPANION_HEALTH x the style's health; its weapon hits as the real one does). The
  * AI is the trooper's peaceful pattern: retaliation, then calling the rest of the gang in, then the
  * attack, then going to whoever called. A badly hurt companion may run; when their criminal goes
  * down, is cuffed or gives up, each may run; a stamina-crit companion gives up for good.
  *
- * They are not bounties, pay nothing, drop nothing and carry no real weapon (a gun is only a
- * ranged_attacks projectile). P5 deletes them when the posting closes; deleting one at any time
+ * They are not bounties, pay nothing, drop nothing and carry no real weapon (what is in their hand
+ * is only a picture, though its blows and shots are the real item's). P5 deletes them when the posting closes; deleting one at any time
  * is safe.
  *
  * The shared vars are declared in bounty_types.dm and nowhere else (leader_ref); the rest here
@@ -30,7 +30,6 @@
 	mob_biotypes = MOB_ORGANIC | MOB_HUMANOID
 	sentience_type = SENTIENCE_HUMANOID
 	status_flags = CANPUSH | CANSTUN | CANKNOCKDOWN
-	armour_penetration = BOUNTY_MELEE_AP
 	basic_mob_flags = NONE
 	// Stamina crit compares raw loss with a percentage when it ends; a pool of 100 keeps the two the same.
 	max_stamina = 100
@@ -113,7 +112,7 @@
 	)))
 	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(set_outpost_npc_look), src, bounty_companion_outfit(leader), gender, random_outpost_npc_look_number())
 
-/// Takes style `key`: health BOUNTY_COMPANION_HEALTH x the style's, damage BOUNTY_COMPANION_DAMAGE x its damage
+/// Takes style `key`: health BOUNTY_COMPANION_HEALTH x the style's, and the style's own weapon (never a Wanted criminal's heavier one)
 /mob/living/basic/bounty_companion/proc/ai_take_style(key)
 	var/datum/bounty_style/style = GLOB.bounty_styles[key]
 	if(!style)
@@ -122,7 +121,7 @@
 	health = maxHealth
 	damage_coeff = damage_coeff.Copy()
 	damage_coeff[STAMINA] = style.stamina_mult
-	return bounty_ai_apply_style(src, key, BOUNTY_COMPANION_DAMAGE)
+	return bounty_ai_apply_style(src, key)
 
 /// What a companion of `leader` wears, by where the criminal is
 /proc/bounty_companion_outfit(mob/living/basic/bounty_criminal/leader)
@@ -153,7 +152,7 @@
 	ai_stand_up()
 	var/datum/bounty_style/style = bounty_ai_style(src)
 	set_varspeed(style?.speed || BOUNTY_NORMAL_SPEED_MELEE)
-	ai_hand = bounty_ai_update_held(src, ai_hand, style?.held_look)
+	ai_hand = bounty_ai_update_held(src, ai_hand, bounty_ai_held_look(src))
 
 /// The fight is over for them: weapon away, easy pace
 /mob/living/basic/bounty_companion/proc/ai_leave_fight()

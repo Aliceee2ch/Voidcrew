@@ -208,22 +208,113 @@
 	criminal.ai_attacked_by(hunter)
 	TEST_ASSERT(HAS_TRAIT(criminal, "bounty_surrendered"), "A hit undid the surrender") // TRAIT_BOUNTY_SURRENDERED
 
-/// Styles: the pistol reloads through its magazine, the club is melee
+/// Styles: each carries a real weapon; the pistol reloads through the Stechkin's magazine, the club is a bat, fists are a punch
 /datum/unit_test/voidcrew_bounty_ai/styles
 
 /datum/unit_test/voidcrew_bounty_ai/styles/Run()
 	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(/mob/living/basic/bounty_criminal/normal, tile(1, 1))
-	TEST_ASSERT(bounty_ai_apply_style(criminal, "pistol", 1), "The pistol style would not apply") // BOUNTY_STYLE_PISTOL
+	TEST_ASSERT(bounty_ai_apply_style(criminal, "pistol"), "The pistol style would not apply") // BOUNTY_STYLE_PISTOL
 	var/datum/component/ranged_attacks/gun = criminal.GetComponent(/datum/component/ranged_attacks)
 	TEST_ASSERT_EQUAL(gun.projectile_type, /obj/projectile/bullet/bounty, "The pistol fires the wrong thing")
-	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 17, "The pistol's magazine is not full") // BB_BOUNTY_AMMO, BOUNTY_PISTOL_MAGAZINE
+	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_weapon"], /obj/item/gun/ballistic/automatic/pistol/aps, "The pistol style isn't the Stechkin") // BB_BOUNTY_WEAPON
+	var/obj/item/ammo_box/magazine/m9mm_aps/magazine = /obj/item/ammo_box/magazine/m9mm_aps
+	var/rounds = initial(magazine.max_ammo)
+	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], rounds, "The pistol's magazine isn't a full Stechkin magazine") // BB_BOUNTY_AMMO
 	var/datum/bounty_style/pistol = bounty_ai_style(criminal)
-	for(var/shot in 1 to 17)
+	for(var/shot in 1 to rounds)
 		pistol.after_shot(criminal)
-	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 0, "Seventeen shots did not empty the magazine") // BB_BOUNTY_AMMO
+	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 0, "A magazine's worth of shots did not empty the magazine") // BB_BOUNTY_AMMO
 	TEST_ASSERT(bounty_style_health_mult("brawler") > 1, "The brawler is not sturdier") // BOUNTY_STYLE_BRAWLER
-	TEST_ASSERT(bounty_ai_apply_style(criminal, "club", 1.2), "The club style would not apply") // BOUNTY_STYLE_CLUB
-	TEST_ASSERT_EQUAL(criminal.melee_damage_upper, round(12 * 1.2), "The club's damage did not take the tier") // BOUNTY_CLUB_DAMAGE_HIGH x the tier multiplier given
+
+	// The club is a baseball bat; a Wanted criminal's is the metal one. The tier picks the bat, never scales it.
+	var/obj/item/melee/baseball_bat/bat = /obj/item/melee/baseball_bat
+	var/obj/item/melee/baseball_bat/ablative/metal_bat = /obj/item/melee/baseball_bat/ablative
+	TEST_ASSERT(bounty_ai_apply_style(criminal, "club"), "The club style would not apply") // BOUNTY_STYLE_CLUB
+	TEST_ASSERT_EQUAL(criminal.melee_damage_upper, initial(bat.force), "The club doesn't hit like a baseball bat")
+	TEST_ASSERT_EQUAL(criminal.wound_bonus, initial(bat.wound_bonus), "The club doesn't wound like a baseball bat")
+	TEST_ASSERT(bounty_ai_apply_style(criminal, "club", TRUE), "The heavy club style would not apply")
+	TEST_ASSERT_EQUAL(criminal.melee_damage_upper, initial(metal_bat.force), "A Wanted criminal's club doesn't hit like a metal bat")
+
+	// Bare fists are a human's punch
+	var/obj/item/bodypart/arm/right/arm = /obj/item/bodypart/arm/right
+	TEST_ASSERT(bounty_ai_apply_style(criminal, "brawler"), "The brawler style would not apply") // BOUNTY_STYLE_BRAWLER
+	TEST_ASSERT_EQUAL(criminal.melee_damage_lower, initial(arm.unarmed_damage_low), "A brawler's weakest punch isn't a human's")
+	TEST_ASSERT_EQUAL(criminal.melee_damage_upper, initial(arm.unarmed_damage_high), "A brawler's hardest punch isn't a human's")
+	TEST_ASSERT_NULL(criminal.ai_controller.blackboard["bb_bounty_weapon"], "A brawler has something in their hand") // BB_BOUNTY_WEAPON
+
+/// Their weapons are the real thing: a pistol's shot is a 9mm round, a shotgun fires a whole shell of buckshot, a knife cuts like a knife
+/datum/unit_test/voidcrew_bounty_ai/real_weapons
+	/// How many projectiles the criminal fired (counted, never kept: they fly off and are deleted)
+	var/shots_fired = 0
+	/// The last hit the hunter took: damage, sharpness, wound bonus, exposed wound bonus
+	var/list/last_hit
+
+/datum/unit_test/voidcrew_bounty_ai/real_weapons/proc/on_fired(datum/source, obj/projectile/shot, atom/fired_from, atom/original)
+	SIGNAL_HANDLER
+	shots_fired++
+
+/datum/unit_test/voidcrew_bounty_ai/real_weapons/proc/on_hit(datum/source, damage, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item)
+	SIGNAL_HANDLER
+	last_hit = list(damage, sharpness, wound_bonus, exposed_wound_bonus)
+
+/datum/unit_test/voidcrew_bounty_ai/real_weapons/Run()
+	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(/mob/living/basic/bounty_criminal/normal, tile(1, 2))
+	var/mob/living/carbon/human/consistent/hunter = allocate(/mob/living/carbon/human/consistent, tile(2, 2))
+	criminal.ai_add_grudge(hunter)
+	RegisterSignal(criminal, COMSIG_PROJECTILE_FIRER_BEFORE_FIRE, PROC_REF(on_fired))
+	RegisterSignal(hunter, COMSIG_MOB_APPLY_DAMAGE, PROC_REF(on_hit))
+
+	// The pistol: the Stechkin's 9mm round, wounds and embedding and all
+	var/obj/projectile/bullet/c9mm/nine = /obj/projectile/bullet/c9mm
+	TEST_ASSERT(bounty_ai_apply_style(criminal, "pistol"), "The pistol style would not apply") // BOUNTY_STYLE_PISTOL
+	var/obj/projectile/bullet/bounty/bullet = fire_at(criminal, hunter)
+	TEST_ASSERT_EQUAL(shots_fired, 1, "A pistol shot fired [shots_fired] projectiles")
+	TEST_ASSERT_EQUAL(bullet.damage, initial(nine.damage), "A pistol shot doesn't do a 9mm round's damage")
+	TEST_ASSERT_EQUAL(bullet.wound_bonus, initial(nine.wound_bonus), "A pistol shot doesn't wound like a 9mm round")
+	TEST_ASSERT_EQUAL(bullet.armour_penetration, initial(nine.armour_penetration), "A pistol shot doesn't pierce armour like a 9mm round")
+	TEST_ASSERT_EQUAL(bullet.sharpness, initial(nine.sharpness), "A pistol shot isn't as sharp as a 9mm round")
+	TEST_ASSERT_EQUAL(bullet.embed_type, initial(nine.embed_type), "A pistol shot doesn't embed like a 9mm round")
+	TEST_ASSERT_NOTNULL(bullet.get_embed(), "A pistol shot can't embed")
+	TEST_ASSERT_NOTNULL(bullet.shrapnel_type, "A pistol shot leaves nothing to embed")
+
+	// The shotgun: every pellet of a buckshot shell, one shell from the tube
+	var/obj/item/ammo_casing/shotgun/buckshot/shell = /obj/item/ammo_casing/shotgun/buckshot
+	var/obj/projectile/bullet/pellet/shotgun_buckshot/pellet = /obj/projectile/bullet/pellet/shotgun_buckshot
+	TEST_ASSERT(bounty_ai_apply_style(criminal, "shotgun"), "The shotgun style would not apply") // BOUNTY_STYLE_SHOTGUN
+	shots_fired = 0
+	var/obj/projectile/bullet/bounty/first_pellet = fire_at(criminal, hunter)
+	TEST_ASSERT_EQUAL(shots_fired, initial(shell.pellets), "A shotgun blast wasn't a whole shell of buckshot")
+	TEST_ASSERT_EQUAL(first_pellet.damage, initial(pellet.damage), "A pellet doesn't do buckshot's damage")
+	TEST_ASSERT_EQUAL(first_pellet.sharpness, initial(pellet.sharpness), "A pellet isn't as sharp as buckshot")
+	var/datum/bounty_style/shotgun = bounty_ai_style(criminal)
+	shotgun.after_shot(criminal)
+	var/obj/item/ammo_box/magazine/internal/shot/tube = /obj/item/ammo_box/magazine/internal/shot
+	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], initial(tube.max_ammo) - 1, "A blast took more than one shell") // BB_BOUNTY_AMMO
+	// A Wanted criminal's combat shotgun hits harder, as the real one does
+	var/obj/item/gun/ballistic/shotgun/automatic/combat/combat = /obj/item/gun/ballistic/shotgun/automatic/combat
+	var/datum/bounty_real_weapon/heavy = bounty_real_weapon(/obj/item/gun/ballistic/shotgun/automatic/combat, /obj/item/ammo_casing/shotgun/buckshot)
+	TEST_ASSERT_EQUAL(heavy.round_damage, initial(pellet.damage) * initial(combat.projectile_damage_multiplier), "The combat shotgun's pellets don't take its damage multiplier")
+
+	// The knife: a kitchen knife's force, edge and wounds, through the mob's own blow
+	var/obj/item/knife/kitchen/knife = /obj/item/knife/kitchen
+	TEST_ASSERT(bounty_ai_apply_style(criminal, "knife"), "The knife style would not apply") // BOUNTY_STYLE_KNIFE
+	last_hit = null
+	TEST_ASSERT(criminal.melee_attack(hunter, ignore_cooldown = TRUE), "The knife didn't land")
+	TEST_ASSERT_NOTNULL(last_hit, "The knife hit did no damage")
+	TEST_ASSERT_EQUAL(last_hit[1], initial(knife.force), "A knife hit doesn't do the kitchen knife's force")
+	TEST_ASSERT_EQUAL(last_hit[2], SHARP_EDGED, "A knife hit isn't edged")
+	TEST_ASSERT_EQUAL(last_hit[3], initial(knife.wound_bonus), "A knife hit doesn't wound like the kitchen knife")
+	TEST_ASSERT_EQUAL(last_hit[4], initial(knife.exposed_wound_bonus), "A knife hit doesn't wound bare skin like the kitchen knife")
+
+/// Loads a shot from `criminal` at `target` as it leaves the gun, as the ranged_attacks component's shot does, and returns it
+/datum/unit_test/voidcrew_bounty_ai/real_weapons/proc/fire_at(mob/living/basic/bounty_criminal/criminal, mob/living/target)
+	var/datum/bounty_style/style = bounty_ai_style(criminal)
+	var/obj/projectile/bullet/bounty/shot = allocate(style.projectile_type, get_turf(criminal))
+	shot.firer = criminal
+	shot.fired_from = criminal
+	shot.original = target
+	SEND_SIGNAL(criminal, COMSIG_PROJECTILE_FIRER_BEFORE_FIRE, shot, criminal, target)
+	return shot
 
 /// Every activity kind starts with its anchor in place
 /datum/unit_test/voidcrew_bounty_ai/activities

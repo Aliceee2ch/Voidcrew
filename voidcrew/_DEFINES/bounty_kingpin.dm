@@ -40,12 +40,12 @@
 
 // ===== HIS REVOLVER =====
 
-#define BOUNTY_KINGPIN_REVOLVER_DAMAGE 35
+/// The revolver in his hand: its look, its rounds and its cylinder (bounty_real_weapon())
+#define BOUNTY_KINGPIN_REVOLVER /obj/item/gun/ballistic/revolver
 /// The aim line before each shot; he never fires without it
 #define BOUNTY_KINGPIN_REVOLVER_AIM (0.5 SECONDS)
 /// From one aim to the next
 #define BOUNTY_KINGPIN_REVOLVER_COOLDOWN (1.2 SECONDS)
-#define BOUNTY_KINGPIN_REVOLVER_ROUNDS 6
 #define BOUNTY_KINGPIN_REVOLVER_RELOAD (3 SECONDS)
 
 // ===== THE SHOOTOUT =====
@@ -84,38 +84,30 @@
 #define BOUNTY_GOON_WEAPON_SMG "smg"
 #define BOUNTY_GOON_WEAPON_SHOTGUN "shotgun"
 
-#define BOUNTY_GOON_PISTOL_DAMAGE_MIN 18
-#define BOUNTY_GOON_PISTOL_DAMAGE_MAX 22
+/// The guns in the goons' hands: their looks, their rounds and their magazines (bounty_real_weapon())
+#define BOUNTY_GOON_PISTOL_GUN /obj/item/gun/ballistic/automatic/pistol/aps
+#define BOUNTY_GOON_SMG_GUN /obj/item/gun/ballistic/automatic/mini_uzi
+#define BOUNTY_GOON_SHOTGUN_GUN /obj/item/gun/ballistic/shotgun/automatic/combat
+/// What the shotguns are loaded with
+#define BOUNTY_GOON_SHOTGUN_AMMO /obj/item/ammo_casing/shotgun/buckshot
+
 #define BOUNTY_GOON_PISTOL_COOLDOWN (0.3 SECONDS)
-#define BOUNTY_GOON_PISTOL_ROUNDS 17
 #define BOUNTY_GOON_PISTOL_RELOAD (2 SECONDS)
 
-#define BOUNTY_GOON_SMG_DAMAGE_MIN 11
-#define BOUNTY_GOON_SMG_DAMAGE_MAX 14
 /// Shots in a burst, and the gap between them
 #define BOUNTY_GOON_SMG_BURST 5
 #define BOUNTY_GOON_SMG_BURST_GAP (0.1 SECONDS)
 /// The spin-up: the gun comes up level, with a sound
 #define BOUNTY_GOON_SMG_WINDUP (0.3 SECONDS)
 #define BOUNTY_GOON_SMG_COOLDOWN (1 SECONDS)
-/// Bursts in a magazine
-#define BOUNTY_GOON_SMG_BURSTS 6
 #define BOUNTY_GOON_SMG_RELOAD (2.5 SECONDS)
 
-#define BOUNTY_GOON_SHOTGUN_DAMAGE_MIN 30
-#define BOUNTY_GOON_SHOTGUN_DAMAGE_MAX 40
 /// Tiles: he walks in to this before he fires
 #define BOUNTY_GOON_SHOTGUN_RANGE 2
 /// The pump before each blast
 #define BOUNTY_GOON_SHOTGUN_WINDUP (0.3 SECONDS)
 #define BOUNTY_GOON_SHOTGUN_COOLDOWN (1.2 SECONDS)
-#define BOUNTY_GOON_SHOTGUN_SHELLS 5
 #define BOUNTY_GOON_SHOTGUN_RELOAD (3 SECONDS)
-
-/// Spread of the goons' shots, in degrees across
-#define BOUNTY_GOON_PISTOL_SPREAD 8
-#define BOUNTY_GOON_SMG_SPREAD 14
-#define BOUNTY_GOON_SHOTGUN_SPREAD 10
 
 /// Tiles from the sofa a goon ever walks
 #define BOUNTY_GOON_LEASH 7

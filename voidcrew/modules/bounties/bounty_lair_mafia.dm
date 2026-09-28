@@ -100,32 +100,36 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	return TRUE
 
 /**
- * Fires one `projectile_type` from `shooter` at `target` (a mob or a turf) for `damage`, `spread` degrees wide, and
- * no farther than `max_range` tiles if given. The club's own faction is never hit by it. Returns the projectile, or
- * null.
+ * Fires one round of `weapon` (a /datum/bounty_real_weapon) from `shooter` at `target` (a mob or a turf) as
+ * `projectile_type`: every pellet of a shell, each with the real round's numbers and spread, plus `spread` degrees
+ * more (full width) if given, and no farther than `max_range` tiles if given. The club's own faction is never hit by
+ * it. Returns the first projectile still flying, or null.
  */
-/proc/bounty_mafia_shoot(mob/living/shooter, projectile_type, atom/target, damage, spread = 0, fire_sound, max_range)
+/proc/bounty_mafia_shoot(mob/living/shooter, projectile_type, atom/target, datum/bounty_real_weapon/weapon, spread = 0, max_range)
 	var/turf/start = get_turf(shooter)
 	var/turf/aim = get_turf(target)
-	if(!start || !aim || start == aim)
+	if(!start || !aim || start == aim || !weapon)
 		return null
-	var/obj/projectile/bullet = new projectile_type(start)
-	if(!isnull(damage))
-		bullet.damage = damage
-	if(max_range)
-		bullet.range = max_range
-		bullet.maximum_range = max_range
-	bullet.firer = shooter
-	bullet.fired_from = shooter
-	bullet.ignored_factions = shooter.faction?.Copy()
-	bullet.spread = spread
-	bullet.aim_projectile(target, shooter)
-	if(QDELETED(bullet))
-		return null
-	if(fire_sound)
-		playsound(shooter, fire_sound, 60, TRUE)
-	bullet.fire()
-	return QDELETED(bullet) ? null : bullet
+	var/obj/projectile/first
+	for(var/pellet in 1 to weapon.pellets)
+		var/obj/projectile/bullet = new projectile_type(start)
+		weapon.load(bullet)
+		if(max_range)
+			bullet.range = max_range
+			bullet.maximum_range = max_range
+		bullet.firer = shooter
+		bullet.fired_from = shooter
+		bullet.ignored_factions = shooter.faction?.Copy()
+		bullet.spread = spread
+		bullet.aim_projectile(target, shooter, null, weapon.shot_spread())
+		if(QDELETED(bullet))
+			continue
+		bullet.fire()
+		if(!first && !QDELETED(bullet))
+			first = bullet
+	if(weapon.fire_sound)
+		playsound(shooter, weapon.fire_sound, 60, TRUE)
+	return first
 
 /**
  * Whether `mover`, kept to the room (area) `home`, may step onto `new_loc` on its own: anywhere in its room, never
@@ -313,31 +317,28 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 // ===== GUNS =====
 
 /**
- * A club mob's gun, simulated: no item, nothing to drop. try_fire() spins it up first if it has a wind-up,
- * then fires a burst of real projectiles, and reloads when the magazine is spent. A hit during the wind-up can
- * spoil it (fumble()). Its timers check `serial`, so a cancelled shot does nothing.
+ * A club mob's gun, simulated: no item, nothing to drop, but every round is the real gun's
+ * (`gun_type`, bounty_real_weapon()): its damage, wounds, armour penetration, spread and magazine.
+ * try_fire() spins it up first if it has a wind-up, then fires a burst of real projectiles, and
+ * reloads when the magazine is spent. A hit during the wind-up can spoil it (fumble()). Its timers
+ * check `serial`, so a cancelled shot does nothing.
  */
 /datum/bounty_mafia_gun
 	/// What it's called in messages
 	var/gun_name = "pistol"
+	/// The real gun: the one in its owner's hand
+	var/gun_type = BOUNTY_MOBSTER_PISTOL_GUN
 	var/projectile_type = /obj/projectile/bullet/bounty_mafia
-	var/damage_min = BOUNTY_MOBSTER_PISTOL_DAMAGE_MIN
-	var/damage_max = BOUNTY_MOBSTER_PISTOL_DAMAGE_MAX
 	/// Shots in one burst, and the time between them. A pistol fires a quick string of shots each time.
 	var/burst = BOUNTY_MOBSTER_PISTOL_BURST
 	var/burst_delay = BOUNTY_MOBSTER_PISTOL_BURST_GAP
 	/// From the start of one burst (or wind-up) to the next
 	var/cooldown = BOUNTY_MOBSTER_PISTOL_COOLDOWN
-	/// Bursts per magazine
-	var/magazine = BOUNTY_MOBSTER_PISTOL_ROUNDS
 	var/reload_time = BOUNTY_MOBSTER_PISTOL_RELOAD
 	/// The spin-up before a burst, if any
 	var/windup = 0
 	/// The wind-up comes once per magazine (the don raises his pistol before each string), not before every burst
 	var/windup_once_per_magazine = FALSE
-	/// Degrees of spread, full width
-	var/spread = 8
-	var/fire_sound = 'sound/items/weapons/gun/pistol/shot.ogg'
 	var/windup_sound
 	var/reload_sound = 'sound/items/weapons/gun/pistol/mag_insert.ogg'
 	/// Dialogue context its owner may say on reloading, and the chance they do
@@ -345,7 +346,11 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/reload_bark_chance = 35
 	/// A hit during the wind-up spoils it
 	var/fumbles = FALSE
-	/// Bursts left in the magazine
+	/// The real gun's numbers (/datum/bounty_real_weapon)
+	var/datum/bounty_real_weapon/weapon
+	/// Rounds in a full magazine: the real gun's
+	var/magazine = 0
+	/// Rounds left in the magazine
 	var/ammo
 	/// world.time it may start the next burst or wind-up
 	var/next_fire_at = 0
@@ -365,12 +370,15 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 /datum/bounty_mafia_gun/New(mob/living/owner)
 	. = ..()
 	owner_ref = WEAKREF(owner)
+	weapon = bounty_real_weapon(gun_type)
+	magazine = max(1, weapon.magazine)
 	ammo = magazine
 
 /datum/bounty_mafia_gun/Destroy()
 	serial++
 	owner_ref = null
 	aim_ref = null
+	weapon = null
 	return ..()
 
 /datum/bounty_mafia_gun/proc/owner()
@@ -417,15 +425,17 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	fire_burst()
 	return TRUE
 
+/// A burst: as many of its shots as the magazine has rounds left, then a reload if it's spent
 /datum/bounty_mafia_gun/proc/fire_burst()
-	ammo--
+	var/shots = clamp(burst, 1, ammo)
+	ammo -= shots
 	next_fire_at = max(next_fire_at, world.time + cooldown)
 	var/fire_serial = serial
 	shoot_once(fire_serial)
-	for(var/i in 2 to burst)
+	for(var/i in 2 to shots)
 		addtimer(CALLBACK(src, PROC_REF(shoot_once), fire_serial), (i - 1) * burst_delay, TIMER_DELETE_ME)
 	if(ammo <= 0)
-		start_reload((burst - 1) * burst_delay)
+		start_reload((shots - 1) * burst_delay)
 
 /// One shot of the burst under `fire_serial`. Never at someone who went down meanwhile.
 /datum/bounty_mafia_gun/proc/shoot_once(fire_serial)
@@ -438,7 +448,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	if(isliving(target) && !bounty_mafia_may_hurt(target))
 		return null
 	owner.face_atom(target)
-	return bounty_mafia_shoot(owner, projectile_type, target, rand(damage_min, damage_max), spread, fire_sound)
+	return bounty_mafia_shoot(owner, projectile_type, target, weapon)
 
 /// A fresh magazine, ready `delay` + reload_time from now
 /datum/bounty_mafia_gun/proc/start_reload(delay = 0)
@@ -462,64 +472,47 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /datum/bounty_mafia_gun/smg
 	gun_name = "SMG"
-	damage_min = BOUNTY_MOBSTER_SMG_DAMAGE_MIN
-	damage_max = BOUNTY_MOBSTER_SMG_DAMAGE_MAX
+	gun_type = BOUNTY_MOBSTER_SMG_GUN
 	burst = BOUNTY_MOBSTER_SMG_BURST
 	burst_delay = BOUNTY_MOBSTER_SMG_BURST_GAP
 	cooldown = BOUNTY_MOBSTER_SMG_COOLDOWN
-	magazine = BOUNTY_MOBSTER_SMG_BURSTS
 	reload_time = BOUNTY_MOBSTER_SMG_RELOAD
 	windup = BOUNTY_MOBSTER_SMG_WINDUP
-	spread = 14
-	fire_sound = 'sound/items/weapons/gun/smg/shot.ogg'
 	windup_sound = 'sound/items/weapons/gun/smg/smgrack.ogg'
 	reload_sound = 'sound/items/weapons/gun/general/magazine_insert_full.ogg'
 	fumbles = TRUE
 
 /datum/bounty_mafia_gun/tommy
 	gun_name = "Tommy gun"
-	damage_min = BOUNTY_LIEUTENANT_TOMMY_DAMAGE_MIN
-	damage_max = BOUNTY_LIEUTENANT_TOMMY_DAMAGE_MAX
+	gun_type = BOUNTY_LIEUTENANT_TOMMY_GUN
 	burst = BOUNTY_LIEUTENANT_TOMMY_BURST
 	burst_delay = BOUNTY_LIEUTENANT_TOMMY_BURST_GAP
 	cooldown = BOUNTY_LIEUTENANT_TOMMY_COOLDOWN
-	magazine = BOUNTY_LIEUTENANT_TOMMY_BURSTS
 	reload_time = BOUNTY_LIEUTENANT_TOMMY_RELOAD
 	windup = BOUNTY_LIEUTENANT_TOMMY_WINDUP
-	spread = 12
-	fire_sound = 'sound/items/weapons/gun/smg/shot.ogg'
 	windup_sound = 'sound/items/weapons/gun/smg/smgrack.ogg'
 	reload_sound = 'sound/items/weapons/gun/general/magazine_insert_full.ogg'
 
 /datum/bounty_mafia_gun/don
 	gun_name = "gold pistol"
-	damage_min = BOUNTY_DON_DAMAGE_MIN
-	damage_max = BOUNTY_DON_DAMAGE_MAX
+	gun_type = BOUNTY_DON_GUN
 	cooldown = BOUNTY_DON_COOLDOWN
-	magazine = BOUNTY_DON_ROUNDS
 	reload_time = BOUNTY_DON_RELOAD
 	windup = BOUNTY_DON_RAISE
 	windup_once_per_magazine = TRUE
-	spread = 6
-	fire_sound = 'sound/items/weapons/gun/pistol/shot_alt.ogg'
 	windup_sound = 'sound/items/weapons/gun/pistol/rack_small.ogg'
 	reload_context = "don_reload"
 	reload_bark_chance = 50
 
 // ===== PROJECTILES =====
 
-/// A club bullet: the gun that fires it sets its damage. No shrapnel, so nothing is left in anyone to farm.
+/// A club bullet: the real round of the gun that fires it (bounty_mafia_shoot())
 /obj/projectile/bullet/bounty_mafia
 	name = "bullet"
-	damage = BOUNTY_MOBSTER_PISTOL_DAMAGE_MIN
-	armour_penetration = BOUNTY_BULLET_AP
-	embed_type = null
-	shrapnel_type = null
 
-/// The mech's machine gun: light rounds that barely scratch furniture
+/// The mech's machine gun: its real exosuit gun's rounds (BOUNTY_MECH_LMG_GUN), which barely scratch furniture
 /obj/projectile/bullet/bounty_mafia/lmg
 	name = "machine gun round"
-	damage = BOUNTY_MECH_LMG_DAMAGE
 	demolition_mod = BOUNTY_MECH_LMG_DEMOLITION
 
 /**
@@ -631,8 +624,8 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 // ===== GOONS =====
 
 /**
- * A club mobster. The base is the knife man; /pistol and /smg carry guns. tg's Russian mobster outruns a player
- * and fires a 60-damage round every second, so every number here is the criminal scale instead (lairs.md 3.1).
+ * A club mobster. The base is the knife man; /pistol and /smg carry guns. Every blow and round is the real
+ * item's in its hand (`r_hand`, bounty_real_weapon()), at the club's own pace (lairs.md 3.1).
  */
 /mob/living/basic/trooper/russian/mafia
 	name = "mobster"
@@ -640,17 +633,14 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	maxHealth = BOUNTY_MOBSTER_KNIFE_HEALTH
 	health = BOUNTY_MOBSTER_KNIFE_HEALTH
 	speed = BOUNTY_MOBSTER_KNIFE_SPEED
-	melee_damage_lower = BOUNTY_MOBSTER_KNIFE_DAMAGE_MIN
-	melee_damage_upper = BOUNTY_MOBSTER_KNIFE_DAMAGE_MAX
 	melee_attack_cooldown = BOUNTY_MOBSTER_KNIFE_COOLDOWN
-	armour_penetration = BOUNTY_MELEE_AP
 	faction = list(FACTION_RUSSIAN, BOUNTY_MAFIA_FACTION)
 	sentience_type = SENTIENCE_BOSS
 	// They talk to the hunters, so they speak Common
 	initial_language_holder = /datum/language_holder/atom_basic
 	mob_spawner = /obj/effect/mob_spawn/corpse/human/bounty_mafia
 	corpse = /obj/effect/mob_spawn/corpse/human/bounty_mafia
-	r_hand = /obj/item/knife/kitchen
+	r_hand = BOUNTY_MOBSTER_KNIFE
 	loot = null
 	ai_controller = /datum/ai_controller/basic_controller/bounty_mafia
 	/// The gun it fights with (a /datum/bounty_mafia_gun type), or null for a knife
@@ -675,6 +665,8 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 
 /mob/living/basic/trooper/russian/mafia/Initialize(mapload)
 	. = ..()
+	// Its blows are the real item's in its hand (bare fists without one)
+	bounty_real_weapon(r_hand).apply_melee(src)
 	if(mafia_gun_type)
 		mafia_gun = new mafia_gun_type(src)
 	mafia_home_turf = get_turf(src)
@@ -1006,10 +998,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	speed = BOUNTY_MOBSTER_PISTOL_SPEED
 	mob_spawner = /obj/effect/mob_spawn/corpse/human/bounty_mafia/pistol
 	corpse = /obj/effect/mob_spawn/corpse/human/bounty_mafia/pistol
-	r_hand = /obj/item/gun/ballistic/automatic/pistol
-	attack_verb_continuous = "pistol-whips"
-	attack_verb_simple = "pistol-whip"
-	attack_sound = 'sound/items/weapons/punch1.ogg'
+	r_hand = BOUNTY_MOBSTER_PISTOL_GUN
 	attack_vis_effect = ATTACK_EFFECT_PUNCH
 	mafia_gun_type = /datum/bounty_mafia_gun
 
@@ -1022,10 +1011,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	speed = BOUNTY_MOBSTER_SMG_SPEED
 	mob_spawner = /obj/effect/mob_spawn/corpse/human/bounty_mafia/smg
 	corpse = /obj/effect/mob_spawn/corpse/human/bounty_mafia/smg
-	r_hand = /obj/item/gun/ballistic/automatic/mini_uzi
-	attack_verb_continuous = "hits"
-	attack_verb_simple = "hit"
-	attack_sound = 'sound/items/weapons/punch1.ogg'
+	r_hand = BOUNTY_MOBSTER_SMG_GUN
 	attack_vis_effect = ATTACK_EFFECT_PUNCH
 	mafia_gun_type = /datum/bounty_mafia_gun/smg
 
@@ -1080,12 +1066,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 		maxHealth = BOUNTY_LIEUTENANT_BRUTE_HEALTH
 		health = BOUNTY_LIEUTENANT_BRUTE_HEALTH
 		speed = BOUNTY_LIEUTENANT_BRUTE_SPEED
-		melee_damage_lower = BOUNTY_LIEUTENANT_BRUTE_DAMAGE_MIN
-		melee_damage_upper = BOUNTY_LIEUTENANT_BRUTE_DAMAGE_MAX
 		melee_attack_cooldown = BOUNTY_LIEUTENANT_BRUTE_COOLDOWN
-		attack_verb_continuous = "punches"
-		attack_verb_simple = "punch"
-		attack_sound = 'sound/items/weapons/punch4.ogg'
 		attack_vis_effect = ATTACK_EFFECT_PUNCH
 		mafia_gun_type = null
 		mob_spawner = /obj/effect/mob_spawn/corpse/human/bounty_mafia/brute
@@ -1099,14 +1080,11 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	maxHealth = BOUNTY_LIEUTENANT_TOMMY_HEALTH
 	health = BOUNTY_LIEUTENANT_TOMMY_HEALTH
 	speed = BOUNTY_LIEUTENANT_TOMMY_SPEED
-	attack_verb_continuous = "clubs"
-	attack_verb_simple = "club"
-	attack_sound = 'sound/items/weapons/punch1.ogg'
 	attack_vis_effect = ATTACK_EFFECT_PUNCH
 	mafia_gun_type = /datum/bounty_mafia_gun/tommy
 	mob_spawner = /obj/effect/mob_spawn/corpse/human/bounty_mafia/tommy
 	corpse = /obj/effect/mob_spawn/corpse/human/bounty_mafia/tommy
-	r_hand = /obj/item/gun/ballistic/automatic/tommygun
+	r_hand = BOUNTY_LIEUTENANT_TOMMY_GUN
 	mafia_voice = "tommy"
 
 // Brute's blows knock people down now and then
@@ -1827,13 +1805,20 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_lmg_round(serial)
 	if(!mech_still("lmg_fire", serial) || !mech_lmg_aim)
 		return null
-	return bounty_mafia_shoot(src, mech_lmg_type, mech_lmg_aim, BOUNTY_MECH_LMG_DAMAGE, BOUNTY_MECH_LMG_ARC, 'sound/items/weapons/gun/l6/shot.ogg', mech_lmg_range + 1)
+	return bounty_mafia_shoot(src, mech_lmg_type, mech_lmg_aim, bounty_real_weapon(BOUNTY_MECH_LMG_GUN), BOUNTY_MECH_LMG_ARC, mech_lmg_range + 1)
 
-/// A stomp on someone right next to it. TRUE if it landed.
+/**
+ * A stomp on someone right next to it, which throws them (their exosuit and all) BOUNTY_MECH_STOMP_THROW tiles
+ * straight back, never out of its arena. TRUE if it landed.
+ */
 /mob/living/basic/bounty_lair_boss/mafia_mech/proc/mech_stomp(mob/living/target)
 	if(!mech_can_act() || mech_busy || !Adjacent(target) || !mech_target_ok(target) || world.time < next_move)
 		return FALSE
-	return melee_attack(target)
+	. = melee_attack(target)
+	if(!. || QDELETED(target))
+		return
+	var/atom/movable/thrown = ismecha(target.loc) ? target.loc : target
+	bounty_throw_back(src, thrown, BOUNTY_MECH_STOMP_THROW, BOUNTY_MECH_STOMP_THROW_SPEED, keep_in = mech_home_ref?.resolve())
 
 // ----- EMPs -----
 
@@ -1961,12 +1946,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	maxHealth = BOUNTY_DON_HEALTH
 	health = BOUNTY_DON_HEALTH
 	speed = BOUNTY_DON_SPEED
-	melee_damage_lower = 8
-	melee_damage_upper = 12
 	melee_attack_cooldown = 1.2 SECONDS
-	attack_verb_continuous = "pistol-whips"
-	attack_verb_simple = "pistol-whip"
-	attack_sound = 'sound/items/weapons/punch1.ogg'
 	attack_vis_effect = ATTACK_EFFECT_PUNCH
 	combat_mode = TRUE
 	faction = list(FACTION_RUSSIAN, BOUNTY_MAFIA_FACTION)
@@ -1998,7 +1978,9 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 /mob/living/basic/bounty_lair_boss/mafia_don/Initialize(mapload)
 	. = ..()
 	don_gun = new(src)
-	apply_dynamic_human_appearance(src, mob_spawn_path = /obj/effect/mob_spawn/corpse/human/bounty_mafia/don, r_hand = /obj/item/gun/ballistic/automatic/pistol/deagle/gold)
+	// Up close he pistol-whips with it, as hard as the real thing
+	bounty_real_weapon(BOUNTY_DON_GUN).apply_melee(src)
+	apply_dynamic_human_appearance(src, mob_spawn_path = /obj/effect/mob_spawn/corpse/human/bounty_mafia/don, r_hand = BOUNTY_DON_GUN)
 	AddElement(/datum/element/death_drops, string_list(list(/obj/effect/mob_spawn/corpse/human/bounty_mafia/don)))
 	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SHOE)
 	AddElement(/datum/element/relay_attackers)

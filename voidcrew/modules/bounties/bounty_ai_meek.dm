@@ -12,7 +12,7 @@
  * - being found (the container opened; bumped, touched, pulled, hit or examined up close; a light
  *   coming near), which shoves the finder back a tile and sends them running again;
  * - a restless tell while hidden a long time, so a search can end;
- * - cornered: a shout, a one-second aim with the holdout (the telegraph), five quick shots, then
+ * - cornered: a shout, a short aim with the holdout (the telegraph), a quick volley, then
  *   running again. A stamina hit during the aim makes them fumble it; each shot checks they can
  *   still shoot.
  * It never loots and never attacks first.
@@ -92,8 +92,8 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	return BOUNTY_STYLE_HOLDOUT
 
 /// The holdout is the same little gun whatever the tier
-/mob/living/basic/bounty_criminal/meek/ai_damage_mult()
-	return 1
+/mob/living/basic/bounty_criminal/meek/ai_heavy_weapon()
+	return FALSE
 
 /mob/living/basic/bounty_criminal/meek/ai_sprints()
 	return TRUE
@@ -358,8 +358,7 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	ai_cornered_since = 0
 	REMOVE_TRAIT(src, TRAIT_BOUNTY_SPRINTING, BOUNTY_AI_TRAIT)
 	face_atom(bounty_ai_target_for(target))
-	var/datum/bounty_style/style = bounty_ai_style(src)
-	ai_hand = bounty_ai_update_held(src, ai_hand, style?.held_look || /obj/item/gun/ballistic/automatic/pistol)
+	ai_hand = bounty_ai_update_held(src, ai_hand, bounty_ai_held_look(src) || /obj/item/gun/ballistic/automatic/pistol)
 	new /obj/effect/temp_visual/telegraphing/bounty_aim(get_turf(target))
 	visible_message(span_danger("[src] pulls out a small pistol and aims it at [target]!"))
 	to_chat(target, span_userdanger("[src] is aiming a pistol at you!"))
@@ -369,9 +368,9 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	return TRUE
 
 /**
- * The aim is up: the volley starts, BOUNTY_MEEK_PISTOL_SHOTS weak shots BOUNTY_MEEK_PISTOL_GAP apart,
- * the first one now. A stamina hit or a stun during the aim makes them fumble it instead. Returns
- * TRUE if the first shot went.
+ * The aim is up: the volley starts, BOUNTY_MEEK_PISTOL_SHOTS shots (never more than the holdout's
+ * magazine) BOUNTY_MEEK_PISTOL_GAP apart, the first one now. A stamina hit or a stun during the aim
+ * makes them fumble it instead. Returns TRUE if the first shot went.
  */
 /mob/living/basic/bounty_criminal/proc/ai_fire_holdout()
 	var/mob/living/target = ai_aim_ref?.resolve()
@@ -386,7 +385,8 @@ GLOBAL_LIST_EMPTY(bounty_ai_test_dark_turfs)
 	if(!ai_volley_target_ok(target))
 		ai_put_gun_away()
 		return FALSE
-	ai_volley_left = BOUNTY_MEEK_PISTOL_SHOTS
+	var/datum/bounty_real_weapon/holdout = bounty_ai_real_weapon(src)
+	ai_volley_left = holdout?.magazine ? min(BOUNTY_MEEK_PISTOL_SHOTS, holdout.magazine) : BOUNTY_MEEK_PISTOL_SHOTS
 	ai_volley_ref = WEAKREF(target)
 	return ai_volley_shot()
 

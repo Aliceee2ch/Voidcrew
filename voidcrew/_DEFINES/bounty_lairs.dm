@@ -81,33 +81,28 @@
 #define BB_BOUNTY_MAFIA_MOVE_TO "BB_bounty_mafia_move_to"
 
 // ----- mobsters -----
+// Every blow and round is the real item's in their hand (bounty_real_weapon()): its look, damage and magazine.
 
+#define BOUNTY_MOBSTER_KNIFE /obj/item/knife/kitchen
 #define BOUNTY_MOBSTER_KNIFE_HEALTH 120
-#define BOUNTY_MOBSTER_KNIFE_DAMAGE_MIN 14
-#define BOUNTY_MOBSTER_KNIFE_DAMAGE_MAX 18
 #define BOUNTY_MOBSTER_KNIFE_COOLDOWN (0.8 SECONDS)
 #define BOUNTY_MOBSTER_KNIFE_SPEED 1.2
 
+#define BOUNTY_MOBSTER_PISTOL_GUN /obj/item/gun/ballistic/automatic/pistol/aps
 #define BOUNTY_MOBSTER_PISTOL_HEALTH 120
-#define BOUNTY_MOBSTER_PISTOL_DAMAGE_MIN 18
-#define BOUNTY_MOBSTER_PISTOL_DAMAGE_MAX 22
 /// A pistol fires this many shots each time it fires, this far apart; a goon only decides to shoot every half second
 #define BOUNTY_MOBSTER_PISTOL_BURST 2
 #define BOUNTY_MOBSTER_PISTOL_BURST_GAP (0.25 SECONDS)
 #define BOUNTY_MOBSTER_PISTOL_COOLDOWN (0.5 SECONDS)
-/// Strings of BOUNTY_MOBSTER_PISTOL_BURST shots per magazine: 16 rounds
-#define BOUNTY_MOBSTER_PISTOL_ROUNDS 8
 #define BOUNTY_MOBSTER_PISTOL_RELOAD (2 SECONDS)
 #define BOUNTY_MOBSTER_PISTOL_SPEED 1.4
 
+#define BOUNTY_MOBSTER_SMG_GUN /obj/item/gun/ballistic/automatic/mini_uzi
 #define BOUNTY_MOBSTER_SMG_HEALTH 150
-#define BOUNTY_MOBSTER_SMG_DAMAGE_MIN 11
-#define BOUNTY_MOBSTER_SMG_DAMAGE_MAX 14
 #define BOUNTY_MOBSTER_SMG_BURST 5
 #define BOUNTY_MOBSTER_SMG_BURST_GAP (0.1 SECONDS)
 #define BOUNTY_MOBSTER_SMG_WINDUP (0.3 SECONDS)
 #define BOUNTY_MOBSTER_SMG_COOLDOWN (1 SECONDS)
-#define BOUNTY_MOBSTER_SMG_BURSTS 6
 #define BOUNTY_MOBSTER_SMG_RELOAD (2.5 SECONDS)
 #define BOUNTY_MOBSTER_SMG_SPEED 1.4
 
@@ -130,20 +125,17 @@
 
 // ----- lieutenants -----
 
+#define BOUNTY_LIEUTENANT_TOMMY_GUN /obj/item/gun/ballistic/automatic/tommygun
 #define BOUNTY_LIEUTENANT_TOMMY_HEALTH 350
-#define BOUNTY_LIEUTENANT_TOMMY_DAMAGE_MIN 12
-#define BOUNTY_LIEUTENANT_TOMMY_DAMAGE_MAX 15
 #define BOUNTY_LIEUTENANT_TOMMY_BURST 6
 #define BOUNTY_LIEUTENANT_TOMMY_BURST_GAP (0.1 SECONDS)
 #define BOUNTY_LIEUTENANT_TOMMY_WINDUP (0.3 SECONDS)
 #define BOUNTY_LIEUTENANT_TOMMY_COOLDOWN (1 SECONDS)
-#define BOUNTY_LIEUTENANT_TOMMY_BURSTS 8
 #define BOUNTY_LIEUTENANT_TOMMY_RELOAD (3 SECONDS)
 #define BOUNTY_LIEUTENANT_TOMMY_SPEED 1.4
 
+/// Brute fights with his fists: a human's punch
 #define BOUNTY_LIEUTENANT_BRUTE_HEALTH 400
-#define BOUNTY_LIEUTENANT_BRUTE_DAMAGE_MIN 24
-#define BOUNTY_LIEUTENANT_BRUTE_DAMAGE_MAX 32
 #define BOUNTY_LIEUTENANT_BRUTE_COOLDOWN (1 SECONDS)
 /// Percent chance a blow knocks the hunter down
 #define BOUNTY_LIEUTENANT_BRUTE_KNOCKDOWN_CHANCE 25
@@ -175,6 +167,9 @@
 #define BOUNTY_MECH_STOMP_DAMAGE_MAX 36
 #define BOUNTY_MECH_STOMP_AP 10
 #define BOUNTY_MECH_STOMP_COOLDOWN (1.2 SECONDS)
+/// A stomp throws them this many tiles straight back, at this throw speed
+#define BOUNTY_MECH_STOMP_THROW 3
+#define BOUNTY_MECH_STOMP_THROW_SPEED 2
 
 /// The lock-on: a marker under each hunter it can see, then one rocket per marker
 #define BOUNTY_MECH_ROCKET_LOCK (0.8 SECONDS)
@@ -186,9 +181,10 @@
 /// What a rocket does to a player's exosuit in its way, against its bullet armour: never the anti-furniture multiplier
 #define BOUNTY_MECH_ROCKET_EXOSUIT_DAMAGE 90
 
+/// The exosuit gun on its arm: its rounds are this gun's (bounty_real_weapon())
+#define BOUNTY_MECH_LMG_GUN /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/lmg
 #define BOUNTY_MECH_LMG_WINDUP (0.6 SECONDS)
 #define BOUNTY_MECH_LMG_ROUNDS 12
-#define BOUNTY_MECH_LMG_DAMAGE 12
 /// The 12 rounds go out over this long
 #define BOUNTY_MECH_LMG_FIRE_TIME (1.5 SECONDS)
 #define BOUNTY_MECH_LMG_COOLDOWN (5 SECONDS)
@@ -214,12 +210,10 @@
 
 /// His name when his posting's record gives none: the name P10's card shows for Club Volga
 #define BOUNTY_DON_NAME "Arkady Sokolov"
+/// His gold pistol: its look, its rounds and its magazine (bounty_real_weapon()); he fires strings of BOUNTY_MOBSTER_PISTOL_BURST as a goon does
+#define BOUNTY_DON_GUN /obj/item/gun/ballistic/automatic/pistol/deagle/gold
 #define BOUNTY_DON_HEALTH 250
-#define BOUNTY_DON_DAMAGE_MIN 20
-#define BOUNTY_DON_DAMAGE_MAX 25
 #define BOUNTY_DON_COOLDOWN (0.5 SECONDS)
-/// Strings of BOUNTY_MOBSTER_PISTOL_BURST shots per magazine, as a goon's pistol
-#define BOUNTY_DON_ROUNDS 8
 #define BOUNTY_DON_RELOAD (2 SECONDS)
 /// He raises the pistol this long before each string of shots
 #define BOUNTY_DON_RAISE (0.2 SECONDS)

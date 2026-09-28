@@ -248,6 +248,37 @@
 	TEST_ASSERT(!mech.mech_start_lmg(hunter), "The machine gun spun up on a downed hunter")
 	TEST_ASSERT(!mech.mech_start_rockets(list(hunter)), "The volley locked on to a downed hunter")
 
+// ===== THE STOMP THROWS YOU BACK; THE CLUB'S GUNS ARE REAL =====
+
+/datum/unit_test/voidcrew_bounty_lair_mafia/stomp
+
+/datum/unit_test/voidcrew_bounty_lair_mafia/stomp/Run()
+	var/mob/living/basic/bounty_lair_boss/mafia_mech/mech = allocate(/mob/living/basic/bounty_lair_boss/mafia_mech, spot(0, 2))
+	var/mob/living/carbon/human/consistent/hunter = hunter_at(spot(1, 2))
+	var/distance_before = get_dist(mech, hunter)
+	mech.next_move = 0
+	TEST_ASSERT(mech.mech_stomp(hunter), "The stomp didn't land on a hunter beside the mech")
+	TEST_ASSERT(hunter.getBruteLoss() > 0, "The stomp didn't hurt")
+	TEST_ASSERT(hunter.throwing || get_dist(mech, hunter) > distance_before, "The stomp didn't throw the hunter back")
+	// BOUNTY_MECH_STOMP_THROW 3 tiles, straight away from the mech
+	TEST_ASSERT(!hunter.throwing || hunter.throwing.maxrange == 3, "The stomp throws [hunter.throwing?.maxrange] tiles, not 3")
+	if(hunter.throwing)
+		hunter.throwing.finalize()
+	clear_room()
+
+	// The club's guns are the real ones: a gunman's magazine is the Stechkin's, and Tommy's the Thompson's drum
+	var/mob/living/basic/trooper/russian/mafia/pistol/gunman = allocate(/mob/living/basic/trooper/russian/mafia/pistol, spot(4, 4))
+	var/obj/item/ammo_box/magazine/m9mm_aps/pistol_magazine = /obj/item/ammo_box/magazine/m9mm_aps
+	TEST_ASSERT_EQUAL(gunman.mafia_gun.magazine, initial(pistol_magazine.max_ammo), "The gunman's magazine isn't the Stechkin's")
+	var/mob/living/basic/trooper/russian/mafia/lieutenant/tommy/tommy = allocate(/mob/living/basic/trooper/russian/mafia/lieutenant/tommy, spot(3, 4))
+	var/obj/item/ammo_box/magazine/tommygunm45/drum = /obj/item/ammo_box/magazine/tommygunm45
+	TEST_ASSERT_EQUAL(tommy.mafia_gun.magazine, initial(drum.max_ammo), "Tommy's magazine isn't the Thompson's drum")
+	// The knife man's blade is a kitchen knife's
+	var/mob/living/basic/trooper/russian/mafia/knife_man = allocate(/mob/living/basic/trooper/russian/mafia, spot(2, 4))
+	var/obj/item/knife/kitchen/knife = /obj/item/knife/kitchen
+	TEST_ASSERT_EQUAL(knife_man.melee_damage_upper, initial(knife.force), "The knife man doesn't hit like a kitchen knife")
+	TEST_ASSERT_EQUAL(knife_man.sharpness, SHARP_EDGED, "The knife man's blows aren't edged")
+
 // ===== POSSE HEALTH =====
 
 /datum/unit_test/voidcrew_bounty_lair_mafia/posse

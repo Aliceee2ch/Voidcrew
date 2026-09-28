@@ -52,8 +52,8 @@
 #define BB_BOUNTY_LEADER "bb_bounty_leader"
 /// Their fighting style's key (BOUNTY_STYLE_*)
 #define BB_BOUNTY_STYLE "bb_bounty_style"
-/// Multiplier on their style's damage (tier, or the companion share)
-#define BB_BOUNTY_DAMAGE_MULT "bb_bounty_damage_mult"
+/// The real item they fight with (a typepath: bounty_real_weapon()), or null for bare fists
+#define BB_BOUNTY_WEAPON "bb_bounty_weapon"
 /// Rounds left in the magazine
 #define BB_BOUNTY_AMMO "bb_bounty_ammo"
 /// world.time a reload ends
@@ -149,12 +149,10 @@
 #define BOUNTY_MEEK_CORNERED_TIME (0.8 SECONDS)
 /// The aim before the shots: the telegraph
 #define BOUNTY_MEEK_PISTOL_WINDUP (0.5 SECONDS)
-/// Shots in the holdout's volley
+/// Shots in the holdout's volley, a magazine at most
 #define BOUNTY_MEEK_PISTOL_SHOTS 8
 /// Between them
 #define BOUNTY_MEEK_PISTOL_GAP (0.2 SECONDS)
-/// Brute per shot; bullet armour applies
-#define BOUNTY_MEEK_PISTOL_DAMAGE 15
 /// One volley per cornering
 #define BOUNTY_MEEK_PISTOL_COOLDOWN (6 SECONDS)
 /// They only aim at someone this close
@@ -174,10 +172,6 @@
 /// Speed in a fight, by style
 #define BOUNTY_NORMAL_SPEED_MELEE 1.25
 #define BOUNTY_NORMAL_SPEED_RANGED 1.4
-/// Style damage by tier
-#define BOUNTY_NORMAL_DAMAGE_PETTY 1
-#define BOUNTY_NORMAL_DAMAGE_WANTED 1.15
-#define BOUNTY_NORMAL_DAMAGE_MOST 1.3
 /// Noticed at this range (someone armed, cuffs or a warrant in hand)
 #define BOUNTY_NORMAL_NOTICE_RANGE 6
 /// Someone with a weapon drawn this close, while they are aware of them, starts the fight
@@ -212,8 +206,6 @@
 #define BOUNTY_COMPANIONS_MAX 2
 /// Health before the style's multiplier
 #define BOUNTY_COMPANION_HEALTH 110
-/// Share of a Wanted criminal's style damage
-#define BOUNTY_COMPANION_DAMAGE 0.9
 /// Below this share of health a companion may run (a BOUNTY_COMPANION_FLEE_CHANCE roll, once)
 #define BOUNTY_COMPANION_FLEE_BELOW 0.3
 #define BOUNTY_COMPANION_FLEE_CHANCE 50
@@ -222,76 +214,44 @@
 /// How often a companion calls the rest of the gang in (the trooper's 30 s)
 #define BOUNTY_REINFORCE_COOLDOWN (30 SECONDS)
 
-// ===== STYLES (combat.md 6.2, Wanted tier) =====
+// ===== STYLES (combat.md 6.2) =====
+// Every blow and shot is the real weapon's (bounty_weapons.dm): the item in their hand is each
+// style's held_look, and a Wanted criminal carries its heavy_look where it has one.
 
 #define BOUNTY_BRAWLER_HEALTH 1.2
 #define BOUNTY_BRAWLER_STAMINA 0.8
-#define BOUNTY_BRAWLER_DAMAGE_LOW 14
-#define BOUNTY_BRAWLER_DAMAGE_HIGH 18
 #define BOUNTY_BRAWLER_INTERVAL (1 SECONDS)
 /// Chance a punch shoves the target back a tile and staggers them for a second
 #define BOUNTY_BRAWLER_SHOVE_CHANCE 20
 #define BOUNTY_BRAWLER_STAGGER (1 SECONDS)
 
 #define BOUNTY_KNIFE_HEALTH 1
-#define BOUNTY_KNIFE_DAMAGE_LOW 13
-#define BOUNTY_KNIFE_DAMAGE_HIGH 17
 #define BOUNTY_KNIFE_INTERVAL (0.8 SECONDS)
-/// Blood lost per second per cut, how long a cut bleeds, and the most cuts that bleed at once
-#define BOUNTY_KNIFE_BLEED 0.5
-#define BOUNTY_KNIFE_BLEED_TIME (15 SECONDS)
-#define BOUNTY_KNIFE_MAX_CUTS 3
 
 #define BOUNTY_PISTOL_HEALTH 0.9
-#define BOUNTY_PISTOL_DAMAGE_LOW 18
-#define BOUNTY_PISTOL_DAMAGE_HIGH 22
 #define BOUNTY_PISTOL_INTERVAL (0.25 SECONDS)
 /// Keeps about this far away
 #define BOUNTY_PISTOL_RANGE 5
 #define BOUNTY_PISTOL_MIN_RANGE 3
-#define BOUNTY_PISTOL_MAGAZINE 17
 /// The reload: the window to close in
 #define BOUNTY_PISTOL_RELOAD (2 SECONDS)
 /// Raising the gun before the first shot of a string
 #define BOUNTY_PISTOL_WINDUP (0.2 SECONDS)
 /// Shots further apart than this start a new string
 #define BOUNTY_PISTOL_STRING_GAP (3 SECONDS)
-/// Degrees each shot may stray, either way: they empty the magazine rather than line up every shot
-#define BOUNTY_PISTOL_SPREAD 5
-/// Armour penetration of every bounty NPC's bullets (criminals, companions, the kingpin's crew, Club Volga, the Heavy): hunters come in good armour
-#define BOUNTY_BULLET_AP 25
-/// A shotgun pellet's, and the meek's little holdout's
-#define BOUNTY_PELLET_AP 10
-#define BOUNTY_HOLDOUT_AP 15
-/// Armour penetration of their fists, knives, clubs and bottles
-#define BOUNTY_MELEE_AP 15
 
 #define BOUNTY_SHOTGUN_HEALTH 1
-/// Total damage of a blast that lands every pellet
-#define BOUNTY_SHOTGUN_DAMAGE_LOW 32
-#define BOUNTY_SHOTGUN_DAMAGE_HIGH 44
 #define BOUNTY_SHOTGUN_INTERVAL (1.2 SECONDS)
 #define BOUNTY_SHOTGUN_RANGE 2
-#define BOUNTY_SHOTGUN_PELLETS 4
-/// Degrees each pellet may stray
-#define BOUNTY_SHOTGUN_SPREAD 12
-/// Tiles a pellet flies
-#define BOUNTY_SHOTGUN_REACH 4
 /// The pump before each blast
 #define BOUNTY_SHOTGUN_WINDUP (0.3 SECONDS)
-/// Shells in the tube, and loading it again: the window to close in
-#define BOUNTY_SHOTGUN_SHELLS 6
+/// Loading the tube again: the window to close in
 #define BOUNTY_SHOTGUN_RELOAD (3 SECONDS)
 
 #define BOUNTY_CLUB_HEALTH 1.1
-#define BOUNTY_CLUB_DAMAGE_LOW 9
-#define BOUNTY_CLUB_DAMAGE_HIGH 12
-#define BOUNTY_CLUB_STAMINA 25
 #define BOUNTY_CLUB_INTERVAL (1.1 SECONDS)
 
 #define BOUNTY_BOTTLE_HEALTH 0.9
-#define BOUNTY_BOTTLE_DAMAGE_LOW 13
-#define BOUNTY_BOTTLE_DAMAGE_HIGH 17
 #define BOUNTY_BOTTLE_INTERVAL (1.2 SECONDS)
 #define BOUNTY_BOTTLE_RANGE 4
 #define BOUNTY_BOTTLE_MIN_RANGE 2
@@ -299,7 +259,3 @@
 #define BOUNTY_BOTTLE_REACH 6
 /// The throwing arc before each throw
 #define BOUNTY_BOTTLE_WINDUP (0.3 SECONDS)
-/// Chance a bottle that lands leaves a cut, which bleeds this much for this long
-#define BOUNTY_BOTTLE_SHARD_CHANCE 30
-#define BOUNTY_BOTTLE_SHARD_BLEED 0.5
-#define BOUNTY_BOTTLE_SHARD_TIME (10 SECONDS)

@@ -353,6 +353,13 @@
 		TEST_ASSERT(bounty_kingpin_clear_shot(goon, hunter), "[goon] has no line on the talk spot")
 
 	TEST_ASSERT(crew.start_shootout(hunter, TRUE), "The shootout didn't start")
+	// Their guns are the real ones: his .357 holds its cylinder, the goons' pistols the Stechkin's magazine
+	var/obj/item/ammo_box/magazine/internal/cylinder/cylinder = /obj/item/ammo_box/magazine/internal/cylinder
+	TEST_ASSERT_EQUAL(kingpin.kingpin_rounds, initial(cylinder.max_ammo), "The kingpin's revolver doesn't hold a .357 cylinder")
+	var/obj/item/ammo_box/magazine/m9mm_aps/pistol_magazine = /obj/item/ammo_box/magazine/m9mm_aps
+	TEST_ASSERT_EQUAL(bounty_kingpin_goon_mag("pistol"), initial(pistol_magazine.max_ammo), "A goon's pistol doesn't hold a Stechkin magazine") // BOUNTY_GOON_WEAPON_PISTOL
+	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in goons)
+		TEST_ASSERT_EQUAL(goon.goon_rounds, bounty_kingpin_goon_mag(goon.goon_weapon), "[goon] drew with a gun that isn't full")
 	var/draw_ends = crew.crew_draw_ends_at
 	TEST_ASSERT_EQUAL(draw_ends, world.time + 6, "The draw isn't 0.6 seconds") // BOUNTY_KINGPIN_TELEGRAPH
 	// During the draw: not a shot, not an aim

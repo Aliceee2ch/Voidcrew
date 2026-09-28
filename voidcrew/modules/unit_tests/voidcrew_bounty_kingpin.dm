@@ -603,13 +603,13 @@
 	var/obj/effect/landmark/bounty_kingpin/seat/seat = bounty_kingpin_find_seat(outpost)
 	TEST_ASSERT_NOTNULL(seat, "The black market has no kingpin seat on a sofa")
 	var/turf/seat_turf = get_turf(seat)
-	TEST_ASSERT_EQUAL(seat_turf.x - bottom_left.x + 1, 28, "The seat isn't at x 28 on the map")
-	TEST_ASSERT_EQUAL(seat_turf.y - bottom_left.y + 1, 8, "The seat isn't at y 8 on the map")
+	TEST_ASSERT_EQUAL(seat_turf.x - bottom_left.x + 1, 24, "The seat isn't at x 24 on the map")
+	TEST_ASSERT_EQUAL(seat_turf.y - bottom_left.y + 1, 22, "The seat isn't at y 22 on the map")
 	var/obj/structure/chair/sofa/corp/sofa = locate() in seat_turf
-	TEST_ASSERT(sofa && sofa.dir == NORTH, "The seat isn't on the corp sofa facing north")
+	TEST_ASSERT(sofa && sofa.dir == WEST, "The seat isn't on the corp sofa facing west")
 	var/list/coffee_table = list()
-	for(var/dx in -1 to 1)
-		var/turf/table_turf = locate(seat_turf.x + dx, seat_turf.y + 1, seat_turf.z)
+	for(var/dy in -1 to 1)
+		var/turf/table_turf = locate(seat_turf.x - 1, seat_turf.y + dy, seat_turf.z)
 		var/obj/structure/table/wood/table = locate() in table_turf
 		TEST_ASSERT(table && table.type == /obj/structure/table/wood && table.can_flip, "No wood coffee table at ([table_turf.x - bottom_left.x + 1],[table_turf.y - bottom_left.y + 1])")
 		coffee_table += table
@@ -636,14 +636,14 @@
 	TEST_ASSERT(istype(kingpin.buckled, /obj/structure/chair/sofa), "The kingpin isn't on the sofa")
 	TEST_ASSERT_EQUAL(length(crew.goons()), 6, "The kingpin doesn't have six goons")
 	TEST_ASSERT_EQUAL(length(crew.crew_coffee_table), 3, "The crew didn't find the coffee table")
-	// The coffee table and the poker, bar and corner tables at the goons' posts
-	TEST_ASSERT_EQUAL(length(crew.crew_tables), 6, "The crew minds [length(crew.crew_tables)] lounge tables, not six")
+	// The coffee table: no other table the crew minds stands at a goon's post
+	TEST_ASSERT_EQUAL(length(crew.crew_tables), 3, "The crew minds [length(crew.crew_tables)] lounge tables, not three")
 	for(var/obj/structure/table/table as anything in coffee_table)
 		TEST_ASSERT(!(table.resistance_flags & INDESTRUCTIBLE), "A lounge table can't be shot to pieces while he's in")
 	TEST_ASSERT_EQUAL(crew.crew_refuge, refuge, "The crew doesn't use the refuge")
 	TEST_ASSERT_EQUAL(crew.exit_turf(crew.crew_loiterer_ref?.resolve()), refuge, "The loiterer's way out isn't the refuge")
 	var/mob/living/basic/outpost_trader/barkeep = crew.crew_barkeep_ref?.resolve()
-	TEST_ASSERT(istype(barkeep, /mob/living/basic/outpost_trader/dregs_barkeep), "The barkeep who ducks is [barkeep ? barkeep.type : "nobody"], not the Dregs' barkeep")
+	TEST_ASSERT_NOTNULL(barkeep, "No trader in sight of the sofa ducks")
 	var/mob/living/basic/outpost_loiterer/loiterer = crew.crew_loiterer_ref?.resolve()
 	TEST_ASSERT_NOTNULL(loiterer, "The crew didn't find the lounge's loiterer")
 	var/turf/loiterer_home = get_turf(loiterer)

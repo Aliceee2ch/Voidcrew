@@ -371,12 +371,6 @@
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/bridge/captain/d)
-"fe" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
-	dir = 8
-	},
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/mining/d)
 "fh" = (
 /obj/machinery/door/airlock/shuttle/glass,
 /obj/machinery/door/firedoor,
@@ -411,11 +405,6 @@
 	},
 /turf/open/water/no_planet_atmos,
 /area/shuttle/voidcrew/phalanx/chapel/d)
-"fR" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/mining/d)
 "fS" = (
 /obj/machinery/vending/cola,
 /obj/effect/turf_decal/siding/wood{
@@ -644,12 +633,13 @@
 	},
 /turf/open/floor/wood/tile,
 /area/shuttle/voidcrew/phalanx/kitchen/d)
-"iy" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
-	dir = 8
+"iv" = (
+/obj/item/flashlight/lantern/on{
+	pixel_y = 6
 	},
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/d)
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
+/turf/open/floor/bamboo,
+/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "iE" = (
 /obj/structure/table/wood,
 /obj/item/reagent_containers/cup/glass/mug/tea{
@@ -817,14 +807,6 @@
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/hallway/central/d)
-"lC" = (
-/obj/structure/window/reinforced/plasma/spawner/directional/east,
-/obj/structure/window/reinforced/plasma/spawner,
-/obj/machinery/atmospherics/components/unary/shuttle/heater/tank{
-	dir = 4
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
 "lD" = (
 /obj/machinery/power/smes/engineering,
 /obj/structure/cable,
@@ -1091,13 +1073,6 @@
 /obj/structure/cable,
 /turf/open/floor/carpet/executive,
 /area/shuttle/voidcrew/phalanx/bridge/d)
-"ow" = (
-/obj/item/flashlight/lantern/on{
-	pixel_y = 6
-	},
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
-/turf/open/floor/bamboo,
-/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "oE" = (
 /turf/open/floor/engine/n2,
 /area/shuttle/voidcrew/phalanx/engineering/atmospherics/d)
@@ -1352,10 +1327,6 @@
 /obj/machinery/suit_storage_unit/atmos,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/engineering/d)
-"rE" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
-/turf/open/floor/bamboo,
-/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "rN" = (
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/machinery/iv_drip,
@@ -1498,14 +1469,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/voidcrew/phalanx/medbay/storage/d)
-"tk" = (
-/obj/structure/cable,
-/obj/structure/rack,
-/obj/item/bedsheet{
-	pixel_y = 4
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
 "tp" = (
 /obj/structure/window/reinforced/plasma/spawner/directional/south,
 /obj/structure/window/reinforced/plasma/spawner/directional/south,
@@ -1579,6 +1542,12 @@
 	},
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/engineering/d)
+"tW" = (
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 1
+	},
+/turf/open/floor/bamboo,
+/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "ue" = (
 /obj/structure/grille,
 /obj/structure/window/reinforced/shuttle,
@@ -1596,6 +1565,14 @@
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/hallway/aft/d)
+"uh" = (
+/obj/machinery/atmospherics/components/unary/shuttle/heater/tank{
+	dir = 4
+	},
+/obj/structure/window/reinforced/plasma/spawner/directional/east,
+/obj/structure/window/reinforced/plasma/spawner/directional/south,
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/phalanx/engineering/d)
 "uo" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/dark,
@@ -1836,13 +1813,6 @@
 "xU" = (
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/voidcrew/phalanx/medbay/morgue/d)
-"xV" = (
-/obj/machinery/power/smes/engineering,
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
 "xX" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -1992,6 +1962,11 @@
 	},
 /turf/open/floor/engine,
 /area/shuttle/voidcrew/phalanx/engineering/storage/d)
+"AP" = (
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/phalanx/cargo/mining/d)
 "AQ" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange,
 /obj/structure/cable,
@@ -2083,6 +2058,12 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/bamboo,
 /area/shuttle/voidcrew/phalanx/hallway/aft/d)
+"BL" = (
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
+	dir = 8
+	},
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/phalanx/cargo/mining/d)
 "BN" = (
 /obj/item/clothing/suit/caution{
 	pixel_x = 8
@@ -2516,6 +2497,13 @@
 /obj/structure/closet/secure_closet/medical3,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/voidcrew/phalanx/medbay/storage/d)
+"GA" = (
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 1
+	},
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/phalanx/cargo/d)
 "GC" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 4
@@ -2625,12 +2613,6 @@
 /obj/machinery/vending/drugs,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/voidcrew/phalanx/medbay/storage/d)
-"HB" = (
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
-	dir = 1
-	},
-/turf/open/floor/bamboo,
-/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "HJ" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -2708,13 +2690,6 @@
 /obj/effect/mapping_helpers/airlock/access/all/service/chapel_office,
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/phalanx/chapel/office/d)
-"IO" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
-	dir = 1
-	},
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/d)
 "IR" = (
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/nanites/d)
@@ -2889,6 +2864,12 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/hallway/central/d)
+"KN" = (
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
+	dir = 1
+	},
+/turf/open/floor/bamboo,
+/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "KQ" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -2993,12 +2974,6 @@
 /obj/machinery/firealarm/directional/north,
 /turf/open/floor/iron,
 /area/shuttle/voidcrew/phalanx/cargo/d)
-"Nb" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
-	dir = 1
-	},
-/turf/open/floor/bamboo,
-/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "Ng" = (
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/voidcrew/phalanx/security/armory/d)
@@ -3198,17 +3173,6 @@
 /obj/effect/decal/cleanable/blood/oil,
 /turf/open/floor/engine,
 /area/shuttle/voidcrew/phalanx/engineering/storage/d)
-"PX" = (
-/obj/structure/cable,
-/obj/structure/rack,
-/obj/item/bedsheet{
-	pixel_y = 4
-	},
-/obj/machinery/power/terminal{
-	dir = 1
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
 "Qi" = (
 /obj/machinery/door/airlock/engineering{
 	name = "Engineering"
@@ -3551,16 +3515,6 @@
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/hallway/central/d)
-"TQ" = (
-/obj/machinery/power/port_gen/pacman{
-	anchored = 1
-	},
-/obj/structure/cable,
-/obj/machinery/power/terminal{
-	dir = 2
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
 "TZ" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -3645,11 +3599,6 @@
 /obj/machinery/power/terminal{
 	dir = 8
 	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
-"VG" = (
-/obj/machinery/atmospherics/pipe/smart/simple/orange/visible,
-/obj/structure/cable,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/engineering/d)
 "VJ" = (
@@ -3777,11 +3726,6 @@
 "WF" = (
 /turf/open/floor/iron/dark,
 /area/shuttle/voidcrew/phalanx/security/d)
-"WK" = (
-/obj/machinery/power/smes/engineering,
-/obj/structure/cable,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/d)
 "WM" = (
 /obj/machinery/light/warm/directional/east,
 /obj/structure/sign/poster/official/random{
@@ -3849,6 +3793,10 @@
 	},
 /turf/open/floor/iron,
 /area/shuttle/voidcrew/phalanx/cargo/d)
+"XI" = (
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
+/turf/open/floor/bamboo,
+/area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "XN" = (
 /obj/structure/cable,
 /obj/machinery/door/airlock/engineering,
@@ -3929,6 +3877,12 @@
 /area/shuttle/voidcrew/phalanx/hallway/aft/d)
 "YH" = (
 /turf/closed/wall/mineral/titanium/nodiagonal,
+/area/shuttle/voidcrew/phalanx/cargo/d)
+"YN" = (
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
+	dir = 8
+	},
+/turf/open/floor/iron,
 /area/shuttle/voidcrew/phalanx/cargo/d)
 "YO" = (
 /obj/machinery/door/airlock/medical,
@@ -4135,7 +4089,7 @@ tB
 zO
 tN
 tN
-lC
+uh
 tB
 Ab
 Xl
@@ -4164,10 +4118,10 @@ sc
 FQ
 FQ
 MC
-FQ
+uH
 uH
 AQ
-VG
+uH
 MC
 FQ
 FQ
@@ -4763,7 +4717,7 @@ Dz
 li
 li
 li
-fR
+AP
 vA
 qA
 BI
@@ -4784,7 +4738,7 @@ qD
 sU
 qA
 ZQ
-IO
+GA
 FD
 FD
 FD
@@ -4798,7 +4752,7 @@ li
 DJ
 qf
 ZX
-Nb
+KN
 Hc
 Rn
 IR
@@ -4813,7 +4767,7 @@ OE
 OE
 gU
 bb
-rE
+XI
 ZX
 Of
 yj
@@ -4827,10 +4781,10 @@ uq
 li
 li
 li
-fe
+BL
 qf
 ZX
-ow
+iv
 Hc
 Hr
 IR
@@ -4845,10 +4799,10 @@ OE
 OE
 Th
 bb
-HB
+tW
 ZX
 Of
-iy
+YN
 FD
 FD
 FD

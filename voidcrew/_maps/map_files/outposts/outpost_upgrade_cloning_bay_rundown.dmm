@@ -1,0 +1,690 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"aa" = (
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = -6;
+	pixel_y = -3
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"ab" = (
+/obj/item/paper{
+	name = "faded notice"
+	},
+/obj/item/paper{
+	name = "faded notice"
+	},
+/obj/structure/noticeboard/directional/south,
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"ac" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor4";
+	color = "#2A2622";
+	alpha = 170
+	},
+/obj/structure/barrel{
+	name = "feed drum";
+	desc = "A rusted drum of vat feed."
+	},
+/obj/effect/decal/cleanable/cobweb,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"ad" = (
+/obj/effect/turf_decal/trimline/yellow/line{
+	dir = 4;
+	alpha = 130
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ae" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/structure/fluff/shower_drain,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor2";
+	color = "#7FA03A";
+	alpha = 130
+	},
+/obj/structure/railing{
+	dir = 2
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"af" = (
+/obj/effect/turf_decal/trimline/yellow/line{
+	dir = 8;
+	alpha = 130
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ag" = (
+/obj/structure/chair/sofa/bench/left{
+	dir = 1
+	},
+/obj/structure/sign/poster/contraband/interdyne_gene_clinics/directional/west,
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ah" = (
+/obj/structure/sign/warning/no_smoking/circle/directional/south,
+/obj/item/cigbutt{
+	pixel_x = -8;
+	pixel_y = -6
+	},
+/obj/item/cigbutt{
+	pixel_x = 4;
+	pixel_y = -10
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"ai" = (
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 120
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/obj/pipes_n_cables/simple.dmi';
+	icon_state = "pipe11-3";
+	dir = 4;
+	color = "#6F8A4A"
+	},
+/obj/machinery/cloning_vat/outpost,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aj" = (
+/obj/item/trash/can{
+	pixel_x = 7;
+	pixel_y = -9
+	},
+/obj/item/cigbutt{
+	pixel_x = -6;
+	pixel_y = 4
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ak" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/railing{
+	dir = 2
+	},
+/obj/structure/sign/warning/biohazard/directional/east,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"al" = (
+/obj/structure/chair/sofa/bench/right{
+	dir = 1
+	},
+/obj/item/cigbutt{
+	pixel_x = -7;
+	pixel_y = -10
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"am" = (
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 8
+	},
+/obj/structure/window/reinforced/tinted/frosted/spawner/directional/west,
+/obj/structure/table,
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = -7;
+	pixel_y = 6
+	},
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = -3;
+	pixel_y = 8
+	},
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = 6;
+	pixel_y = 2
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"an" = (
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal{
+	icon = 'icons/obj/pipes_n_cables/simple.dmi';
+	icon_state = "pipe11-3";
+	dir = 4;
+	color = "#6F8A4A"
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor6";
+	color = "#7FA03A";
+	alpha = 120
+	},
+/obj/machinery/cloning_vat/outpost,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ao" = (
+/obj/item/kirbyplants/organic/plant22,
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ap" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor7";
+	color = "#2A2622";
+	alpha = 150
+	},
+/obj/structure/barrel{
+	name = "feed drum";
+	desc = "A rusted drum of vat feed."
+	},
+/obj/effect/decal/cleanable/cobweb/cobweb2,
+/obj/structure/sign/poster/official/random/directional/north,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aq" = (
+/obj/structure/closet/crate/bin,
+/obj/item/trash/chips{
+	pixel_x = -9;
+	pixel_y = 12
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ar" = (
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 8
+	},
+/obj/structure/window/reinforced/tinted/frosted/spawner/directional/west,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/effects.dmi';
+	icon_state = "splash_floor";
+	alpha = 90
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"as" = (
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 1
+	},
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = 5;
+	pixel_y = -7
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"at" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged2";
+	alpha = 150
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/footprints.dmi';
+	icon_state = "blood1";
+	dir = 2;
+	color = "#B6E08A";
+	alpha = 120
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"au" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"av" = (
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 9
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/effects.dmi';
+	icon_state = "splash_floor";
+	alpha = 110
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aw" = (
+/obj/structure/chair/comfy/brown{
+	dir = 1
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ax" = (
+/obj/machinery/digital_clock/directional/west,
+/obj/item/cigbutt{
+	pixel_x = 3;
+	pixel_y = 8
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"ay" = (
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"az" = (
+/obj/structure/table/wood,
+/obj/item/flashlight/lamp{
+	pixel_x = -5;
+	pixel_y = 10
+	},
+/obj/item/newspaper{
+	pixel_x = 4;
+	pixel_y = -2
+	},
+/obj/item/reagent_containers/cup/glass/mug{
+	pixel_x = 9;
+	pixel_y = 4
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aA" = (
+/obj/structure/chair/sofa/right/brown{
+	dir = 1
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aB" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "redcarpetdamaged";
+	alpha = 90
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aC" = (
+/obj/structure/sign/poster/official/cleanliness/directional/east,
+/obj/machinery/light/small/directional/east,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aD" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aE" = (
+/obj/structure/chair/sofa/middle/brown{
+	dir = 1
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aF" = (
+/obj/structure/curtain,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aG" = (
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"aH" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/footprints.dmi';
+	icon_state = "blood1";
+	dir = 4;
+	color = "#B6E08A";
+	alpha = 120
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aI" = (
+/obj/structure/table/wood,
+/obj/item/trash/can{
+	pixel_x = -6;
+	pixel_y = 7
+	},
+/obj/item/cigbutt{
+	pixel_x = 5;
+	pixel_y = 3
+	},
+/obj/item/cigbutt{
+	pixel_x = -1;
+	pixel_y = -4
+	},
+/obj/item/cigbutt/roach{
+	pixel_x = 9;
+	pixel_y = -1
+	},
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = 8;
+	pixel_y = 9
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aJ" = (
+/obj/effect/turf_decal{
+	icon = 'icons/obj/pipes_n_cables/simple.dmi';
+	icon_state = "pipe11-3";
+	dir = 4;
+	color = "#6F8A4A"
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor5";
+	color = "#7FA03A";
+	alpha = 110
+	},
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aK" = (
+/obj/machinery/light/small/dim/directional/south,
+/obj/item/cigbutt{
+	pixel_x = -4;
+	pixel_y = 6
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aL" = (
+/obj/structure/fluff/shower_drain,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/effects.dmi';
+	icon_state = "splash_floor";
+	alpha = 170
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aM" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/railing{
+	dir = 2
+	},
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aN" = (
+/obj/effect/turf_decal/trimline/yellow/line{
+	dir = 4;
+	alpha = 130
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/footprints.dmi';
+	icon_state = "blood1";
+	dir = 4;
+	color = "#B6E08A";
+	alpha = 120
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aO" = (
+/obj/structure/chair/sofa/left/brown{
+	dir = 1
+	},
+/obj/machinery/light/warm/directional/west,
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aP" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/structure/fluff/shower_drain,
+/obj/effect/decal/cleanable/greenglow{
+	name = "nutrient spill";
+	desc = "Vat fluid, dried to a faint green crust.";
+	light_power = 2
+	},
+/obj/structure/railing{
+	dir = 2
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aQ" = (
+/obj/item/kirbyplants/random/dead,
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aR" = (
+/obj/structure/sign/poster/contraband/random/directional/south,
+/obj/item/trash/candy{
+	pixel_x = 6;
+	pixel_y = -8
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aS" = (
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal{
+	icon = 'icons/obj/pipes_n_cables/simple.dmi';
+	icon_state = "pipe11-3";
+	dir = 4;
+	color = "#6F8A4A"
+	},
+/obj/structure/fluff{
+	icon = 'voidcrew/icons/obj/machines/cloning_vat.dmi';
+	icon_state = "infuser";
+	name = "feed tank";
+	desc = "A tank of nutrient fluid, piped to the vats.";
+	density = 1
+	},
+/obj/item/clipboard{
+	pixel_x = 11;
+	pixel_y = 2
+	},
+/obj/structure/sign/departments/genetics/directional/north,
+/obj/machinery/light/warm/dim/directional/north,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aT" = (
+/obj/structure/chair/sofa/bench{
+	dir = 1
+	},
+/obj/item/newspaper{
+	pixel_x = -4;
+	pixel_y = 4
+	},
+/obj/item/cigbutt{
+	pixel_x = 6;
+	pixel_y = -9
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aU" = (
+/turf/closed/indestructible/rusty,
+/area/template_noop)
+"aV" = (
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 1
+	},
+/obj/structure/sink/directional/west,
+/obj/structure/mirror/broken/directional/east,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aW" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/railing{
+	dir = 2
+	},
+/obj/structure/sign/warning/biohazard/directional/west,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aX" = (
+/obj/item/kirbyplants/organic/plant21,
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aY" = (
+/obj/effect/turf_decal{
+	icon = 'icons/obj/pipes_n_cables/simple.dmi';
+	icon_state = "pipe11-3";
+	dir = 4;
+	color = "#6F8A4A"
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor3";
+	color = "#7FA03A";
+	alpha = 140
+	},
+/obj/machinery/light/small/directional/north,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aZ" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"pE" = (
+/obj/effect/spawner/structure/window/reinforced/tinted,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"tD" = (
+/obj/structure/sign/departments/genetics,
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"Us" = (
+/obj/machinery/shower/directional/west,
+/obj/structure/fluff/shower_drain,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"Vo" = (
+/obj/machinery/door/airlock/outpost/service/maintenance{
+	name = "vat room"
+	},
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+
+(1,1,1) = {"
+aG
+aG
+aG
+aG
+aG
+aG
+aG
+aG
+"}
+(2,1,1) = {"
+aG
+ac
+aW
+ag
+ax
+aO
+aQ
+aG
+"}
+(3,1,1) = {"
+aU
+ai
+ae
+aT
+aB
+aE
+ab
+aU
+"}
+(4,1,1) = {"
+aG
+aY
+aM
+al
+ay
+aA
+aB
+pE
+"}
+(5,1,1) = {"
+aG
+an
+aP
+aI
+aa
+az
+ah
+aG
+"}
+(6,1,1) = {"
+aG
+aJ
+aD
+af
+af
+af
+ao
+tD
+"}
+(7,1,1) = {"
+aG
+aS
+aD
+au
+au
+au
+aZ
+Vo
+"}
+(8,1,1) = {"
+aG
+aJ
+aD
+aN
+ad
+ad
+aR
+aG
+"}
+(9,1,1) = {"
+aG
+an
+aP
+at
+aH
+aq
+aK
+aG
+"}
+(10,1,1) = {"
+aU
+aY
+aM
+aw
+av
+ar
+am
+pE
+"}
+(11,1,1) = {"
+aG
+ai
+ae
+aj
+as
+aL
+aF
+aU
+"}
+(12,1,1) = {"
+aG
+ap
+ak
+aX
+aV
+aC
+Us
+aG
+"}
+(13,1,1) = {"
+aG
+aG
+aG
+aG
+aG
+aG
+aG
+aG
+"}

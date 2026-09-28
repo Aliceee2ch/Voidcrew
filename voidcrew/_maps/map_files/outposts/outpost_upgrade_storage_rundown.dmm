@@ -1,0 +1,732 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"aa" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 140
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"ab" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/fence/post{
+	dir = 4
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ac" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/machinery/light/small/directional/west,
+/turf/open/indestructible/grimy{
+	color = "#E6DFD7"
+	},
+/area/template_noop)
+"ad" = (
+/obj/structure/table/reinforced,
+/obj/item/paper{
+	name = "claim ticket";
+	pixel_x = -7;
+	pixel_y = 6
+	},
+/obj/item/clipboard{
+	pixel_x = 4
+	},
+/obj/item/pen{
+	pixel_x = 7;
+	pixel_y = 3
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ae" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/structure/sign/poster/contraband/random/directional/north,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"af" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 120
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"ag" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/fence{
+	dir = 4
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ah" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/fence/post{
+	dir = 4
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ai" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/turf/open/indestructible/plating{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+"aj" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "pawprint";
+	paint_colour = "#9A8C78";
+	name = "paw prints";
+	desc = "Small dusty paw prints.";
+	alpha = 170;
+	pixel_x = -6;
+	pixel_y = 4
+	},
+/obj/structure/sign/poster/ripped/directional/west,
+/turf/open/indestructible/dark/textured{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+"ak" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 150
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"al" = (
+/obj/structure/table/wood,
+/obj/item/flashlight/lamp/green{
+	pixel_x = 5;
+	pixel_y = 11
+	},
+/obj/item/newspaper{
+	pixel_x = -5;
+	pixel_y = 2
+	},
+/obj/item/cigbutt{
+	pixel_x = 6;
+	pixel_y = -3
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"am" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "line";
+	paint_colour = "#7A4A22";
+	name = "rust stain";
+	desc = "A streak of rust from a leak in the ceiling.";
+	alpha = 150;
+	pixel_x = -4
+	},
+/turf/closed/indestructible/rusty,
+/area/template_noop)
+"an" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 160
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"ao" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 9
+	},
+/obj/structure/sign/clock/directional/east,
+/turf/open/indestructible/wood,
+/area/template_noop)
+"ap" = (
+/obj/effect/decal/cleanable/wrapping,
+/obj/structure/table,
+/obj/item/paper{
+	name = "packing list";
+	pixel_x = -4;
+	pixel_y = 4
+	},
+/obj/item/pen{
+	pixel_x = -2;
+	pixel_y = 6
+	},
+/obj/item/trash/chips{
+	pixel_x = 7;
+	pixel_y = -2
+	},
+/obj/machinery/light/small/directional/west,
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aq" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "drip2";
+	color = "#6B4526";
+	alpha = 170
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor6";
+	color = "#5C4030";
+	alpha = 80
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 110
+	},
+/turf/open/indestructible/dark/textured{
+	color = "#C3B8AC"
+	},
+/area/template_noop)
+"ar" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 200
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "drip1";
+	color = "#6B4526";
+	alpha = 220
+	},
+/obj/effect/decal/cleanable/cobweb/cobweb2,
+/obj/structure/barrel,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"as" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 50
+	},
+/obj/structure/closet/secure_closet/outpost_storage,
+/turf/open/indestructible/plating{
+	color = "#E6DFD7"
+	},
+/area/template_noop)
+"at" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/plating{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+"au" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "line";
+	paint_colour = "#7A4A22";
+	name = "rust stain";
+	desc = "A streak of rust from a leak in the ceiling.";
+	alpha = 150;
+	pixel_x = 3
+	},
+/turf/closed/indestructible/rusty,
+/area/template_noop)
+"av" = (
+/turf/closed/indestructible/rusty,
+/area/template_noop)
+"aw" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ax" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/machinery/light/warm/directional/north,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ay" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/item/cigbutt{
+	pixel_x = 5;
+	pixel_y = -4
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"az" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "drip5";
+	color = "#6B4526";
+	alpha = 150
+	},
+/obj/machinery/light/warm/directional/east,
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aA" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 150
+	},
+/turf/open/indestructible/dark/textured{
+	color = "#E6DFD7"
+	},
+/area/template_noop)
+"aB" = (
+/obj/structure/chair/sofa/bench/left{
+	dir = 1
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aC" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "pawprint";
+	paint_colour = "#9A8C78";
+	name = "paw prints";
+	desc = "Small dusty paw prints.";
+	alpha = 170;
+	pixel_x = 4;
+	pixel_y = -5
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aD" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 80
+	},
+/obj/structure/closet/secure_closet/outpost_storage,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aE" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 70
+	},
+/turf/open/indestructible/dark/textured{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+"aF" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "line";
+	paint_colour = "#7A4A22";
+	name = "rust stain";
+	desc = "A streak of rust from a leak in the ceiling.";
+	alpha = 150;
+	pixel_x = 5
+	},
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"aG" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 170
+	},
+/turf/open/indestructible/dark/textured{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+"aH" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "line";
+	paint_colour = "#7A4A22";
+	name = "rust stain";
+	desc = "A streak of rust from a leak in the ceiling.";
+	alpha = 150;
+	pixel_x = -6
+	},
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"aI" = (
+/turf/closed/indestructible/reinforced,
+/area/template_noop)
+"aJ" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 90
+	},
+/turf/open/indestructible/dark/textured{
+	color = "#E6DFD7"
+	},
+/area/template_noop)
+"aK" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 60
+	},
+/obj/structure/closet/secure_closet/outpost_storage,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aL" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 120
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aM" = (
+/obj/item/kirbyplants/organic/plant22{
+	pixel_y = 3
+	},
+/obj/structure/noticeboard/directional/west,
+/obj/item/paper{
+	name = "impound notice";
+	default_raw_text = "CUSTOMS IMPOUND. Collection 0800 to 1600. Bring your docket."
+	},
+/obj/item/paper{
+	name = "lost cat";
+	default_raw_text = "LOST: grey tabby, answers to Rivet. Last seen by the lockers."
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aN" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 170
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aO" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/dark/textured{
+	color = "#E6DFD7"
+	},
+/area/template_noop)
+"aP" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "pawprint";
+	paint_colour = "#9A8C78";
+	name = "paw prints";
+	desc = "Small dusty paw prints.";
+	alpha = 170;
+	pixel_x = -3;
+	pixel_y = 2
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aQ" = (
+/obj/item/cigbutt{
+	pixel_x = -8;
+	pixel_y = 6
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aR" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/item/cigbutt{
+	pixel_x = -6;
+	pixel_y = -8
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aS" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/decal/cleanable/cobweb,
+/obj/item/kirbyplants/organic/plant10{
+	pixel_x = -2;
+	pixel_y = 4
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aT" = (
+/obj/structure/chair/sofa/bench/right{
+	dir = 1
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aU" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor3";
+	color = "#2A2622";
+	alpha = 120
+	},
+/turf/open/indestructible/grimy{
+	color = "#C3B8AC"
+	},
+/area/template_noop)
+"aV" = (
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"aW" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1;
+	alpha = 130
+	},
+/turf/open/indestructible/dark/textured{
+	color = "#E6DFD7"
+	},
+/area/template_noop)
+"aX" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/machinery/light/warm/directional/north,
+/turf/open/indestructible/plating{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+"aY" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+"aZ" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 160
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor4";
+	color = "#5C4030";
+	alpha = 120
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "drip3";
+	color = "#6B4526";
+	alpha = 200
+	},
+/obj/structure/fluff/shower_drain,
+/obj/structure/sign/poster/official/random/directional/east,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"bI" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/item/trash/candy{
+	pixel_x = -6;
+	pixel_y = -8
+	},
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = 7;
+	pixel_y = 2
+	},
+/turf/open/indestructible/grimy{
+	color = "#C3B8AC"
+	},
+/area/template_noop)
+"dL" = (
+/obj/structure/fence{
+	dir = 1
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"hH" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 8
+	},
+/obj/structure/table,
+/obj/item/flashlight/lamp{
+	pixel_x = -7;
+	pixel_y = 9
+	},
+/obj/item/reagent_containers/cup/glass/mug{
+	pixel_x = 7;
+	pixel_y = 7
+	},
+/obj/item/folder{
+	pixel_x = 1;
+	pixel_y = -3
+	},
+/obj/structure/sign/calendar/directional/south,
+/turf/open/indestructible/wood,
+/area/template_noop)
+"ik" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/sign/departments/vault/directional/south,
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"iB" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/machinery/light/small/directional/east,
+/turf/open/indestructible/wood,
+/area/template_noop)
+"ja" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/fluff/paper/stack{
+	dir = 2
+	},
+/obj/item/cigbutt{
+	pixel_x = 8;
+	pixel_y = -6
+	},
+/turf/open/indestructible/wood,
+/area/template_noop)
+"wr" = (
+/obj/machinery/door/airlock/outpost/service/vault{
+	name = "lockup"
+	},
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"Bu" = (
+/obj/effect/decal/cleanable/ash,
+/obj/item/cigbutt{
+	pixel_x = -3;
+	pixel_y = -9
+	},
+/obj/item/cigbutt{
+	pixel_x = 6;
+	pixel_y = -5
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"DN" = (
+/obj/structure/filingcabinet,
+/turf/open/indestructible/wood,
+/area/template_noop)
+"GB" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 9
+	},
+/obj/structure/chair/stool/bar{
+	dir = 8;
+	item_chair = null
+	},
+/turf/open/indestructible/wood,
+/area/template_noop)
+"Jf" = (
+/obj/structure/sign/warning/no_smoking/circle/directional/south,
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"QN" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/turf/open/indestructible/wood,
+/area/template_noop)
+"Vb" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/stripes/line{
+	dir = 2;
+	alpha = 170
+	},
+/turf/open/indestructible/plating{
+	color = "#D6CDC3"
+	},
+/area/template_noop)
+
+(1,1,1) = {"
+aV
+av
+av
+av
+aF
+av
+aI
+aV
+aV
+"}
+(2,1,1) = {"
+aV
+aS
+aj
+ap
+aE
+aM
+ac
+bI
+aV
+"}
+(3,1,1) = {"
+aV
+as
+aA
+aC
+aP
+aQ
+aB
+Jf
+aI
+"}
+(4,1,1) = {"
+aV
+ax
+aN
+aK
+an
+ay
+aT
+Bu
+aV
+"}
+(5,1,1) = {"
+aI
+aw
+af
+ai
+aW
+aR
+al
+ik
+aV
+"}
+(6,1,1) = {"
+aV
+ae
+an
+aw
+aG
+aU
+aY
+Vb
+wr
+"}
+(7,1,1) = {"
+aH
+aw
+at
+aw
+aJ
+ah
+ad
+dL
+aI
+"}
+(8,1,1) = {"
+av
+aX
+aa
+aw
+ak
+ag
+GB
+hH
+aV
+"}
+(9,1,1) = {"
+aV
+aD
+aq
+ai
+aL
+ab
+QN
+DN
+av
+"}
+(10,1,1) = {"
+au
+ar
+aZ
+az
+aO
+ao
+iB
+ja
+aV
+"}
+(11,1,1) = {"
+aV
+am
+aI
+av
+av
+av
+av
+aV
+aV
+"}

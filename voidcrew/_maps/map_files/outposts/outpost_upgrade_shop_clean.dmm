@@ -1,0 +1,808 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"aa" = (
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"ab" = (
+/obj/machinery/light/directional/north,
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ac" = (
+/obj/structure/table/reinforced,
+/obj/item/paper_bin{
+	pixel_x = -2;
+	pixel_y = 6
+	},
+/obj/item/pen{
+	pixel_x = -2;
+	pixel_y = 8
+	},
+/obj/structure/window/reinforced/spawner/directional/south,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"ad" = (
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"ae" = (
+/obj/structure/chair/sofa/bench{
+	dir = 8
+	},
+/obj/machinery/light/directional/east,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"af" = (
+/obj/machinery/light/directional/north,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"ag" = (
+/obj/structure/table/wood,
+/obj/item/flashlight/lamp/green{
+	pixel_x = -3;
+	pixel_y = 7
+	},
+/obj/item/folder/blue{
+	pixel_x = 5;
+	pixel_y = 2
+	},
+/obj/structure/sign/calendar/directional/west,
+/obj/effect/turf_decal/siding/wood{
+	dir = 10
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ah" = (
+/obj/structure/table/wood,
+/obj/item/paper_bin{
+	pixel_x = -1;
+	pixel_y = 5
+	},
+/obj/item/pen{
+	pixel_x = 4;
+	pixel_y = 7
+	},
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ai" = (
+/obj/item/kirbyplants/organic/plant22,
+/obj/structure/sign/poster/official/soft_cap_pop_art/directional/north,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 9
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aj" = (
+/obj/structure/filingcabinet,
+/obj/effect/turf_decal/siding/wood{
+	dir = 9
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ak" = (
+/obj/structure/rack,
+/obj/item/folder/yellow{
+	pixel_x = -4;
+	pixel_y = 4
+	},
+/obj/item/folder/blue{
+	pixel_x = 3;
+	pixel_y = 2
+	},
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"al" = (
+/obj/machinery/light/directional/north,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"am" = (
+/mob/living/basic/outpost_shop_bot{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"an" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 4
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ao" = (
+/obj/structure/table/wood/fancy/black,
+/obj/item/folder/white{
+	pixel_x = 3;
+	pixel_y = 4
+	},
+/obj/item/pen{
+	pixel_x = 5;
+	pixel_y = 6
+	},
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"ap" = (
+/obj/structure/closet/crate/wooden,
+/obj/machinery/light/directional/north,
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aq" = (
+/obj/machinery/computer/outpost_shop_register{
+	dir = 2
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"ar" = (
+/obj/structure/table/reinforced,
+/obj/item/flashlight/lamp{
+	pixel_x = -3;
+	pixel_y = 8
+	},
+/obj/structure/window/reinforced/spawner/directional/south,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"as" = (
+/obj/structure/table/reinforced,
+/obj/structure/window/reinforced/spawner/directional/south,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"at" = (
+/obj/structure/table/reinforced,
+/obj/item/flashlight/lamp{
+	pixel_x = 3;
+	pixel_y = 8
+	},
+/obj/structure/window/reinforced/spawner/directional/south,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"au" = (
+/obj/item/kirbyplants/organic/plant22,
+/obj/structure/sign/warning/no_smoking/circle/directional/north,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 5
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"av" = (
+/obj/structure/chair/office{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wood{
+	dir = 8
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aw" = (
+/turf/open/indestructible/carpet/green,
+/area/template_noop)
+"ax" = (
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 8
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"ay" = (
+/obj/structure/table/wood/fancy/black,
+/obj/item/paper{
+	pixel_x = -5;
+	pixel_y = 2
+	},
+/obj/item/paper{
+	pixel_x = -2;
+	pixel_y = 5
+	},
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"az" = (
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aA" = (
+/obj/structure/chair/sofa/bench/left{
+	dir = 4
+	},
+/obj/structure/sign/poster/official/nanomichi_ad/directional/west,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 8
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aB" = (
+/obj/structure/table/wood/fancy/black,
+/obj/item/flashlight/lamp/green{
+	pixel_x = 4;
+	pixel_y = 6
+	},
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aC" = (
+/obj/structure/chair/sofa/bench/right{
+	dir = 8
+	},
+/obj/structure/sign/poster/official/jim_nortons/directional/east,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aD" = (
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aE" = (
+/obj/structure/table/wood/fancy/black,
+/obj/item/flashlight/lamp/green{
+	pixel_x = -4;
+	pixel_y = 6
+	},
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aF" = (
+/obj/structure/sign/poster/official/cleanliness/directional/east,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aG" = (
+/obj/structure/table/wood/fancy/black,
+/obj/item/kirbyplants/organic/plant21{
+	pixel_y = 7
+	},
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aH" = (
+/obj/machinery/door/airlock/outpost/service/staff,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"aI" = (
+/obj/machinery/outpost_shop_stock,
+/obj/machinery/digital_clock/directional/north,
+/obj/effect/turf_decal/box/white,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aJ" = (
+/obj/structure/chair/office/light{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aK" = (
+/obj/structure/table/reinforced,
+/obj/item/clipboard{
+	pixel_x = 2;
+	pixel_y = 4
+	},
+/obj/structure/window/reinforced/spawner/directional/south,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aL" = (
+/obj/item/kirbyplants/organic/plant21,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aM" = (
+/obj/structure/table/wood/fancy/black,
+/obj/item/paper{
+	pixel_x = 5;
+	pixel_y = 2
+	},
+/obj/item/paper{
+	pixel_x = 2;
+	pixel_y = 5
+	},
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aN" = (
+/turf/closed/indestructible/reinforced/titanium/nodiagonal,
+/area/template_noop)
+"aO" = (
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aP" = (
+/obj/structure/rack,
+/obj/item/folder/white{
+	pixel_x = -2;
+	pixel_y = 3
+	},
+/obj/item/folder/yellow{
+	pixel_x = 3;
+	pixel_y = 6
+	},
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 5
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aQ" = (
+/obj/structure/rack,
+/obj/item/paper_bin{
+	pixel_y = 4
+	},
+/obj/item/clipboard{
+	pixel_x = 4;
+	pixel_y = 2
+	},
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aR" = (
+/obj/structure/closet/crate/cardboard,
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 6
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aS" = (
+/obj/item/kirbyplants/organic/plant10,
+/obj/effect/turf_decal/siding/wood{
+	dir = 5
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aT" = (
+/obj/structure/closet/crate/cardboard,
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal/trimline/neutral/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aU" = (
+/obj/structure/noticeboard/directional/north,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aV" = (
+/obj/structure/table/wood/fancy/black,
+/obj/item/folder/blue{
+	pixel_x = -3;
+	pixel_y = 4
+	},
+/obj/item/pen{
+	pixel_x = -1;
+	pixel_y = 6
+	},
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aW" = (
+/obj/machinery/light/directional/north,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 8
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aX" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 6
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aY" = (
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aZ" = (
+/obj/structure/chair/sofa/bench{
+	dir = 4
+	},
+/obj/machinery/light/directional/west,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 8
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"bI" = (
+/obj/structure/flora/bush/flowers_pp/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+"dn" = (
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"vI" = (
+/obj/structure/chair/sofa/bench/left{
+	dir = 8
+	},
+/obj/structure/sign/poster/official/high_class_martini/directional/east,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"zo" = (
+/obj/structure/flora/bush/large/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+"BF" = (
+/obj/effect/spawner/structure/window/reinforced,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"Qc" = (
+/obj/item/kirbyplants/organic/plant21,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 4
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 8
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"Qm" = (
+/obj/item/kirbyplants/organic/plant21,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 8
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"Ro" = (
+/obj/structure/chair/sofa/bench/right{
+	dir = 4
+	},
+/obj/structure/sign/poster/official/fruit_bowl/directional/west,
+/obj/effect/turf_decal/tile/green/opposingcorners{
+	dir = 2
+	},
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 8
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"Xa" = (
+/obj/structure/flora/bush/flowers_yw/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+"Xy" = (
+/obj/machinery/door/airlock/outpost/service,
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"XW" = (
+/obj/structure/flora/bush/ferny/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+
+(1,1,1) = {"
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+"}
+(2,1,1) = {"
+aN
+aj
+av
+ag
+aN
+ai
+aA
+aZ
+Ro
+zo
+aN
+"}
+(3,1,1) = {"
+aN
+ab
+aY
+ah
+aN
+aU
+aO
+aO
+dn
+Xa
+BF
+"}
+(4,1,1) = {"
+aN
+aS
+an
+aX
+aN
+al
+aE
+ay
+dn
+XW
+BF
+"}
+(5,1,1) = {"
+aN
+ak
+aa
+az
+ar
+aw
+ao
+aG
+dn
+bI
+BF
+"}
+(6,1,1) = {"
+aN
+ap
+aa
+aJ
+as
+aw
+ad
+ad
+ad
+Qc
+aN
+"}
+(7,1,1) = {"
+aN
+aL
+aa
+az
+ac
+aw
+aw
+aw
+aw
+aw
+aN
+"}
+(8,1,1) = {"
+aN
+aI
+aa
+am
+aq
+aw
+aw
+aw
+aw
+aw
+Xy
+"}
+(9,1,1) = {"
+aN
+aL
+aa
+az
+aK
+aw
+aw
+aw
+aw
+aw
+aN
+"}
+(10,1,1) = {"
+aN
+ap
+aa
+aJ
+as
+aw
+ax
+ax
+ax
+Qm
+aN
+"}
+(11,1,1) = {"
+aN
+aQ
+aa
+az
+at
+aw
+aV
+aG
+dn
+bI
+BF
+"}
+(12,1,1) = {"
+aN
+aT
+aa
+az
+aN
+aW
+aB
+aM
+dn
+XW
+BF
+"}
+(13,1,1) = {"
+aN
+af
+aa
+az
+aH
+aD
+aO
+aO
+dn
+Xa
+BF
+"}
+(14,1,1) = {"
+aN
+aP
+aF
+aR
+aN
+au
+aC
+ae
+vI
+zo
+aN
+"}
+(15,1,1) = {"
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+aN
+"}

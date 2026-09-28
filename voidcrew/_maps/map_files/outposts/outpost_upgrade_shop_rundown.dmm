@@ -1,0 +1,815 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"aa" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"ab" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "credit";
+	paint_colour = "#E3B55B";
+	name = "painted sign";
+	desc = "A credit mark in flaking yellow paint."
+	},
+/turf/closed/indestructible/rusty,
+/area/template_noop)
+"ac" = (
+/obj/machinery/light/warm/directional/west,
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ad" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 140
+	},
+/obj/structure/barrel,
+/obj/structure/sign/poster/ripped/directional/east,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"ae" = (
+/obj/machinery/door/airlock/outpost/service/staff/maintenance,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"af" = (
+/obj/effect/decal/cleanable/cobweb/cobweb2,
+/obj/structure/table/wood,
+/obj/structure/showcase{
+	icon = 'icons/obj/fluff/general.dmi';
+	icon_state = "table_clock_broken";
+	name = "table clock";
+	desc = "A brass table clock, stopped at twenty past four.";
+	density = 0;
+	pixel_x = 7;
+	pixel_y = 9
+	},
+/obj/item/folder{
+	pixel_x = -5;
+	pixel_y = 3
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ag" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/obj/structure/chair/stool/bar{
+	dir = 2
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ah" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/chair/stool{
+	dir = 8
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ai" = (
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"aj" = (
+/obj/structure/safe,
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ak" = (
+/obj/structure/table/reinforced,
+/obj/structure/window/reinforced/spawner/directional/south,
+/obj/item/reagent_containers/cup/glass/mug{
+	pixel_x = -6;
+	pixel_y = 7
+	},
+/obj/item/cigbutt{
+	pixel_x = 5;
+	pixel_y = 3
+	},
+/obj/item/cigbutt/roach{
+	pixel_x = 8;
+	pixel_y = 8
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"al" = (
+/obj/machinery/light/small/directional/north,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"am" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"an" = (
+/obj/effect/turf_decal/bot,
+/obj/structure/rack,
+/obj/item/paper{
+	pixel_x = -5;
+	pixel_y = 6
+	},
+/obj/item/folder/yellow{
+	pixel_x = 4;
+	pixel_y = 1
+	},
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"ao" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/decal/cleanable/cobweb,
+/obj/structure/closet/crate/bin,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ap" = (
+/obj/structure/fluff/paper/stack{
+	dir = 1
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aq" = (
+/obj/effect/turf_decal/delivery,
+/obj/machinery/outpost_shop_stock,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"ar" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/effect/decal/cleanable/cobweb/cobweb2,
+/obj/structure/closet/crate/wooden,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"as" = (
+/obj/structure/table/wood,
+/obj/item/flashlight/lamp/green{
+	pixel_x = -7;
+	pixel_y = 9
+	},
+/obj/item/paper{
+	pixel_x = 5;
+	pixel_y = 3
+	},
+/obj/item/pen{
+	pixel_x = 7;
+	pixel_y = -2
+	},
+/obj/structure/sign/calendar/directional/north,
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"at" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"au" = (
+/obj/structure/table/reinforced,
+/obj/structure/window/reinforced/spawner/directional/south,
+/obj/item/paper_bin{
+	pixel_x = 1;
+	pixel_y = 6
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"av" = (
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aw" = (
+/obj/structure/rack,
+/obj/structure/showcase{
+	icon = 'icons/obj/art/musician.dmi';
+	icon_state = "guitar";
+	name = "pawned guitar";
+	desc = "An acoustic guitar with a paper tag tied to the neck.";
+	pixel_y = 4
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"ax" = (
+/obj/structure/table/reinforced,
+/obj/structure/window/reinforced/spawner/directional/south,
+/obj/item/paper{
+	pixel_x = -6;
+	pixel_y = 5
+	},
+/obj/item/paper{
+	pixel_x = -3;
+	pixel_y = 8
+	},
+/obj/item/pen{
+	pixel_x = 6;
+	pixel_y = 4
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"ay" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/machinery/light/small/directional/west,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"az" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aA" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aB" = (
+/obj/effect/turf_decal/bot,
+/obj/structure/closet/crate/cardboard,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aC" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/closet/crate/cardboard,
+/obj/structure/sign/poster/contraband/random/directional/west,
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aD" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 8
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aE" = (
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aF" = (
+/obj/structure/showcase{
+	icon = 'icons/obj/machines/music.dmi';
+	icon_state = "jukebox-broken";
+	name = "broken jukebox";
+	desc = "A jukebox with a cracked front. It has not played in years."
+	},
+/obj/structure/sign/poster/contraband/random/directional/north,
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aG" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/structure/table,
+/obj/item/paper_bin{
+	pixel_x = -4;
+	pixel_y = 6
+	},
+/obj/item/pen{
+	pixel_x = 7;
+	pixel_y = 3
+	},
+/obj/item/clipboard{
+	pixel_x = 3;
+	pixel_y = -4
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aH" = (
+/obj/machinery/computer/outpost_shop_register{
+	dir = 2
+	},
+/obj/structure/desk_bell{
+	pixel_x = 10;
+	pixel_y = 10
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aI" = (
+/turf/closed/indestructible/rusty,
+/area/template_noop)
+"aJ" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aK" = (
+/obj/structure/rack,
+/obj/structure/showcase{
+	icon = 'icons/obj/art/musician.dmi';
+	icon_state = "accordion";
+	name = "pawned accordion";
+	desc = "A red accordion. The bellows wheeze.";
+	pixel_y = 4
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aL" = (
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aM" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/mob/living/basic/outpost_shop_bot{
+	dir = 2
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aN" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aO" = (
+/obj/structure/table/reinforced,
+/obj/structure/window/reinforced/spawner/directional/south,
+/obj/item/clipboard{
+	pixel_x = 2;
+	pixel_y = 5
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aP" = (
+/obj/structure/sign/warning/no_smoking/directional/north,
+/obj/item/cigbutt{
+	pixel_x = -7;
+	pixel_y = -4
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aQ" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/obj/item/kirbyplants/organic/plant10,
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aR" = (
+/obj/structure/showcase/katana{
+	name = "display katana";
+	desc = "A display sword on two wall pegs. The edge was never sharpened.";
+	pixel_x = 11
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aS" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 140
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aT" = (
+/obj/structure/chair/office{
+	dir = 1
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aU" = (
+/obj/machinery/light/warm/directional/east,
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aV" = (
+/obj/effect/decal/cleanable/cobweb,
+/obj/structure/showcase{
+	icon = 'icons/obj/fluff/general.dmi';
+	icon_state = "wooden_tv_broken";
+	name = "old television";
+	desc = "A wood-cased television. Only static comes through."
+	},
+/turf/open/indestructible/wood/parquet,
+/area/template_noop)
+"aW" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aX" = (
+/obj/structure/table/reinforced,
+/obj/structure/window/reinforced/spawner/directional/south,
+/obj/structure/showcase{
+	icon = 'icons/obj/fluff/general.dmi';
+	icon_state = "maneki-neko";
+	name = "lucky cat";
+	desc = "A beckoning cat with one paw raised. Most of its paint has rubbed off.";
+	density = 0;
+	pixel_x = -6;
+	pixel_y = 8
+	},
+/turf/open/indestructible/dark/textured,
+/area/template_noop)
+"aY" = (
+/obj/effect/turf_decal/bot,
+/obj/effect/decal/cleanable/cobweb,
+/obj/structure/rack,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aZ" = (
+/obj/item/paper/crumpled{
+	pixel_x = 6;
+	pixel_y = -5
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"be" = (
+/obj/structure/table/wood,
+/obj/structure/showcase{
+	icon = 'icons/obj/art/musician.dmi';
+	icon_state = "saxophone";
+	name = "pawned saxophone";
+	desc = "A dented saxophone with a price tag on a string.";
+	density = 0;
+	pixel_y = 6
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"cN" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"ef" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/item/cigbutt{
+	pixel_x = -8;
+	pixel_y = 6
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"eS" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"lb" = (
+/obj/machinery/light/warm/directional/south,
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"mO" = (
+/obj/item/kirbyplants/organic/plant21,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ng" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"rW" = (
+/obj/structure/chair/sofa/bench/left{
+	dir = 4
+	},
+/obj/item/paper{
+	name = "handbill";
+	default_raw_text = "WE BUY AND SELL. Fair prices, no questions."
+	},
+/obj/item/paper{
+	name = "lost cat notice";
+	default_raw_text = "LOST: grey tabby, answers to Biscuit. Reward."
+	},
+/obj/structure/noticeboard/directional/west,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"sr" = (
+/obj/structure/table/wood,
+/obj/structure/showcase{
+	icon = 'icons/obj/art/statue.dmi';
+	icon_state = "bust";
+	name = "marble bust";
+	desc = "A marble bust of somebody important. Nobody remembers who.";
+	density = 0;
+	pixel_y = 6
+	},
+/obj/item/paper{
+	pixel_x = -9;
+	pixel_y = -5
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"vF" = (
+/obj/structure/table/wood,
+/obj/structure/showcase{
+	icon = 'icons/obj/art/musician.dmi';
+	icon_state = "trumpet";
+	name = "pawned trumpet";
+	desc = "A trumpet with one sticky valve.";
+	density = 0;
+	pixel_y = 7
+	},
+/obj/item/paper{
+	pixel_x = 6;
+	pixel_y = -4
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"xm" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"yk" = (
+/obj/structure/sign/clock/directional/south,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"zm" = (
+/obj/machinery/door/airlock/outpost/service/wood,
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"Aa" = (
+/obj/effect/decal/cleanable/cobweb/cobweb2,
+/obj/item/kirbyplants/random/dead,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"BG" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "shop";
+	paint_colour = "#E3B55B";
+	name = "painted sign";
+	desc = "Hand-painted letters, flaking at the edges."
+	},
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"Ce" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "trade";
+	paint_colour = "#D8704A";
+	name = "painted sign";
+	desc = "Hand-painted letters, flaking at the edges."
+	},
+/turf/closed/indestructible/reinforced/rusty,
+/area/template_noop)
+"ES" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/spawner/random/trash/cigbutt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"Fm" = (
+/obj/effect/spawner/structure/window/reinforced,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"FT" = (
+/obj/structure/chair/sofa/bench/right{
+	dir = 4
+	},
+/obj/item/cigbutt{
+	pixel_x = 9;
+	pixel_y = -8
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"Kd" = (
+/obj/machinery/light/warm/directional/east,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"Ky" = (
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"Nv" = (
+/obj/structure/table/wood,
+/obj/item/newspaper{
+	pixel_x = -3;
+	pixel_y = 5
+	},
+/obj/item/reagent_containers/cup/glass/mug{
+	pixel_x = 7;
+	pixel_y = 9
+	},
+/obj/item/cigbutt{
+	pixel_x = 6;
+	pixel_y = -1
+	},
+/obj/structure/sign/poster/contraband/random/directional/west,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"RV" = (
+/obj/structure/table/wood,
+/obj/structure/showcase{
+	icon = 'icons/obj/devices/tool.dmi';
+	icon_state = "binoculars";
+	name = "old binoculars";
+	desc = "A pair of binoculars with one cracked lens.";
+	density = 0;
+	pixel_x = -5;
+	pixel_y = 5
+	},
+/obj/item/paper{
+	pixel_x = 7;
+	pixel_y = 1
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"Uu" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/item/cigbutt/cigarbutt{
+	pixel_x = 5;
+	pixel_y = -7
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"UO" = (
+/obj/structure/showcase{
+	icon = 'icons/obj/machines/computer.dmi';
+	icon_state = "arcade";
+	dir = 8;
+	name = "dead arcade cabinet";
+	desc = "An arcade cabinet with a dead screen and a coin slot full of gum."
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"VJ" = (
+/obj/effect/decal/cleanable/blood/oil,
+/obj/structure/sign/poster/official/random/directional/east,
+/obj/structure/showcase{
+	icon = 'icons/mob/rideables/vehicles.dmi';
+	icon_state = "atv";
+	dir = 8;
+	name = "used quad bike";
+	desc = "A dented quad bike. The tag on the handlebars reads NOT FOR SALE."
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+
+(1,1,1) = {"
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+"}
+(2,1,1) = {"
+ai
+aY
+ay
+aB
+aG
+ab
+ao
+rW
+FT
+Nv
+ai
+"}
+(3,1,1) = {"
+ai
+aq
+aW
+am
+ah
+aI
+al
+aN
+ES
+be
+Fm
+"}
+(4,1,1) = {"
+ai
+an
+aS
+aE
+aJ
+ae
+aN
+Ky
+ng
+vF
+Fm
+"}
+(5,1,1) = {"
+ai
+ar
+at
+aJ
+ad
+aI
+aP
+eS
+sr
+mO
+ai
+"}
+(6,1,1) = {"
+ai
+aI
+aI
+am
+aI
+aI
+aF
+Ky
+RV
+lb
+ai
+"}
+(7,1,1) = {"
+ai
+aV
+ac
+aD
+aC
+aX
+aN
+Uu
+ng
+yk
+ai
+"}
+(8,1,1) = {"
+ai
+aw
+av
+aA
+az
+ax
+aL
+aa
+aL
+cN
+BG
+"}
+(9,1,1) = {"
+ai
+aj
+ap
+av
+aM
+aH
+aa
+aL
+aL
+cN
+zm
+"}
+(10,1,1) = {"
+ai
+aK
+av
+av
+az
+aO
+aZ
+aL
+ef
+aL
+Ce
+"}
+(11,1,1) = {"
+ai
+as
+aT
+aA
+ag
+ak
+aN
+xm
+xm
+eS
+Fm
+"}
+(12,1,1) = {"
+ai
+af
+aU
+aR
+aQ
+au
+Aa
+Kd
+UO
+VJ
+Fm
+"}
+(13,1,1) = {"
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+ai
+"}

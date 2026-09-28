@@ -1,0 +1,496 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"a" = (
+/obj/item/kirbyplants/organic/plant16,
+/obj/structure/sign/poster/official/random/directional/east,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 6
+	},
+/obj/effect/turf_decal/tile/dark_blue/anticorner/contrasted{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"b" = (
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 2
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 2
+	},
+/obj/structure/chair/sofa/bench/tram/right{
+	dir = 1
+	},
+/obj/structure/sign/poster/official/random/directional/south,
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"c" = (
+/obj/structure/flora/bush/fullgrass/style_random,
+/obj/structure/flora/bush/ferny/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/obj/structure/railing/unbreakable{
+	dir = 4
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+"f" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 9
+	},
+/obj/effect/turf_decal/tile/dark_blue/anticorner/contrasted{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"g" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"h" = (
+/obj/machinery/light/cold/directional/east,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"j" = (
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 2
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 2
+	},
+/obj/structure/chair/sofa/bench/tram/right{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"k" = (
+/obj/structure/table/wood,
+/obj/item/paper_bin{
+	pixel_x = -5;
+	pixel_y = 7
+	},
+/obj/item/pen{
+	pixel_x = -3;
+	pixel_y = 9
+	},
+/obj/item/paper{
+	pixel_x = 6;
+	pixel_y = -1
+	},
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"l" = (
+/obj/machinery/light/cold/directional/west,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 9
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"n" = (
+/obj/structure/flora/bush/fullgrass/style_random,
+/obj/structure/flora/bush/ferny/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/obj/structure/railing/unbreakable{
+	dir = 8
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+"o" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 1
+	},
+/obj/structure/sign/clock/directional/north,
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"p" = (
+/obj/machinery/light/cold/directional/east,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 4
+	},
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"q" = (
+/obj/machinery/light/cold/directional/west,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 8
+	},
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"r" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 1
+	},
+/obj/structure/sign/departments/vault/directional/north{
+	desc = "A sign marking the deposit vault."
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"s" = (
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 2
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 2
+	},
+/obj/structure/chair/sofa/bench/tram/left{
+	dir = 1
+	},
+/obj/item/newspaper{
+	pixel_x = 4;
+	pixel_y = 3
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"u" = (
+/obj/structure/table/wood,
+/obj/item/flashlight/lamp/green{
+	pixel_y = 10
+	},
+/obj/item/paper{
+	pixel_x = -5;
+	pixel_y = -3
+	},
+/obj/item/pen{
+	pixel_x = 6;
+	pixel_y = -2
+	},
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"v" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 5
+	},
+/obj/effect/turf_decal/tile/dark_blue/anticorner/contrasted{
+	dir = 4
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"w" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 1
+	},
+/obj/structure/sign/calendar/directional/north,
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"y" = (
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"z" = (
+/turf/closed/indestructible/reinforced/titanium/nodiagonal,
+/area/template_noop)
+"A" = (
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"C" = (
+/obj/structure/chair/comfy/black{
+	dir = 1
+	},
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"D" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 4
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 4
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"E" = (
+/obj/structure/flora/bush/sparsegrass/style_random,
+/obj/structure/flora/bush/flowers_yw/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+"F" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"H" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/plaque,
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"K" = (
+/obj/item/kirbyplants/organic/plant21,
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"M" = (
+/obj/structure/table/wood,
+/obj/item/folder/blue{
+	pixel_x = 4;
+	pixel_y = 6
+	},
+/obj/item/clipboard{
+	pixel_x = -5;
+	pixel_y = 2
+	},
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"N" = (
+/obj/machinery/light/cold/directional/west,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"O" = (
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 2
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 2
+	},
+/obj/structure/chair/sofa/bench/tram/left{
+	dir = 1
+	},
+/obj/structure/noticeboard/directional/south,
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"Q" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"R" = (
+/obj/item/kirbyplants/organic/plant16,
+/obj/structure/sign/poster/official/random/directional/west,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 10
+	},
+/obj/effect/turf_decal/tile/dark_blue/anticorner/contrasted{
+	dir = 8
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"T" = (
+/obj/structure/chair/comfy/black{
+	dir = 2
+	},
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"U" = (
+/obj/machinery/door/airlock/outpost/service/vault{
+	name = "deposit vault"
+	},
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"V" = (
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 2
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"X" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"Y" = (
+/obj/structure/closet/secure_closet/outpost_storage,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 8
+	},
+/obj/effect/turf_decal/tile/dark_blue/half/contrasted{
+	dir = 8
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"Z" = (
+/obj/machinery/light/cold/directional/east,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 5
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+
+(1,1,1) = {"
+z
+z
+z
+z
+z
+z
+z
+z
+z
+z
+z
+"}
+(2,1,1) = {"
+z
+z
+z
+Y
+z
+Y
+z
+Y
+z
+R
+z
+"}
+(3,1,1) = {"
+z
+f
+l
+X
+N
+X
+N
+X
+q
+s
+z
+"}
+(4,1,1) = {"
+z
+o
+F
+K
+A
+A
+A
+y
+E
+b
+z
+"}
+(5,1,1) = {"
+z
+Q
+F
+y
+T
+k
+C
+y
+c
+V
+z
+"}
+(6,1,1) = {"
+z
+r
+H
+y
+T
+u
+C
+A
+A
+A
+U
+"}
+(7,1,1) = {"
+z
+Q
+F
+y
+T
+M
+C
+y
+n
+V
+z
+"}
+(8,1,1) = {"
+z
+w
+F
+K
+A
+A
+A
+y
+E
+O
+z
+"}
+(9,1,1) = {"
+z
+v
+Z
+g
+h
+g
+h
+g
+p
+j
+z
+"}
+(10,1,1) = {"
+z
+z
+z
+D
+z
+D
+z
+D
+z
+a
+z
+"}
+(11,1,1) = {"
+z
+z
+z
+z
+z
+z
+z
+z
+z
+z
+z
+"}

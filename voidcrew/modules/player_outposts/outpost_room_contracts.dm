@@ -83,11 +83,11 @@
 			queue += next
 	return reached
 
-/// Whether something dense stands between two neighbouring tiles or on the second one
+/// Whether something dense and fixed stands between two neighbouring tiles or on the second one. Mobs move, so they never count.
 /proc/outpost_room_step_blocked(turf/source, turf/target)
 	if(outpost_room_edge_blocked(source, target))
 		return TRUE
-	for(var/atom/movable/thing as anything in target)
+	for(var/obj/thing in target)
 		if(thing.density && !(thing.flags_1 & ON_BORDER_1))
 			return TRUE
 	return FALSE
@@ -111,6 +111,20 @@
 		return FALSE
 	return !findtext("[thing.type]", "/directional")
 
+/// The room tiles a visitor can walk to from the entrance: staff doors stay shut
+/datum/outpost_upgrade/service/proc/visitor_reach()
+	var/list/routes = exit_routes()
+	var/turf/start = length(routes) ? routes[1][1] : null
+	return start ? outpost_room_walk(start, room_lookup(), block_staff = TRUE) : list()
+
+/// One problem line for each of `things` a visitor cannot reach (visitor_reach())
+/datum/outpost_upgrade/service/proc/visitor_reach_problems(list/things)
+	. = list()
+	var/list/visitor = visitor_reach()
+	for(var/atom/movable/thing as anything in things)
+		if(!outpost_room_can_reach(thing, visitor))
+			. += "a visitor cannot reach the [thing.name] at [thing.x],[thing.y]"
+
 /// Whether someone standing on a `reached` tile can use `thing`: from its own tile or one beside it
 /proc/outpost_room_can_reach(obj/thing, list/reached)
 	var/turf/place = get_turf(thing)
@@ -126,13 +140,19 @@
 
 /datum/outpost_upgrade/service/cloning_bay/contract_problems()
 	. = ..()
-	if(installed && length(room_vats()) != OUTPOST_CLONING_BAY_VATS)
+	if(!installed)
+		return
+	if(length(room_vats()) != OUTPOST_CLONING_BAY_VATS)
 		. += "[length(room_vats())] vats, not [OUTPOST_CLONING_BAY_VATS]"
+	. += visitor_reach_problems(room_vats())
 
 /datum/outpost_upgrade/service/storage/contract_problems()
 	. = ..()
-	if(installed && length(live_lockers()) != OUTPOST_STORAGE_LOCKERS)
+	if(!installed)
+		return
+	if(length(live_lockers()) != OUTPOST_STORAGE_LOCKERS)
 		. += "[length(live_lockers())] lockers, not [OUTPOST_STORAGE_LOCKERS]"
+	. += visitor_reach_problems(live_lockers())
 
 /datum/outpost_upgrade/service/teleporter/contract_problems()
 	. = ..()
@@ -149,12 +169,16 @@
 		. += "the arrival spot is not beside the pad"
 	if(!pad.pad_step_off_turf())
 		. += "the pad has no free tile beside it"
+	var/list/visitor = visitor_reach()
+	if(!visitor[get_turf(pad)] || !visitor[pad.arrival_turf])
+		. += "a visitor cannot walk to the pad and from the arrival spot"
 
 /datum/outpost_upgrade/service/medical_lab/contract_problems()
 	. = ..()
 	if(!installed)
 		return
 	var/list/found = list()
+	var/list/patient_machines = list()
 	var/obj/machinery/atmospherics/components/unary/thermomachine/freezer
 	var/list/cells = list()
 	var/list/connectors = list()
@@ -162,6 +186,9 @@
 	for(var/turf/tile as anything in room_lookup())
 		for(var/obj/machinery/machine in tile)
 			found[machine.type] = (found[machine.type] || 0) + 1
+			// Everything a patient with a pass uses: the pass terminal, the slab and its console, sleepers and cells
+			if(istype(machine, /obj/machinery/outpost_autosurgeon) || istype(machine, /obj/machinery/computer/outpost_autosurgeon) 				|| istype(machine, /obj/machinery/computer/outpost_medlab_terminal) || istype(machine, /obj/machinery/sleeper) || istype(machine, /obj/machinery/cryo_cell))
+				patient_machines += machine
 			if(istype(machine, /obj/machinery/atmospherics/components/unary/thermomachine))
 				freezer = machine
 			else if(istype(machine, /obj/machinery/cryo_cell))
@@ -184,6 +211,7 @@
 	for(var/machine_type in wanted)
 		if(found[machine_type] != wanted[machine_type])
 			. += "[found[machine_type] || 0] [machine_type], not [wanted[machine_type]]"
+	. += visitor_reach_problems(patient_machines)
 	var/datum/pipeline/loop = freezer?.parents[1]
 	if(!loop)
 		. += "the freezer is not on a pipe loop"

@@ -400,6 +400,10 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	if(istype(target, /obj/machinery/atmospherics))
 		var/obj/machinery/atmospherics/atmos_part = target
 		atmos_part.can_unwrench = FALSE
+	// A seat dragged onto someone folds into a carried chair (chair.dm)
+	if(istype(target, /obj/structure/chair))
+		var/obj/structure/chair/seat = target
+		seat.item_chair = null
 
 	RegisterSignals(target, list(
 		COMSIG_ATOM_TOOL_ACT(TOOL_CROWBAR),
@@ -430,6 +434,12 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	RegisterSignal(target, COMSIG_ATOM_PREHITBY, PROC_REF(on_thrown_hit))
 	RegisterSignal(target, COMSIG_ATOM_HULK_ATTACK, PROC_REF(on_hulk_attack))
 	RegisterSignal(target, COMSIG_ATOM_ATTACK_MECH, PROC_REF(on_mech_attack))
+
+/// A desk bell dragged onto someone turns into a held bell (desk_bell.dm). Outpost property stays put.
+/obj/structure/desk_bell/mouse_drop_dragged(atom/over_object, mob/user)
+	if(HAS_TRAIT(src, TRAIT_OUTPOST_PROPERTY))
+		return FALSE
+	return ..()
 
 /datum/element/outpost_property/Detach(datum/source, ...)
 	UnregisterSignal(source, list(

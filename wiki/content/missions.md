@@ -75,7 +75,7 @@ Trader outposts also run their own boards, separate from your ship's. You take t
 
 ## Street Chemistry
 
-One contract type is never posted on your ship's board and never rolls at random. **Vex**, the fence at the Undertow Exchange in the lawless deep, is the only person in the galaxy who posts a **Drug Run**, and the only counter that will take the product afterwards. You have to fly out there and ask.
+One contract type is never posted on any board and never rolls at random. The **kingpin**, the crime boss in the lounge at the Undertow Exchange in the lawless deep, is the only person in the galaxy who gives out a **Drug Run**. Fly out there and ask him for work (see [the kingpin](bounty-hunting.md#the-kingpin)). **Vex**, the fence at the Undertow's counter, is the only one who will buy the product. Only one crew can run it at a time, and a crew that takes it can't hunt the kingpin or turn him in for the rest of the round.
 
 The run has three stages and a one-hour clock.
 

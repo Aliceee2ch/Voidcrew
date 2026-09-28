@@ -10,7 +10,7 @@
 
 /// The kingpin's archetype on his record (spec 13). He is his own kind: not meek, normal or a mini-boss.
 #define BOUNTY_ARCHETYPE_KINGPIN "kingpin"
-/// His placement: the corp sofa in the black market's lounge, never anywhere else
+/// His placement: the corp sofa in the black market's lounge, from the start of the round, never anywhere else
 #define BOUNTY_PLACEMENT_KINGPIN "kingpin_lounge"
 /// Trait source for everything the kingpin's crew puts on a mob
 #define BOUNTY_KINGPIN_TRAIT "bounty_kingpin"
@@ -129,19 +129,18 @@
 #define BOUNTY_KINGPIN_TALK_RANGE 2
 /// His talk radial's options; the text is also what the radial shows
 #define BOUNTY_KINGPIN_TALK_HERE "We're here for you."
-#define BOUNTY_KINGPIN_TALK_OFFER "What's the offer?"
-#define BOUNTY_KINGPIN_TALK_TAKE "Take the deal."
-#define BOUNTY_KINGPIN_TALK_NO_DEAL "No deal."
+#define BOUNTY_KINGPIN_TALK_WORK "Got any work?"
+#define BOUNTY_KINGPIN_TALK_TAKE_JOB "I'll take it."
 #define BOUNTY_KINGPIN_TALK_WALK "Walk away."
-/// Deals per kingpin, each ship once
-#define BOUNTY_KINGPIN_DEALS 2
-/// The bribe's worth in credits-equivalent (economy_v2.md 5.3)
-#define BOUNTY_KINGPIN_BRIBE_MIN 2500
-#define BOUNTY_KINGPIN_BRIBE_MAX 3500
-/// How far a catalogue item may sit outside the band and still be offered: the 2- and 3-voucher items (economy_v2.md 5.3)
-#define BOUNTY_KINGPIN_BRIBE_SLACK 100
-/// An offer nobody takes goes back in his pocket
+
+// ===== HIS BUSINESS =====
+
+/// The job he gives out (the only place it is given out): a Drug Run, fenced at Vex's counter
+#define BOUNTY_KINGPIN_JOB /datum/mission/drug_run
+/// A crew he has offered his job may take it for this long
 #define BOUNTY_KINGPIN_OFFER_TIME (3 MINUTES)
+/// When no job could be made (the round's planets don't fit one), he tries again after this
+#define BOUNTY_KINGPIN_JOB_RETRY (5 MINUTES)
 /// Between his idle lines, and between a goon's idle actions
 #define BOUNTY_KINGPIN_IDLE_MIN (40 SECONDS)
 #define BOUNTY_KINGPIN_IDLE_MAX (90 SECONDS)
@@ -162,13 +161,13 @@
 /// Wanted dead or alive: restrained, stunned or downed is alive
 #define BOUNTY_KINGPIN_PAY_ALIVE 100
 #define BOUNTY_KINGPIN_PAY_DEAD 80
-/// The first after 45 minutes of round, and only with 3+ active ships
+/// He goes on the board no earlier than 45 minutes into the round, and only with 3+ active ships
 #define BOUNTY_KINGPIN_FIRST (45 MINUTES)
 #define BOUNTY_KINGPIN_MIN_SHIPS 3
-/// The next 60-90 minutes after the last one resolves
+/// The next posting 60-90 minutes after the last one resolves
 #define BOUNTY_KINGPIN_GAP_MIN (60 MINUTES)
 #define BOUNTY_KINGPIN_GAP_MAX (90 MINUTES)
-/// If nothing could be posted (no black market loaded, say), try again after this
+/// If he couldn't be posted (not seated yet, say), try again after this
 #define BOUNTY_KINGPIN_RETRY (5 MINUTES)
 /// On the board for this, paused while a shootout is on
 #define BOUNTY_KINGPIN_EXPIRY (60 MINUTES)

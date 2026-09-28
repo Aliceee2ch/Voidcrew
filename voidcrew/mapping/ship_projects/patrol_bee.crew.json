@@ -1,25 +1,6 @@
 {
   "Rosters": {
-    "ship": [
-      {
-        "ID": "job_2",
-        "Name": "Quartermaster",
-        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_2",
-        "BaseOutfit": "/datum/outfit/job/quartermaster/corporate",
-        "Category": "Cargo",
-        "Slots": 1,
-        "Officer": false,
-        "Equipment": null,
-        "Backpack": {
-          "/obj/item/clothing/accessory/medal/gold/ordom": 1,
-          "/obj/item/melee/baton": 1,
-          "/obj/item/paper_bin": 1,
-          "/obj/item/universal_scanner": 1
-        },
-        "Belt": null,
-        "Extra": null
-      }
-    ],
+    "ship": [],
     "theme/standard": [
       {
         "ID": "job_1",
@@ -40,6 +21,68 @@
         },
         "Belt": null,
         "Extra": null
+      },
+      {
+        "ID": "job_26",
+        "Name": "Ship Engineer",
+        "Outfit": "/datum/outfit/job/engineer/gloved",
+        "BaseOutfit": "",
+        "Category": "Engineering",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": null,
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_27",
+        "Name": "Atmospheric Technician",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_27",
+        "BaseOutfit": "/datum/outfit/job/atmos",
+        "Category": "Engineering",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": {
+          "gloves": "/obj/item/clothing/gloves/color/yellow"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_28",
+        "Name": "Cargo Technician",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_28",
+        "BaseOutfit": "/datum/outfit/job/cargo_tech",
+        "Category": "Cargo",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": {
+          "gloves": "/obj/item/clothing/gloves/cargo_gauntlet",
+          "head": "/obj/item/clothing/head/soft"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_2",
+        "Name": "Patrolling Officer",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_2",
+        "BaseOutfit": "/datum/outfit/spacepol",
+        "Category": "Security",
+        "Slots": 2,
+        "Officer": true,
+        "Equipment": {
+          "belt": "",
+          "ears": "/obj/item/radio/headset/headset_sec/alt",
+          "l_pocket": "",
+          "mask": ""
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
       }
     ],
     "theme/syndicate_black": [
@@ -52,6 +95,75 @@
         "Slots": 1,
         "Officer": false,
         "Equipment": null,
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_12",
+        "Name": "Ship Engineer",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_12",
+        "BaseOutfit": "/datum/outfit/job/engineer/syndicate",
+        "Category": "Engineering",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": {
+          "gloves": "/obj/item/clothing/gloves/combat"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_13",
+        "Name": "Atmospheric Technician",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_13",
+        "BaseOutfit": "/datum/outfit/job/atmos/syndicate",
+        "Category": "Engineering",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": {
+          "gloves": "/obj/item/clothing/gloves/combat"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_24",
+        "Name": "Cargo Technician",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_24",
+        "BaseOutfit": "/datum/outfit/job/cargo_tech",
+        "Category": "Cargo",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": {
+          "gloves": "/obj/item/clothing/gloves/cargo_gauntlet",
+          "head": "/obj/item/clothing/head/soft",
+          "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
+          "neck": "/obj/item/clothing/neck/large_scarf/syndie",
+          "uniform": "/obj/item/clothing/under/syndicate"
+        },
+        "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_25",
+        "Name": "Patrolling Officer",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_25",
+        "BaseOutfit": "/datum/outfit/spacepol",
+        "Category": "Security",
+        "Slots": 2,
+        "Officer": true,
+        "Equipment": {
+          "belt": "",
+          "ears": "/obj/item/radio/headset/headset_sec/alt",
+          "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
+          "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
+          "l_pocket": "",
+          "uniform": "/obj/item/clothing/under/syndicate"
+        },
         "Backpack": null,
         "Belt": null,
         "Extra": null
@@ -375,102 +487,12 @@
       ]
     },
     "riot_gera_bay": {
-      "standard": [
-        {
-          "ID": "job_13",
-          "Name": "Patrolling Officer",
-          "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_13",
-          "BaseOutfit": "/datum/outfit/spacepol",
-          "Category": "Security",
-          "Slots": 2,
-          "Officer": true,
-          "Equipment": {
-            "belt": "",
-            "ears": "/obj/item/radio/headset/headset_sec/alt",
-            "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
-            "gloves": "/obj/item/clothing/gloves/color/black/security/blu",
-            "l_pocket": "",
-            "mask": ""
-          },
-          "Backpack": null,
-          "Belt": null,
-          "Extra": null
-        }
-      ],
-      "syndicate_black": [
-        {
-          "ID": "job_25",
-          "Name": "Patrolling Officer",
-          "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_25",
-          "BaseOutfit": "/datum/outfit/spacepol",
-          "Category": "Security",
-          "Slots": 2,
-          "Officer": true,
-          "Equipment": {
-            "belt": "",
-            "ears": "/obj/item/radio/headset/headset_sec/alt",
-            "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses/eyepatch",
-            "gloves": "/obj/item/clothing/gloves/color/black/security/blu",
-            "head": "/obj/item/clothing/head/hats/hos/cap/syndicate",
-            "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
-            "l_pocket": "",
-            "mask": "",
-            "uniform": "/obj/item/clothing/under/syndicate"
-          },
-          "Backpack": null,
-          "Belt": null,
-          "Extra": null
-        }
-      ]
+      "standard": [],
+      "syndicate_black": []
     },
     "security_bay_basic": {
-      "standard": [
-        {
-          "ID": "job_12",
-          "Name": "Patrolling Officer",
-          "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_12",
-          "BaseOutfit": "/datum/outfit/spacepol",
-          "Category": "Security",
-          "Slots": 2,
-          "Officer": true,
-          "Equipment": {
-            "belt": "",
-            "ears": "/obj/item/radio/headset/headset_sec/alt",
-            "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
-            "gloves": "/obj/item/clothing/gloves/color/black/security/blu",
-            "l_pocket": "",
-            "mask": ""
-          },
-          "Backpack": null,
-          "Belt": null,
-          "Extra": null
-        }
-      ],
-      "syndicate_black": [
-        {
-          "ID": "job_24",
-          "Name": "Patrolling Officer",
-          "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_24",
-          "BaseOutfit": "/datum/outfit/spacepol",
-          "Category": "Security",
-          "Slots": 2,
-          "Officer": true,
-          "Equipment": {
-            "belt": "",
-            "ears": "/obj/item/radio/headset/headset_sec/alt",
-            "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses/eyepatch",
-            "gloves": "/obj/item/clothing/gloves/color/black/security/blu",
-            "head": "/obj/item/clothing/head/hats/hos/cap/syndicate",
-            "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
-            "l_pocket": "",
-            "mask": "",
-            "uniform": "/obj/item/clothing/under/syndicate"
-          },
-          "Backpack": null,
-          "Belt": null,
-          "Extra": null
-        }
-      ]
+      "standard": [],
+      "syndicate_black": []
     },
     "service_basic": {
       "standard": [

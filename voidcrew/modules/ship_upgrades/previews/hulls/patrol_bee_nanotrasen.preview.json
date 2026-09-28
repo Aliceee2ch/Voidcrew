@@ -1,32 +1,32 @@
 {
  "hulls": {
   "patrol_bee_nanotrasen": {
-   "height": 24,
+   "height": 21,
    "png": "ship_patrol_bee_nanotrasen.png",
    "slots": {
     "Upper_Cargo": [
      7,
-     17
+     16
     ],
     "cleanroom": [
      15,
-     9
+     8
     ],
     "closet": [
      15,
-     4
+     3
     ],
     "security_bay": [
      19,
-     17
+     16
     ],
     "service": [
      18,
-     9
+     8
     ]
    },
-   "src_md5": "f914e518c253d29ca3dd7d9696318f85",
-   "width": 24
+   "src_md5": "de675e5b018bd3e52ae3b8005d78810b",
+   "width": 23
   }
  },
  "modules": {},

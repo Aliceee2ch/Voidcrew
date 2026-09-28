@@ -7,7 +7,7 @@
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list("Upper_Cargo", "closet", "cleanroom", "service", "security_bay")
 	player_hidden = FALSE
-	job_slots = list(list(name = "Quartermaster", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_2, category = "Cargo", slots = 1))
+	job_slots = list()
 	available_themes = list("standard", "syndicate_black")
 
 /obj/docking_port/mobile/voidcrew/patrol_bee

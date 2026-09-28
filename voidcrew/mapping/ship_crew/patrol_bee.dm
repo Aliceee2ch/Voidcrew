@@ -169,94 +169,6 @@
 	suit = /obj/item/clothing/suit/toggle/labcoat/interdyne
 	id = /obj/item/card/id/advanced/black/syndicate_command
 
-/datum/outfit/job/workshop_patrol_bee_job_13
-	parent_type = /datum/outfit/spacepol
-	name = "Patrol Bee — Patrolling Officer"
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	l_pocket = null
-
-/datum/outfit/job/workshop_patrol_bee_job_13/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
-	. = ..()
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	l_pocket = null
-
-/datum/outfit/job/workshop_patrol_bee_job_25
-	parent_type = /datum/outfit/spacepol
-	name = "Patrol Bee — Patrolling Officer"
-	uniform = /obj/item/clothing/under/syndicate
-	head = /obj/item/clothing/head/hats/hos/cap/syndicate
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses/eyepatch
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
-	l_pocket = null
-
-/datum/outfit/job/workshop_patrol_bee_job_25/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
-	. = ..()
-	uniform = /obj/item/clothing/under/syndicate
-	head = /obj/item/clothing/head/hats/hos/cap/syndicate
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses/eyepatch
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
-	l_pocket = null
-
-/datum/outfit/job/workshop_patrol_bee_job_12
-	parent_type = /datum/outfit/spacepol
-	name = "Patrol Bee — Patrolling Officer"
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	l_pocket = null
-
-/datum/outfit/job/workshop_patrol_bee_job_12/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
-	. = ..()
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	l_pocket = null
-
-/datum/outfit/job/workshop_patrol_bee_job_24
-	parent_type = /datum/outfit/spacepol
-	name = "Patrol Bee — Patrolling Officer"
-	uniform = /obj/item/clothing/under/syndicate
-	head = /obj/item/clothing/head/hats/hos/cap/syndicate
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses/eyepatch
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
-	l_pocket = null
-
-/datum/outfit/job/workshop_patrol_bee_job_24/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
-	. = ..()
-	uniform = /obj/item/clothing/under/syndicate
-	head = /obj/item/clothing/head/hats/hos/cap/syndicate
-	mask = null
-	glasses = /obj/item/clothing/glasses/hud/security/sunglasses/eyepatch
-	ears = /obj/item/radio/headset/headset_sec/alt
-	gloves = /obj/item/clothing/gloves/color/black/security/blu
-	belt = null
-	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
-	l_pocket = null
-
 /datum/outfit/job/workshop_patrol_bee_job_9
 	parent_type = /datum/outfit/deathmatch_loadout/chef/upgraded
 	name = "Patrol Bee — Chef"
@@ -285,15 +197,6 @@
 	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
 	backpack_contents = list(/obj/item/holosign_creator/robot_seat/restaurant = 1, /obj/item/sharpener = 1)
 
-/datum/outfit/job/workshop_patrol_bee_job_2
-	parent_type = /datum/outfit/job/quartermaster/corporate
-	name = "Patrol Bee — Quartermaster"
-	backpack_contents = list(/obj/item/clothing/accessory/medal/gold/ordom = 1, /obj/item/melee/baton = 1, /obj/item/paper_bin = 1, /obj/item/universal_scanner = 1)
-
-/datum/outfit/job/workshop_patrol_bee_job_2/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
-	. = ..()
-	backpack_contents = list(/obj/item/clothing/accessory/medal/gold/ordom = 1, /obj/item/melee/baton = 1, /obj/item/paper_bin = 1, /obj/item/universal_scanner = 1)
-
 /datum/outfit/job/workshop_patrol_bee_job_1
 	parent_type = /datum/outfit/job/hos
 	name = "Patrol Bee — Captain"
@@ -304,3 +207,92 @@
 	. = ..()
 	id = /obj/item/card/id/advanced/gold
 	backpack_contents = list(/obj/item/evidencebag = 1, /obj/item/gun/energy/e_gun/hos = 1, /obj/item/melee/baton/security/loaded/hos = 1, /obj/item/melee/baton/telescopic/gold = 1)
+
+/datum/outfit/job/workshop_patrol_bee_job_27
+	parent_type = /datum/outfit/job/atmos
+	name = "Patrol Bee — Atmospheric Technician"
+	gloves = /obj/item/clothing/gloves/color/yellow
+
+/datum/outfit/job/workshop_patrol_bee_job_27/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
+	. = ..()
+	gloves = /obj/item/clothing/gloves/color/yellow
+
+/datum/outfit/job/workshop_patrol_bee_job_28
+	parent_type = /datum/outfit/job/cargo_tech
+	name = "Patrol Bee — Cargo Technician"
+	head = /obj/item/clothing/head/soft
+	gloves = /obj/item/clothing/gloves/cargo_gauntlet
+
+/datum/outfit/job/workshop_patrol_bee_job_28/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
+	. = ..()
+	head = /obj/item/clothing/head/soft
+	gloves = /obj/item/clothing/gloves/cargo_gauntlet
+
+/datum/outfit/job/workshop_patrol_bee_job_2
+	parent_type = /datum/outfit/spacepol
+	name = "Patrol Bee — Patrolling Officer"
+	mask = null
+	ears = /obj/item/radio/headset/headset_sec/alt
+	belt = null
+	l_pocket = null
+
+/datum/outfit/job/workshop_patrol_bee_job_2/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
+	. = ..()
+	mask = null
+	ears = /obj/item/radio/headset/headset_sec/alt
+	belt = null
+	l_pocket = null
+
+/datum/outfit/job/workshop_patrol_bee_job_12
+	parent_type = /datum/outfit/job/engineer/syndicate
+	name = "Patrol Bee — Ship Engineer"
+	gloves = /obj/item/clothing/gloves/combat
+
+/datum/outfit/job/workshop_patrol_bee_job_12/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
+	. = ..()
+	gloves = /obj/item/clothing/gloves/combat
+
+/datum/outfit/job/workshop_patrol_bee_job_13
+	parent_type = /datum/outfit/job/atmos/syndicate
+	name = "Patrol Bee — Atmospheric Technician"
+	gloves = /obj/item/clothing/gloves/combat
+
+/datum/outfit/job/workshop_patrol_bee_job_13/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
+	. = ..()
+	gloves = /obj/item/clothing/gloves/combat
+
+/datum/outfit/job/workshop_patrol_bee_job_24
+	parent_type = /datum/outfit/job/cargo_tech
+	name = "Patrol Bee — Cargo Technician"
+	uniform = /obj/item/clothing/under/syndicate
+	head = /obj/item/clothing/head/soft
+	neck = /obj/item/clothing/neck/large_scarf/syndie
+	gloves = /obj/item/clothing/gloves/cargo_gauntlet
+	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
+
+/datum/outfit/job/workshop_patrol_bee_job_24/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
+	. = ..()
+	uniform = /obj/item/clothing/under/syndicate
+	head = /obj/item/clothing/head/soft
+	neck = /obj/item/clothing/neck/large_scarf/syndie
+	gloves = /obj/item/clothing/gloves/cargo_gauntlet
+	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
+
+/datum/outfit/job/workshop_patrol_bee_job_25
+	parent_type = /datum/outfit/spacepol
+	name = "Patrol Bee — Patrolling Officer"
+	uniform = /obj/item/clothing/under/syndicate
+	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
+	ears = /obj/item/radio/headset/headset_sec/alt
+	belt = null
+	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
+	l_pocket = null
+
+/datum/outfit/job/workshop_patrol_bee_job_25/pre_equip(mob/living/carbon/human/H, visuals_only = FALSE)
+	. = ..()
+	uniform = /obj/item/clothing/under/syndicate
+	glasses = /obj/item/clothing/glasses/hud/security/sunglasses
+	ears = /obj/item/radio/headset/headset_sec/alt
+	belt = null
+	id = /obj/item/card/id/advanced/black/syndicate_command/crew_id
+	l_pocket = null

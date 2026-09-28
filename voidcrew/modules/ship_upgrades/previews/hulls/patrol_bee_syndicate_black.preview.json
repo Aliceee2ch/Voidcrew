@@ -1,32 +1,32 @@
 {
  "hulls": {
   "patrol_bee_syndicate_black": {
-   "height": 24,
+   "height": 21,
    "png": "ship_patrol_bee_syndicate_black.png",
    "slots": {
     "Upper_Cargo": [
      7,
-     17
+     16
     ],
     "cleanroom": [
      15,
-     9
+     8
     ],
     "closet": [
      15,
-     4
+     3
     ],
     "security_bay": [
      19,
-     17
+     16
     ],
     "service": [
      18,
-     9
+     8
     ]
    },
-   "src_md5": "c3f329159d00b7701bba893e08bb1597",
-   "width": 24
+   "src_md5": "8d2302aff360fc6e69a977375d6b2b77",
+   "width": 23
   }
  },
  "modules": {},

@@ -45,6 +45,44 @@
 	glass = FALSE
 	door_policy = OUTPOST_DOOR_STAFF
 
+// Other looks for the outpost styles (outpost_styles.dm). Same rules as the doors above.
+
+/obj/machinery/door/airlock/outpost/service/mining
+	name = "service airlock"
+	icon = 'icons/obj/doors/airlocks/station/mining.dmi'
+	overlays_file = 'icons/obj/doors/airlocks/station/overlays.dmi'
+
+/obj/machinery/door/airlock/outpost/service/research
+	name = "service airlock"
+	icon = 'icons/obj/doors/airlocks/station/research.dmi'
+	overlays_file = 'icons/obj/doors/airlocks/station/overlays.dmi'
+
+/obj/machinery/door/airlock/outpost/service/maintenance
+	name = "service door"
+	desc = "A scuffed maintenance door on an outpost's service room."
+	icon = 'icons/obj/doors/airlocks/station/maintenance.dmi'
+	overlays_file = 'icons/obj/doors/airlocks/station/overlays.dmi'
+	opacity = TRUE
+	glass = FALSE
+
+/obj/machinery/door/airlock/outpost/service/wood
+	name = "wooden door"
+	desc = "A wooden door hung in an airlock frame."
+	icon = 'icons/obj/doors/airlocks/station/wood.dmi'
+	overlays_file = 'icons/obj/doors/airlocks/station/overlays.dmi'
+	opacity = TRUE
+	glass = FALSE
+
+/obj/machinery/door/airlock/outpost/service/staff/maintenance
+	name = "staff door"
+	desc = "A maintenance door marked for staff."
+	icon = 'icons/obj/doors/airlocks/station/maintenance.dmi'
+
+/obj/machinery/door/airlock/outpost/service/staff/wood
+	name = "staff door"
+	desc = "A wooden door marked for staff."
+	icon = 'icons/obj/doors/airlocks/station/wood.dmi'
+
 /// Whether this door opens for `user`
 /obj/machinery/door/airlock/outpost/service/proc/admits(mob/user)
 	if(!user)

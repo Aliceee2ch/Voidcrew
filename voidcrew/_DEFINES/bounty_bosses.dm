@@ -26,8 +26,8 @@
 /// Ability cooldowns are this much longer while tired (P4: the spec says "longer" and gives no number)
 #define BOUNTY_BOSS_TIRED_COOLDOWN_MULT 1.5
 /// Pause after one ability before the next may start, so telegraphs never overlap
-#define BOUNTY_BOSS_ABILITY_GAP_MIN (2 SECONDS)
-#define BOUNTY_BOSS_ABILITY_GAP_MAX (4 SECONDS)
+#define BOUNTY_BOSS_ABILITY_GAP_MIN (1 SECONDS)
+#define BOUNTY_BOSS_ABILITY_GAP_MAX (2 SECONDS)
 /// FALSE (set by the coordinator, matching the balance sim): skip the last ability only while another is ready, so a kit's main ability can repeat when its other one is on cooldown or not worth using. TRUE: never the same ability twice in a row, even when it is the only one ready (the hoarfrost rotation).
 #define BOUNTY_BOSS_STRICT_ROTATION FALSE
 /// Interior walls and doors one boss may break in its fight, all abilities together
@@ -39,7 +39,7 @@
 /// How far a hostile boss looks for hunters on its site once it has lost sight of everyone (P4)
 #define BOUNTY_BOSS_HUNT_RANGE 30
 /// How often a hunting boss looks again for the nearest hunter (P4)
-#define BOUNTY_BOSS_HUNT_INTERVAL (5 SECONDS)
+#define BOUNTY_BOSS_HUNT_INTERVAL (2 SECONDS)
 /// A hostile boss that finds no hunter on its site for this long calms down and waits again (P4)
 #define BOUNTY_BOSS_CALM_TIME (60 SECONDS)
 /// A hunter who hit the boss this recently is its first choice of target (P4)
@@ -72,10 +72,10 @@
 #define BOUNTY_JUGGERNAUT_MELEE_MIN 20
 #define BOUNTY_JUGGERNAUT_MELEE_MAX 26
 #define BOUNTY_JUGGERNAUT_MELEE_AP 15
-#define BOUNTY_JUGGERNAUT_MELEE_COOLDOWN (1.6 SECONDS)
+#define BOUNTY_JUGGERNAUT_MELEE_COOLDOWN (1.1 SECONDS)
 /// Charge: a roar, a stamp and a cracked-floor line
-#define BOUNTY_JUGGERNAUT_CHARGE_WINDUP (1.5 SECONDS)
-#define BOUNTY_JUGGERNAUT_CHARGE_COOLDOWN (12 SECONDS)
+#define BOUNTY_JUGGERNAUT_CHARGE_WINDUP (0.8 SECONDS)
+#define BOUNTY_JUGGERNAUT_CHARGE_COOLDOWN (8 SECONDS)
 /// Tiles it charges, at most
 #define BOUNTY_JUGGERNAUT_CHARGE_RANGE 7
 /// Time per tile of the charge (P4)
@@ -88,8 +88,8 @@
 #define BOUNTY_JUGGERNAUT_WALL_STAGGER (2 SECONDS)
 #define BOUNTY_JUGGERNAUT_WALL_VULNERABLE 1.25
 /// Slam: both fists up, a red ring
-#define BOUNTY_JUGGERNAUT_SLAM_WINDUP (1.2 SECONDS)
-#define BOUNTY_JUGGERNAUT_SLAM_COOLDOWN (10 SECONDS)
+#define BOUNTY_JUGGERNAUT_SLAM_WINDUP (0.7 SECONDS)
+#define BOUNTY_JUGGERNAUT_SLAM_COOLDOWN (7 SECONDS)
 #define BOUNTY_JUGGERNAUT_SLAM_DAMAGE 20
 #define BOUNTY_JUGGERNAUT_SLAM_KNOCKDOWN (1.5 SECONDS)
 
@@ -106,10 +106,10 @@
 /// Its torch: burn damage
 #define BOUNTY_PYROMANIAC_MELEE_MIN 10
 #define BOUNTY_PYROMANIAC_MELEE_MAX 14
-#define BOUNTY_PYROMANIAC_MELEE_COOLDOWN (1.4 SECONDS)
+#define BOUNTY_PYROMANIAC_MELEE_COOLDOWN (1 SECONDS)
 /// Flamer: a pilot light hiss, an orange cone
-#define BOUNTY_PYROMANIAC_FLAMER_WINDUP (1 SECONDS)
-#define BOUNTY_PYROMANIAC_FLAMER_COOLDOWN (7 SECONDS)
+#define BOUNTY_PYROMANIAC_FLAMER_WINDUP (0.5 SECONDS)
+#define BOUNTY_PYROMANIAC_FLAMER_COOLDOWN (5 SECONDS)
 #define BOUNTY_PYROMANIAC_FLAMER_RANGE 3
 /// Full width of the cone, in degrees
 #define BOUNTY_PYROMANIAC_FLAMER_ARC 90
@@ -117,8 +117,8 @@
 /// How long the floor the cone covered keeps burning
 #define BOUNTY_PYROMANIAC_FLAMER_FLOOR (4 SECONDS)
 /// Molotov: a lit rag, the throw, a ring where it lands
-#define BOUNTY_PYROMANIAC_MOLOTOV_WINDUP (1.4 SECONDS)
-#define BOUNTY_PYROMANIAC_MOLOTOV_COOLDOWN (10 SECONDS)
+#define BOUNTY_PYROMANIAC_MOLOTOV_WINDUP (0.7 SECONDS)
+#define BOUNTY_PYROMANIAC_MOLOTOV_COOLDOWN (7 SECONDS)
 #define BOUNTY_PYROMANIAC_MOLOTOV_RANGE 7
 #define BOUNTY_PYROMANIAC_MOLOTOV_DAMAGE 10
 #define BOUNTY_PYROMANIAC_MOLOTOV_POOL (8 SECONDS)
@@ -138,14 +138,14 @@
 /// Its crowbar
 #define BOUNTY_DEMOLITIONIST_MELEE_MIN 8
 #define BOUNTY_DEMOLITIONIST_MELEE_MAX 12
-#define BOUNTY_DEMOLITIONIST_MELEE_COOLDOWN (1.4 SECONDS)
+#define BOUNTY_DEMOLITIONIST_MELEE_COOLDOWN (1 SECONDS)
 /// It keeps this far from its target unless someone is right on it
 #define BOUNTY_DEMOLITIONIST_KEEP_MIN 4
 #define BOUNTY_DEMOLITIONIST_KEEP_MAX 6
 /// Grenade: the throw, then a fuse with a blinking ring
-#define BOUNTY_DEMOLITIONIST_GRENADE_WINDUP (0.8 SECONDS)
+#define BOUNTY_DEMOLITIONIST_GRENADE_WINDUP (0.5 SECONDS)
 #define BOUNTY_DEMOLITIONIST_GRENADE_FUSE (1.5 SECONDS)
-#define BOUNTY_DEMOLITIONIST_GRENADE_COOLDOWN (6 SECONDS)
+#define BOUNTY_DEMOLITIONIST_GRENADE_COOLDOWN (4 SECONDS)
 #define BOUNTY_DEMOLITIONIST_GRENADE_RANGE 8
 #define BOUNTY_DEMOLITIONIST_GRENADE_RADIUS 2
 /// Brute to anyone caught, against bomb armour
@@ -157,9 +157,9 @@
 /// Percent chance of a second grenade after the first
 #define BOUNTY_DEMOLITIONIST_SECOND_GRENADE 40
 /// Breaching charge: pressed onto an interior wall or door, then a beeping fuse
-#define BOUNTY_DEMOLITIONIST_BREACH_WINDUP (1 SECONDS)
+#define BOUNTY_DEMOLITIONIST_BREACH_WINDUP (0.6 SECONDS)
 #define BOUNTY_DEMOLITIONIST_BREACH_FUSE (5 SECONDS)
-#define BOUNTY_DEMOLITIONIST_BREACH_COOLDOWN (25 SECONDS)
+#define BOUNTY_DEMOLITIONIST_BREACH_COOLDOWN (18 SECONDS)
 #define BOUNTY_DEMOLITIONIST_BREACH_DAMAGE 25
 /// It breaches toward a target it can't see within this range
 #define BOUNTY_DEMOLITIONIST_BREACH_RANGE 8
@@ -177,21 +177,21 @@
 #define BOUNTY_GHOST_MELEE_MIN 12
 #define BOUNTY_GHOST_MELEE_MAX 16
 #define BOUNTY_GHOST_MELEE_AP 10
-#define BOUNTY_GHOST_MELEE_COOLDOWN (1 SECONDS)
+#define BOUNTY_GHOST_MELEE_COOLDOWN (0.7 SECONDS)
 /// Each cut bleeds this much brute a second for BOUNTY_GHOST_BLEED_TIME, up to BOUNTY_GHOST_BLEED_CAP a second
 #define BOUNTY_GHOST_BLEED_PER_CUT 1
 #define BOUNTY_GHOST_BLEED_CAP 2
 #define BOUNTY_GHOST_BLEED_TIME (12 SECONDS)
 /// Dash: a blur line to the target
-#define BOUNTY_GHOST_DASH_WINDUP (0.5 SECONDS)
-#define BOUNTY_GHOST_DASH_COOLDOWN (8 SECONDS)
+#define BOUNTY_GHOST_DASH_WINDUP (0.3 SECONDS)
+#define BOUNTY_GHOST_DASH_COOLDOWN (5 SECONDS)
 #define BOUNTY_GHOST_DASH_RANGE 5
 /// The dash's cut, its biggest hit (P4: combat.md B4 asks for the dash to be the biggest hit)
 #define BOUNTY_GHOST_DASH_DAMAGE 20
 /// Cloak: a shimmer, then a faint distortion
-#define BOUNTY_GHOST_CLOAK_WINDUP (0.5 SECONDS)
+#define BOUNTY_GHOST_CLOAK_WINDUP (0.3 SECONDS)
 #define BOUNTY_GHOST_CLOAK_TIME (6 SECONDS)
-#define BOUNTY_GHOST_CLOAK_COOLDOWN (18 SECONDS)
+#define BOUNTY_GHOST_CLOAK_COOLDOWN (12 SECONDS)
 #define BOUNTY_GHOST_CLOAK_ALPHA 50
 /// Percent of hits that miss it while it is cloaked
 #define BOUNTY_GHOST_CLOAK_MISS 50
@@ -218,14 +218,14 @@
 /// Its rifle butt
 #define BOUNTY_HEAVY_MELEE_MIN 14
 #define BOUNTY_HEAVY_MELEE_MAX 18
-#define BOUNTY_HEAVY_MELEE_COOLDOWN (1.6 SECONDS)
+#define BOUNTY_HEAVY_MELEE_COOLDOWN (1.1 SECONDS)
 /// Suppressive burst: a spin-up whirr, a laser sight and a red cone
-#define BOUNTY_HEAVY_BURST_WINDUP (1.5 SECONDS)
-#define BOUNTY_HEAVY_BURST_COOLDOWN (7 SECONDS)
+#define BOUNTY_HEAVY_BURST_WINDUP (0.7 SECONDS)
+#define BOUNTY_HEAVY_BURST_COOLDOWN (4 SECONDS)
 #define BOUNTY_HEAVY_BURST_RANGE 8
 #define BOUNTY_HEAVY_BURST_SHOTS 10
 /// How long the burst takes to fire
-#define BOUNTY_HEAVY_BURST_TIME (2 SECONDS)
+#define BOUNTY_HEAVY_BURST_TIME (1.5 SECONDS)
 #define BOUNTY_HEAVY_BURST_DAMAGE 9
 /// Full width of the cone the rounds go into, in degrees
 #define BOUNTY_HEAVY_BURST_ARC 30
@@ -234,8 +234,8 @@
 /// The rounds' damage to windows, grilles, tables and barricades it may break, as a share of their damage (none to anything else)
 #define BOUNTY_HEAVY_BURST_DEMOLITION 0.25
 /// Barricade: tg's security barrier, dropped in front of it
-#define BOUNTY_HEAVY_BARRICADE_WINDUP (1 SECONDS)
-#define BOUNTY_HEAVY_BARRICADE_COOLDOWN (30 SECONDS)
+#define BOUNTY_HEAVY_BARRICADE_WINDUP (0.6 SECONDS)
+#define BOUNTY_HEAVY_BARRICADE_COOLDOWN (20 SECONDS)
 /// Percent of projectiles that pass its barricade (combat.md's number; tg's barrier lets 20 through)
 #define BOUNTY_HEAVY_BARRICADE_PASS 50
 

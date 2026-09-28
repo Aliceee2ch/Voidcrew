@@ -152,7 +152,7 @@
 	TEST_ASSERT(criminal.ai_start_aim(hunter), "They would not aim a second time")
 	criminal.ai_aim_until = world.time
 	TEST_ASSERT(criminal.ai_fire_holdout(), "A clean aim did not fire")
-	TEST_ASSERT_EQUAL(criminal.ai_volley_left, 4, "After the first shot, four of the volley should be left") // BOUNTY_MEEK_PISTOL_SHOTS - 1
+	TEST_ASSERT_EQUAL(criminal.ai_volley_left, 7, "After the first shot, seven of the volley should be left") // BOUNTY_MEEK_PISTOL_SHOTS - 1
 	var/datum/component/ranged_attacks/gun = criminal.GetComponent(/datum/component/ranged_attacks)
 	TEST_ASSERT_NOTNULL(gun, "The meek criminal has no ranged_attacks component")
 	TEST_ASSERT_EQUAL(gun.projectile_type, /obj/projectile/bullet/bounty/holdout, "The holdout fires the wrong thing")
@@ -216,11 +216,11 @@
 	TEST_ASSERT(bounty_ai_apply_style(criminal, "pistol", 1), "The pistol style would not apply") // BOUNTY_STYLE_PISTOL
 	var/datum/component/ranged_attacks/gun = criminal.GetComponent(/datum/component/ranged_attacks)
 	TEST_ASSERT_EQUAL(gun.projectile_type, /obj/projectile/bullet/bounty, "The pistol fires the wrong thing")
-	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 8, "The pistol's magazine is not full") // BB_BOUNTY_AMMO, BOUNTY_PISTOL_MAGAZINE
+	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 17, "The pistol's magazine is not full") // BB_BOUNTY_AMMO, BOUNTY_PISTOL_MAGAZINE
 	var/datum/bounty_style/pistol = bounty_ai_style(criminal)
-	for(var/shot in 1 to 8)
+	for(var/shot in 1 to 17)
 		pistol.after_shot(criminal)
-	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 0, "Eight shots did not empty the magazine") // BB_BOUNTY_AMMO
+	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 0, "Seventeen shots did not empty the magazine") // BB_BOUNTY_AMMO
 	TEST_ASSERT(bounty_style_health_mult("brawler") > 1, "The brawler is not sturdier") // BOUNTY_STYLE_BRAWLER
 	TEST_ASSERT(bounty_ai_apply_style(criminal, "club", 1.2), "The club style would not apply") // BOUNTY_STYLE_CLUB
 	TEST_ASSERT_EQUAL(criminal.melee_damage_upper, round(7 * 1.2), "The club's damage did not take the tier") // BOUNTY_CLUB_DAMAGE_HIGH x BOUNTY_NORMAL_DAMAGE_MOST

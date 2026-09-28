@@ -42,18 +42,18 @@
 
 #define BOUNTY_KINGPIN_REVOLVER_DAMAGE 30
 /// The aim line before each shot; he never fires without it
-#define BOUNTY_KINGPIN_REVOLVER_AIM (1 SECONDS)
+#define BOUNTY_KINGPIN_REVOLVER_AIM (0.5 SECONDS)
 /// From one aim to the next
-#define BOUNTY_KINGPIN_REVOLVER_COOLDOWN (3.5 SECONDS)
+#define BOUNTY_KINGPIN_REVOLVER_COOLDOWN (1.2 SECONDS)
 #define BOUNTY_KINGPIN_REVOLVER_ROUNDS 6
-#define BOUNTY_KINGPIN_REVOLVER_RELOAD (4 SECONDS)
+#define BOUNTY_KINGPIN_REVOLVER_RELOAD (3 SECONDS)
 
 // ===== THE SHOOTOUT =====
 
 /// "The goons reach for their guns": nobody in his crew fires in it
-#define BOUNTY_KINGPIN_TELEGRAPH (1.5 SECONDS)
+#define BOUNTY_KINGPIN_TELEGRAPH (0.6 SECONDS)
 /// The goons' first shots are spread over this, after the telegraph
-#define BOUNTY_KINGPIN_FIRST_SHOT_SPREAD (1 SECONDS)
+#define BOUNTY_KINGPIN_FIRST_SHOT_SPREAD (0.5 SECONDS)
 /// A goon hit while drawing or winding up
 #define BOUNTY_KINGPIN_FUMBLE (1 SECONDS)
 /// Goons that may draw on one hunter at once, in the opening volley and whenever that hunter is in cover
@@ -86,31 +86,31 @@
 
 #define BOUNTY_GOON_PISTOL_DAMAGE_MIN 12
 #define BOUNTY_GOON_PISTOL_DAMAGE_MAX 14
-#define BOUNTY_GOON_PISTOL_COOLDOWN (1.5 SECONDS)
-#define BOUNTY_GOON_PISTOL_ROUNDS 6
-#define BOUNTY_GOON_PISTOL_RELOAD (3 SECONDS)
+#define BOUNTY_GOON_PISTOL_COOLDOWN (0.3 SECONDS)
+#define BOUNTY_GOON_PISTOL_ROUNDS 17
+#define BOUNTY_GOON_PISTOL_RELOAD (2 SECONDS)
 
 #define BOUNTY_GOON_SMG_DAMAGE_MIN 7
 #define BOUNTY_GOON_SMG_DAMAGE_MAX 9
 /// Shots in a burst, and the gap between them
-#define BOUNTY_GOON_SMG_BURST 3
-#define BOUNTY_GOON_SMG_BURST_GAP (0.15 SECONDS)
+#define BOUNTY_GOON_SMG_BURST 5
+#define BOUNTY_GOON_SMG_BURST_GAP (0.1 SECONDS)
 /// The spin-up: the gun comes up level, with a sound
-#define BOUNTY_GOON_SMG_WINDUP (0.8 SECONDS)
-#define BOUNTY_GOON_SMG_COOLDOWN (3.5 SECONDS)
+#define BOUNTY_GOON_SMG_WINDUP (0.3 SECONDS)
+#define BOUNTY_GOON_SMG_COOLDOWN (1 SECONDS)
 /// Bursts in a magazine
-#define BOUNTY_GOON_SMG_BURSTS 4
-#define BOUNTY_GOON_SMG_RELOAD (3 SECONDS)
+#define BOUNTY_GOON_SMG_BURSTS 6
+#define BOUNTY_GOON_SMG_RELOAD (2.5 SECONDS)
 
 #define BOUNTY_GOON_SHOTGUN_DAMAGE_MIN 16
 #define BOUNTY_GOON_SHOTGUN_DAMAGE_MAX 24
 /// Tiles: he walks in to this before he fires
 #define BOUNTY_GOON_SHOTGUN_RANGE 2
 /// The pump before each blast
-#define BOUNTY_GOON_SHOTGUN_WINDUP (0.6 SECONDS)
-#define BOUNTY_GOON_SHOTGUN_COOLDOWN (2.8 SECONDS)
+#define BOUNTY_GOON_SHOTGUN_WINDUP (0.3 SECONDS)
+#define BOUNTY_GOON_SHOTGUN_COOLDOWN (1.2 SECONDS)
 #define BOUNTY_GOON_SHOTGUN_SHELLS 5
-#define BOUNTY_GOON_SHOTGUN_RELOAD (4 SECONDS)
+#define BOUNTY_GOON_SHOTGUN_RELOAD (3 SECONDS)
 
 /// Spread of the goons' shots, in degrees across
 #define BOUNTY_GOON_PISTOL_SPREAD 8

@@ -228,8 +228,8 @@
  * so a new target, a retreat or a call for help is picked up mid-fight.
  */
 /datum/ai_behavior/basic_ranged_attack/bounty
-	// Often enough for the 0.4 s wind-up; each tick walks the line of fire (L10)
-	action_cooldown = 0.4 SECONDS
+	// Often enough that the pistol fires at its own pace, and its wind-up is never stretched; each tick walks the line of fire (L10)
+	action_cooldown = 0.1 SECONDS
 	behavior_flags = AI_BEHAVIOR_REQUIRE_MOVEMENT | AI_BEHAVIOR_MOVE_AND_PERFORM | AI_BEHAVIOR_CAN_PLAN_DURING_EXECUTION
 	required_distance = BOUNTY_PISTOL_RANGE
 	chase_range = BOUNTY_FIGHT_VISION
@@ -713,6 +713,9 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	windup = BOUNTY_SHOTGUN_WINDUP
 	windup_message = "%USER pumps the shotgun."
 	windup_sound = 'sound/items/weapons/gun/shotgun/rack.ogg'
+	magazine = BOUNTY_SHOTGUN_SHELLS
+	reload_time = BOUNTY_SHOTGUN_RELOAD
+	reload_sound = 'sound/items/weapons/gun/shotgun/insert_shell.ogg'
 
 /datum/bounty_style/bottle
 	key = BOUNTY_STYLE_BOTTLE
@@ -760,6 +763,11 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	embed_type = null
 	shrapnel_type = null
 	wound_bonus = -10
+	/// Degrees it may stray either way: fired fast, not every shot is lined up
+	var/stray = BOUNTY_PISTOL_SPREAD
+
+/obj/projectile/bullet/bounty/aim_projectile(atom/target, atom/source, list/modifiers = null, deviation = 0)
+	return ..(target, source, modifiers, deviation + rand(-stray, stray))
 
 /obj/projectile/bullet/bounty/can_hit_target(atom/target, direct_target = FALSE, ignore_loc = FALSE, cross_failed = FALSE)
 	. = ..()
@@ -778,9 +786,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	icon_state = "pellet"
 	damage = 5
 	range = BOUNTY_SHOTGUN_REACH
-
-/obj/projectile/bullet/bounty/pellet/aim_projectile(atom/target, atom/source, list/modifiers = null, deviation = 0)
-	return ..(target, source, modifiers, deviation + rand(-BOUNTY_SHOTGUN_SPREAD, BOUNTY_SHOTGUN_SPREAD))
+	stray = BOUNTY_SHOTGUN_SPREAD
 
 /**
  * A thrown bottle: it flies slower than a bullet and smashes where it lands, leaving broken glass

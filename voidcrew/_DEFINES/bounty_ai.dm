@@ -79,7 +79,7 @@
 /// Speed while going about their business, and while blended in (the fugitive and every decoy move alike)
 #define BOUNTY_CALM_SPEED 2.5
 /// How often they look around for hunters
-#define BOUNTY_NOTICE_INTERVAL (1 SECONDS)
+#define BOUNTY_NOTICE_INTERVAL (0.5 SECONDS)
 /// Held items at least this strong count as a weapon drawn
 #define BOUNTY_WEAPON_FORCE 10
 /// How far they run each leg when fleeing
@@ -146,17 +146,17 @@
 /// Running away failed this recently: still cornered (longer than a failed plan's 1.5 s pause)
 #define BOUNTY_MEEK_RUN_FAIL_WINDOW (2 SECONDS)
 /// Cornered this long before the gun comes out
-#define BOUNTY_MEEK_CORNERED_TIME (1.5 SECONDS)
+#define BOUNTY_MEEK_CORNERED_TIME (0.8 SECONDS)
 /// The aim before the shots: the telegraph
-#define BOUNTY_MEEK_PISTOL_WINDUP (1 SECONDS)
+#define BOUNTY_MEEK_PISTOL_WINDUP (0.5 SECONDS)
 /// Shots in the holdout's volley
-#define BOUNTY_MEEK_PISTOL_SHOTS 5
+#define BOUNTY_MEEK_PISTOL_SHOTS 8
 /// Between them
-#define BOUNTY_MEEK_PISTOL_GAP (0.3 SECONDS)
+#define BOUNTY_MEEK_PISTOL_GAP (0.2 SECONDS)
 /// Brute per shot; bullet armour applies
 #define BOUNTY_MEEK_PISTOL_DAMAGE 10
 /// One volley per cornering
-#define BOUNTY_MEEK_PISTOL_COOLDOWN (12 SECONDS)
+#define BOUNTY_MEEK_PISTOL_COOLDOWN (6 SECONDS)
 /// They only aim at someone this close
 #define BOUNTY_MEEK_PISTOL_RANGE 6
 /// Hiding place scores: what kind of place
@@ -181,7 +181,7 @@
 /// Noticed at this range (someone armed, cuffs or a warrant in hand)
 #define BOUNTY_NORMAL_NOTICE_RANGE 6
 /// Someone with a weapon drawn this close, while they are aware of them, starts the fight
-#define BOUNTY_NORMAL_THREAT_RANGE 4
+#define BOUNTY_NORMAL_THREAT_RANGE 6
 /// Aware, but the person has been out of sight this long: back to what they were doing
 #define BOUNTY_NORMAL_AWARE_FORGET (15 SECONDS)
 /// Fighting, but nobody on the grudge list seen for this long: the fight is over
@@ -228,7 +228,7 @@
 #define BOUNTY_BRAWLER_STAMINA 0.8
 #define BOUNTY_BRAWLER_DAMAGE_LOW 8
 #define BOUNTY_BRAWLER_DAMAGE_HIGH 11
-#define BOUNTY_BRAWLER_INTERVAL (1.4 SECONDS)
+#define BOUNTY_BRAWLER_INTERVAL (1 SECONDS)
 /// Chance a punch shoves the target back a tile and staggers them for a second
 #define BOUNTY_BRAWLER_SHOVE_CHANCE 20
 #define BOUNTY_BRAWLER_STAGGER (1 SECONDS)
@@ -236,7 +236,7 @@
 #define BOUNTY_KNIFE_HEALTH 1
 #define BOUNTY_KNIFE_DAMAGE_LOW 7
 #define BOUNTY_KNIFE_DAMAGE_HIGH 10
-#define BOUNTY_KNIFE_INTERVAL (1.2 SECONDS)
+#define BOUNTY_KNIFE_INTERVAL (0.8 SECONDS)
 /// Blood lost per second per cut, how long a cut bleeds, and the most cuts that bleed at once
 #define BOUNTY_KNIFE_BLEED 0.5
 #define BOUNTY_KNIFE_BLEED_TIME (15 SECONDS)
@@ -245,23 +245,25 @@
 #define BOUNTY_PISTOL_HEALTH 0.9
 #define BOUNTY_PISTOL_DAMAGE_LOW 12
 #define BOUNTY_PISTOL_DAMAGE_HIGH 14
-#define BOUNTY_PISTOL_INTERVAL (0.5 SECONDS)
+#define BOUNTY_PISTOL_INTERVAL (0.25 SECONDS)
 /// Keeps about this far away
 #define BOUNTY_PISTOL_RANGE 5
 #define BOUNTY_PISTOL_MIN_RANGE 3
-#define BOUNTY_PISTOL_MAGAZINE 8
+#define BOUNTY_PISTOL_MAGAZINE 17
 /// The reload: the window to close in
 #define BOUNTY_PISTOL_RELOAD (2 SECONDS)
 /// Raising the gun before the first shot of a string
-#define BOUNTY_PISTOL_WINDUP (0.4 SECONDS)
+#define BOUNTY_PISTOL_WINDUP (0.2 SECONDS)
 /// Shots further apart than this start a new string
 #define BOUNTY_PISTOL_STRING_GAP (3 SECONDS)
+/// Degrees each shot may stray, either way: they empty the magazine rather than line up every shot
+#define BOUNTY_PISTOL_SPREAD 5
 
 #define BOUNTY_SHOTGUN_HEALTH 1
 /// Total damage of a blast that lands every pellet
 #define BOUNTY_SHOTGUN_DAMAGE_LOW 16
 #define BOUNTY_SHOTGUN_DAMAGE_HIGH 24
-#define BOUNTY_SHOTGUN_INTERVAL (2.8 SECONDS)
+#define BOUNTY_SHOTGUN_INTERVAL (1.2 SECONDS)
 #define BOUNTY_SHOTGUN_RANGE 2
 #define BOUNTY_SHOTGUN_PELLETS 4
 /// Degrees each pellet may stray
@@ -269,24 +271,27 @@
 /// Tiles a pellet flies
 #define BOUNTY_SHOTGUN_REACH 4
 /// The pump before each blast
-#define BOUNTY_SHOTGUN_WINDUP (0.6 SECONDS)
+#define BOUNTY_SHOTGUN_WINDUP (0.3 SECONDS)
+/// Shells in the tube, and loading it again: the window to close in
+#define BOUNTY_SHOTGUN_SHELLS 6
+#define BOUNTY_SHOTGUN_RELOAD (3 SECONDS)
 
 #define BOUNTY_CLUB_HEALTH 1.1
 #define BOUNTY_CLUB_DAMAGE_LOW 5
 #define BOUNTY_CLUB_DAMAGE_HIGH 7
 #define BOUNTY_CLUB_STAMINA 18
-#define BOUNTY_CLUB_INTERVAL (1.6 SECONDS)
+#define BOUNTY_CLUB_INTERVAL (1.1 SECONDS)
 
 #define BOUNTY_BOTTLE_HEALTH 0.9
 #define BOUNTY_BOTTLE_DAMAGE_LOW 9
 #define BOUNTY_BOTTLE_DAMAGE_HIGH 12
-#define BOUNTY_BOTTLE_INTERVAL (2.2 SECONDS)
+#define BOUNTY_BOTTLE_INTERVAL (1.2 SECONDS)
 #define BOUNTY_BOTTLE_RANGE 4
 #define BOUNTY_BOTTLE_MIN_RANGE 2
 /// Tiles a bottle flies
 #define BOUNTY_BOTTLE_REACH 6
 /// The throwing arc before each throw
-#define BOUNTY_BOTTLE_WINDUP (0.5 SECONDS)
+#define BOUNTY_BOTTLE_WINDUP (0.3 SECONDS)
 /// Chance a bottle that lands leaves a cut, which bleeds this much for this long
 #define BOUNTY_BOTTLE_SHARD_CHANCE 30
 #define BOUNTY_BOTTLE_SHARD_BLEED 0.5

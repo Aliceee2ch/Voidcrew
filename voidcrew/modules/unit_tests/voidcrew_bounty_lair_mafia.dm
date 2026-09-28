@@ -509,11 +509,11 @@
 	var/mob/living/carbon/human/consistent/hunter = hunter_at(spot(4, 0), as_client = TRUE)
 	TEST_ASSERT(!gunman.mafia_is_ready(), "The gunman is ready before seeing anyone")
 
-	// He spots the hunter: the room is alerted, and nobody shoots for a second
+	// He spots the hunter: the room is alerted, and nobody shoots for half a second
 	TEST_ASSERT_EQUAL(gunman.mafia_find_target(), hunter, "The gunman didn't spot the hunter")
 	var/datum/bounty_mafia_room/room = gunman.mafia_room()
 	TEST_ASSERT(room?.alerted, "Spotting a hunter didn't alert the room")
-	TEST_ASSERT(gunman.mafia_ready_at >= world.time + 10, "The shout gives less than a second") // BOUNTY_MOBSTER_ALERT
+	TEST_ASSERT(gunman.mafia_ready_at >= world.time + 5, "The shout gives less than half a second") // BOUNTY_MOBSTER_ALERT
 	TEST_ASSERT(!gunman.mafia_attack(hunter), "The gunman shot before his shout was over")
 	gunman.mafia_ready_at = world.time
 	TEST_ASSERT(gunman.mafia_attack(hunter), "The gunman didn't shoot after his shout")

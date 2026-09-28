@@ -323,9 +323,9 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	var/projectile_type = /obj/projectile/bullet/bounty_mafia
 	var/damage_min = BOUNTY_MOBSTER_PISTOL_DAMAGE_MIN
 	var/damage_max = BOUNTY_MOBSTER_PISTOL_DAMAGE_MAX
-	/// Shots in one burst, and the time between them
-	var/burst = 1
-	var/burst_delay = 0.15 SECONDS
+	/// Shots in one burst, and the time between them. A pistol fires a quick string of shots each time.
+	var/burst = BOUNTY_MOBSTER_PISTOL_BURST
+	var/burst_delay = BOUNTY_MOBSTER_PISTOL_BURST_GAP
 	/// From the start of one burst (or wind-up) to the next
 	var/cooldown = BOUNTY_MOBSTER_PISTOL_COOLDOWN
 	/// Bursts per magazine
@@ -465,6 +465,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	damage_min = BOUNTY_MOBSTER_SMG_DAMAGE_MIN
 	damage_max = BOUNTY_MOBSTER_SMG_DAMAGE_MAX
 	burst = BOUNTY_MOBSTER_SMG_BURST
+	burst_delay = BOUNTY_MOBSTER_SMG_BURST_GAP
 	cooldown = BOUNTY_MOBSTER_SMG_COOLDOWN
 	magazine = BOUNTY_MOBSTER_SMG_BURSTS
 	reload_time = BOUNTY_MOBSTER_SMG_RELOAD
@@ -480,7 +481,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	damage_min = BOUNTY_LIEUTENANT_TOMMY_DAMAGE_MIN
 	damage_max = BOUNTY_LIEUTENANT_TOMMY_DAMAGE_MAX
 	burst = BOUNTY_LIEUTENANT_TOMMY_BURST
-	burst_delay = 0.12 SECONDS
+	burst_delay = BOUNTY_LIEUTENANT_TOMMY_BURST_GAP
 	cooldown = BOUNTY_LIEUTENANT_TOMMY_COOLDOWN
 	magazine = BOUNTY_LIEUTENANT_TOMMY_BURSTS
 	reload_time = BOUNTY_LIEUTENANT_TOMMY_RELOAD

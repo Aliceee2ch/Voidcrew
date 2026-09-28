@@ -354,7 +354,7 @@
 
 	TEST_ASSERT(crew.start_shootout(hunter, TRUE), "The shootout didn't start")
 	var/draw_ends = crew.crew_draw_ends_at
-	TEST_ASSERT_EQUAL(draw_ends, world.time + 15, "The draw isn't 1.5 seconds") // BOUNTY_KINGPIN_TELEGRAPH
+	TEST_ASSERT_EQUAL(draw_ends, world.time + 6, "The draw isn't 0.6 seconds") // BOUNTY_KINGPIN_TELEGRAPH
 	// During the draw: not a shot, not an aim
 	crew.process(0.2)
 	crew.fight_tick()
@@ -370,7 +370,7 @@
 	crew.member_attacked(fumbler, list(hunter))
 	TEST_ASSERT_EQUAL(fumbler.goon_fumbled_until, draw_ends + 10, "A goon hit while drawing didn't fumble")
 
-	// The draw ends: first shots spread over a second after it
+	// The draw ends: first shots spread over half a second after it
 	crew.crew_draw_ends_at = world.time
 	crew.process(0.2)
 	TEST_ASSERT_EQUAL(crew.crew_state, "fighting", "The fight didn't start after the draw") // BOUNTY_KINGPIN_FIGHTING
@@ -378,8 +378,8 @@
 	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in goons)
 		TEST_ASSERT(goon.goon_next_fire_at >= world.time, "[goon]'s first shot comes before the draw ended")
 		if(goon != fumbler)
-			// BOUNTY_KINGPIN_FIRST_SHOT_SPREAD 1 second
-			TEST_ASSERT(goon.goon_next_fire_at <= world.time + 10, "[goon]'s first shot is more than a second after the draw")
+			// BOUNTY_KINGPIN_FIRST_SHOT_SPREAD half a second
+			TEST_ASSERT(goon.goon_next_fire_at <= world.time + 5, "[goon]'s first shot is more than half a second after the draw")
 			times |= goon.goon_next_fire_at
 		else
 			TEST_ASSERT(goon.goon_next_fire_at >= world.time + 10, "The fumbling goon's first shot didn't wait")

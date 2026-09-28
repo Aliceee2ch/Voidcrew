@@ -141,8 +141,8 @@
 		hunters += ship
 	return hunters
 
-/// Why `ship` can't hunt it now, or null if it can
-/datum/criminal_bounty/proc/hunt_refusal(obj/structure/overmap/ship/ship)
+/// Why `ship` can't hunt it now, or null if it can. `forced` (an admin giving it to the crew) skips the one-hunt limit and an earlier abandon.
+/datum/criminal_bounty/proc/hunt_refusal(obj/structure/overmap/ship/ship, forced = FALSE)
 	if(!is_open())
 		return "that bounty is closed"
 	if(QDELETED(ship))
@@ -155,6 +155,8 @@
 		return null
 	if(is_hunting(ship))
 		return "already hunting it"
+	if(forced)
+		return null
 	if(has_abandoned(ship))
 		return "you abandoned this one"
 	if(SScriminal_bounties.board_public_hunts(ship) >= BOUNTY_MAX_HUNTS_PER_SHIP)
@@ -164,14 +166,16 @@
 /**
  * `ship` starts hunting it: the helm waypoint to its site (tracking a pirate ship), notices about
  * it, and its sighting for the crew's GPS units. A private offer is taken this way and starts its
- * contract clock; it waits to place its criminal until then. No mission slot is used. Returns TRUE,
+ * contract clock; it waits to place its criminal until then. No mission slot is used. `forced` (the
+ * admin panel) skips the one-hunt limit and lets a ship that abandoned it hunt it again. Returns TRUE,
  * or why not.
  */
-/datum/criminal_bounty/proc/hunt(obj/structure/overmap/ship/ship)
-	var/refusal = hunt_refusal(ship)
+/datum/criminal_bounty/proc/hunt(obj/structure/overmap/ship/ship, forced = FALSE)
+	var/refusal = hunt_refusal(ship, forced)
 	if(refusal)
 		return refusal
 	var/datum/weakref/ship_ref = WEAKREF(ship)
+	board_abandoned_by -= ship_ref
 	claimants |= ship_ref
 	board_hunt_started[ship_ref] = world.time
 	if(private_to)

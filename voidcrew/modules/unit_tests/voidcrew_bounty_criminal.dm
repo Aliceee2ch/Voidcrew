@@ -437,6 +437,48 @@
 	TEST_ASSERT_EQUAL(hunter.pulling, criminal, "A dead criminal could not be pulled")
 	hunter.stop_pulling()
 
+// ===== CARRYING =====
+
+/// On the floor and draggable, it goes over a hunter's shoulders and comes along; it squirms off once it gets up or comes round
+/datum/unit_test/voidcrew_bounty_criminal_carry
+	parent_type = /datum/unit_test/voidcrew_bounty_criminal
+
+/datum/unit_test/voidcrew_bounty_criminal_carry/Run()
+	var/turf/start = get_step(run_loc_floor_bottom_left, EAST)
+	var/mob/living/carbon/human/consistent/hunter = allocate(__IMPLIED_TYPE__, start)
+	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(__IMPLIED_TYPE__, start)
+
+	// On its feet, nobody lifts it.
+	TEST_ASSERT(!hunter.can_be_firemanned(criminal), "A criminal on its feet could be carried")
+
+	// Down, it goes over the shoulders and comes along.
+	criminal.adjustBruteLoss(500)
+	TEST_ASSERT(criminal.is_downed(), "The criminal was not downed")
+	TEST_ASSERT(hunter.can_be_firemanned(criminal), "A downed criminal could not be carried")
+	TEST_ASSERT(hunter.buckle_mob(criminal, TRUE, TRUE, CARRIER_NEEDS_ARM), "A downed criminal could not be lifted")
+	TEST_ASSERT_EQUAL(criminal.buckled, hunter, "The downed criminal is not on the hunter's shoulders")
+	var/turf/ahead = get_step(start, NORTH)
+	hunter.Move(ahead, NORTH)
+	TEST_ASSERT_EQUAL(get_turf(hunter), ahead, "The hunter could not walk with the criminal on their shoulders")
+	TEST_ASSERT_EQUAL(get_turf(criminal), ahead, "The carried criminal did not come along")
+	TEST_ASSERT(criminal.is_downed(), "Being carried stood the criminal up")
+
+	// Getting up, it squirms off.
+	TEST_ASSERT(criminal.body_stand_up(), "The criminal could not get up")
+	TEST_ASSERT_NULL(criminal.buckled, "A criminal that got up stayed on the hunter's shoulders")
+	TEST_ASSERT(!hunter.has_buckled_mobs(), "The hunter still carries a criminal that got up")
+
+	// Knocked down, it can be carried until it comes round.
+	criminal.Knockdown(10 SECONDS)
+	TEST_ASSERT(hunter.can_be_firemanned(criminal), "A knocked down criminal could not be carried")
+	TEST_ASSERT(hunter.buckle_mob(criminal, TRUE, TRUE, CARRIER_NEEDS_ARM), "A knocked down criminal could not be lifted")
+	criminal.SetKnockdown(0)
+	TEST_ASSERT_NULL(criminal.buckled, "A criminal that came round stayed on the hunter's shoulders")
+
+	// Dead, it can be carried.
+	criminal.death()
+	TEST_ASSERT(hunter.can_be_firemanned(criminal), "A dead criminal could not be carried")
+
 // ===== DEATH =====
 
 /datum/unit_test/voidcrew_bounty_criminal_death

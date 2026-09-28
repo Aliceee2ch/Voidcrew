@@ -6,15 +6,17 @@
  *
  * What it owns: the "Bounty Panel" admin verb, with tgui input lists and no .tsx (spec section 11):
  * spawn any archetype, kit or tier at your feet; spawn a decoy beside a criminal; post a bounty now;
- * list, close, relist, jump to and fetch bounties; force capture states; list the prisoner pool, admit
- * a record into a chosen prison, drop or clear records or add a test one; run the board forward.
+ * give a bounty to a player (their ship hunts it, and they get its warrant); list, close, relist, jump
+ * to and fetch bounties; force capture states; list the prisoner pool, admit a record into a chosen
+ * prison, drop or clear records or add a test one; run the board forward.
  *
  * It changes other packages' state only through their procs:
  * - P1: generate_bounty_record(), make_decoy_record();
  * - P2: spawn_bounty_criminal(), body_apply_cuffs(), body_remove_cuffs(), body_downed_line(),
  *   body_stand_up(), capture_state();
  * - P3: start_activity();
- * - P5: post_criminal_bounty(), close(), relist(), SScriminal_bounties.board_fast_forward() and
+ * - P5: post_criminal_bounty(), close(), relist(), hunt() (forced), print_warrant(),
+ *   SScriminal_bounties.board_fast_forward() and
  *   admin_skip_post_gap(), board_site_zone(), board_kind_allowed(), board_postings_at();
  * - P6: the decoy's outpost_become() and the outpost's display name, description and outfit;
  * - P7: bounty_pool_add(), bounty_pool_remove(), bounty_pool_clear(), the prison's
@@ -52,6 +54,7 @@
 #define BOUNTY_ADMIN_MENU_SPAWN "Spawn a criminal at my feet"
 #define BOUNTY_ADMIN_MENU_DECOY "Spawn a decoy next to a criminal"
 #define BOUNTY_ADMIN_MENU_POST "Post a bounty now"
+#define BOUNTY_ADMIN_MENU_GIVE "Give a bounty to a player"
 #define BOUNTY_ADMIN_MENU_POSTINGS "Live postings"
 #define BOUNTY_ADMIN_MENU_FORCE "Force a capture state"
 #define BOUNTY_ADMIN_MENU_POOL "Prisoner pool"
@@ -59,8 +62,10 @@
 
 /// "Post a bounty now"'s first entry when there are extra post actions: an ordinary criminal
 #define BOUNTY_ADMIN_POST_CRIMINAL "A criminal (pick the tier and place)"
+/// "Give a bounty to a player"'s first entry: a new criminal, posted as a private offer to their ship
+#define BOUNTY_ADMIN_GIVE_NEW "A new criminal, just for them (pick the tier and place)"
 
-ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force bounty criminals, manage the prisoner pool and run the bounty board forward.", ADMIN_CATEGORY_SHUTTLE)
+ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, give out, list and force bounty criminals, manage the prisoner pool and run the bounty board forward.", ADMIN_CATEGORY_SHUTTLE)
 	var/datum/bounty_admin_panel/panel = new(user.mob)
 	BLACKBOX_LOG_ADMIN_VERB("Bounty Panel")
 	panel.run_menu(user.mob)
@@ -124,6 +129,7 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		BOUNTY_ADMIN_MENU_SPAWN,
 		BOUNTY_ADMIN_MENU_DECOY,
 		BOUNTY_ADMIN_MENU_POST,
+		BOUNTY_ADMIN_MENU_GIVE,
 		BOUNTY_ADMIN_MENU_POSTINGS,
 		BOUNTY_ADMIN_MENU_FORCE,
 		BOUNTY_ADMIN_MENU_POOL,
@@ -143,6 +149,8 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 				menu_decoy(user)
 			if(BOUNTY_ADMIN_MENU_POST)
 				menu_post(user)
+			if(BOUNTY_ADMIN_MENU_GIVE)
+				menu_give(user)
 			if(BOUNTY_ADMIN_MENU_POSTINGS)
 				menu_postings(user)
 			if(BOUNTY_ADMIN_MENU_FORCE)
@@ -216,9 +224,18 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		if(bounty_choice != BOUNTY_ADMIN_POST_CRIMINAL)
 			admin_run_post_action(user, kinds_of_bounty[bounty_choice])
 			return
+	menu_post_criminal(user)
+
+/**
+ * Asks for an ordinary criminal's tier, placement and site, and whether it is public or a private
+ * offer to a ship, then posts it. With `for_ship` it is a private offer to that ship, and that
+ * question is skipped. Returns the posting, or null.
+ */
+/datum/bounty_admin_panel/proc/menu_post_criminal(mob/user, obj/structure/overmap/ship/for_ship)
+	var/datum/weakref/ship_ref = for_ship ? WEAKREF(for_ship) : null
 	var/tier = ask_tier(user, "Post a bounty")
 	if(!tier)
-		return
+		return null
 	var/list/kinds = list()
 	var/list/all_kinds = placement_choices()
 	for(var/label in all_kinds)
@@ -226,27 +243,69 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 			kinds[label] = all_kinds[label]
 	var/kind_choice = ask_list(user, "Where? Only the places a [bounty_tier_name(tier)] bounty may go.", "Post a bounty", kinds)
 	if(!kind_choice || !authorized(user))
-		return
+		return null
 	var/kind = kinds[kind_choice]
 	var/list/sites = list("Let the board pick" = null) + site_choices(kind)
 	var/site_choice = ask_list(user, "Which site? Only those the board would pick are listed.", "Post a bounty", sites)
 	if(!site_choice || !authorized(user))
-		return
-	var/list/audiences = list("Public" = null) + ship_choices()
-	var/audience_choice = ask_list(user, "Public, or a private offer to one ship?", "Post a bounty", audiences)
-	if(!audience_choice || !authorized(user))
-		return
+		return null
+	if(!ship_ref)
+		var/list/audiences = list("Public" = null) + ship_choices()
+		var/audience_choice = ask_list(user, "Public, or a private offer to one ship?", "Post a bounty", audiences)
+		if(!audience_choice || !authorized(user))
+			return null
+		ship_ref = audiences[audience_choice]
 	var/datum/weakref/site_ref = sites[site_choice]
 	var/obj/structure/overmap/site = site_ref?.resolve()
 	if(site_ref && QDELETED(site))
-		refuse(user, "That site is gone.")
-		return
-	var/datum/weakref/ship_ref = audiences[audience_choice]
+		return refuse(user, "That site is gone.")
 	var/obj/structure/overmap/ship/private_to = ship_ref?.resolve()
 	if(ship_ref && QDELETED(private_to))
-		refuse(user, "That ship is gone.")
+		return refuse(user, "That ship is gone.")
+	return admin_post_bounty(user, tier, kind, site, private_to)
+
+/**
+ * Gives a bounty to a player: asks whom (anyone alive crewing a ship), then which bounty (a new one
+ * posted as a private offer to their ship, or any open one they may hunt), unless `given` is the
+ * bounty already. See admin_give_bounty().
+ */
+/datum/bounty_admin_panel/proc/menu_give(mob/user, datum/criminal_bounty/given)
+	var/datum/weakref/given_ref = given ? WEAKREF(given) : null
+	var/list/players = player_choices()
+	if(!length(players))
+		refuse(user, "Nobody alive is crewing a ship.")
 		return
-	admin_post_bounty(user, tier, kind, site, private_to)
+	var/player_choice = ask_list(user, "Give a bounty to whom? Their ship hunts it, and they get the warrant.", "Give a bounty", players)
+	if(!player_choice || !authorized(user))
+		return
+	var/datum/weakref/player_ref = players[player_choice]
+	var/mob/living/player = player_ref.resolve()
+	var/obj/structure/overmap/ship/ship = get_crew_ship(player)
+	if(QDELETED(player) || QDELETED(ship))
+		refuse(user, "That player is gone, or no longer crews a ship.")
+		return
+	if(!given_ref)
+		var/list/bounties = list()
+		bounties[BOUNTY_ADMIN_GIVE_NEW] = null
+		bounties += give_choices(ship)
+		var/bounty_choice = ask_list(user, "Which bounty?", "Give a bounty", bounties)
+		if(!bounty_choice || !authorized(user))
+			return
+		given_ref = bounties[bounty_choice]
+		if(!given_ref)
+			ship = get_crew_ship(player_ref.resolve())
+			if(QDELETED(ship))
+				refuse(user, "That player no longer crews a ship.")
+				return
+			var/datum/criminal_bounty/posted = menu_post_criminal(user, ship)
+			if(!posted)
+				return
+			given_ref = WEAKREF(posted)
+	var/datum/criminal_bounty/posting = given_ref.resolve()
+	if(QDELETED(posting))
+		refuse(user, "That bounty is gone.")
+		return
+	admin_give_bounty(user, posting, player_ref.resolve())
 
 /datum/bounty_admin_panel/proc/menu_postings(mob/user)
 	var/list/choices = list()
@@ -265,7 +324,7 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	if(!posting_choice || !authorized(user))
 		return
 	var/datum/weakref/posting_ref = choices[posting_choice]
-	var/static/list/actions = list("Close it", "Relist it", "Jump to the criminal", "Bring the criminal here")
+	var/static/list/actions = list("Give it to a player", "Close it", "Relist it", "Jump to the criminal", "Bring the criminal here")
 	var/action = ask_list(user, "Do what with it?", "Live postings", actions)
 	if(!action || !authorized(user))
 		return
@@ -274,6 +333,8 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		refuse(user, "That bounty is gone.")
 		return
 	switch(action)
+		if("Give it to a player")
+			menu_give(user, posting)
 		if("Close it")
 			admin_close_posting(user, posting)
 		if("Relist it")
@@ -587,6 +648,29 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 		choices[unique_label(choices, "Private to [site_name(ship)]")] = WEAKREF(ship)
 	return choices
 
+/// Everyone alive crewing a player ship, with their key and ship, for giving a bounty to
+/datum/bounty_admin_panel/proc/player_choices()
+	var/list/choices = list()
+	for(var/mob/living/player as anything in GLOB.alive_mob_list)
+		if(!player.mind || QDELETED(player))
+			continue
+		var/obj/structure/overmap/ship/ship = get_crew_ship(player)
+		if(QDELETED(ship))
+			continue
+		choices[unique_label(choices, "[player.real_name] ([player.key || "no key"]), [site_name(ship)]")] = WEAKREF(player)
+	return choices
+
+/// Every open bounty `ship` may be given: the public ones and its own offers, never another crew's offer
+/datum/bounty_admin_panel/proc/give_choices(obj/structure/overmap/ship/ship)
+	var/list/choices = list()
+	for(var/datum/criminal_bounty/posting in GLOB.criminal_bounties)
+		if(!posting.is_open() || (posting.private_to && posting.offered_to() != ship))
+			continue
+		var/list/row = posting_row(posting)
+		var/note = posting.is_hunting(ship) ? ", already theirs" : ""
+		choices[unique_label(choices, "[row["tier"]] [row["name"]] at [row["place"]] ([row["for"]][note])")] = WEAKREF(posting)
+	return choices
+
 /// Every running prison, labelled with its free cells
 /datum/bounty_admin_panel/proc/prison_choices()
 	var/list/choices = list()
@@ -863,6 +947,43 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 	log_action(user, "relist the bounty on [wanted_name]")
 	tell(user, span_notice("The bounty on [wanted_name] is relisting."))
 	return TRUE
+
+/**
+ * Gives `posting` to `player`'s crew. Their ship hunts it (takes it, for an offer to them), past the
+ * one-hunt limit and an earlier abandon; the hunt places its criminal if its site is loaded, and the
+ * crew is told as if they had pressed Hunt. Then a warrant for it goes into `player`'s hands (it is
+ * printed even if they were hunting it already). Returns the warrant, or null.
+ */
+/datum/bounty_admin_panel/proc/admin_give_bounty(mob/user, datum/criminal_bounty/posting, mob/living/player)
+	error = null
+	if(!authorized(user))
+		return null
+	if(QDELETED(posting) || !posting.is_open())
+		return refuse(user, "That bounty is closed.")
+	if(QDELETED(player))
+		return refuse(user, "That player is gone.")
+	var/obj/structure/overmap/ship/ship = get_crew_ship(player)
+	if(QDELETED(ship))
+		return refuse(user, "[player.real_name] is not crewing a ship.")
+	var/wanted_name = posting.record?.name || "nobody"
+	if(!posting.is_hunting(ship))
+		var/result = posting.hunt(ship, TRUE)
+		if(result != TRUE)
+			return refuse(user, "[site_name(ship)] can't hunt [wanted_name]: [result].")
+	// The warrant shows the mugshot only once it is built; build it now if the board hasn't (can sleep)
+	bounty_record_mugshot(posting.record)
+	if(!authorized(user))
+		return null
+	if(QDELETED(posting) || QDELETED(player))
+		return refuse(user, "The bounty or the player was gone before the warrant printed.")
+	var/obj/item/paper/bounty_warrant/warrant = posting.print_warrant(get_turf(player))
+	if(!warrant)
+		return refuse(user, "[player.real_name] is nowhere a warrant can be printed.")
+	player.put_in_hands(warrant)
+	log_action(user, "give the [posting.board_log_name()] to [key_name(player)] of [site_name(ship)]")
+	var/list/row = posting_row(posting)
+	tell(user, span_notice("[site_name(ship)] is hunting [wanted_name], and [player.real_name] has the warrant. Criminal: [row["location"]]."))
+	return warrant
 
 /**
  * Why `posting` has no criminal right now, for the panel: relisting (and when it lists again), an
@@ -1219,8 +1340,10 @@ ADMIN_VERB(bounty_panel, R_ADMIN, "Bounty Panel", "Spawn, post, list and force b
 #undef BOUNTY_ADMIN_MENU_SPAWN
 #undef BOUNTY_ADMIN_MENU_DECOY
 #undef BOUNTY_ADMIN_MENU_POST
+#undef BOUNTY_ADMIN_MENU_GIVE
 #undef BOUNTY_ADMIN_MENU_POSTINGS
 #undef BOUNTY_ADMIN_MENU_FORCE
 #undef BOUNTY_ADMIN_MENU_POOL
 #undef BOUNTY_ADMIN_MENU_BOARD
 #undef BOUNTY_ADMIN_POST_CRIMINAL
+#undef BOUNTY_ADMIN_GIVE_NEW

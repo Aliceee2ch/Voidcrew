@@ -2468,7 +2468,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 			continue
 		ship.ship_notify("WANTED DEAD OR ALIVE: [who], in the lounge at [board_site_name || "the black market"]. Reward: [board_reward_text()].","MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 
-/datum/criminal_bounty/kingpin/hunt_refusal(obj/structure/overmap/ship/ship)
+// Even an admin can't give him to a crew bound by his deal: they could never turn him in
+/datum/criminal_bounty/kingpin/hunt_refusal(obj/structure/overmap/ship/ship, forced = FALSE)
 	var/refusal = kingpin_bound_refusal(ship)
 	if(refusal)
 		return refusal

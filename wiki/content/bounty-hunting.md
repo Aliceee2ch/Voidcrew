@@ -132,6 +132,7 @@ Every Most Wanted criminal is a mini-boss with one of five kits.
 - **Cuffs** only go on a criminal who is downed, stunned or has given up, and take 2 seconds. Reaching for a free one's wrists sets them off: a meek one runs and a normal one fights.
 - **Restraints.** Handcuffs hold for good. Cable restraints slip after 3 minutes and zipties after 5, with a visible struggle for the last 20 seconds. Mini-bosses snap them in half the time.
 - **Dragging.** You can pull a criminal who is downed, stunned, cuffed or dead. A free one pulls away.
+- **Carrying.** A criminal lying on the floor who could be dragged can also be carried over your shoulders: grab them aggressively, then drag them onto yourself. They squirm off once they come round or get up.
 - **No shortcuts.** Criminals can't be teleported. Transporters won't beam a locker, crate or bag with one inside, fultons won't attach to them, and a bluespace body bag won't fold with a live one in it. Carry them to your ship.
 - Turrets, traps, fire and wildlife on their site can't take a criminal below 40% health.
 

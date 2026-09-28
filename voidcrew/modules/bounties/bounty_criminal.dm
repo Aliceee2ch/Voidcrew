@@ -27,6 +27,8 @@
  * - Fire and heat burn it like a suited person (L3), within the mercy line and the floor.
  * - worst_state only ever gets worse (spec 12.1); P5 pays on it, and carries it to a respawned copy
  *   with body_restore_worst_state().
+ * - On the floor and draggable (down, stunned, cuffed or dead), it can be fireman carried like a
+ *   person. It squirms off the carrier's shoulders once it can't be dragged any more.
  * - Dead, the body stays and can't be revived (AR-A5). A dead body destroyed with its posting open
  *   (gibbed, dusted, lost in a chasm) asks P5's bounty_drop_proof() for proof of death, unless it was
  *   removed on purpose (P5's TRAIT_BOUNTY_REMOVED, or body_mark_removed()). A live one deleted never
@@ -124,7 +126,8 @@
 	// Its own copy: the stamina pool here, and a mini-boss's armour (P4), change it per mob.
 	damage_coeff = damage_coeff.Copy()
 	body_update_stamina_coeff()
-	add_traits(list(TRAIT_NO_TELEPORT, TRAIT_NOMOBSWAP), BOUNTY_BODY_TRAIT)
+	// TRAIT_CAN_MOUNT_HUMANS: someone can carry it over their shoulders (body_can_be_carried())
+	add_traits(list(TRAIT_NO_TELEPORT, TRAIT_NOMOBSWAP, TRAIT_CAN_MOUNT_HUMANS), BOUNTY_BODY_TRAIT)
 	AddComponent(/datum/component/bounty_body)
 	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SHOE)
 
@@ -580,10 +583,11 @@
 		worst_state = state
 	return worst_state
 
-/// Something about its state changed: worst_state, and whether it can be dragged
+/// Something about its state changed: worst_state, and whether it can be dragged or carried
 /mob/living/basic/bounty_criminal/proc/body_state_changed()
 	body_note_state()
 	body_update_drag()
+	body_update_carry()
 
 /mob/living/basic/bounty_criminal/set_stat(new_stat)
 	. = ..()
@@ -638,6 +642,27 @@
 			balloon_alert(user, "[p_they()] pull[p_s()] away!")
 		return FALSE
 	body_update_drag()
+	return ..()
+
+// ===== CARRYING =====
+
+/// Whether someone can lift it over their shoulders (a fireman carry): on the floor, and in a state to be dragged
+/mob/living/basic/bounty_criminal/proc/body_can_be_carried()
+	return body_position == LYING_DOWN && body_can_be_dragged()
+
+/// Carried, and no longer in a state to be dragged (it came round, or got up): it gets off whoever is carrying it
+/mob/living/basic/bounty_criminal/proc/body_update_carry()
+	if(!ishuman(buckled) || body_can_be_dragged())
+		return
+	var/mob/living/carrier = buckled
+	carrier.unbuckle_mob(src, force = TRUE)
+	visible_message(span_warning("[src] squirms off [carrier]'s shoulders."))
+
+// A criminal lying on the floor can be carried like a person, as long as it can be dragged
+/mob/living/carbon/human/can_be_firemanned(mob/living/carbon/target)
+	if(istype(target, /mob/living/basic/bounty_criminal))
+		var/mob/living/basic/bounty_criminal/criminal = target
+		return criminal.body_can_be_carried()
 	return ..()
 
 // ===== DOWNED, MERCY AND RECOVERY =====

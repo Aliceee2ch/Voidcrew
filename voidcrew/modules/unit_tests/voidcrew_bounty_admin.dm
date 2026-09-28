@@ -457,6 +457,113 @@
 	TEST_ASSERT(panel.said("the test post action ran"), "The extra post action did not run")
 	TEST_ASSERT(("post the test posting" in panel.operations), "The extra post action was not logged")
 
+// ===== GIVING A BOUNTY TO A PLAYER =====
+
+/**
+ * Giving a bounty to a player: their ship hunts it (past the one-hunt limit and an earlier abandon),
+ * an offer to them is taken, another crew's offer and a closed bounty are refused, and the warrant
+ * lands in their hands. The menu lists them and the bounties they may be given.
+ */
+/datum/unit_test/voidcrew_bounty_admin/give
+	/// The player's crew, taken apart before its ship goes
+	var/datum/team/voidcrew/give_team
+	/// The player's mind, let go of the crew before the team goes
+	var/datum/mind/give_mind
+
+/datum/unit_test/voidcrew_bounty_admin/give/Run()
+	board_test_begin()
+	var/mob/living/carbon/human/operator = make_operator(run_loc_floor_top_right)
+	var/datum/bounty_admin_panel/unit_test/panel = allocate(__IMPLIED_TYPE__, operator)
+	var/obj/structure/overmap/ship/ship = board_test_ship()
+	var/mob/living/carbon/human/player = allocate(/mob/living/carbon/human/consistent, run_loc_floor_bottom_left)
+	player.mind_initialize()
+	give_mind = player.mind
+	give_team = new
+	give_team.ship = ship
+	give_mind.ship_teams = list(give_team)
+	run_checks(panel, operator, ship, player)
+	give_mind.ship_teams = null
+	give_team.ship = null
+	QDEL_NULL(give_team)
+	board_test_end()
+
+/datum/unit_test/voidcrew_bounty_admin/give/proc/run_checks(datum/bounty_admin_panel/unit_test/panel, mob/operator, obj/structure/overmap/ship/ship, mob/living/carbon/human/player)
+	var/datum/criminal_bounty/first = board_test_posting()
+	var/datum/criminal_bounty/second = board_test_posting()
+	TEST_ASSERT_EQUAL(first.hunt(ship), TRUE, "The ship could not hunt the first bounty")
+	TEST_ASSERT(istext(second.hunt(ship)), "The ship hunted two public bounties at once without an admin")
+
+	// Only an admin.
+	panel.allow_actions = FALSE
+	TEST_ASSERT_NULL(panel.admin_give_bounty(operator, second, player), "A panel without R_ADMIN gave a bounty")
+	TEST_ASSERT(!second.is_hunting(ship), "A refused give started a hunt")
+	panel.allow_actions = TRUE
+
+	// Given: past the one-hunt limit, with the warrant in hand.
+	var/obj/item/paper/bounty_warrant/warrant = panel.admin_give_bounty(operator, second, player)
+	TEST_ASSERT_NOTNULL(warrant, "The bounty was not given: [panel.error]")
+	TEST_ASSERT(second.is_hunting(ship), "The player's ship is not hunting the bounty given to them")
+	TEST_ASSERT(player.is_holding(warrant), "The warrant is not in the player's hands")
+	TEST_ASSERT_EQUAL(warrant.posting_ref?.resolve(), second, "The warrant is for another bounty")
+	TEST_ASSERT_EQUAL(length(panel.operations), 1, "Giving a bounty logged [length(panel.operations)] lines")
+	qdel(warrant)
+
+	// Abandoned, it can be given again.
+	TEST_ASSERT_EQUAL(second.abandon(ship), TRUE, "The ship could not abandon the bounty")
+	warrant = panel.admin_give_bounty(operator, second, player)
+	TEST_ASSERT_NOTNULL(warrant, "An abandoned bounty could not be given back: [panel.error]")
+	TEST_ASSERT(second.is_hunting(ship) && !second.has_abandoned(ship), "An abandoned bounty given back is not hunted afresh")
+	qdel(warrant)
+
+	// Already theirs: only the warrant.
+	warrant = panel.admin_give_bounty(operator, first, player)
+	TEST_ASSERT_NOTNULL(warrant, "A bounty they already hunt gave no warrant: [panel.error]")
+	TEST_ASSERT_EQUAL(length(first.hunter_ships()), 1, "Giving a bounty they already hunt changed who hunts it")
+	qdel(warrant)
+
+	// An offer to them is taken; another crew's offer is not.
+	var/datum/criminal_bounty/offer = board_test_posting(1, ship)
+	warrant = panel.admin_give_bounty(operator, offer, player)
+	TEST_ASSERT_NOTNULL(warrant, "Their own offer could not be given: [panel.error]")
+	TEST_ASSERT(offer.board_accepted, "Giving their own offer did not take it")
+	qdel(warrant)
+	var/datum/criminal_bounty/other_offer = board_test_posting(1, board_test_ship())
+	TEST_ASSERT_NULL(panel.admin_give_bounty(operator, other_offer, player), "Another crew's offer was given")
+	TEST_ASSERT(panel.error, "Giving another crew's offer left no reason")
+	TEST_ASSERT(!other_offer.is_hunting(ship), "Another crew's offer was taken")
+
+	// Nobody without a ship, and nothing closed.
+	var/mob/living/carbon/human/stranger = allocate(/mob/living/carbon/human/consistent, run_loc_floor_bottom_left)
+	TEST_ASSERT_NULL(panel.admin_give_bounty(operator, first, stranger), "A bounty was given to someone with no ship")
+	var/datum/criminal_bounty/closed = board_test_posting()
+	closed.close("admin") // BOUNTY_CLOSE_ADMIN
+	TEST_ASSERT_NULL(panel.admin_give_bounty(operator, closed, player), "A closed bounty was given")
+
+	// Through the menu: the player, then a public bounty; another crew's offer is not listed.
+	var/player_label
+	var/list/players = panel.player_choices()
+	for(var/label in players)
+		var/datum/weakref/player_ref = players[label]
+		if(player_ref?.resolve() == player)
+			player_label = label
+	TEST_ASSERT_NOTNULL(player_label, "The player is not listed")
+	var/datum/criminal_bounty/third = board_test_posting()
+	var/third_label
+	var/list/bounties = panel.give_choices(ship)
+	for(var/label in bounties)
+		var/datum/weakref/posting_ref = bounties[label]
+		var/datum/criminal_bounty/listed = posting_ref?.resolve()
+		TEST_ASSERT(listed != other_offer, "Another crew's offer is listed for the player")
+		if(listed == third)
+			third_label = label
+	TEST_ASSERT_NOTNULL(third_label, "An open public bounty is not listed for the player")
+	panel.answers = list("Give a bounty to a player", player_label, third_label)
+	panel.run_menu(operator)
+	TEST_ASSERT_EQUAL(length(panel.missed), 0, "The give menu did not offer: [jointext(panel.missed, "; ")]")
+	TEST_ASSERT(third.is_hunting(ship), "The give menu did not give the bounty")
+	for(var/obj/item/paper/bounty_warrant/menu_warrant in player.held_items)
+		qdel(menu_warrant)
+
 // ===== ADMITTING INTO A PRISON =====
 
 /// A pool record admitted into a chosen running prison now, through P7: out of the pool, into a free cell, rebuilt from its record

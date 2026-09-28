@@ -166,6 +166,16 @@
 	},
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/bridge/captain/b)
+"bI" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
+/turf/open/floor/carpet,
+/area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "bJ" = (
 /obj/structure/table/reinforced,
 /obj/effect/spawner/random/food_or_drink/donkpockets,
@@ -675,6 +685,18 @@
 	},
 /turf/open/floor/wood/large,
 /area/shuttle/voidcrew/phalanx/hallway/aft/b)
+"gK" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
+	dir = 1
+	},
+/turf/open/floor/carpet,
+/area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "gQ" = (
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
 /obj/structure/cable,
@@ -784,6 +806,13 @@
 "hZ" = (
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/voidcrew/phalanx/security/armory/b)
+"im" = (
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 1
+	},
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/phalanx/cargo/b)
 "iq" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /obj/effect/turf_decal/siding/wood{
@@ -1037,6 +1066,16 @@
 	},
 /turf/open/floor/engine,
 /area/shuttle/voidcrew/phalanx/engineering/storage/b)
+"kT" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
+/turf/open/floor/carpet,
+/area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "kV" = (
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/chapel/b)
@@ -1135,16 +1174,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/mineral/titanium/tiled/blue,
 /area/shuttle/voidcrew/phalanx/hallway/aft/b)
-"mb" = (
-/obj/effect/turf_decal/siding/wood{
-	dir = 1
-	},
-/obj/effect/turf_decal/siding/wood{
-	dir = 2
-	},
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
-/turf/open/floor/carpet,
-/area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "md" = (
 /obj/structure/closet/secure_closet/freezer/kitchen{
 	req_access = null
@@ -1160,21 +1189,6 @@
 /area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "mu" = (
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/b)
-"mz" = (
-/obj/effect/turf_decal/siding/wood{
-	dir = 1
-	},
-/obj/effect/turf_decal/siding/wood{
-	dir = 2
-	},
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
-/turf/open/floor/carpet,
-/area/shuttle/voidcrew/phalanx/hallway/aft/b)
-"mA" = (
-/obj/machinery/atmospherics/pipe/smart/simple/orange/visible,
-/obj/structure/cable,
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/phalanx/engineering/b)
 "mQ" = (
@@ -1321,12 +1335,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/wood/large,
 /area/shuttle/voidcrew/phalanx/hallway/aft/b)
-"oL" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
-	dir = 8
-	},
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/mining/b)
 "oM" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/orange,
 /obj/structure/cable,
@@ -1529,13 +1537,6 @@
 /obj/machinery/atmospherics/pipe/smart/simple/green/visible,
 /turf/open/floor/engine,
 /area/shuttle/voidcrew/phalanx/engineering/atmospherics/b)
-"rk" = (
-/obj/structure/cable,
-/obj/machinery/power/terminal{
-	dir = 1
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/b)
 "rs" = (
 /obj/structure/cable,
 /obj/structure/table/reinforced,
@@ -1648,14 +1649,6 @@
 	},
 /turf/open/floor/carpet,
 /area/shuttle/voidcrew/phalanx/cafeteria/b)
-"sG" = (
-/obj/structure/window/reinforced/plasma/spawner/directional/east,
-/obj/structure/window/reinforced/plasma/spawner,
-/obj/machinery/atmospherics/components/unary/shuttle/heater/tank{
-	dir = 4
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/b)
 "sK" = (
 /obj/machinery/door/airlock/highsecurity{
 	name = "Armory"
@@ -1698,11 +1691,6 @@
 	},
 /turf/open/floor/carpet,
 /area/shuttle/voidcrew/phalanx/hallway/aft/b)
-"sS" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/mining/b)
 "sX" = (
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/voidcrew/phalanx/chapel/office/b)
@@ -1964,6 +1952,14 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/mineral/titanium/tiled/blue,
 /area/shuttle/voidcrew/phalanx/hallway/central/b)
+"wr" = (
+/obj/machinery/atmospherics/components/unary/shuttle/heater/tank{
+	dir = 4
+	},
+/obj/structure/window/reinforced/plasma/spawner/directional/east,
+/obj/structure/window/reinforced/plasma/spawner/directional/south,
+/turf/open/floor/plating,
+/area/shuttle/voidcrew/phalanx/engineering/b)
 "wB" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -2075,11 +2071,6 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/chapel/b)
-"xU" = (
-/obj/machinery/power/smes/engineering,
-/obj/structure/cable,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/b)
 "xW" = (
 /obj/machinery/light/warm{
 	dir = 8
@@ -2198,6 +2189,12 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/kitchen/b)
+"zC" = (
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
+	dir = 8
+	},
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/phalanx/cargo/b)
 "zE" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 5
@@ -2827,6 +2824,18 @@
 	},
 /turf/closed/wall/mineral/titanium/nodiagonal,
 /area/shuttle/voidcrew/phalanx/security/b)
+"Ht" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/wood{
+	dir = 2
+	},
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 1
+	},
+/turf/open/floor/carpet,
+/area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "Hu" = (
 /obj/machinery/door/firedoor,
 /obj/effect/turf_decal/siding/wood{
@@ -2845,18 +2854,6 @@
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
 /turf/open/floor/iron/kitchen_coldroom/freezerfloor,
 /area/shuttle/voidcrew/phalanx/kitchen/b)
-"HB" = (
-/obj/effect/turf_decal/siding/wood{
-	dir = 1
-	},
-/obj/effect/turf_decal/siding/wood{
-	dir = 2
-	},
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
-	dir = 1
-	},
-/turf/open/floor/carpet,
-/area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "HL" = (
 /obj/machinery/light/small{
 	dir = 8
@@ -2933,12 +2930,6 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/chapel/b)
-"It" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
-	dir = 8
-	},
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/b)
 "IA" = (
 /obj/structure/chair/sofa/left,
 /obj/effect/turf_decal/siding/wood{
@@ -3010,13 +3001,6 @@
 	},
 /turf/open/floor/carpet,
 /area/shuttle/voidcrew/phalanx/dorms/b)
-"IX" = (
-/obj/machinery/power/smes/engineering,
-/obj/structure/cable,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/b)
 "Jf" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/wood/large,
@@ -3072,18 +3056,6 @@
 /obj/machinery/firealarm/directional/east,
 /turf/open/floor/wood,
 /area/shuttle/voidcrew/phalanx/chapel/office/b)
-"JI" = (
-/obj/effect/turf_decal/siding/wood{
-	dir = 1
-	},
-/obj/effect/turf_decal/siding/wood{
-	dir = 2
-	},
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
-	dir = 1
-	},
-/turf/open/floor/carpet,
-/area/shuttle/voidcrew/phalanx/hallway/aft/b)
 "JO" = (
 /obj/structure/table/wood,
 /obj/item/reagent_containers/condiment/peppermill{
@@ -3245,16 +3217,6 @@
 /obj/structure/tank_dispenser/oxygen,
 /turf/open/floor/iron,
 /area/shuttle/voidcrew/phalanx/cargo/b)
-"LP" = (
-/obj/machinery/power/port_gen/pacman{
-	anchored = 1
-	},
-/obj/structure/cable,
-/obj/machinery/power/terminal{
-	dir = 2
-	},
-/turf/open/floor/plating,
-/area/shuttle/voidcrew/phalanx/engineering/b)
 "LT" = (
 /obj/machinery/door/firedoor,
 /obj/effect/turf_decal/siding/wood{
@@ -3631,6 +3593,11 @@
 /obj/machinery/door/firedoor/heavy,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/phalanx/cargo/b)
+"PY" = (
+/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/phalanx/cargo/mining/b)
 "Qd" = (
 /obj/structure/closet/crate/freezer/blood,
 /turf/open/floor/mineral/titanium/blue,
@@ -3815,13 +3782,6 @@
 "Sg" = (
 /turf/closed/wall/mineral/titanium,
 /area/shuttle/voidcrew/phalanx/nanites/b)
-"Si" = (
-/obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
-	dir = 1
-	},
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/phalanx/cargo/b)
 "Sv" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/closed/wall/mineral/titanium/nodiagonal,
@@ -4352,6 +4312,12 @@
 /obj/structure/cable,
 /turf/open/floor/iron/textured_large,
 /area/shuttle/voidcrew/phalanx/cargo/b)
+"Zg" = (
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2{
+	dir = 8
+	},
+/turf/open/floor/iron,
+/area/shuttle/voidcrew/phalanx/cargo/mining/b)
 "Zi" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -4499,7 +4465,7 @@ HP
 dJ
 SB
 SB
-sG
+wr
 HP
 iU
 wk
@@ -4528,10 +4494,10 @@ vF
 Op
 Op
 fr
-Op
+Pt
 Pt
 oM
-mA
+Pt
 fr
 Op
 Op
@@ -5127,7 +5093,7 @@ oA
 gD
 gD
 gD
-sS
+PY
 Es
 qw
 SO
@@ -5148,7 +5114,7 @@ Jf
 Gc
 qw
 ZD
-Si
+im
 wH
 wH
 wH
@@ -5162,7 +5128,7 @@ gD
 yr
 on
 Er
-HB
+gK
 iq
 Sg
 FW
@@ -5177,7 +5143,7 @@ nb
 nb
 KY
 lJ
-mz
+kT
 Er
 PP
 Mx
@@ -5191,10 +5157,10 @@ Yf
 gD
 gD
 gD
-oL
+Zg
 on
 Er
-mb
+bI
 iq
 cK
 FW
@@ -5209,10 +5175,10 @@ nb
 nb
 Fx
 lJ
-JI
+Ht
 Er
 PP
-It
+zC
 wH
 wH
 wH

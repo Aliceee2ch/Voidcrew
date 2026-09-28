@@ -499,6 +499,13 @@
 	},
 /turf/open/floor/iron/dark/small,
 /area/voidcrew/player_outpost)
+"cQ" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/obj/item/kirbyplants/organic/plant10,
+/turf/open/floor/wood/tile,
+/area/voidcrew/player_outpost)
 "cX" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
@@ -5071,7 +5078,7 @@ an
 aS
 aS
 aS
-oI
+cQ
 eL
 aS
 pL

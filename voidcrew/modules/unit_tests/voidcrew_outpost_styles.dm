@@ -70,7 +70,10 @@
 		var/obj/machinery/power/port_gen/pacman/generator = locate() in home.outpost_area
 		TEST_ASSERT_NOTNULL(apc, "The [label] has no APC")
 		TEST_ASSERT(smes?.terminal, "The [label]'s SMES has no terminal")
-		TEST_ASSERT(generator?.powernet && generator.powernet == smes.terminal.powernet, "The [label]'s generator does not feed the SMES")
+		TEST_ASSERT_NOTNULL(generator, "The [label] has no generator")
+		// It ships loose, like any portable generator: the owner bolts it down to run it
+		generator.set_anchored(TRUE)
+		TEST_ASSERT(generator.powernet && generator.powernet == smes.terminal.powernet, "The [label]'s generator does not feed the SMES once bolted down")
 		TEST_ASSERT(apc.terminal?.powernet && apc.terminal.powernet == smes.powernet, "The [label]'s SMES does not feed the APC")
 
 /// Every upgrade room in every style works where it lands, in each of the four turns.

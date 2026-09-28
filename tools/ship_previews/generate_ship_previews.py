@@ -100,6 +100,8 @@ SMOOTH_TURFS = {
     "/turf/closed/indestructible/rusty": ("icons/turf/walls/rusty_wall.dmi", "rusty_wall", "wall"),
     "/turf/closed/indestructible/reinforced/rusty": ("icons/turf/walls/rusty_reinforced_wall.dmi", "rusty_reinforced_wall", "wall"),
     "/turf/closed/indestructible/iron": ("icons/turf/walls/iron_wall.dmi", "iron_wall", "wall"),
+    "/turf/closed/wall/rusted": ("icons/turf/walls/rusty_wall.dmi", "rusty_wall", "wall"),
+    "/turf/closed/wall/r_wall/rusted": ("icons/turf/walls/rusty_reinforced_wall.dmi", "rusty_reinforced_wall", "wall"),
 }
 # Carpets: each colour smooths only with itself (its own join group), stock and indestructible alike
 for _colour in ("", "black", "blue", "cyan", "green", "orange", "purple", "red", "royalblack", "royalblue"):

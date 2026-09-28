@@ -143,7 +143,7 @@
 /turf/open/floor/wood,
 /area/voidcrew/player_outpost/cargo_dock)
 "aq" = (
-/turf/closed/wall/rust,
+/turf/closed/wall/rusted,
 /area/voidcrew/player_outpost/cargo_dock)
 "ar" = (
 /obj/effect/decal/cleanable/dirt,
@@ -156,7 +156,7 @@
 /area/voidcrew/player_outpost/cargo_dock)
 "at" = (
 /obj/structure/sign/departments/cargo,
-/turf/closed/wall/rust,
+/turf/closed/wall/rusted,
 /area/voidcrew/player_outpost/cargo_dock)
 "au" = (
 /obj/effect/turf_decal/stripes/line{
@@ -234,7 +234,7 @@
 /area/voidcrew/player_outpost/cargo_dock)
 "aA" = (
 /obj/structure/sign/warning/docking,
-/turf/closed/wall/rust,
+/turf/closed/wall/rusted,
 /area/voidcrew/player_outpost/cargo_dock)
 "aB" = (
 /obj/effect/turf_decal/stripes/line{
@@ -310,7 +310,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost/cargo_dock)
 "aK" = (
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating,
 /area/voidcrew/player_outpost/cargo_dock)
 "aL" = (
 /obj/effect/turf_decal{
@@ -391,7 +391,7 @@
 	name = "paint";
 	desc = "A hazard mark in yellow spray paint."
 	},
-/turf/closed/wall/rust,
+/turf/closed/wall/rusted,
 /area/voidcrew/player_outpost/cargo_dock)
 "aU" = (
 /obj/effect/spawner/structure/window/reinforced,
@@ -435,7 +435,7 @@
 /area/voidcrew/player_outpost/cargo_dock)
 "aZ" = (
 /obj/structure/sign/poster/contraband/random,
-/turf/closed/wall/rust,
+/turf/closed/wall/rusted,
 /area/voidcrew/player_outpost/cargo_dock)
 "bv" = (
 /obj/machinery/power/apc/auto_name/directional/south,

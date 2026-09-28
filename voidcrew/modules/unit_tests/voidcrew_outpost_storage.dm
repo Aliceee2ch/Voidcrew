@@ -39,8 +39,6 @@
 	TEST_ASSERT_EQUAL(prototype.price, 1000, "Safe storage has the wrong upgrade price")
 	var/datum/map_template/template = prototype.get_template()
 	TEST_ASSERT_NOTNULL(template, "The safe storage map did not load")
-	TEST_ASSERT_EQUAL(template.width, 9, "The safe storage map has the wrong width")
-	TEST_ASSERT_EQUAL(template.height, 9, "The safe storage map has the wrong height")
 
 	var/list/room_turfs = list()
 	for(var/rotation in list(0, 90, 180, 270))

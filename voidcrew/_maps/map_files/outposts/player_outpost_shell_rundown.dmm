@@ -124,7 +124,7 @@
 	},
 /obj/effect/decal/cleanable/dirt,
 /obj/machinery/light/small/red/dim/directional/north,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "ar" = (
 /obj/effect/landmark/outpost_elevator_alcove,
@@ -183,7 +183,7 @@
 /turf/open/floor/wood,
 /area/voidcrew/player_outpost)
 "aD" = (
-/turf/closed/wall/rust,
+/turf/closed/wall/rusted,
 /area/voidcrew/player_outpost)
 "aE" = (
 /turf/closed/wall,
@@ -236,7 +236,7 @@
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "aK" = (
-/turf/closed/wall/r_wall/rust,
+/turf/closed/wall/r_wall/rusted,
 /area/voidcrew/player_outpost)
 "aL" = (
 /obj/structure/table/wood,
@@ -280,7 +280,7 @@
 	name = "Service Bay"
 	},
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "aS" = (
 /obj/machinery/door/airlock/external,
@@ -340,7 +340,7 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/light/small/red/dim/directional/east,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "bj" = (
 /obj/effect/turf_decal{
@@ -423,7 +423,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "cT" = (
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "df" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
@@ -845,7 +845,7 @@
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
 	},
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "lN" = (
 /obj/structure/table/wood,
@@ -1057,7 +1057,7 @@
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/rack,
 /obj/effect/turf_decal/bot,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "pF" = (
 /obj/effect/turf_decal{
@@ -1147,7 +1147,7 @@
 /area/voidcrew/player_outpost)
 "ro" = (
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "rv" = (
 /turf/open/floor/carpet,
@@ -1536,7 +1536,7 @@
 "AO" = (
 /obj/structure/rack,
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "Bh" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
@@ -1554,7 +1554,7 @@
 	},
 /obj/structure/rack,
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "Bn" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -1616,7 +1616,7 @@
 "Do" = (
 /obj/machinery/light/small/directional/west,
 /obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "Dq" = (
 /obj/machinery/light/small/directional/north,
@@ -1714,7 +1714,7 @@
 "Eo" = (
 /obj/structure/frame/machine,
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "Eq" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -2209,12 +2209,12 @@
 /area/voidcrew/player_outpost)
 "KS" = (
 /obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "KW" = (
 /obj/structure/cable,
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "KY" = (
 /obj/structure/sign/warning/electric_shock/directional/south,
@@ -2410,7 +2410,7 @@
 "NR" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "Ol" = (
 /obj/effect/turf_decal{
@@ -2436,7 +2436,7 @@
 	alpha = 150
 	},
 /obj/structure/barrel,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "Or" = (
 /obj/structure/sign/warning/no_smoking/directional/east,
@@ -2553,7 +2553,7 @@
 	pixel_x = -4;
 	pixel_y = -6
 	},
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "Qj" = (
 /obj/structure/bed{
@@ -2763,7 +2763,7 @@
 /area/voidcrew/player_outpost)
 "UI" = (
 /obj/structure/sign/departments/restroom,
-/turf/closed/wall/rust,
+/turf/closed/wall/rusted,
 /area/voidcrew/player_outpost)
 "UK" = (
 /obj/effect/decal/cleanable/dirt,
@@ -3012,7 +3012,7 @@
 "Yt" = (
 /obj/structure/barrel,
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rust,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "YC" = (
 /obj/effect/decal/cleanable/dirt,

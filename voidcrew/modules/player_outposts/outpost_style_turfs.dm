@@ -189,3 +189,28 @@
 	base_icon_state = "carpet_royalblue"
 	smoothing_groups = SMOOTH_GROUP_TURF_OPEN + SMOOTH_GROUP_CARPET_ROYAL_BLUE
 	canSmoothWith = SMOOTH_GROUP_CARPET_ROYAL_BLUE
+
+// ===== RUST FOR THE OWNER'S OWN TURFS =====
+// Shells and the cargo dock are the owner's to rebuild, so they use ordinary turfs. The stock rust
+// turfs add /datum/element/rust, whose signals stay on a turf when it changes, so a rusted map loaded
+// where another stood before (a recycled outpost level) warns for every signal on every tile. These
+// draw the rusty sprite instead. They build, break and strip like the plain versions.
+
+/turf/closed/wall/rusted
+	name = "rusted wall"
+	desc = "A wall gone orange with rust. It still holds."
+	icon = 'icons/turf/walls/rusty_wall.dmi'
+	icon_state = "rusty_wall-0"
+	base_icon_state = "rusty_wall"
+
+/turf/closed/wall/r_wall/rusted
+	name = "rusted reinforced wall"
+	desc = "A reinforced wall under a thick coat of rust."
+	icon = 'icons/turf/walls/rusty_reinforced_wall.dmi'
+	icon_state = "rusty_reinforced_wall-0"
+	base_icon_state = "rusty_reinforced_wall"
+	base_decon_state = "rusty_wall"
+
+/turf/open/floor/plating/rusted
+	name = "rusted plating"
+	icon_state = "plating_rust"

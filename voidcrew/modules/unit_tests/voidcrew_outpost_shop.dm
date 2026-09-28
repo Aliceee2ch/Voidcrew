@@ -4,8 +4,8 @@
  * hardened UI params, the stock unit and bot surviving abuse, teardown, and the UI payload.
  *
  * Voidcrew defines are not visible from test files, so prices, ids and sizes appear as literals.
- * The map (outpost_upgrade_shop.dmm) is 11x10 with its entrance on the south edge: stock unit
- * (2,9), bot (6,7), register (6,6), staff door (10,6), queue mark (6,5), entrance (6,1).
+ * The shop has one map per outpost style; the tests find the register, queue, staff side and
+ * doors in the placed room (shop_queue_turf() and friends), so they hold for every style.
  */
 
 /// A stock unit whose payment always fails after the goods are staged (F-26)
@@ -20,11 +20,33 @@
 	home.outpost_upgrades["shop"] = blueprint
 	return place_test_service_room(home, blueprint, list(rotation))
 
-/// A turf of the placed shop by its map coordinates (1-based, as drawn)
-/datum/unit_test/voidcrew_outpost_management/proc/shop_turf(datum/outpost_upgrade/service/shop/shop, x, y)
-	var/datum/map_template/template = shop.get_template()
-	var/turf/bottom_left = locate(shop.footprint_bounds[1], shop.footprint_bounds[2], shop.footprint_bounds[5])
-	return template.rotated_template_turf(bottom_left, x - 1, y - 1, shop.rotation)
+// Spots in the placed shop, found by what stands there rather than by map coordinates, so the tests
+// hold for every shop map in every style.
+
+/// The customer's tile in front of the register
+/datum/unit_test/voidcrew_outpost_management/proc/shop_queue_turf(datum/outpost_upgrade/service/shop/shop)
+	var/obj/machinery/computer/outpost_shop_register/register = shop.register_ref?.resolve()
+	var/list/customer = shop.visitor_reach()
+	for(var/direction in GLOB.cardinals)
+		var/turf/front = get_step(register, direction)
+		if(customer[front] && !outpost_room_edge_blocked(front, get_turf(register)))
+			return front
+	return null
+
+/// A clear floor tile beside the stock unit, which only staff reach
+/datum/unit_test/voidcrew_outpost_management/proc/shop_staff_turf(datum/outpost_upgrade/service/shop/shop)
+	var/list/routes = shop.exit_routes()
+	var/list/staff = outpost_room_walk(routes[1][1], shop.room_lookup())
+	for(var/direction in GLOB.cardinals)
+		var/turf/beside = get_step(shop.get_stock(), direction)
+		if(staff[beside] && !beside.is_blocked_turf(exclude_mobs = TRUE))
+			return beside
+	return null
+
+/// A customer's tile well away from the register: just inside the entrance
+/datum/unit_test/voidcrew_outpost_management/proc/shop_away_turf(datum/outpost_upgrade/service/shop/shop)
+	var/list/routes = shop.exit_routes()
+	return routes[1][1]
 
 /// Units of `stack_type` a mob holds or stands on
 /datum/unit_test/voidcrew_outpost_management/proc/shop_units_near(mob/living/holder, stack_type)
@@ -65,26 +87,31 @@
 		TEST_ASSERT_NOTNULL(stock, "The shop linked no stock unit at [rotation] degrees")
 		TEST_ASSERT_NOTNULL(register, "The shop linked no register at [rotation] degrees")
 		TEST_ASSERT_NOTNULL(bot, "The shop linked no bot at [rotation] degrees")
-		TEST_ASSERT_EQUAL(stock.loc, shop_turf(shop, 2, 9), "The stock unit is on the wrong tile at [rotation] degrees")
-		TEST_ASSERT_EQUAL(register.loc, shop_turf(shop, 6, 6), "The register is on the wrong tile at [rotation] degrees")
-		TEST_ASSERT_EQUAL(bot.loc, shop_turf(shop, 6, 7), "The bot is on the wrong tile at [rotation] degrees")
+		for(var/problem in shop.contract_problems())
+			TEST_FAIL("The shop at [rotation] degrees: [problem]")
+		var/turf/queue = shop_queue_turf(shop)
+		TEST_ASSERT_NOTNULL(queue, "No customer tile in front of the register at [rotation] degrees")
 		TEST_ASSERT_EQUAL(bot.register_ref?.resolve(), register, "The bot does not know its register at [rotation] degrees")
-		TEST_ASSERT_EQUAL(register.dir, angle2dir(rotation + 180), "The register does not face the customers at [rotation] degrees")
+		TEST_ASSERT_EQUAL(register.dir, get_dir(register, queue), "The register does not face the customers at [rotation] degrees")
 		TEST_ASSERT(HAS_TRAIT(stock, "outpost_property"), "The stock unit is not outpost property at [rotation] degrees")
 		TEST_ASSERT(stock.flags_1 & PREVENT_CONTENTS_EXPLOSION_1, "Explosions reach the stock at [rotation] degrees")
 		TEST_ASSERT(HAS_TRAIT(register, "outpost_property"), "The register is not outpost property at [rotation] degrees")
 		TEST_ASSERT(register.Adjacent(bot), "The bot is not behind the register at [rotation] degrees")
-		TEST_ASSERT(register.Adjacent(shop_turf(shop, 6, 5)), "The queue mark does not reach the register at [rotation] degrees")
+		TEST_ASSERT(register.Adjacent(queue), "The queue tile does not reach the register at [rotation] degrees")
 
-		// One door out with a fan; the staff door sits on the counter row, opening from the staff side
-		var/obj/machinery/door/airlock/outpost/service/staff/staff_door = locate() in shop_turf(shop, 10, 6)
-		TEST_ASSERT_NOTNULL(staff_door, "No staff door on the counter row at [rotation] degrees")
-		TEST_ASSERT_EQUAL(staff_door.unres_sides, angle2dir(rotation), "The staff door does not open from the staff side at [rotation] degrees")
+		// One door out with a fan; the staff door opens freely only from the staff side
+		var/obj/machinery/door/airlock/outpost/service/staff/staff_door
+		for(var/turf/tile as anything in footprint)
+			staff_door ||= locate() in tile
+		TEST_ASSERT_NOTNULL(staff_door, "No staff door at [rotation] degrees")
+		var/list/customer = shop.visitor_reach()
+		var/turf/staff_side = get_step(staff_door, staff_door.unres_sides)
+		TEST_ASSERT(staff_side && !customer[staff_side], "The staff door opens freely from the customers' side at [rotation] degrees")
 		var/list/doors_out = upgrade_exterior_doors(footprint)
 		TEST_ASSERT_EQUAL(length(doors_out[1]), 1, "The shop should have one door out at [rotation] degrees")
 		TEST_ASSERT(!length(doors_out[2]), "The shop's door out has no tiny fan at [rotation] degrees")
-		var/obj/machinery/door/airlock/outpost/service/entrance = locate() in shop_turf(shop, 6, 1)
-		TEST_ASSERT(entrance in doors_out[1], "The entrance is not the door out at [rotation] degrees")
+		var/obj/machinery/door/airlock/outpost/service/entrance = doors_out[1][1]
+		TEST_ASSERT(!istype(entrance, /obj/machinery/door/airlock/outpost/service/staff), "The entrance is a staff door at [rotation] degrees")
 		for(var/turf/tile as anything in footprint)
 			for(var/obj/structure/fixture in tile)
 				TEST_ASSERT(fixture.anchored, "[fixture] in the shop is not anchored at [rotation] degrees")
@@ -110,9 +137,9 @@
 	var/datum/outpost_upgrade/service/shop/shop = result
 	var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()
 	var/obj/machinery/computer/outpost_shop_register/register = shop.register_ref.resolve()
-	var/turf/staff_spot = shop_turf(shop, 3, 9)
-	var/turf/queue = shop_turf(shop, 6, 5)
-	var/turf/away = shop_turf(shop, 2, 2)
+	var/turf/staff_spot = shop_staff_turf(shop)
+	var/turf/queue = shop_queue_turf(shop)
+	var/turf/away = shop_away_turf(shop)
 
 	var/mob/living/carbon/human/owner = make_market_visitor(staff_spot, "shopowner", 0)
 	home.founder_mind = WEAKREF(owner.mind)
@@ -408,8 +435,8 @@
 	var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()
 	var/mob/living/basic/outpost_shop_bot/bot = shop.get_bot()
 	var/turf/bot_spot = get_turf(bot)
-	var/turf/queue = shop_turf(shop, 6, 5)
-	var/mob/living/carbon/human/owner = make_market_visitor(shop_turf(shop, 3, 9), "shopbotowner", 0)
+	var/turf/queue = shop_queue_turf(shop)
+	var/mob/living/carbon/human/owner = make_market_visitor(shop_staff_turf(shop), "shopbotowner", 0)
 	var/mob/living/carbon/human/visitor = make_market_visitor(queue, "shopbotvisitor", 0)
 
 	bot.apply_damage(500, BRUTE)
@@ -450,7 +477,7 @@
 	var/datum/outpost_upgrade/service/shop/shop = result
 	var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()
 	var/obj/machinery/computer/outpost_shop_register/register = shop.register_ref.resolve()
-	var/turf/staff_spot = shop_turf(shop, 3, 9)
+	var/turf/staff_spot = shop_staff_turf(shop)
 	var/mob/living/carbon/human/owner = make_market_visitor(staff_spot, "shoppayloadowner", 0)
 	var/list/ids = list()
 	for(var/index in 1 to 150)
@@ -482,8 +509,8 @@
 	var/datum/outpost_upgrade/service/shop/shop = result
 	var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()
 	var/obj/machinery/computer/outpost_shop_register/register = shop.register_ref.resolve()
-	var/turf/staff_spot = shop_turf(shop, 3, 9)
-	var/turf/queue = shop_turf(shop, 6, 5)
+	var/turf/staff_spot = shop_staff_turf(shop)
+	var/turf/queue = shop_queue_turf(shop)
 	var/mob/living/carbon/human/owner = make_market_visitor(staff_spot, "shopinnerowner", 0)
 	home.founder_mind = WEAKREF(owner.mind)
 	var/mob/living/carbon/human/buyer = make_market_visitor(queue, "shopinnerbuyer", 1000)

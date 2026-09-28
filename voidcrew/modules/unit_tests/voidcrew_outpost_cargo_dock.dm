@@ -4,8 +4,8 @@
  * anything it would crush, and the dock's area being released when its claim is torn down.
  *
  * Voidcrew defines are not visible from test files, so sizes and messages appear as literals.
- * The map (outpost_upgrade_cargo_dock.dmm) is 16x13 with its entrance on the south edge; the
- * pad runs from (3,5) to (14,11) and its port stands on (8,5) facing north.
+ * The dock has one map per outpost style; the tests find its pad and doors in the placed room
+ * rather than at map coordinates, so they hold for every style.
  */
 
 // ===== SHARED HELPERS =====
@@ -171,11 +171,12 @@
 			dock_entry = entry
 	TEST_ASSERT_NOTNULL(dock_entry, "The cargo dock is missing from the upgrade catalog")
 	TEST_ASSERT_EQUAL(dock_entry["price"], 0, "The cargo dock is not free")
-	TEST_ASSERT_EQUAL(dock_entry["width"], 16, "The cargo dock's catalog width is wrong")
-	TEST_ASSERT_EQUAL(dock_entry["height"], 13, "The cargo dock's catalog height is wrong")
 	var/datum/outpost_upgrade/dock_prototype = GLOB.outpost_upgrade_catalog["cargo_dock"]
+	var/datum/map_template/dock_template = dock_prototype.get_template(home.outpost_style)
+	TEST_ASSERT_EQUAL(dock_entry["width"], dock_template.width, "The cargo dock's catalog width is not its map's")
+	TEST_ASSERT_EQUAL(dock_entry["height"], dock_template.height, "The cargo dock's catalog height is not its map's")
 	TEST_ASSERT_EQUAL(dock_prototype.entrance_side, SOUTH, "The cargo dock's entrance edge is wrong")
-	TEST_ASSERT_EQUAL(dock_entry["preview"], "outpost_upgrade_cargo_dock.png", "The cargo dock's preview is missing")
+	TEST_ASSERT(dock_entry["preview"] && dock_entry["preview"] == dock_prototype.preview_asset(home.outpost_style), "The cargo dock's preview is missing")
 
 	// Free, but still bought through the normal path: an empty treasury is enough, once.
 	TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "The test treasury did not start empty")
@@ -241,23 +242,17 @@
 		TEST_ASSERT(istype(dock_area), "No cargo dock area was recorded at [rotation] degrees")
 
 		// The port: where the map put it, turned with the room, and the ferry's size.
-		var/datum/map_template/template = blueprint.get_template()
 		var/obj/docking_port/stationary/outpost_cargo_dock/pad = blueprint.pad
 		TEST_ASSERT_NOTNULL(pad, "The placed cargo dock found no landing pad port at [rotation] degrees")
 		TEST_ASSERT_EQUAL(home.cargo_dock_port(), pad, "The claim does not know its cargo dock at [rotation] degrees")
-		TEST_ASSERT_EQUAL(pad.loc, template.rotated_template_turf(bottom_left, 7, 4, rotation), "The pad port is on the wrong tile at [rotation] degrees")
+		TEST_ASSERT(blueprint.contains_turf(get_turf(pad)), "The pad port is outside the room at [rotation] degrees")
 		TEST_ASSERT_EQUAL(pad.dir, angle2dir(rotation), "The pad port was not turned with the room at [rotation] degrees")
 		TEST_ASSERT_EQUAL(pad.width, 12, "The pad is the wrong width at [rotation] degrees")
 		TEST_ASSERT_EQUAL(pad.height, 7, "The pad is the wrong height at [rotation] degrees")
 		TEST_ASSERT_EQUAL(pad.dwidth, 5, "The pad port is off-centre across the pad at [rotation] degrees")
 		TEST_ASSERT_EQUAL(pad.dheight, 0, "The pad port is not on the pad's edge at [rotation] degrees")
-		// The painted pad, (3,5)-(14,11) as drawn, turned with the room.
-		var/turf/pad_corner = template.rotated_template_turf(bottom_left, 2, 4, rotation)
-		var/turf/pad_far_corner = template.rotated_template_turf(bottom_left, 13, 10, rotation)
-		var/list/expected_rect = list(min(pad_corner.x, pad_far_corner.x), min(pad_corner.y, pad_far_corner.y), max(pad_corner.x, pad_far_corner.x), max(pad_corner.y, pad_far_corner.y))
 		var/list/rect = cargo_dock_rect(pad)
-		for(var/index in 1 to 4)
-			TEST_ASSERT_EQUAL(rect[index], expected_rect[index], "The landing rectangle ([rect.Join(",")]) is not the painted pad ([expected_rect.Join(",")]) at [rotation] degrees")
+		TEST_ASSERT_NULL(pad.pad_obstruction(), "Something stands on the landing pad at [rotation] degrees")
 		TEST_ASSERT(rect[1] > bottom_left.x && rect[2] > bottom_left.y && rect[3] < top_right.x && rect[4] < top_right.y, "The landing rectangle reaches the room's walls at [rotation] degrees")
 		// The ferry's airlocks sit on the port's row, so that row must face the entrance.
 		TEST_ASSERT_EQUAL(REVERSE_DIR(pad.dir), footprint["entrance_dir"], "The pad's airlock side does not face the entrance at [rotation] degrees")
@@ -276,23 +271,19 @@
 
 		// Power and the way in.
 		var/list/apcs = list()
-		var/list/edge_airlocks = list()
 		for(var/turf/tile as anything in footprint["turfs"])
 			TEST_ASSERT_EQUAL(tile.loc, dock_area, "Footprint tile [tile.x],[tile.y] is not in the dock's area at [rotation] degrees")
 			for(var/obj/machinery/power/apc/apc in tile)
 				apcs += apc
-			for(var/obj/machinery/door/airlock/airlock in tile)
-				edge_airlocks += airlock
 		TEST_ASSERT_EQUAL(length(apcs), 1, "The cargo dock should have exactly one APC at [rotation] degrees")
 		var/obj/machinery/power/apc/apc = apcs[1]
 		TEST_ASSERT_EQUAL(dock_area.apc, apc, "The dock's area does not know its APC at [rotation] degrees")
 		TEST_ASSERT(iswallturf(get_step(apc, apc.dir)), "The turned APC is not against a wall at [rotation] degrees")
-		TEST_ASSERT_EQUAL(length(edge_airlocks), 1, "The cargo dock should have exactly one airlock at [rotation] degrees")
-		var/obj/machinery/door/airlock/entrance = edge_airlocks[1]
-		TEST_ASSERT(get_turf(entrance) in footprint["entrance"], "The airlock is not on the entrance edge at [rotation] degrees")
 		// The way in can open onto vacuum or a planet: a tiny fan under every door out holds the air.
 		var/list/doors_out = upgrade_exterior_doors(footprint["turfs"])
-		TEST_ASSERT(entrance in doors_out[1], "The entrance airlock does not count as a door out at [rotation] degrees")
+		TEST_ASSERT_EQUAL(length(doors_out[1]), 1, "The cargo dock should have exactly one door out at [rotation] degrees")
+		var/obj/machinery/door/airlock/entrance = doors_out[1][1]
+		TEST_ASSERT(get_turf(entrance) in footprint["entrance"], "The airlock is not on the entrance edge at [rotation] degrees")
 		var/list/unfanned = doors_out[2]
 		TEST_ASSERT(!length(unfanned), "[length(unfanned)] door(s) out of the cargo dock have no tiny fan at [rotation] degrees")
 

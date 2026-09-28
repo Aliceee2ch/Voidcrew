@@ -1013,7 +1013,6 @@
 /obj/effect/turf_decal/trimline/blue/filled/mid_joiner{
 	dir = 4
 	},
-/obj/machinery/light/floor,
 /obj/machinery/light/red/directional/south,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/trader_outpost)

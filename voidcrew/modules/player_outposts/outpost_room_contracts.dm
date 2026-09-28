@@ -219,15 +219,22 @@
 	for(var/obj/machinery/cryo_cell/cell as anything in cells)
 		if(cell.internal_connector?.gas_connector?.parents[1] != loop)
 			. += "the cryo cell at [cell.x],[cell.y] is not on the freezer's loop"
-	if(length(connectors) != 2)
-		. += "[length(connectors)] canister connectors, not 2"
-	for(var/obj/machinery/atmospherics/components/unary/portables_connector/port as anything in connectors)
-		if(port.parents[1] != loop)
-			. += "the connector at [port.x],[port.y] is not on the freezer's loop"
-		if(!port.connected_device)
-			. += "the connector at [port.x],[port.y] has no canister"
 	if(!lab_filter || !(loop in lab_filter.parents))
 		. += "the filter is not on the freezer's loop"
+		return
+	if(length(connectors) != 2)
+		. += "[length(connectors)] canister connectors, not 2"
+	// The gas canister feeds the loop; the drain sits on the filter's side outlet, a network of its own
+	var/feeding = 0
+	for(var/obj/machinery/atmospherics/components/unary/portables_connector/port as anything in connectors)
+		if(port.parents[1] == loop)
+			feeding++
+		else if(!(port.parents[1] in lab_filter.parents))
+			. += "the connector at [port.x],[port.y] is on neither the freezer's loop nor the filter"
+		if(!port.connected_device)
+			. += "the connector at [port.x],[port.y] has no canister"
+	if(feeding != 1)
+		. += "[feeding] canisters feed the freezer's loop, not 1"
 
 /datum/outpost_upgrade/service/shop/contract_problems()
 	. = ..()

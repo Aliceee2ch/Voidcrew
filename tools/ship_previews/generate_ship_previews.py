@@ -96,8 +96,16 @@ SMOOTH_TURFS = {
     "/turf/closed/indestructible/reinforced": ("icons/turf/walls/reinforced_wall.dmi", "reinforced_wall", "wall"),
     # Keeps the titanium lookalike from matching the reinforced prefix above
     "/turf/closed/indestructible/reinforced/titanium": ("icons/turf/walls/shuttle_wall.dmi", "shuttle_wall", "shuttle_wall"),
-    "/turf/open/floor/carpet": ("icons/turf/floors/carpet.dmi", "carpet", "carpet"),
+    # Outpost style walls (voidcrew/modules/player_outposts/outpost_style_turfs.dm)
+    "/turf/closed/indestructible/rusty": ("icons/turf/walls/rusty_wall.dmi", "rusty_wall", "wall"),
+    "/turf/closed/indestructible/reinforced/rusty": ("icons/turf/walls/rusty_reinforced_wall.dmi", "rusty_reinforced_wall", "wall"),
+    "/turf/closed/indestructible/iron": ("icons/turf/walls/iron_wall.dmi", "iron_wall", "wall"),
 }
+# Carpets: each colour smooths only with itself (its own join group), stock and indestructible alike
+for _colour in ("", "black", "blue", "cyan", "green", "orange", "purple", "red", "royalblack", "royalblue"):
+    _state = f"carpet_{_colour}" if _colour else "carpet"
+    for _base in ("/turf/open/floor/carpet", "/turf/open/indestructible/carpet"):
+        SMOOTH_TURFS[f"{_base}/{_colour}" if _colour else _base] = (f"icons/turf/floors/{_state}.dmi", _state, _state)
 
 # Bitmask-smoothed objects drawn as an overlay on top of the render.
 # type path -> (dmi path, base_icon_state, join group)
@@ -325,21 +333,28 @@ class Dmi:
         return self.image.crop((x, y, x + self.icon_w, y + self.icon_h))
 
 
+def smooth_turf_entry(path: str):
+    """Longest-prefix SMOOTH_TURFS entry for a turf path, or None."""
+    best = None
+    best_len = -1
+    for prefix, entry in SMOOTH_TURFS.items():
+        if path_matches(path, prefix) and len(prefix) > best_len:
+            best = entry
+            best_len = len(prefix)
+    return best
+
+
 def smooth_turf_at(dmm: Dmm, x: int, y: int):
     """Longest-prefix SMOOTH_TURFS entry for the tile's turf, or None."""
     key = dmm.grid.get((x, y))
     if key is None:
         return None
-    best = None
-    best_len = -1
     for path in dmm.key_paths[key]:
-        if not path.startswith("/turf/"):
-            continue
-        for prefix, entry in SMOOTH_TURFS.items():
-            if path_matches(path, prefix) and len(prefix) > best_len:
-                best = entry
-                best_len = len(prefix)
-    return best
+        if path.startswith("/turf/"):
+            entry = smooth_turf_entry(path)
+            if entry:
+                return entry
+    return None
 
 
 def resolve_window_spawner(path: str) -> str:
@@ -380,7 +395,7 @@ def build_join_sets(dmm: Dmm) -> tuple[dict, set, dict]:
     """Precompute per-tile membership: one join set per turf group (wall families,
     carpet), copy-from-B tiles, and one join set per window group."""
     wall_join: set[tuple[int, int]] = set()
-    carpet: set[tuple[int, int]] = set()
+    carpets: dict[str, set[tuple[int, int]]] = {}
     copy_b: set[tuple[int, int]] = set()
     shuttle_parts: set[tuple[int, int]] = set()
     window_joins: dict[str, set[tuple[int, int]]] = {
@@ -393,8 +408,10 @@ def build_join_sets(dmm: Dmm) -> tuple[dict, set, dict]:
                 path_matches(path, p) for p in WALL_JOIN_EXCLUDE
             ):
                 wall_join.add(pos)
-            if path.startswith("/turf/") and path_matches(path, "/turf/open/floor/carpet"):
-                carpet.add(pos)
+            if path.startswith("/turf/"):
+                turf_entry = smooth_turf_entry(path)
+                if turf_entry and turf_entry[2].startswith("carpet"):
+                    carpets.setdefault(turf_entry[2], set()).add(pos)
             if any(path_matches(path, p) for p in COPY_B_PREFIXES):
                 copy_b.add(pos)
             if any(path_matches(path, p) for p in SHUTTLE_PARTS_PREFIXES):
@@ -409,8 +426,9 @@ def build_join_sets(dmm: Dmm) -> tuple[dict, set, dict]:
         "wall": wall_join,
         "shuttle_wall": wall_join | shuttle_parts,
         "pod_wall": wall_join | shuttle_parts | window_joins["window"],
-        "carpet": carpet,
     }
+    for group in {entry[2] for entry in SMOOTH_TURFS.values() if entry[2].startswith("carpet")}:
+        turf_joins[group] = carpets.get(group, set())
     return turf_joins, copy_b, window_joins
 
 

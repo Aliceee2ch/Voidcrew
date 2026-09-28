@@ -7,26 +7,33 @@
  *
  * The tests drive the kingpin's procs directly: the lounge is built in the test room (a sofa, the
  * coffee table, a few goon posts), the talk is picked by option rather than through the radial, and
- * the shootout's clock is moved by hand rather than waited out. The board's clock is stopped and
- * every posting is closed before and after each test.
+ * the shootout's clock is moved by hand rather than waited out. Before and after each test the
+ * board's clock is stopped, every kingpin and goon is deleted (a posting that closes no longer takes
+ * him away), every posting is closed and SSbounty_kingpin forgets the round's kingpin.
  */
 
 // ===== FIXTURES =====
 
-/// The kingpin's tests: the board's clock stopped and the board emptied around each one
+/// The kingpin's tests: the board's clock stopped and the board and the lounge emptied around each one
 /datum/unit_test/voidcrew_bounty_kingpin
 	abstract_type = /datum/unit_test/voidcrew_bounty_kingpin
 	/// The crews the test made (/datum/team/voidcrew), taken apart at the end
 	var/list/kingpin_test_teams = list()
+	/// SSbounty_kingpin's clock before the test, put back after
+	var/kingpin_test_old_next = 0
 
-/// Stops the board's clock and closes every posting
+/// Stops the board's clock, clears every kingpin and posting, and has SSbounty_kingpin forget the round's kingpin
 /datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_begin()
 	SScriminal_bounties.can_fire = FALSE
+	kingpin_test_old_next = SSbounty_kingpin.kingpin_next_at
+	kingpin_test_clear_crews()
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties.Copy())
 		posting.close("admin") // BOUNTY_CLOSE_ADMIN
+	SSbounty_kingpin.kingpin_reset()
 
-/// Closes whatever the test left, takes its crews apart, empties the prisoner pool and starts the board's clock again
+/// Clears whatever the test left, takes its crews apart, empties the prisoner pool and starts the board's clock again
 /datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_end()
+	kingpin_test_clear_crews()
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties.Copy())
 		posting.close("admin") // BOUNTY_CLOSE_ADMIN
 	// A crew roster holds its ship and its members' minds hold the crew: undone here, or none of them is ever collected
@@ -37,7 +44,28 @@
 		team.ship = null
 	kingpin_test_teams.Cut()
 	bounty_pool_clear("kingpin test")
+	SSbounty_kingpin.kingpin_reset()
+	SSbounty_kingpin.kingpin_next_at = kingpin_test_old_next
 	SScriminal_bounties.can_fire = TRUE
+
+/// Deletes every kingpin in the world and his goons (with him goes his crew and the job he holds)
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_clear_crews()
+	for(var/datum/bounty_kingpin_crew/crew as anything in GLOB.bounty_kingpin_crews.Copy())
+		for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in crew.goons())
+			qdel(goon)
+		var/mob/living/basic/bounty_criminal/kingpin/kingpin = crew.kingpin()
+		if(kingpin)
+			qdel(kingpin)
+		else
+			qdel(crew)
+
+/// Clears the test lounge for another: every kingpin and goon, the coffee table and the sofa
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_clear_lounge()
+	kingpin_test_clear_crews()
+	for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
+		qdel(table)
+	for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
+		qdel(sofa)
 
 /// A turf in the test room, `dx` and `dy` from its bottom left corner (the room is 5 by 5)
 /datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_spot(dx, dy)
@@ -63,8 +91,9 @@
 
 /**
  * The lounge in the test room: the sofa at (2,0) facing north, the coffee table across (1-3,1),
- * the kingpin on the sofa for `posting`, and `goon_count` goons (up to 4) at the room's edges. The
- * talk spot is (2,2).
+ * the kingpin on the sofa, and `goon_count` goons (up to 4) at the room's edges. The talk spot is
+ * (2,2). With `posting` he is wanted on it (on its record); with none he sits on no posting, on a
+ * record of his own, as the round starts him.
  */
 /datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_lounge(datum/criminal_bounty/kingpin/posting, goon_count = 2)
 	var/turf/seat = kingpin_test_spot(2, 0)
@@ -77,8 +106,9 @@
 	var/list/posts = list()
 	for(var/i in 1 to min(goon_count, length(spots)))
 		posts += list(list(spots[i], weapons[i]))
-	var/mob/living/basic/bounty_criminal/kingpin/kingpin = bounty_kingpin_setup(seat, posts, posting.record, posting)
-	posting.board_adopt_criminal(kingpin, null, null, null)
+	var/datum/bounty_record/record = posting ? posting.record : bounty_kingpin_make_record()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = bounty_kingpin_setup(seat, posts, record)
+	posting?.board_adopt_criminal(kingpin, null, null, null)
 	return kingpin
 
 /// A kingpin posting by hand (no site: red space), worth 1000 credits and 2 vouchers at full pay
@@ -87,6 +117,16 @@
 	posting.value = 1000
 	posting.board_vouchers = 2
 	return posting
+
+/**
+ * Gives `kingpin` a job to hold: a plain mission standing in for his Drug Run, whose making depends on
+ * the round's planets. He makes no other after it is taken.
+ */
+/datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_job(mob/living/basic/bounty_criminal/kingpin/kingpin)
+	var/datum/mission/job = allocate(/datum/mission)
+	kingpin.kingpin_crew.crew_job_retry_at = world.time + 1 HOURS
+	kingpin.kingpin_crew.hold_job(job)
+	return job
 
 /// Trade vouchers lying on `spot`
 /datum/unit_test/voidcrew_bounty_kingpin/proc/kingpin_test_vouchers(turf/spot)
@@ -160,22 +200,14 @@
 		TEST_ASSERT_EQUAL(ship.ship_account.account_balance - balance_before, pay_case[2], "The ship's account didn't get the credits")
 		TEST_ASSERT_EQUAL(kingpin_test_vouchers(pad_turf) - vouchers_before, pay_case[3], "The pad didn't get the vouchers")
 		TEST_ASSERT(QDELETED(case_posting), "A claimed kingpin's posting stayed up")
-		for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
-			qdel(table)
-		for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
-			qdel(sofa)
+		// Claimed at a pad, he is gone for the round
+		TEST_ASSERT(SSbounty_kingpin.kingpin_gone, "A [pay_case[1]] kingpin claimed at the pad isn't gone for the round")
+		SSbounty_kingpin.kingpin_reset()
+		kingpin_test_clear_lounge()
 
-	// The bribes: real black market goods, 2500-3500 credits' worth, give or take the 2- and 3-voucher items
-	var/list/choices = bounty_kingpin_bribe_choices()
-	TEST_ASSERT(length(choices) >= 5, "The kingpin has fewer than five things to offer")
-	for(var/item_type in choices)
-		TEST_ASSERT(ispath(item_type, /obj/item), "[item_type] is not an item")
-		// BOUNTY_KINGPIN_BRIBE_MIN/MAX 2500/3500, BOUNTY_KINGPIN_BRIBE_SLACK 100
-		TEST_ASSERT(choices[item_type] >= 2400 && choices[item_type] <= 3600, "[item_type] is worth [choices[item_type]], outside the bribe band")
+// ===== TALK AND HIS JOB =====
 
-// ===== TALK AND THE DEAL =====
-
-/// "We're here for you" gets an offer on the table; taking the deal hands it over and binds the ship, and the pad refuses him from that ship
+/// "Got any work?" gets the crew his job; "I'll take it" hands it over through the ship's own accept, and that crew then can't hunt him or turn him in
 /datum/unit_test/voidcrew_bounty_kingpin/talk
 
 /datum/unit_test/voidcrew_bounty_kingpin/talk/Run()
@@ -186,43 +218,45 @@
 	TEST_ASSERT(istype(kingpin.buckled, /obj/structure/chair/sofa), "The kingpin isn't sitting on the sofa")
 	TEST_ASSERT_EQUAL(kingpin.dir, NORTH, "The kingpin isn't facing the table")
 	TEST_ASSERT_EQUAL(length(crew.crew_coffee_table), 3, "The crew didn't find the three pieces of the coffee table")
-	TEST_ASSERT(length(bounty_kingpin_lines("kingpin", "offer")), "The kingpin's dialogue file has no offers")
+	TEST_ASSERT(length(bounty_kingpin_lines("kingpin", "work_offer")), "The kingpin's dialogue file has no job offers")
+	var/datum/mission/job = kingpin_test_job(kingpin)
 
 	var/obj/structure/overmap/ship/ship = kingpin_test_ship()
-	var/mob/living/carbon/human/dealer = kingpin_test_person(kingpin_test_spot(2, 2), ship)
+	var/mob/living/carbon/human/taker = kingpin_test_person(kingpin_test_spot(2, 2), ship)
 	var/mob/living/carbon/human/shipmate = kingpin_test_person(kingpin_test_spot(3, 3), ship)
-	TEST_ASSERT(kingpin.kingpin_in_talk_range(dealer), "The talk spot across the table is out of talking range")
+	TEST_ASSERT(kingpin.kingpin_in_talk_range(taker), "The talk spot across the table is out of talking range")
 	TEST_ASSERT(kingpin.kingpin_can_talk(), "A calm kingpin won't talk")
+	TEST_ASSERT_EQUAL(posting.hunt(ship), TRUE, "A crew couldn't hunt the kingpin before it worked for him")
 
 	// Walking away does nothing
-	TEST_ASSERT(kingpin.kingpin_talk(dealer, "Walk away."), "The kingpin didn't listen to walk away") // BOUNTY_KINGPIN_TALK_WALK
-	TEST_ASSERT_NULL(crew.crew_offer, "Walking away put an offer on the table")
+	TEST_ASSERT(kingpin.kingpin_talk(taker, "Walk away."), "The kingpin didn't listen to walk away") // BOUNTY_KINGPIN_TALK_WALK
+	TEST_ASSERT(!crew.job_offered_to(ship), "Walking away got the crew an offer")
 	TEST_ASSERT_EQUAL(crew.crew_state, "calm", "Walking away started something") // BOUNTY_KINGPIN_CALM
 
-	// The offer goes on the table, and nobody can just pick it up
-	TEST_ASSERT(kingpin.kingpin_talk(dealer, "We're here for you."), "The kingpin didn't listen") // BOUNTY_KINGPIN_TALK_HERE
-	var/obj/effect/bounty_kingpin_offer/offer = crew.crew_offer
-	TEST_ASSERT_NOTNULL(offer, "No offer went on the table")
-	TEST_ASSERT_EQUAL(get_turf(offer), kingpin_test_spot(2, 1), "The offer isn't on the table in front of him")
-	var/obj/item/bribe = offer.offer_item
-	TEST_ASSERT(istype(bribe) && bribe.loc == offer, "The offer doesn't hold a real item")
-	TEST_ASSERT(bribe.type in bounty_kingpin_bribe_choices(), "The offer isn't one of his bribes")
-	offer.attack_hand(dealer)
-	TEST_ASSERT(bribe.loc == offer, "The offer came off the table without a deal")
-	kingpin.kingpin_talk(dealer, "What's the offer?") // BOUNTY_KINGPIN_TALK_OFFER
-	TEST_ASSERT_EQUAL(crew.crew_offer, offer, "Asking again put a different offer on the table")
+	// Nobody takes his job before he offers it
+	TEST_ASSERT_NULL(kingpin.kingpin_take_job(taker), "A crew took his job before he offered it")
+	TEST_ASSERT(!job.active, "His job started before he offered it")
 
-	// The deal: the item is theirs, and the ship and its crew are bound
-	TEST_ASSERT(kingpin.kingpin_talk(dealer, "Take the deal."), "The kingpin didn't listen to the deal") // BOUNTY_KINGPIN_TALK_TAKE
-	TEST_ASSERT(dealer.is_holding(bribe), "The dealer isn't holding the bribe")
-	TEST_ASSERT(QDELETED(offer) && isnull(crew.crew_offer), "The offer stayed on the table after the deal")
-	TEST_ASSERT_EQUAL(posting.kingpin_deals, 1, "The deal wasn't counted")
-	TEST_ASSERT(posting.kingpin_ship_dealt(ship), "The dealing ship isn't bound")
-	TEST_ASSERT(posting.kingpin_mind_bound(dealer.mind), "The dealer isn't bound")
-	TEST_ASSERT(posting.kingpin_mind_bound(shipmate.mind), "The dealer's shipmate isn't bound")
-	TEST_ASSERT(istext(posting.hunt(ship)), "A bound ship could hunt him")
-	TEST_ASSERT(!crew.is_hunter(dealer), "The crew treats a guest as a hunter")
-	TEST_ASSERT(!crew.valid_target(dealer), "The goons would shoot a guest")
+	// He offers the job he holds, to that crew
+	TEST_ASSERT(kingpin.kingpin_talk(taker, "Got any work?"), "The kingpin didn't listen to a request for work") // BOUNTY_KINGPIN_TALK_WORK
+	TEST_ASSERT(crew.job_offered_to(ship), "He didn't offer the crew his job")
+	TEST_ASSERT_EQUAL(crew.job(), job, "Asking for work changed the job he holds")
+	TEST_ASSERT_EQUAL(crew.crew_state, "calm", "Asking for work started a fight")
+
+	// "I'll take it": the ship's own accept, and the crew works for him
+	TEST_ASSERT(kingpin.kingpin_talk(taker, "I'll take it."), "The kingpin didn't listen to the crew taking the job") // BOUNTY_KINGPIN_TALK_TAKE_JOB
+	TEST_ASSERT(job.active && job.servant == ship, "The crew didn't get the job")
+	TEST_ASSERT(job in ship.active_missions, "The job isn't among the ship's active missions")
+	TEST_ASSERT(!(job in ship.available_missions), "The taken job stayed among the ship's available missions")
+	TEST_ASSERT_NULL(crew.crew_job, "He still holds the job a crew took")
+	TEST_ASSERT(!crew.job_offered_to(ship), "The offer of a taken job still stands")
+	TEST_ASSERT(SSbounty_kingpin.kingpin_ship_bound(ship), "The ship that took his job doesn't work for him")
+	TEST_ASSERT(SSbounty_kingpin.kingpin_mind_bound(taker.mind), "The one who took his job doesn't work for him")
+	TEST_ASSERT(SSbounty_kingpin.kingpin_mind_bound(shipmate.mind), "The taker's shipmate doesn't work for him")
+	TEST_ASSERT(!posting.is_hunting(ship), "A crew that took his job is still hunting him")
+	TEST_ASSERT(istext(posting.hunt(ship)), "A crew that works for him could hunt him")
+	TEST_ASSERT(!crew.is_hunter(taker), "The crew treats someone who works for him as a hunter")
+	TEST_ASSERT(!crew.valid_target(taker), "The goons would shoot someone who works for him")
 
 	// The pad refuses him from that ship, even with him subdued on it
 	var/turf/pad_turf = kingpin_test_spot(4, 4)
@@ -231,68 +265,67 @@
 	kingpin.forceMove(pad_turf)
 	kingpin.kingpin_surrender()
 	TEST_ASSERT_EQUAL(kingpin.capture_state(), "stunned", "A kingpin who gave up doesn't read stunned") // BOUNTY_STATE_STUNNED
-	TEST_ASSERT_EQUAL(posting.turn_in(pad, ship, dealer), "your crew took his deal", "The pad took the kingpin from the ship that took his deal")
+	TEST_ASSERT_EQUAL(posting.turn_in(pad, ship, taker), "your crew works for him", "The pad took the kingpin from the ship that works for him")
 	TEST_ASSERT(posting.is_open() && !QDELETED(kingpin), "Refusing the bound ship touched the bounty")
 	var/list/preview = posting.board_pad_preview(ship, pad)
 	TEST_ASSERT(!preview[1], "The bound ship's board offers a turn-in")
-	// A bound person pressing for another ship is refused too; an unbound ship isn't refused for the deal
+	// Someone who works for him pressing for another ship is refused too; an unbound ship isn't refused for them
 	var/obj/structure/overmap/ship/other = kingpin_test_ship()
-	TEST_ASSERT_EQUAL(posting.turn_in(pad, other, dealer), "you took his deal", "A bound person turned him in for another ship")
-	TEST_ASSERT(posting.turn_in(pad, other, null) != "your crew took his deal", "An unbound ship was refused for someone else's deal")
+	TEST_ASSERT_EQUAL(posting.turn_in(pad, other, taker), "you work for him", "Someone who works for him turned him in for another ship")
+	TEST_ASSERT(posting.turn_in(pad, other, null) != "your crew works for him", "An unbound ship was refused for someone else's job")
 
-// ===== THE DEAL CAP =====
+// ===== WHO GETS HIS WORK =====
 
-/// Two deals per kingpin, each ship once; after that he's done negotiating
-/datum/unit_test/voidcrew_bounty_kingpin/deal_cap
+/// No work for drifters, crews who fought his people, a crew that is too busy, or while someone else runs his job; none when he has none to give
+/datum/unit_test/voidcrew_bounty_kingpin/work_refusals
 
-/datum/unit_test/voidcrew_bounty_kingpin/deal_cap/Run()
-	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
-	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 1)
+/datum/unit_test/voidcrew_bounty_kingpin/work_refusals/Run()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(null, 1)
 	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
-	var/obj/structure/overmap/ship/first_ship = kingpin_test_ship()
-	var/obj/structure/overmap/ship/second_ship = kingpin_test_ship()
-	var/obj/structure/overmap/ship/third_ship = kingpin_test_ship()
-	var/mob/living/carbon/human/first = kingpin_test_person(kingpin_test_spot(2, 2), first_ship)
-	var/mob/living/carbon/human/first_again = kingpin_test_person(kingpin_test_spot(1, 2), first_ship)
-	var/mob/living/carbon/human/second = kingpin_test_person(kingpin_test_spot(3, 2), second_ship)
-	var/mob/living/carbon/human/third = kingpin_test_person(kingpin_test_spot(2, 3), third_ship)
+	// No real Drug Run is made here: the round's planets decide whether one can be
+	crew.crew_job_retry_at = world.time + 1 HOURS
+	var/obj/structure/overmap/ship/ship = kingpin_test_ship()
+	var/obj/structure/overmap/ship/fighting_ship = kingpin_test_ship()
+	var/mob/living/carbon/human/asker = kingpin_test_person(kingpin_test_spot(2, 2), ship)
+	var/mob/living/carbon/human/fighter = kingpin_test_person(kingpin_test_spot(3, 3), fighting_ship)
+	var/mob/living/carbon/human/crewmate = kingpin_test_person(kingpin_test_spot(1, 2), fighting_ship)
 	var/mob/living/carbon/human/drifter = kingpin_test_person(kingpin_test_spot(1, 3), null)
 
-	// No crew, no deal
-	TEST_ASSERT_EQUAL(kingpin.kingpin_offer_refusal(drifter), "no_offer_drifter", "He'd deal with someone with no ship")
+	// Nothing to give: no work, no offer
+	TEST_ASSERT_EQUAL(kingpin.kingpin_work_refusal(asker), "no_work", "He had work with none to give")
+	kingpin.kingpin_talk(asker, "Got any work?")
+	TEST_ASSERT(!crew.job_offered_to(ship), "He offered work he doesn't have")
 
-	kingpin.kingpin_talk(first, "We're here for you.")
-	TEST_ASSERT_NOTNULL(kingpin.kingpin_talk(first, "Take the deal."), "The first ship couldn't take the deal")
-	TEST_ASSERT_EQUAL(posting.kingpin_deals, 1, "The first deal wasn't counted")
+	// Someone is already running a Drug Run: one at a time (its mission_limit 1)
+	var/datum/mission/drug_run/running = allocate(/datum/mission/drug_run)
+	SSmissions.all_active_missions += running
+	TEST_ASSERT_EQUAL(kingpin.kingpin_work_refusal(asker), "no_work_taken", "He had work while someone was running his job")
+	SSmissions.all_active_missions -= running
 
-	// Each ship once: not the dealer again, not their shipmate
-	TEST_ASSERT_EQUAL(kingpin.kingpin_offer_refusal(first), "no_offer_dealt", "He offered the dealer a second deal")
-	TEST_ASSERT_EQUAL(kingpin.kingpin_offer_refusal(first_again), "no_offer_dealt", "He offered the dealing ship a second deal")
-	kingpin.kingpin_talk(first_again, "What's the offer?")
-	TEST_ASSERT_NULL(crew.crew_offer, "He put a second offer on the table for the same ship")
-	TEST_ASSERT_NULL(kingpin.kingpin_take_deal(first_again), "The same ship took a second deal")
-	TEST_ASSERT_EQUAL(posting.kingpin_deals, 1, "The same ship dealt twice")
+	// No crew, no work; nor for a crew that fought his people, not even the crewmate who stayed back
+	var/datum/mission/job = kingpin_test_job(kingpin)
+	TEST_ASSERT_EQUAL(kingpin.kingpin_work_refusal(drifter), "no_work_drifter", "He'd hire someone with no ship")
+	crew.add_hunter(fighter)
+	TEST_ASSERT_EQUAL(kingpin.kingpin_work_refusal(fighter), "no_work_hostile", "He'd hire someone who fought his people")
+	TEST_ASSERT_EQUAL(kingpin.kingpin_work_refusal(crewmate), "no_work_hostile", "He'd hire the crewmate of someone who fought his people")
+	kingpin.kingpin_talk(crewmate, "Got any work?")
+	TEST_ASSERT(!crew.job_offered_to(fighting_ship), "He offered his job to a crew that fought his people")
 
-	// A second ship may deal
-	kingpin.kingpin_talk(second, "What's the offer?")
-	TEST_ASSERT_NOTNULL(crew.crew_offer, "He made the second ship no offer")
-	TEST_ASSERT_NOTNULL(kingpin.kingpin_take_deal(second), "The second ship couldn't take the deal")
-	TEST_ASSERT_EQUAL(posting.kingpin_deals, 2, "The second deal wasn't counted")
-
-	// Two deals: he's done negotiating (BOUNTY_KINGPIN_DEALS 2)
-	TEST_ASSERT_EQUAL(kingpin.kingpin_offer_refusal(third), "no_offer", "He offered a third deal")
-	kingpin.kingpin_talk(third, "We're here for you.")
-	TEST_ASSERT_NULL(crew.crew_offer, "He put a third offer on the table")
-	TEST_ASSERT_NULL(kingpin.kingpin_take_deal(third), "A third ship took a deal")
-	TEST_ASSERT(!posting.kingpin_ship_dealt(third_ship), "A third ship was bound")
-	TEST_ASSERT(posting.hunt(third_ship) == TRUE, "A ship that never dealt couldn't hunt him")
+	// A crew too busy for more work is turned away, and nothing binds it
+	TEST_ASSERT_NULL(kingpin.kingpin_work_refusal(asker), "He had no work with a job to give")
+	kingpin.kingpin_talk(asker, "Got any work?")
+	TEST_ASSERT(crew.job_offered_to(ship), "He didn't offer his job")
+	ship.max_missions = 0
+	TEST_ASSERT_NULL(kingpin.kingpin_take_job(asker), "A crew with no room for more work took his job")
+	TEST_ASSERT(!job.active && crew.job() == job, "A refused crew's take touched the job")
+	TEST_ASSERT(!SSbounty_kingpin.kingpin_ship_bound(ship), "A crew turned away works for him")
 
 // ===== THE SHOOTOUT STARTS =====
 
-/// "No deal" starts it: the draw, the coffee table over, the hunter and their crew marked; an attack on a goon starts it too, a shove doesn't
-/datum/unit_test/voidcrew_bounty_kingpin/no_deal
+/// A warrant gets his line and no fight; "We're here for you" starts it: the draw, the coffee table over, the hunter and their crew marked. An attack on a goon starts it too, a shove doesn't.
+/datum/unit_test/voidcrew_bounty_kingpin/confront
 
-/datum/unit_test/voidcrew_bounty_kingpin/no_deal/Run()
+/datum/unit_test/voidcrew_bounty_kingpin/confront/Run()
 	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
 	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 2)
 	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
@@ -300,16 +333,18 @@
 	var/mob/living/carbon/human/hunter = kingpin_test_person(kingpin_test_spot(2, 2), ship)
 	var/mob/living/carbon/human/shipmate = kingpin_test_person(kingpin_test_spot(3, 3), ship)
 	var/mob/living/carbon/human/bystander = kingpin_test_person(kingpin_test_spot(1, 3), null)
-	kingpin.kingpin_talk(hunter, "What's the offer?")
-	TEST_ASSERT_NOTNULL(crew.crew_offer, "No offer went on the table")
 	TEST_ASSERT(!posting.board_clock_held(), "A calm kingpin's clock was held")
 
-	TEST_ASSERT(kingpin.kingpin_talk(hunter, "No deal."), "The kingpin didn't listen to no deal") // BOUNTY_KINGPIN_TALK_NO_DEAL
-	TEST_ASSERT_EQUAL(crew.crew_state, "drawing", "No deal didn't start the draw") // BOUNTY_KINGPIN_DRAWING
-	TEST_ASSERT(crew.is_hunter(hunter), "The one who said no deal isn't a hunter")
+	// Shown a warrant or reached for: his line, and nothing more
+	kingpin.kingpin_confronted(hunter)
+	TEST_ASSERT_EQUAL(crew.crew_state, "calm", "A warrant started a shootout") // BOUNTY_KINGPIN_CALM
+	TEST_ASSERT(!crew.is_hunter(hunter), "A warrant made someone a hunter")
+
+	TEST_ASSERT(kingpin.kingpin_talk(hunter, "We're here for you."), "The kingpin didn't listen") // BOUNTY_KINGPIN_TALK_HERE
+	TEST_ASSERT_EQUAL(crew.crew_state, "drawing", "We're here for you didn't start the draw") // BOUNTY_KINGPIN_DRAWING
+	TEST_ASSERT(crew.is_hunter(hunter), "The one who confronted him isn't a hunter")
 	TEST_ASSERT(crew.is_hunter(shipmate), "Their shipmate at the table isn't a hunter")
 	TEST_ASSERT(!crew.is_hunter(bystander), "A bystander became a hunter")
-	TEST_ASSERT_NULL(crew.crew_offer, "The offer stayed on the table")
 	TEST_ASSERT(crew.crew_armed, "The crew didn't draw")
 	for(var/datum/weakref/ref as anything in crew.crew_coffee_table)
 		var/obj/structure/table/table = ref.resolve()
@@ -319,14 +354,12 @@
 		TEST_ASSERT(goon.goon_armed, "[goon] didn't reach for their gun")
 	TEST_ASSERT(posting.board_clock_held(), "The clock runs during a shootout")
 	TEST_ASSERT(!kingpin.kingpin_can_talk(), "He'll still talk mid-shootout")
+	TEST_ASSERT_EQUAL(kingpin.kingpin_work_refusal(shipmate), "no_work_hostile", "The crew that came for him could still get his work")
 	posting.close("admin")
 
 	// An attack on a goon starts it too; a shove does not
+	kingpin_test_clear_lounge()
 	var/datum/criminal_bounty/kingpin/second_posting = kingpin_test_posting()
-	for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
-		qdel(table)
-	for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
-		qdel(sofa)
 	var/mob/living/basic/bounty_criminal/kingpin/second_kingpin = kingpin_test_lounge(second_posting, 2)
 	var/datum/bounty_kingpin_crew/second_crew = second_kingpin.kingpin_crew
 	var/list/second_goons = second_crew.goons()
@@ -521,11 +554,8 @@
 	TEST_ASSERT(!crew.crew_down(), "The crew is down with goons still standing")
 
 	// He surrenders only once his crew is down
+	kingpin_test_clear_lounge()
 	var/datum/criminal_bounty/kingpin/second_posting = kingpin_test_posting()
-	for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
-		qdel(table)
-	for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
-		qdel(sofa)
 	var/mob/living/basic/bounty_criminal/kingpin/boss = kingpin_test_lounge(second_posting, 1)
 	var/list/boss_goons = boss.kingpin_crew.goons()
 	var/mob/living/basic/bounty_kingpin_goon/last_goon = boss_goons[1]
@@ -547,22 +577,27 @@
 
 // ===== THE CLOCK AND THE CADENCE =====
 
-/// The first kingpin after 45 minutes with 3+ ships, one at a time, the next 60-90 minutes after the last; his clock stops only for a shootout
+/// He goes on the board no earlier than 45 minutes in with 3+ ships, one at a time, the next 60-90 minutes after the last; never once gone; his clock stops only for a shootout
 /datum/unit_test/voidcrew_bounty_kingpin/cadence
 
 /datum/unit_test/voidcrew_bounty_kingpin/cadence/Run()
-	var/old_next = SSbounty_kingpin.kingpin_next_at
 	SSbounty_kingpin.kingpin_next_at = 0
 	// BOUNTY_KINGPIN_FIRST 45 minutes, BOUNTY_KINGPIN_MIN_SHIPS 3
-	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(44 MINUTES, 5)), "A kingpin could go up before 45 minutes")
-	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(50 MINUTES, 2)), "A kingpin could go up with two ships")
-	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_post_refusal(45 MINUTES, 3), "A kingpin couldn't go up at 45 minutes with three ships")
+	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(44 MINUTES, 5)), "He could go on the board before 45 minutes")
+	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(50 MINUTES, 2)), "He could go on the board with two ships")
+	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_post_refusal(45 MINUTES, 3), "He couldn't go on the board at 45 minutes with three ships")
+	// Gone for the round: never on the clock again
+	SSbounty_kingpin.kingpin_gone = TRUE
+	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(4 HOURS, 8)), "He could go on the board once gone for the round")
+	SSbounty_kingpin.kingpin_gone = FALSE
 
 	// One at a time
 	var/datum/criminal_bounty/kingpin/posting = kingpin_test_posting()
 	TEST_ASSERT_EQUAL(bounty_kingpin_open_posting(), posting, "The open kingpin posting isn't found")
-	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(90 MINUTES, 8)), "A second kingpin could go up while one is open")
-	TEST_ASSERT_NULL(post_kingpin_bounty(allocate(/obj/structure/overmap/trader_outpost/black_market)), "A second kingpin was posted")
+	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(90 MINUTES, 8)), "A second kingpin posting could go up while one is open")
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 1)
+	SSbounty_kingpin.kingpin_track(kingpin)
+	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_post(), "A second kingpin posting went up")
 	// BOUNTY_KINGPIN_EXPIRY 60 minutes
 	TEST_ASSERT(posting.expires_at >= world.time + 59 MINUTES, "A kingpin isn't up for 60 minutes")
 	TEST_ASSERT_EQUAL(posting.record.archetype, "kingpin", "The kingpin's record isn't a kingpin's") // BOUNTY_ARCHETYPE_KINGPIN
@@ -575,7 +610,6 @@
 	red.close("admin")
 
 	// His clock: held only while his crew fights, not while a ship hunts him
-	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(posting, 1)
 	var/obj/structure/overmap/ship/ship = kingpin_test_ship()
 	TEST_ASSERT_EQUAL(posting.hunt(ship), TRUE, "A ship couldn't hunt the kingpin")
 	posting.expires_at = world.time + 100
@@ -588,18 +622,166 @@
 	// Resolving it: the next waits 60-90 minutes (BOUNTY_KINGPIN_GAP_MIN/MAX)
 	posting.close("expired") // BOUNTY_CLOSE_EXPIRED
 	var/wait = SSbounty_kingpin.kingpin_next_at - world.time
-	TEST_ASSERT(wait >= 60 MINUTES && wait <= 90 MINUTES, "The next kingpin waits [wait / (1 MINUTES)] minutes, not 60 to 90")
-	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(4 HOURS, 8)), "A kingpin could go up inside the gap")
-	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_post_refusal(4 HOURS, 8, SSbounty_kingpin.kingpin_next_at), "A kingpin couldn't go up after the gap")
-	SSbounty_kingpin.kingpin_next_at = old_next
+	TEST_ASSERT(wait >= 60 MINUTES && wait <= 90 MINUTES, "The next kingpin posting waits [wait / (1 MINUTES)] minutes, not 60 to 90")
+	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(4 HOURS, 8)), "A kingpin posting could go up inside the gap")
+	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_post_refusal(4 HOURS, 8, SSbounty_kingpin.kingpin_next_at), "A kingpin posting couldn't go up after the gap")
+
+// ===== HIS POSTING ADOPTS THE MAN IN THE LOUNGE =====
+
+/// On the clock his posting adopts the seated kingpin, never a second body, and with his crew at ease an empty goon post gets a new goon
+/datum/unit_test/voidcrew_bounty_kingpin/adopt
+
+/datum/unit_test/voidcrew_bounty_kingpin/adopt/Run()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(null, 2)
+	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
+	SSbounty_kingpin.kingpin_track(kingpin)
+	TEST_ASSERT_NULL(kingpin.posting(), "The kingpin sat down on a posting")
+	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "A kingpin posting is up before he was posted")
+	var/list/goons = crew.goons()
+	var/mob/living/basic/bounty_kingpin_goon/dead_goon = goons[1]
+	var/turf/dead_post = dead_goon.goon_post
+	dead_goon.death()
+
+	var/datum/criminal_bounty/kingpin/posting = SSbounty_kingpin.kingpin_post()
+	TEST_ASSERT_NOTNULL(posting, "The seated kingpin couldn't be posted")
+	TEST_ASSERT_EQUAL(posting.criminal(), kingpin, "The posting didn't adopt the man in the lounge")
+	TEST_ASSERT_EQUAL(kingpin.posting(), posting, "The kingpin isn't wanted on his posting")
+	TEST_ASSERT_EQUAL(posting.record, kingpin.record, "The posting isn't on his own record")
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_kingpin_crews), 1, "Posting him put a second kingpin in the world")
+	TEST_ASSERT(!posting.board_arm(), "His posting tried to spawn someone")
+	// The dead goon's post has a new goon
+	var/mob/living/basic/bounty_kingpin_goon/new_goon
+	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in crew.standing_goons())
+		if(goon.goon_post == dead_post)
+			new_goon = goon
+	TEST_ASSERT_NOTNULL(new_goon, "His dead goon's post wasn't filled when he went on the board")
+	TEST_ASSERT_EQUAL(length(crew.standing_goons()), 2, "He went on the board with [length(crew.standing_goons())] goons standing, not two")
+	// One at a time
+	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_post(), "A second kingpin posting went up")
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_kingpin_crews), 1, "A second posting try put a second kingpin in the world")
+
+/// A posting that runs out leaves him alive in his lounge, off the board, his crew still with him and his people seeing to him; the next posting adopts him again
+/datum/unit_test/voidcrew_bounty_kingpin/expired
+
+/datum/unit_test/voidcrew_bounty_kingpin/expired/Run()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(null, 1)
+	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
+	SSbounty_kingpin.kingpin_track(kingpin)
+	var/datum/criminal_bounty/kingpin/posting = SSbounty_kingpin.kingpin_post()
+	TEST_ASSERT_NOTNULL(posting, "The seated kingpin couldn't be posted")
+	// Downed and cuffed by his sofa as the clock runs out
+	kingpin.buckled?.unbuckle_mob(kingpin, force = TRUE)
+	kingpin.body_go_down()
+	var/obj/item/restraints/handcuffs/cuffs = allocate(/obj/item/restraints/handcuffs, get_turf(kingpin))
+	TEST_ASSERT(kingpin.body_apply_cuffs(cuffs), "The kingpin couldn't be cuffed")
+	TEST_ASSERT_EQUAL(crew.crew_state, "calm", "Cuffing him with nobody about started a shootout") // BOUNTY_KINGPIN_CALM
+
+	posting.close("expired") // BOUNTY_CLOSE_EXPIRED
+	TEST_ASSERT(QDELETED(posting), "The expired posting stayed up")
+	TEST_ASSERT(!QDELETED(kingpin) && kingpin.stat != DEAD, "The kingpin went with his expired posting")
+	TEST_ASSERT_NULL(kingpin.posting(), "The kingpin is still on the closed posting")
+	TEST_ASSERT_EQUAL(kingpin.kingpin_crew, crew, "His crew went with the posting")
+	TEST_ASSERT(!QDELETED(crew) && length(crew.standing_goons()) == 1, "His goon left with the posting")
+	TEST_ASSERT(!kingpin.is_restrained(), "His people left him cuffed")
+	TEST_ASSERT(!SSbounty_kingpin.kingpin_gone, "An expired posting counted him gone for the round")
+	TEST_ASSERT_EQUAL(SSbounty_kingpin.kingpin(), kingpin, "The round lost track of its kingpin")
+
+	// The next posting adopts the same man, on the same record, wanted again
+	var/datum/criminal_bounty/kingpin/next = SSbounty_kingpin.kingpin_post()
+	TEST_ASSERT_NOTNULL(next, "He couldn't be posted again")
+	TEST_ASSERT_EQUAL(next.criminal(), kingpin, "The next posting didn't adopt him again")
+	TEST_ASSERT_EQUAL(next.record.status, "wanted", "His record isn't wanted again") // BOUNTY_RECORD_WANTED
+
+/// Killed before he is on the board, he is gone for the round with nothing to claim: no posting goes up, his body fades, and nothing seats or posts him again, the admin panel included
+/datum/unit_test/voidcrew_bounty_kingpin/death
+
+/datum/unit_test/voidcrew_bounty_kingpin/death/Run()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(null, 1)
+	SSbounty_kingpin.kingpin_track(kingpin)
+	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "A kingpin posting is up before he died")
+	kingpin.death()
+	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "His death put him on the board")
+	TEST_ASSERT_NULL(kingpin.posting(), "His body is on a posting")
+	TEST_ASSERT(SSbounty_kingpin.kingpin_gone, "His death didn't make him gone for the round")
+	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_post(), "A dead kingpin could be posted")
+	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_post_refusal(4 HOURS, 8)), "He could go on the board on the clock after he died")
+	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_seat(bounty_kingpin_black_market()), "A new kingpin was seated after he died")
+
+	// The admin's "Post a bounty now" refuses
+	var/mob/living/carbon/human/operator = allocate(/mob/living/carbon/human/consistent, kingpin_test_spot(4, 4))
+	var/datum/bounty_admin_panel/unit_test/panel = allocate(/datum/bounty_admin_panel/unit_test, operator)
+	var/datum/bounty_admin_post_action/kingpin/action = allocate(/datum/bounty_admin_post_action/kingpin)
+	TEST_ASSERT_NULL(panel.admin_run_post_action(operator, action), "The panel posted a kingpin who is gone for the round")
+	TEST_ASSERT(findtext(panel.error, "gone"), "The panel's refusal doesn't say he's gone: [panel.error]")
+
+	// Nothing to claim: the body fades, as a goon's does (BOUNTY_GOON_FADE a minute)
+	TEST_ASSERT(kingpin.kingpin_fade_timer, "His unclaimable body won't fade")
+	var/fade_in = timeleft(kingpin.kingpin_fade_timer)
+	TEST_ASSERT(fade_in > 590 && fade_in <= 600, "His body fades in [fade_in] deciseconds, not a minute")
+	kingpin.kingpin_fade_out()
+	var/deadline = world.time + 5 SECONDS
+	UNTIL(QDELETED(kingpin) || world.time > deadline)
+	TEST_ASSERT(QDELETED(kingpin), "His unclaimable body didn't fade away")
+
+/// A shootout puts nobody on the board; when his posting goes up it adopts him wherever he is, so a crew that grabbed him early can bring him in; withdrawn while he's held away, it takes him, and he's gone
+/datum/unit_test/voidcrew_bounty_kingpin/grabbed
+
+/datum/unit_test/voidcrew_bounty_kingpin/grabbed/Run()
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(null, 1)
+	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
+	SSbounty_kingpin.kingpin_track(kingpin)
+	var/mob/living/carbon/human/hunter = kingpin_test_person(kingpin_test_spot(2, 2), null)
+
+	// "We're here for you." with nothing on the board: a fight, and still nothing on the board
+	TEST_ASSERT(kingpin.kingpin_talk(hunter, "We're here for you."), "The kingpin didn't listen") // BOUNTY_KINGPIN_TALK_HERE
+	TEST_ASSERT_EQUAL(crew.crew_state, "drawing", "We're here for you didn't start the draw") // BOUNTY_KINGPIN_DRAWING
+	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "A shootout put him on the board")
+	crew.stand_down()
+	crew.crew_hunters.Cut()
+
+	// Grabbed early: downed and shut in a locker, away from his lounge, and still nothing on the board
+	kingpin.buckled?.unbuckle_mob(kingpin, force = TRUE)
+	kingpin.body_go_down()
+	var/obj/structure/closet/locker = allocate(/obj/structure/closet, kingpin_test_spot(4, 4))
+	kingpin.forceMove(locker)
+	crew.process(0.2)
+	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "Carrying him off put him on the board")
+	TEST_ASSERT(!QDELETED(kingpin) && kingpin.stat != DEAD, "Carrying him off took him out of the round")
+
+	// His posting goes up: it adopts him where he is
+	var/datum/criminal_bounty/kingpin/posting = SSbounty_kingpin.kingpin_post()
+	TEST_ASSERT_NOTNULL(posting, "The kingpin couldn't be posted while held away from his lounge")
+	TEST_ASSERT_EQUAL(posting.criminal(), kingpin, "His posting didn't adopt him where he was held")
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_kingpin_crews), 1, "His posting put a second kingpin in the world")
+
+	// Withdrawn while he's held away from his lounge: he goes with it, and is gone for the round
+	posting.close("admin") // BOUNTY_CLOSE_ADMIN
+	TEST_ASSERT(QDELETED(kingpin), "A kingpin held away from his lounge stayed when his posting was withdrawn")
+	TEST_ASSERT(SSbounty_kingpin.kingpin_gone, "Taken away with his posting, he isn't gone for the round")
+
+/// Only the kingpin gives out the Drug Run: Vex's board no longer rolls it, and it never rolls at random
+/datum/unit_test/voidcrew_bounty_kingpin/drug_run_giver
+
+/datum/unit_test/voidcrew_bounty_kingpin/drug_run_giver/Run()
+	var/obj/structure/overmap/trader_outpost/black_market/outpost = allocate(/obj/structure/overmap/trader_outpost/black_market)
+	TEST_ASSERT_NOTNULL(outpost.shop, "The test black market has no shop")
+	TEST_ASSERT(!(/datum/mission/drug_run in outpost.shop.extra_offer_mix), "Vex's board still rolls drug runs")
+	var/datum/mission/drug_run/run = /datum/mission/drug_run
+	TEST_ASSERT_EQUAL(initial(run.weight), 0, "Drug runs roll at random")
+	TEST_ASSERT_EQUAL(initial(run.mission_limit), 1, "More than one drug run can run at once")
+	// His jobs are posted with the black market's shop, so Vex's counter takes the product
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(null, 0)
+	var/datum/outpost_shop/shop = kingpin.kingpin_crew.crew_shop()
+	TEST_ASSERT(istype(shop, /datum/outpost_shop/black_market), "His jobs aren't posted with the black market's shop")
 
 // ===== THE MAP =====
 
 /**
  * The black market's lounge: the seat on the corp sofa, the 3-tile wood coffee table in front of it,
- * six goon posts and the refuge. He and his crew sit down there: the lounge's tables can be shot to
- * pieces while he's in (and are outpost property again after), the barkeep is the bar's own, and the
- * loiterer goes to the refuge, never the hangar lift (M3, M4, M5).
+ * six goon posts and the refuge. SSbounty_kingpin seats him and his crew there on no posting, as it
+ * does at the start of the round: the lounge's tables can be shot to pieces while he's in (and are
+ * outpost property again after), the barkeep is the bar's own, the loiterer goes to the refuge, never
+ * the hangar lift (M3, M4, M5), and his posting is at that outpost.
  */
 /datum/unit_test/voidcrew_bounty_kingpin/map
 
@@ -637,11 +819,23 @@
 	TEST_ASSERT_EQUAL(weapons["pistol"], 3, "The lounge doesn't have three pistol posts")
 	TEST_ASSERT_EQUAL(weapons["smg"], 1, "The lounge doesn't have one SMG post")
 
-	var/mob/living/basic/bounty_criminal/kingpin/kingpin = bounty_kingpin_setup(seat_turf, posts, bounty_kingpin_make_record(), null)
-	TEST_ASSERT_NOTNULL(kingpin, "The kingpin didn't sit down in the lounge")
+	// The round seats him: his own record, on no posting, one kingpin only
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = SSbounty_kingpin.kingpin_seat(outpost)
+	TEST_ASSERT_NOTNULL(kingpin, "The subsystem didn't seat the kingpin in the lounge")
+	TEST_ASSERT_EQUAL(SSbounty_kingpin.kingpin(), kingpin, "The subsystem didn't keep track of the kingpin it seated")
+	TEST_ASSERT_EQUAL(get_turf(kingpin), seat_turf, "The kingpin didn't sit down at his seat")
+	TEST_ASSERT_NULL(kingpin.posting(), "The kingpin sat down on a posting")
+	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "Seating the kingpin put him on the board")
+	TEST_ASSERT_EQUAL(kingpin.record?.tier, 3, "The seated kingpin isn't Most Wanted") // BOUNTY_TIER_MOST_WANTED
+	TEST_ASSERT_EQUAL(kingpin.record?.archetype, "kingpin", "The seated kingpin's record isn't a kingpin's") // BOUNTY_ARCHETYPE_KINGPIN
+	TEST_ASSERT(kingpin.record?.alias && kingpin.record?.crime, "The seated kingpin has no alias or no crime")
+	TEST_ASSERT_EQUAL(SSbounty_kingpin.kingpin_seat(outpost), kingpin, "Seating him again made a second kingpin")
+	TEST_ASSERT_EQUAL(length(GLOB.bounty_kingpin_crews), 1, "The lounge has more than one kingpin")
 	var/datum/bounty_kingpin_crew/crew = kingpin.kingpin_crew
 	TEST_ASSERT(istype(kingpin.buckled, /obj/structure/chair/sofa), "The kingpin isn't on the sofa")
 	TEST_ASSERT_EQUAL(length(crew.goons()), 6, "The kingpin doesn't have six goons")
+	TEST_ASSERT_EQUAL(length(crew.crew_posts), 6, "The crew doesn't know its six posts")
+	TEST_ASSERT_EQUAL(crew.crew_outpost(), outpost, "The crew doesn't know the outpost its lounge is in")
 	TEST_ASSERT_EQUAL(length(crew.crew_coffee_table), 3, "The crew didn't find the coffee table")
 	// The coffee table: no other table the crew minds stands at a goon's post
 	TEST_ASSERT_EQUAL(length(crew.crew_tables), 3, "The crew minds [length(crew.crew_tables)] lounge tables, not three")
@@ -664,6 +858,12 @@
 	TEST_ASSERT(bounty_turret_ignores(kingpin, TRUE), "The lounge turret doesn't leave the kingpin alone")
 	TEST_ASSERT(HAS_TRAIT(loiterer, TRAIT_AI_PAUSED), "The loiterer didn't leave at the draw")
 	TEST_ASSERT(crew.crew_barkeep_ducked, "The barkeep didn't duck")
+	// A shootout puts nobody on the board; the clock does, adopting him at this outpost
+	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "The shootout put him on the board")
+	var/datum/criminal_bounty/kingpin/posting = SSbounty_kingpin.kingpin_post()
+	TEST_ASSERT_NOTNULL(posting, "The seated kingpin couldn't be posted")
+	TEST_ASSERT_EQUAL(posting.criminal(), kingpin, "His posting didn't adopt him")
+	TEST_ASSERT_EQUAL(posting.site(), outpost, "His posting isn't at his outpost")
 	// A loiterer carried off somewhere far comes straight home
 	loiterer.forceMove(run_loc_floor_bottom_left)
 	qdel(kingpin)
@@ -673,6 +873,7 @@
 	for(var/obj/structure/table/table as anything in coffee_table)
 		TEST_ASSERT(!table.is_flipped, "The coffee table stayed over after he was gone")
 		TEST_ASSERT(table.resistance_flags & INDESTRUCTIBLE, "The coffee table isn't outpost property again after he was gone")
+	TEST_ASSERT(SSbounty_kingpin.kingpin_gone, "Deleted, he isn't gone for the round")
 	qdel(hunter)
 	qdel(outpost)
 
@@ -705,10 +906,7 @@
 	posting.close("admin")
 
 	// Any damage to a calm crew: the nearest person in sight who isn't a guest is taken for the attacker
-	for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
-		qdel(table)
-	for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
-		qdel(sofa)
+	kingpin_test_clear_lounge()
 	var/datum/criminal_bounty/kingpin/second_posting = kingpin_test_posting()
 	var/mob/living/basic/bounty_criminal/kingpin/second = kingpin_test_lounge(second_posting, 2)
 	var/datum/bounty_kingpin_crew/second_crew = second.kingpin_crew
@@ -724,10 +922,7 @@
 
 	// A criminal hitting a goon starts nothing: there's nobody the crew would fight (L6)
 	second_posting.close("admin")
-	for(var/obj/structure/table/table in range(1, kingpin_test_spot(2, 1)))
-		qdel(table)
-	for(var/obj/structure/chair/sofa in kingpin_test_spot(2, 0))
-		qdel(sofa)
+	kingpin_test_clear_lounge()
 	var/datum/criminal_bounty/kingpin/third_posting = kingpin_test_posting()
 	var/mob/living/basic/bounty_criminal/kingpin/third = kingpin_test_lounge(third_posting, 1)
 	var/list/third_goons = third.kingpin_crew.goons()
@@ -759,7 +954,7 @@
 	TEST_ASSERT(!coffee.is_flipped, "The goons left the coffee table knocked over")
 	TEST_ASSERT(!post_table.is_flipped, "The goons left a post table knocked over")
 
-	// Knocked over again just before "No deal": at the draw it goes over his way, not theirs
+	// Knocked over again just before the shootout: at the draw it goes over his way, not theirs
 	coffee.flip_table(SOUTH)
 	var/mob/living/carbon/human/hunter = kingpin_test_person(kingpin_test_spot(2, 2), null)
 	crew.start_shootout(hunter, TRUE)
@@ -777,8 +972,8 @@
 	TEST_ASSERT(HAS_TRAIT(replacement, "outpost_property"), "A replaced table isn't outpost property") // TRAIT_OUTPOST_PROPERTY
 
 	// He's gone: the lounge's tables are outpost property again
-	posting.close("admin")
-	TEST_ASSERT(replacement.resistance_flags & INDESTRUCTIBLE, "A lounge table stayed breakable after he left")
+	qdel(kingpin)
+	TEST_ASSERT(replacement.resistance_flags & INDESTRUCTIBLE, "A lounge table stayed breakable after he was gone")
 
 // ===== M1: GOON STAMINA =====
 
@@ -839,7 +1034,7 @@
 
 // ===== THE LOW ONES =====
 
-/// A hunter in a locker is not shot at (L2); a crewmate of anyone who fought gets no deal (L3); a new character of a bound player is still bound (L4)
+/// A hunter in a locker is not shot at (L2); a crewmate of anyone who fought gets no work (L3); a new character of a player who works for him is still bound (L4)
 /datum/unit_test/voidcrew_bounty_kingpin/lows
 
 /datum/unit_test/voidcrew_bounty_kingpin/lows/Run()
@@ -858,22 +1053,23 @@
 	TEST_ASSERT(!crew.valid_target(fighter), "The crew would shoot at a hunter inside a locker")
 	fighter.forceMove(kingpin_test_spot(3, 3))
 
-	// L3: the crewmate who stayed back gets no consolation deal
-	TEST_ASSERT_EQUAL(kingpin.kingpin_offer_refusal(crewmate), "no_offer_hostile", "A crewmate of someone who fought his crew was offered a deal")
-	TEST_ASSERT_NULL(kingpin.kingpin_take_deal(crewmate), "A crewmate of someone who fought his crew took a deal")
+	// L3: the crewmate who stayed back gets no work
+	kingpin_test_job(kingpin)
+	TEST_ASSERT_EQUAL(kingpin.kingpin_work_refusal(crewmate), "no_work_hostile", "A crewmate of someone who fought his crew was offered work")
+	TEST_ASSERT_NULL(kingpin.kingpin_take_job(crewmate), "A crewmate of someone who fought his crew took his job")
 
 	// L4: bound by player as well as by character
-	var/obj/structure/overmap/ship/dealing_ship = kingpin_test_ship()
-	var/mob/living/carbon/human/dealer = kingpin_test_person(kingpin_test_spot(1, 2), dealing_ship)
-	dealer.mind.key = "p9kingpintestdealer"
-	kingpin.kingpin_talk(dealer, "What's the offer?")
-	TEST_ASSERT_NOTNULL(kingpin.kingpin_take_deal(dealer), "The dealer couldn't take the deal")
+	var/obj/structure/overmap/ship/working_ship = kingpin_test_ship()
+	var/mob/living/carbon/human/worker = kingpin_test_person(kingpin_test_spot(1, 2), working_ship)
+	worker.mind.key = "p9kingpintestworker"
+	kingpin.kingpin_talk(worker, "Got any work?")
+	TEST_ASSERT_NOTNULL(kingpin.kingpin_take_job(worker), "The worker couldn't take his job")
 	var/obj/structure/overmap/ship/new_ship = kingpin_test_ship()
 	var/mob/living/carbon/human/new_character = kingpin_test_person(kingpin_test_spot(1, 3), new_ship)
-	new_character.mind.key = "p9kingpintestdealer"
-	TEST_ASSERT(posting.kingpin_mind_bound(new_character.mind), "The dealer's new character isn't bound")
-	TEST_ASSERT(istext(posting.kingpin_bound_refusal(new_ship, new_character)), "The dealer's new character could turn him in")
-	TEST_ASSERT(istext(posting.hunt_refusal(new_ship)), "A ship with the dealer's new character aboard could hunt him")
-	// A ship that has nobody bound is not refused for someone else's deal
+	new_character.mind.key = "p9kingpintestworker"
+	TEST_ASSERT(SSbounty_kingpin.kingpin_mind_bound(new_character.mind), "The worker's new character isn't bound")
+	TEST_ASSERT(istext(SSbounty_kingpin.kingpin_bound_refusal(new_ship, new_character)), "The worker's new character could turn him in")
+	TEST_ASSERT(istext(posting.hunt_refusal(new_ship)), "A ship with the worker's new character aboard could hunt him")
+	// A ship that has nobody bound is not refused for someone else's work
 	var/obj/structure/overmap/ship/clean_ship = kingpin_test_ship()
-	TEST_ASSERT_NULL(posting.kingpin_bound_refusal(clean_ship, null), "A ship with nobody bound was refused")
+	TEST_ASSERT_NULL(SSbounty_kingpin.kingpin_bound_refusal(clean_ship, null), "A ship with nobody bound was refused")

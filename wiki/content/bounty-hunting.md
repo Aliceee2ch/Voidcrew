@@ -183,16 +183,21 @@ Petty and Wanted criminals can hide among the patrons at a trader outpost. Most 
 
 ## The kingpin
 
-Now and then a crime boss holds court in the lounge at the Undertow Exchange, on the sofa behind a low table, with six armed goons around the room. Every crew is told when he is posted.
+A crime boss holds court in the lounge at the Undertow Exchange from the start of the round, on the sofa behind a low table, with six armed goons around the room. There is only one each round.
 
-- There is only ever one. The first comes at least 45 minutes into the round, and only with three or more active crews. The next comes 60 to 90 minutes after the last one is resolved. He stays on the board for 60 minutes, and the clock stops during a shootout.
-- He's wanted **dead or alive**. Alive, he pays 6,500–9,100 cr and 2 vouchers, and downed counts as alive. Dead, he pays 80%, all in credits.
+**Talking.** Click him with an empty hand from across the table. You can say "We're here for you.", "Got any work?" or "Walk away."
 
-**Talking.** Click him with an empty hand from across the table. You can say "We're here for you.", "What's the offer?", "Take the deal.", "No deal." or "Walk away."
+**Work.** Ask him for work and he offers your crew a [Drug Run](missions.md#street-chemistry). Say "I'll take it." within 3 minutes to sign on. Only one crew can run it at a time, and he won't hire drifters or anyone whose crew has shot at his people. Once your crew works for him, nobody on your crew, and nobody aboard your ship at the time, can hunt him or turn him in for the rest of the round, at any pad. His goons treat you as guests.
 
-**The deal.** He puts a valuable item from Vex's stock on the table and leaves it there for 3 minutes. **Take the deal** and it's yours, but after that nobody in your ship's crew or aboard your ship can hunt him or turn him in, at any pad. His goons treat you as guests. He makes two deals at most, one per ship, and won't deal with anyone who has shot at his people.
+**Wanted.** Later in the round he goes on the board, **wanted dead or alive**, and every crew is told.
 
-**The shootout.** "No deal", or any attack on him or a goon, starts it.
+- The first posting comes at least 45 minutes into the round, with three or more active crews. The next comes 60 to 90 minutes after the last one ends.
+- He can only be turned in while he's on the board, wherever he is when it goes up. Kill him before that and there's nothing to claim.
+- He stays on the board for 60 minutes, and the clock stops during a shootout. If time runs out while he's in his lounge, he stays there.
+- Alive, he pays 6,500–9,100 cr and 2 vouchers, and downed counts as alive. Dead, he pays 80%, all in credits.
+- Once he's turned in or killed, he's gone for the rest of the round.
+
+**The shootout.** "We're here for you.", or any attack on him or a goon, starts it.
 
 - The goons reach for their guns for about half a second before anyone fires. No more than two of them draw on one hunter at once. Three carry pistols, two shotguns and one an SMG. They stay near the sofa, and never shoot anyone who is down.
 - He never leaves the sofa. Before each shot he aims his .357 revolver at someone with a red line for half a second. He reloads after seven shots.

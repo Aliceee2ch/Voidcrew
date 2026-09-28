@@ -1,56 +1,48 @@
 {
 	"kingpin": {
 		"confront": [
-			"I know why you're here. Let's be sensible about it.",
-			"Hunters. Fine. Before anyone does something stupid, hear me out.",
+			"I know why you're here.",
 			"You're not the first crew to come through that door for me.",
-			"Keep your hands where my people can see them, and we'll talk."
+			"Hunters. In my lounge.",
+			"Bold. Stupid, but bold."
 		],
-		"offer": [
-			"Here's my offer: {item}, right here on the table. Take it, fly off, forget my face.",
-			"I'll make it simple. You get {item}, and you walk away.",
-			"You want paying? I pay better than the board. There's {item} on the table.",
-			"That's {item} on the table. Nobody has to bleed for it."
+		"work_offer": [
+			"I need a {job} cooked quiet. Vex takes it at the counter. You in?",
+			"There's a {job} wants cooking. Do it clean and Vex pays you at the counter.",
+			"I've got a {job} that needs making. Vex handles the buying. Interested?"
 		],
-		"offer_repeat": [
-			"Same offer: {item}, right there.",
-			"It's still on the table: {item}. Take it or don't.",
-			"I don't haggle. You get {item}, and you leave."
+		"work_repeat": [
+			"Same job. A {job}, and Vex takes it at the counter.",
+			"Still a {job} on offer. Yes or no?"
 		],
-		"offer_withdrawn": [
-			"Offer's off the table.",
-			"Nobody wants it? Fine. Back in my pocket."
+		"no_work": [
+			"Nothing for you today.",
+			"Business is slow. Try me later."
 		],
-		"no_offer": [
-			"I'm done making deals today.",
-			"No more offers. You know where the door is.",
-			"I've paid off enough crews for one day."
+		"no_work_taken": [
+			"Someone's already cooking for me.",
+			"That job's spoken for."
 		],
-		"no_offer_dealt": [
-			"Your crew already took my money. We're square. Go.",
-			"You've been paid. Don't get greedy."
+		"no_work_busy": [
+			"Your crew's got enough on its plate.",
+			"Finish the work you've got first."
 		],
-		"no_offer_hostile": [
+		"no_work_hostile": [
 			"You shot at my people. We're past talking.",
 			"After what you did? No."
 		],
-		"no_offer_drifter": [
-			"I deal with crews, not drifters. Who do you fly with?",
+		"no_work_drifter": [
+			"I hire crews, not drifters.",
 			"Come back when you've got a ship behind you."
 		],
-		"no_offer_yet": [
-			"What deal? You haven't heard one yet.",
-			"Ask me first. Then we'll see."
+		"no_work_yet": [
+			"What job? You haven't heard one.",
+			"Ask first. Then we'll see."
 		],
-		"deal_done": [
-			"Smart. Enjoy it, and don't come looking for me again.",
-			"Pleasure doing business. My people will remember your faces.",
-			"Good. We never met."
-		],
-		"no_deal": [
-			"Wrong answer.",
-			"Have it your way.",
-			"Shame. I liked you."
+		"job_taken": [
+			"Good. Don't keep me waiting.",
+			"Smart. Vex will be expecting you.",
+			"Pleasure doing business. My people will remember your faces."
 		],
 		"attacked": [
 			"Take care of this.",
@@ -78,8 +70,8 @@
 			"Easy. This is my table."
 		],
 		"greet_guest": [
-			"Our friends from the other day. Relax, boys.",
-			"You again. We're square, remember that."
+			"One of ours. Relax, boys.",
+			"Back already? Good. Keep it that way."
 		],
 		"greet_hostile": [
 			"You've got some nerve coming back here.",
@@ -188,14 +180,11 @@
 		"here": [
 			"We're here for you."
 		],
-		"offer": [
-			"What's the offer?"
+		"work": [
+			"Got any work?"
 		],
 		"take": [
-			"We'll take the deal."
-		],
-		"no_deal": [
-			"No deal."
+			"I'll take it."
 		],
 		"walk": [
 			"Never mind. We're leaving."

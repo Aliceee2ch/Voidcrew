@@ -229,7 +229,7 @@
 
 /**
  * Why Turn In is off for `ship`, from its `preview` (board_pad_preview()), or null when it is on. A
- * subtype that turns it off without saying why (the kingpin's deal) gives its reason through
+ * subtype that turns it off without saying why (the kingpin, for a crew that works for him) gives its reason through
  * hunt_refusal().
  */
 /datum/criminal_bounty/proc/board_preview_refusal(list/preview, obj/structure/overmap/ship/ship)

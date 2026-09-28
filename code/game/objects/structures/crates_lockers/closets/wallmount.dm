@@ -78,10 +78,10 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/closet/wall/security, 32)
 MAPPING_DIRECTIONAL_HELPERS(/obj/structure/closet/wall/cargo, 32)
 
 /obj/structure/closet/wall/cargo/mining
-	name = "cargo technician's wall locker"
+	name = "miner's wall locker"
 	icon_door = "miner"
 
-MAPPING_DIRECTIONAL_HELPERS(/obj/structure/closet/wall/mining, 32)
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/closet/wall/cargo/mining, 32)
 
 /obj/structure/closet/wall/botany
 	name = "botanist's wall locker"

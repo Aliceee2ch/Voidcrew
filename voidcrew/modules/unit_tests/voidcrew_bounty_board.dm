@@ -780,6 +780,8 @@
 	// The mugshots are static data, keyed by record id
 	var/list/mugshots = console.board_wanted_mugshots(ship)
 	TEST_ASSERT(hunted.record.id in mugshots, "The static data has no mugshot for the hunted bounty")
+	TEST_ASSERT(offer.record.id in mugshots, "The static data has no mugshot for the ship's own offer")
+	TEST_ASSERT(offer.record.mugshot || offer.record.identity_mugshot_queued, "Listing an offer didn't build or queue its picture")
 	TEST_ASSERT(!(elsewhere.record.id in mugshots), "The static data has another ship's offer's mugshot")
 
 // ===== A REAL SHIP =====

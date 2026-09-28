@@ -488,7 +488,8 @@ SUBSYSTEM_DEF(criminal_bounties)
 
 /**
  * Record id -> mugshot (a base64 PNG, or "" while it's being built) of every posting `ship`'s board
- * lists. Static data only. P1's bounty_mugshot_asset() never sleeps: the first ask queues the build,
+ * lists, this ship's private offers included: they sit in the same list as everything else. Static
+ * data only. P1's bounty_mugshot_asset() never sleeps: the first ask queues the build (one a tick),
  * and the record's ready signal bumps the board so the viewers get it (board_on_mugshot_ready()).
  */
 /obj/machinery/computer/mission_board/proc/board_wanted_mugshots(obj/structure/overmap/ship/ship)
@@ -497,10 +498,6 @@ SUBSYSTEM_DEF(criminal_bounties)
 		return mugshots
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
 		if(!posting.is_open() || !posting.board_visible_to(ship) || !posting.record)
-			continue
-		// An offer nobody has taken yet gets no mugshot built for it (AR-G1: lazily, on acceptance)
-		if(posting.private_to && !posting.board_accepted)
-			mugshots[posting.record.id] = ""
 			continue
 		mugshots[posting.record.id] = bounty_mugshot_asset(posting.record) || ""
 	return mugshots

@@ -165,11 +165,20 @@ export const MissionBoard = () => {
   );
 };
 
-/** One card in a list, with the credits it pays for ordering */
+/** One card in a list */
 type ListItem = {
   key: string;
-  reward: number;
   node: ReactNode;
+};
+
+/** A card's fixed place in the shuffled list (FNV-1a of its key), so the order doesn't jump between updates */
+const shufflePlace = (key: string) => {
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 };
 
 const MissionBoardContent = () => {
@@ -199,18 +208,16 @@ const MissionBoardContent = () => {
   const mugshotOf = (entry: WantedEntry) =>
     entry.mugshot_id ? wanted_mugshots[entry.mugshot_id] : undefined;
 
-  // Everything on offer in one list, best paid first
+  // Everything on offer in one list, every kind mixed together
   const offered: ListItem[] = [
     ...available_missions.map((mission) => ({
       key: `mission-${mission.ref}`,
-      reward: mission.value,
       node: <MissionCard mission={mission} isActive={false} />,
     })),
     ...wanted
       .filter((entry) => !entry.hunting_by_us)
       .map((entry) => ({
         key: `wanted-${entry.ref}`,
-        reward: entry.value ?? 0,
         node: (
           <WantedCard
             entry={entry}
@@ -223,7 +230,6 @@ const MissionBoardContent = () => {
       .filter((bounty) => !bounty.is_hunting)
       .map((bounty) => ({
         key: `bounty-${bounty.ref}`,
-        reward: bounty.reward,
         node: (
           <BountyCard
             bounty={bounty}
@@ -241,7 +247,6 @@ const MissionBoardContent = () => {
       )
       .map((bounty) => ({
         key: `contract-${bounty.ref}`,
-        reward: bounty.reward,
         node: (
           <PlayerBountyCard
             bounty={bounty}
@@ -250,13 +255,12 @@ const MissionBoardContent = () => {
           />
         ),
       })),
-  ].sort((a, b) => b.reward - a.reward);
+  ].sort((a, b) => shufflePlace(a.key) - shufflePlace(b.key));
 
   // Everything taken on
   const taken: ListItem[] = [
     ...active_missions.map((mission) => ({
       key: `mission-${mission.ref}`,
-      reward: mission.value,
       node: (
         <MissionCard mission={mission} isActive padContents={pad_contents} />
       ),
@@ -265,7 +269,6 @@ const MissionBoardContent = () => {
       .filter((entry) => !!entry.hunting_by_us)
       .map((entry) => ({
         key: `wanted-${entry.ref}`,
-        reward: entry.value ?? 0,
         node: (
           <WantedCard
             entry={entry}
@@ -278,7 +281,6 @@ const MissionBoardContent = () => {
       .filter((bounty) => !!bounty.is_hunting)
       .map((bounty) => ({
         key: `bounty-${bounty.ref}`,
-        reward: bounty.reward,
         node: (
           <BountyCard
             bounty={bounty}

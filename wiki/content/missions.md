@@ -65,9 +65,9 @@ Not every type is available at once. Several are capped so the galaxy only ever 
 
 ## Bounties
 
-Everything the board has on offer sits in one list, best paid first: contracts, **wanted criminals** to find and bring to your pad, alive for full pay (see [Bounty Hunting](bounty-hunting.md)), **pirate bounties** and jobs other crews have posted. Whatever your crew has taken on moves to the **Active** tab.
+Everything the board has on offer sits in one mixed list: contracts, **wanted criminals** to find and bring to your pad, alive for full pay (see [Bounty Hunting](bounty-hunting.md)), **pirate bounties** and jobs other crews have posted. Whatever your crew has taken on moves to the **Active** tab.
 
-**Pirate bounties** are competitive: a named pirate captain is posted galaxy-wide, several crews can hunt the same one, and it goes to whoever kills them and puts their **ship key** on the mission pad. Paying a fee out of the ship account tracks the target on your chart, deducted from the reward.
+**Pirate bounties** are competitive: a named pirate captain is posted galaxy-wide (only some pirates carry one at a time, and they move around), several crews can hunt the same one, and it goes to whoever kills them and puts their **ship key** on the mission pad. Paying a fee out of the ship account tracks the target on your chart, deducted from the reward.
 
 **Player bounties** let you post a job for other crews yourself with **Post Bounty**, funded from your account. A crew that takes it puts what you asked for on their pad and submits it as an offer. You approve or reject each offer from your board, and approving completes the exchange.
 

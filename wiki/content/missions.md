@@ -63,9 +63,13 @@ Not every type is available at once. Several are capped so the galaxy only ever 
 !!! tip "Read the description before you accept"
     Each offer's text names its coordinates, its zone band, its beacon tag, and whether it dispenses equipment. The planet contracts in particular hand you a lure, a crate, or a claim kit at accept, if you launch without collecting it off the pad, you have wasted the run.
 
-## Bounties and broadcasts
+## Bounties
 
-The board carries four things besides contracts. The **Wanted** section at the top of the Bounties tab lists wanted criminals to find and bring to your pad, alive for full pay: see [Bounty Hunting](bounty-hunting.md). **Pirate bounties** are competitive: a named pirate captain is posted galaxy-wide, several crews can hunt the same one, and it goes to whoever kills them and puts their **ship key** on the mission pad. Paying a fee out of the ship account tracks the target on your chart, deducted from the reward. **Player bounties** let you post a job for other crews yourself, funded from your account and delivered to your pad. **Broadcasts** list any player-founded outpost currently advertising, with coordinates. See [Player Outposts](player-outposts.md).
+Everything the board has on offer sits in one list, best paid first: contracts, **wanted criminals** to find and bring to your pad, alive for full pay (see [Bounty Hunting](bounty-hunting.md)), **pirate bounties** and jobs other crews have posted. Whatever your crew has taken on moves to the **Active** tab.
+
+**Pirate bounties** are competitive: a named pirate captain is posted galaxy-wide, several crews can hunt the same one, and it goes to whoever kills them and puts their **ship key** on the mission pad. Paying a fee out of the ship account tracks the target on your chart, deducted from the reward.
+
+**Player bounties** let you post a job for other crews yourself with **Post Bounty**, funded from your account. A crew that takes it puts what you asked for on their pad and submits it as an offer. You approve or reject each offer from your board, and approving completes the exchange.
 
 Trader outposts also run their own boards, separate from your ship's. You take those by talking to the trader in person, and they pay in **goods off that trader's shelves** rather than money. See [Trader Outposts](trader-outposts.md).
 

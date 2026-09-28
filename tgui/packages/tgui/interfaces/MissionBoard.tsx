@@ -115,7 +115,6 @@ type Data = {
   has_claimed_player_bounty: BooleanLike;
   ship_balance: number;
   refresh_cooldown_remaining: number;
-  outpost_adverts: OutpostAdvert[];
   // Wanted criminals (voidcrew/modules/bounties/bounty_board.dm)
   wanted?: WantedEntry[];
   // Static data: record id -> base64 mugshot, never sent in the live data
@@ -149,14 +148,6 @@ type WantedEntry = {
   turn_in_refusal?: string | null;
 };
 
-type OutpostAdvert = {
-  name: string;
-  blurb: string;
-  x: number;
-  y: number;
-  remaining_minutes: number;
-};
-
 export const MissionBoard = () => {
   const { data } = useBackend<Data>();
   const { has_ship } = data;
@@ -174,11 +165,16 @@ export const MissionBoard = () => {
   );
 };
 
+/** One card in a list, with the credits it pays for ordering */
+type ListItem = {
+  key: string;
+  reward: number;
+  node: ReactNode;
+};
+
 const MissionBoardContent = () => {
   const { act, data } = useBackend<Data>();
   const {
-    max_missions,
-    active_count,
     has_pad,
     has_mod_gps,
     available_missions,
@@ -191,43 +187,140 @@ const MissionBoardContent = () => {
     has_claimed_player_bounty,
     ship_balance,
     refresh_cooldown_remaining,
-    outpost_adverts = [],
     wanted = [],
     wanted_mugshots = {},
   } = data;
 
-  const [currentTab, setCurrentTab] = useState<
-    'available' | 'active' | 'bounties' | 'broadcasts'
-  >('available');
+  const [currentTab, setCurrentTab] = useState<'available' | 'active'>(
+    'available',
+  );
+  const [posting, setPosting] = useState(false);
 
-  // Ship bounties and wanted criminals share the tab
-  const huntingCount =
-    bounties.filter((b) => b.is_hunting).length +
-    wanted.filter((w) => w.hunting_by_us).length;
-  const bountyCount = bounties.length + wanted.length;
+  const mugshotOf = (entry: WantedEntry) =>
+    entry.mugshot_id ? wanted_mugshots[entry.mugshot_id] : undefined;
+
+  // Everything on offer in one list, best paid first
+  const offered: ListItem[] = [
+    ...available_missions.map((mission) => ({
+      key: `mission-${mission.ref}`,
+      reward: mission.value,
+      node: <MissionCard mission={mission} isActive={false} />,
+    })),
+    ...wanted
+      .filter((entry) => !entry.hunting_by_us)
+      .map((entry) => ({
+        key: `wanted-${entry.ref}`,
+        reward: entry.value ?? 0,
+        node: (
+          <WantedCard
+            entry={entry}
+            mugshot={mugshotOf(entry)}
+            hasPad={!!has_pad}
+          />
+        ),
+      })),
+    ...bounties
+      .filter((bounty) => !bounty.is_hunting)
+      .map((bounty) => ({
+        key: `bounty-${bounty.ref}`,
+        reward: bounty.reward,
+        node: (
+          <BountyCard
+            bounty={bounty}
+            hasPad={!!has_pad}
+            hasActiveBounty={!!has_active_bounty}
+          />
+        ),
+      })),
+    ...player_bounties
+      .filter(
+        (bounty) =>
+          !bounty.is_creator &&
+          !bounty.is_claimer &&
+          bounty.status === 'available',
+      )
+      .map((bounty) => ({
+        key: `contract-${bounty.ref}`,
+        reward: bounty.reward,
+        node: (
+          <PlayerBountyCard
+            bounty={bounty}
+            hasPad={!!has_pad}
+            hasClaimedBounty={!!has_claimed_player_bounty}
+          />
+        ),
+      })),
+  ].sort((a, b) => b.reward - a.reward);
+
+  // Everything taken on
+  const taken: ListItem[] = [
+    ...active_missions.map((mission) => ({
+      key: `mission-${mission.ref}`,
+      reward: mission.value,
+      node: (
+        <MissionCard mission={mission} isActive padContents={pad_contents} />
+      ),
+    })),
+    ...wanted
+      .filter((entry) => !!entry.hunting_by_us)
+      .map((entry) => ({
+        key: `wanted-${entry.ref}`,
+        reward: entry.value ?? 0,
+        node: (
+          <WantedCard
+            entry={entry}
+            mugshot={mugshotOf(entry)}
+            hasPad={!!has_pad}
+          />
+        ),
+      })),
+    ...bounties
+      .filter((bounty) => !!bounty.is_hunting)
+      .map((bounty) => ({
+        key: `bounty-${bounty.ref}`,
+        reward: bounty.reward,
+        node: (
+          <BountyCard
+            bounty={bounty}
+            hasPad={!!has_pad}
+            hasActiveBounty={!!has_active_bounty}
+          />
+        ),
+      })),
+  ];
+  const contracts =
+    (has_created_bounty ? 1 : 0) + (has_claimed_player_bounty ? 1 : 0);
+  const activeCount = taken.length + contracts;
 
   return (
     <Stack fill vertical>
-      {/* Header */}
       <Stack.Item>
         <Section
           title="Mission Control"
           buttons={
-            <Button
-              icon="sync"
-              disabled={refresh_cooldown_remaining > 0}
-              onClick={() => act('refresh')}
-            >
-              {refresh_cooldown_remaining > 0
-                ? `Refresh (${refresh_cooldown_remaining}s)`
-                : 'Refresh'}
-            </Button>
+            <>
+              {!has_created_bounty && (
+                <Button
+                  icon="bullhorn"
+                  selected={posting}
+                  onClick={() => setPosting(!posting)}
+                >
+                  Post Bounty
+                </Button>
+              )}
+              <Button
+                icon="sync"
+                disabled={refresh_cooldown_remaining > 0}
+                onClick={() => act('refresh')}
+              >
+                {refresh_cooldown_remaining > 0
+                  ? `Refresh (${refresh_cooldown_remaining}s)`
+                  : 'Refresh'}
+              </Button>
+            </>
           }
         >
           <LabeledList>
-            <LabeledList.Item label="Active Missions">
-              {active_count} / {max_missions}
-            </LabeledList.Item>
             <LabeledList.Item label="Mission Pad">
               <Box color={has_pad ? 'good' : 'bad'}>
                 {has_pad ? 'Connected' : 'Not Found'}
@@ -237,11 +330,7 @@ const MissionBoardContent = () => {
               <Button
                 icon="location-dot"
                 disabled={!has_mod_gps}
-                tooltip={
-                  has_mod_gps
-                    ? 'Upload active mission beacons to your worn MODsuit GPS.'
-                    : 'Wear a MODsuit with an installed GPS module to link it here.'
-                }
+                tooltip={has_mod_gps ? undefined : 'No MODsuit GPS'}
                 onClick={() => act('link_mod_gps')}
               >
                 Link Mission Beacons
@@ -251,7 +340,15 @@ const MissionBoardContent = () => {
         </Section>
       </Stack.Item>
 
-      {/* Pad contents if any - only show on active tab */}
+      {posting && !has_created_bounty && (
+        <Stack.Item>
+          <PlayerBountyCreator
+            shipBalance={ship_balance}
+            onPosted={() => setPosting(false)}
+          />
+        </Stack.Item>
+      )}
+
       {currentTab === 'active' && !!has_pad && pad_contents.length > 0 && (
         <Stack.Item>
           <Section title="Items on Pad">
@@ -264,50 +361,32 @@ const MissionBoardContent = () => {
         </Stack.Item>
       )}
 
-      {/* Mission Tabs */}
       <Stack.Item>
         <Tabs fluid>
           <Tabs.Tab
             selected={currentTab === 'available'}
             onClick={() => setCurrentTab('available')}
           >
-            Available ({available_missions.length})
+            Available ({offered.length})
           </Tabs.Tab>
           <Tabs.Tab
             selected={currentTab === 'active'}
             onClick={() => setCurrentTab('active')}
           >
-            Active ({active_count}/{max_missions})
-          </Tabs.Tab>
-          <Tabs.Tab
-            selected={currentTab === 'bounties'}
-            onClick={() => setCurrentTab('bounties')}
-            icon="skull"
-          >
-            Bounties ({huntingCount}/{bountyCount})
-          </Tabs.Tab>
-          <Tabs.Tab
-            selected={currentTab === 'broadcasts'}
-            onClick={() => setCurrentTab('broadcasts')}
-            icon="satellite-dish"
-          >
-            Broadcasts ({outpost_adverts.length})
+            Active ({activeCount})
           </Tabs.Tab>
         </Tabs>
       </Stack.Item>
 
-      {/* Tab Content */}
       <Stack.Item grow>
         {currentTab === 'available' && (
           <Section fill scrollable>
-            {available_missions.length === 0 ? (
-              <NoticeBox>No available missions</NoticeBox>
+            {offered.length === 0 ? (
+              <NoticeBox>Nothing posted right now.</NoticeBox>
             ) : (
               <Stack vertical>
-                {available_missions.map((mission) => (
-                  <Stack.Item key={mission.ref}>
-                    <MissionCard mission={mission} isActive={false} />
-                  </Stack.Item>
+                {offered.map((item) => (
+                  <Stack.Item key={item.key}>{item.node}</Stack.Item>
                 ))}
               </Stack>
             )}
@@ -316,130 +395,21 @@ const MissionBoardContent = () => {
 
         {currentTab === 'active' && (
           <Section fill scrollable>
-            {active_missions.length === 0 ? (
-              <NoticeBox>No active missions</NoticeBox>
+            {activeCount === 0 ? (
+              <NoticeBox>Nothing taken on.</NoticeBox>
             ) : (
               <Stack vertical>
-                {active_missions.map((mission) => (
-                  <Stack.Item key={mission.ref}>
-                    <MissionCard
-                      mission={mission}
-                      isActive
-                      padContents={pad_contents}
+                {taken.map((item) => (
+                  <Stack.Item key={item.key}>{item.node}</Stack.Item>
+                ))}
+                {contracts > 0 && (
+                  <Stack.Item>
+                    <PlayerBountyStatus
+                      playerBounties={player_bounties}
+                      hasPad={!!has_pad}
                     />
                   </Stack.Item>
-                ))}
-              </Stack>
-            )}
-          </Section>
-        )}
-
-        {currentTab === 'bounties' && (
-          <Section fill scrollable>
-            {/* Wanted criminals come first */}
-            <WantedSection
-              wanted={wanted}
-              mugshots={wanted_mugshots}
-              hasPad={!!has_pad}
-            />
-
-            <Divider />
-
-            {/* Player Bounty Creation */}
-            <PlayerBountyCreator
-              hasCreatedBounty={!!has_created_bounty}
-              shipBalance={ship_balance}
-              hasPad={!!has_pad}
-            />
-
-            {/* Player's Active Bounty Status */}
-            {(!!has_created_bounty || !!has_claimed_player_bounty) && (
-              <PlayerBountyStatus
-                playerBounties={player_bounties}
-                hasPad={!!has_pad}
-              />
-            )}
-
-            {/* Available Player Bounties */}
-            {player_bounties.filter(
-              (b) => !b.is_creator && b.status === 'available',
-            ).length > 0 && (
-              <Section title="Player Bounties" mt={1}>
-                <Stack vertical>
-                  {player_bounties
-                    .filter((b) => !b.is_creator && b.status === 'available')
-                    .map((bounty) => (
-                      <Stack.Item key={bounty.ref}>
-                        <PlayerBountyCard
-                          bounty={bounty}
-                          hasPad={!!has_pad}
-                          hasClaimedBounty={!!has_claimed_player_bounty}
-                        />
-                      </Stack.Item>
-                    ))}
-                </Stack>
-              </Section>
-            )}
-
-            <Divider />
-
-            {/* Pirate Bounties */}
-            <Section title="Pirate Bounties">
-              <NoticeBox info mb={1}>
-                Bounties are competitive - multiple crews can hunt the same
-                target. Turn in the captain&apos;s key at the mission pad to
-                claim the reward.
-              </NoticeBox>
-              {bounties.length === 0 ? (
-                <NoticeBox>No active pirate bounties</NoticeBox>
-              ) : (
-                <Stack vertical>
-                  {bounties.map((bounty) => (
-                    <Stack.Item key={bounty.ref}>
-                      <BountyCard
-                        bounty={bounty}
-                        hasPad={!!has_pad}
-                        hasActiveBounty={!!has_active_bounty}
-                      />
-                    </Stack.Item>
-                  ))}
-                </Stack>
-              )}
-            </Section>
-          </Section>
-        )}
-
-        {currentTab === 'broadcasts' && (
-          <Section fill scrollable title="Outpost Broadcasts">
-            {outpost_adverts.length === 0 ? (
-              <NoticeBox>
-                No outposts are broadcasting right now. Player-founded outposts
-                can buy galaxy-wide listings from their management console.
-              </NoticeBox>
-            ) : (
-              <Stack vertical>
-                {outpost_adverts.map((advert) => (
-                  <Stack.Item key={`${advert.name}-${advert.x}-${advert.y}`}>
-                    <Section>
-                      <Stack align="center">
-                        <Stack.Item grow>
-                          <Box bold>{advert.name}</Box>
-                          <Box color="label" fontSize="0.9em">
-                            &quot;{advert.blurb}&quot;
-                          </Box>
-                        </Stack.Item>
-                        <Stack.Item textAlign="right">
-                          <Box bold>
-                            ({advert.x}, {advert.y})
-                          </Box>
-                          <Box color="label" fontSize="0.85em">
-                            {advert.remaining_minutes} min left
-                          </Box>
-                        </Stack.Item>
-                      </Stack>
-                    </Section>
-                  </Stack.Item>
-                ))}
+                )}
               </Stack>
             )}
           </Section>
@@ -622,6 +592,7 @@ const MissionCard = (props: MissionCardProps) => {
           icon="plus"
           color="good"
           disabled={!canAccept}
+          tooltip={canAccept ? undefined : 'Mission slots full'}
           onClick={() => act('accept', { ref: mission.ref })}
         >
           Accept Mission
@@ -726,23 +697,6 @@ const BountyCard = (props: BountyCardProps) => {
             </Box>
           </Box>
         </Flex.Item>
-        <Flex.Item>
-          {!!bounty.is_hunting && !!bounty.has_tracking && (
-            <Box color="teal" bold mr={1}>
-              [TRACKING]
-            </Box>
-          )}
-          {!!bounty.is_hunting && (
-            <Box color="green" bold>
-              [HUNTING]
-            </Box>
-          )}
-          {!!bounty.was_abandoned && (
-            <Box color="bad" bold>
-              [ABANDONED]
-            </Box>
-          )}
-        </Flex.Item>
       </Flex>
 
       <Divider />
@@ -757,9 +711,7 @@ const BountyCard = (props: BountyCardProps) => {
                   icon="crosshairs"
                   color="green"
                   disabled={!hasPad}
-                  tooltip={
-                    !hasPad ? 'Requires mission pad to turn in' : undefined
-                  }
+                  tooltip={hasPad ? undefined : 'No mission pad'}
                   onClick={() => act('turn_in_bounty', { ref: bounty.ref })}
                 >
                   Turn In Key
@@ -770,7 +722,6 @@ const BountyCard = (props: BountyCardProps) => {
                   <Button
                     icon="satellite-dish"
                     color="teal"
-                    tooltip={`Enable tracking to see target coordinates. Reduces reward by ${bounty.tracking_cost} cr`}
                     onClick={() => act('enable_tracking', { ref: bounty.ref })}
                   >
                     Track (-{bounty.tracking_cost})
@@ -827,45 +778,6 @@ const formatWantedTime = (seconds: number) => {
   const minutes = Math.floor(total / 60);
   const rest = total % 60;
   return `${minutes}:${rest.toString().padStart(2, '0')}`;
-};
-
-type WantedSectionProps = {
-  wanted: WantedEntry[];
-  mugshots: Record<string, string>;
-  hasPad: boolean;
-};
-
-/** The Wanted section at the top of the Bounties tab: the hunt first, then public bounties, then private offers. */
-const WantedSection = (props: WantedSectionProps) => {
-  const { wanted, mugshots, hasPad } = props;
-  const rank = (entry: WantedEntry) => {
-    if (entry.hunting_by_us) return 0;
-    if (!entry.private) return 1;
-    return 2;
-  };
-  const sorted = [...wanted].sort((a, b) => rank(a) - rank(b));
-
-  return (
-    <Section title="Wanted">
-      {sorted.length === 0 ? (
-        <Box color="label">No one is wanted right now.</Box>
-      ) : (
-        <Stack vertical>
-          {sorted.map((entry) => (
-            <Stack.Item key={entry.ref}>
-              <WantedCard
-                entry={entry}
-                mugshot={
-                  entry.mugshot_id ? mugshots[entry.mugshot_id] : undefined
-                }
-                hasPad={hasPad}
-              />
-            </Stack.Item>
-          ))}
-        </Stack>
-      )}
-    </Section>
-  );
 };
 
 type WantedCardProps = {
@@ -1030,29 +942,20 @@ const WantedCard = (props: WantedCardProps) => {
 // ========== PLAYER BOUNTY COMPONENTS ==========
 
 type PlayerBountyCreatorProps = {
-  hasCreatedBounty: boolean;
   shipBalance: number;
-  hasPad: boolean;
+  onPosted: () => void;
 };
 
 const PlayerBountyCreator = (props: PlayerBountyCreatorProps) => {
   const { act } = useBackend<Data>();
-  const { hasCreatedBounty, shipBalance, hasPad } = props;
+  const { shipBalance, onPosted } = props;
 
   const [reward, setReward] = useState(500);
   const [bountyName, setBountyName] = useState('');
   const [bountyDesc, setBountyDesc] = useState('');
 
-  if (hasCreatedBounty) {
-    return null; // Don't show creator if already has a bounty
-  }
-
   return (
-    <Section title="Create Bounty">
-      <Box mb={1} color="label">
-        Post a bounty for other ships to complete. Contractors will submit
-        offers with proof, which you can approve to complete the exchange.
-      </Box>
+    <Section title="Post Bounty">
       <LabeledList>
         <LabeledList.Item label="Ship Balance">
           <Box color={shipBalance >= 100 ? 'good' : 'bad'}>
@@ -1104,9 +1007,9 @@ const PlayerBountyCreator = (props: PlayerBountyCreatorProps) => {
           shipBalance < reward
             ? 'Insufficient funds'
             : bountyName.length < 3
-              ? 'Title must be at least 3 characters'
+              ? 'Title too short'
               : bountyDesc.length < 5
-                ? 'Objective must be at least 5 characters'
+                ? 'Objective too short'
                 : undefined
         }
         onClick={() => {
@@ -1117,6 +1020,7 @@ const PlayerBountyCreator = (props: PlayerBountyCreatorProps) => {
           });
           setBountyName('');
           setBountyDesc('');
+          onPosted();
         }}
       >
         Post Bounty
@@ -1228,18 +1132,6 @@ const PlayerBountyStatus = (props: PlayerBountyStatusProps) => {
                 </Stack>
               </Box>
             )}
-
-          {/* Contractors working but no offers yet */}
-          {createdBounty.contractor_count > 0 &&
-            (!createdBounty.pending_offers ||
-              createdBounty.pending_offers.length === 0) && (
-              <Box mt={1}>
-                <NoticeBox info>
-                  Contractors are working on your bounty. Offers will appear
-                  here for your approval.
-                </NoticeBox>
-              </Box>
-            )}
         </Section>
       )}
 
@@ -1285,41 +1177,25 @@ const PlayerBountyStatus = (props: PlayerBountyStatusProps) => {
 
           <Box mt={1}>
             {claimedBounty.has_pending_offer ? (
-              <>
-                <NoticeBox info mb={1}>
-                  Your offer has been submitted. Keep the items on your pad
-                  until the creator approves!
-                </NoticeBox>
-                <Button
-                  fluid
-                  icon="undo"
-                  color="caution"
-                  onClick={() => act('withdraw_bounty_offer')}
-                >
-                  Withdraw Offer
-                </Button>
-              </>
+              <Button
+                fluid
+                icon="undo"
+                color="caution"
+                onClick={() => act('withdraw_bounty_offer')}
+              >
+                Withdraw Offer
+              </Button>
             ) : (
-              <>
-                <NoticeBox info mb={1}>
-                  Place items on your pad as proof, then submit an offer. The
-                  creator will review and approve to complete the exchange.
-                </NoticeBox>
-                <Button
-                  fluid
-                  icon="paper-plane"
-                  color="good"
-                  disabled={!hasPad}
-                  tooltip={
-                    !hasPad
-                      ? 'Requires mission pad'
-                      : 'Submit items on pad as an offer'
-                  }
-                  onClick={() => act('make_bounty_offer')}
-                >
-                  Submit Offer
-                </Button>
-              </>
+              <Button
+                fluid
+                icon="paper-plane"
+                color="good"
+                disabled={!hasPad}
+                tooltip={hasPad ? undefined : 'No mission pad'}
+                onClick={() => act('make_bounty_offer')}
+              >
+                Submit Offer
+              </Button>
             )}
           </Box>
         </Section>

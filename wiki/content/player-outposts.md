@@ -91,7 +91,7 @@ A hull defense turret bolted to the outpost answers only to its owner, stewards,
 
 ## Advertising
 
-A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships, adds its memo and coordinates to [mission boards](missions.md), and marks it on helm charts. The panel shows why a purchase is refused.
+A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships and marks it on helm charts. The panel shows why a purchase is refused.
 
 ## Raiding and siege
 

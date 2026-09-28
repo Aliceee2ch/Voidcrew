@@ -13,12 +13,12 @@ Buy an **outpost deed** from the Colonial Registry shelf at Waystation Halcyon o
 
 Your crew's ship must be stationary on an empty overmap tile, away from planets, ruins, and other outposts. Undock before using the deed. Choose a name and one of two homes:
 
-| Home | Layout |
+| Home | Style |
 |---|---|
-| Compact Habitat | A small pressurised core with room to expand. |
-| Waystation Frame | Separate living and workshop space around a central hall. |
+| Salvaged Waystation | Run down: an old roadhouse, rust and grease included. |
+| Registry Habitat | Clean: new from the registry's catalogue. |
 
-Both include a bank terminal, cargo console, empty ore silo, resident cryopod, management and construction consoles, and a hangar elevator. A charged SMES and portable generator provide starting power. Keep the generator fuelled or build another power supply.
+The style you pick is for good. Every room you buy later, and the ship bay, is built to match it. Both homes work the same way and come with the same things: a bank terminal, cargo console, empty ore silo, resident cryopod, management and construction consoles, and a hangar elevator. A charged SMES and portable generator provide starting power. Keep the generator fuelled or build another power supply.
 
 !!! warning "Where you plant it is permanent"
     Zone rules lock in at founding. An outpost founded in the patrolled inner ring is protected from ship weapons. One founded in contested or lawless space is raidable. You cannot move it later.
@@ -43,7 +43,7 @@ Load eligible goods onto the ferry and dispatch it to export them. Payment goes 
 
 ## Upgrades
 
-The **Upgrades** tab of the management console sells prefabricated rooms: the free **cargo dock** and the service rooms your outpost can sell to visiting crews, such as the cloning bay, medical lab, shop, storage and teleporter. Buying one needs management and treasury permission and is paid from the outpost bank. Until the room is placed, **Cancel purchase** refunds the full price.
+The **Upgrades** tab of the management console sells prefabricated rooms: the free **cargo dock** and the service rooms your outpost can sell to visiting crews, such as the cloning bay, medical lab, shop, storage and teleporter. Each room comes in your outpost's style: a run-down outpost gets run-down rooms, a clean one gets clean rooms. The layout differs between styles, but the room does the same job either way. Buying one needs management and treasury permission and is paid from the outpost bank. Until the room is placed, **Cancel purchase** refunds the full price.
 
 Press **Place** to open the placement map, a plan of the ground around the outpost:
 

@@ -42,6 +42,13 @@
 	ambience_index = AMBIENCE_AWAY
 	repels_megafauna = TRUE // voidcrew/area/megafauna_ban.dm
 
+/// The registry habitat's walls. They strip to iron: titanium walls would make every new habitat
+/// a titanium claim worth several deeds on the stock market.
+/turf/closed/wall/mineral/titanium/nodiagonal/habitat
+	name = "habitat wall"
+	desc = "Titanium panelling bolted over an iron frame."
+	sheet_type = /obj/item/stack/sheet/iron
+
 /// Marks where visitors and the construction drone arrive; consumed at load
 /obj/effect/landmark/player_outpost_arrival
 	name = "player outpost arrival"

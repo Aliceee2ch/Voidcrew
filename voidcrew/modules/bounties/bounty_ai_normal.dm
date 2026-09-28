@@ -763,6 +763,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	embed_type = null
 	shrapnel_type = null
 	wound_bonus = -10
+	armour_penetration = BOUNTY_BULLET_AP
 	/// Degrees it may stray either way: fired fast, not every shot is lined up
 	var/stray = BOUNTY_PISTOL_SPREAD
 
@@ -779,6 +780,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 /obj/projectile/bullet/bounty/holdout
 	name = "small bullet"
 	damage = BOUNTY_MEEK_PISTOL_DAMAGE
+	armour_penetration = BOUNTY_HOLDOUT_AP
 
 /// A shotgun pellet: short reach, each one strays a little
 /obj/projectile/bullet/bounty/pellet
@@ -786,6 +788,7 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	icon_state = "pellet"
 	damage = 5
 	range = BOUNTY_SHOTGUN_REACH
+	armour_penetration = BOUNTY_PELLET_AP
 	stray = BOUNTY_SHOTGUN_SPREAD
 
 /**

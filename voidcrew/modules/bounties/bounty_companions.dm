@@ -30,6 +30,7 @@
 	mob_biotypes = MOB_ORGANIC | MOB_HUMANOID
 	sentience_type = SENTIENCE_HUMANOID
 	status_flags = CANPUSH | CANSTUN | CANKNOCKDOWN
+	armour_penetration = BOUNTY_MELEE_AP
 	basic_mob_flags = NONE
 	// Stamina crit compares raw loss with a percentage when it ends; a pool of 100 keeps the two the same.
 	max_stamina = 100

@@ -480,7 +480,7 @@
 	var/list/goons = crew.goons()
 	TEST_ASSERT_EQUAL(length(goons), 4, "The lounge doesn't have its four goons")
 	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in goons)
-		TEST_ASSERT(goon.health == 90 && goon.maxHealth == 90, "[goon] doesn't have 90 health") // BOUNTY_GOON_HEALTH
+		TEST_ASSERT(goon.health == 150 && goon.maxHealth == 150, "[goon] doesn't have 150 health") // BOUNTY_GOON_HEALTH
 		TEST_ASSERT(FACTION_TURRET in goon.faction, "[goon] isn't left alone by the turrets")
 		TEST_ASSERT(!length(goon.contents), "[goon] carries something")
 
@@ -775,17 +775,18 @@
 
 // ===== M1: GOON STAMINA =====
 
-/// Three disabler hits stamcrit a goon: a stun, not just a slowdown
+/// Five disabler hits stamcrit a goon: a stun, not just a slowdown
 /datum/unit_test/voidcrew_bounty_kingpin/stamina
 
 /datum/unit_test/voidcrew_bounty_kingpin/stamina/Run()
 	var/mob/living/basic/bounty_kingpin_goon/goon = allocate(/mob/living/basic/bounty_kingpin_goon, kingpin_test_spot(2, 2))
 	TEST_ASSERT_EQUAL(goon.max_stamina, 100, "A goon's stamina pool isn't 100") // BOUNTY_GOON_MAX_STAMINA
+	// 30-point disabler hits against BOUNTY_GOON_HEALTH 150: 20 points each
+	for(var/hit in 1 to 4)
+		goon.adjustStaminaLoss(30)
+	TEST_ASSERT(goon.goon_able(), "Four disabler hits stunned a goon")
 	goon.adjustStaminaLoss(30)
-	goon.adjustStaminaLoss(30)
-	TEST_ASSERT(goon.goon_able(), "Two disabler hits stunned a goon")
-	goon.adjustStaminaLoss(30)
-	TEST_ASSERT(goon.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Three disabler hits didn't stamcrit a goon")
+	TEST_ASSERT(goon.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Five disabler hits didn't stamcrit a goon")
 	TEST_ASSERT(!goon.goon_able(), "A stamcrit goon can still fight")
 
 // ===== M2: A CALM CREW STILL WATCHES =====

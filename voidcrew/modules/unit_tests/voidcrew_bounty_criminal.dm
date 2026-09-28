@@ -75,12 +75,12 @@
 
 /datum/unit_test/voidcrew_bounty_criminal_mercy/Run()
 	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(__IMPLIED_TYPE__)
-	// BOUNTY_NORMAL_HEALTH_WANTED 120; BOUNTY_DOWNED_BELOW 25: the line is 30
-	TEST_ASSERT_EQUAL(criminal.maxHealth, 120, "A normal criminal has the wrong health")
+	// BOUNTY_NORMAL_HEALTH_WANTED 180; BOUNTY_DOWNED_BELOW 25: the line is 45
+	TEST_ASSERT_EQUAL(criminal.maxHealth, 180, "A normal criminal has the wrong health")
 	TEST_ASSERT(!criminal.is_downed(), "A fresh criminal is downed")
 	criminal.adjustBruteLoss(500)
 	TEST_ASSERT_EQUAL(criminal.stat, CONSCIOUS, "One big hit killed a criminal on its feet")
-	TEST_ASSERT_EQUAL(criminal.health, 29, "A big hit on a criminal on its feet did not stop 1 under the downed line")
+	TEST_ASSERT_EQUAL(criminal.health, 44, "A big hit on a criminal on its feet did not stop 1 under the downed line")
 	TEST_ASSERT(criminal.is_downed(), "A criminal at the downed line is not downed")
 	TEST_ASSERT_EQUAL(criminal.capture_state(), "downed", "A downed criminal's capture state is wrong") // BOUNTY_STATE_DOWNED
 	// Down, the next hit can kill: that is a choice.
@@ -94,30 +94,30 @@
 	runner.adjustStaminaLoss(200)
 	TEST_ASSERT(runner.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "A meek criminal did not stamina crit")
 	runner.adjustBruteLoss(500)
-	// BOUNTY_MEEK_HEALTH 80: the line is 20
+	// BOUNTY_MEEK_HEALTH 120: the line is 30
 	TEST_ASSERT_EQUAL(runner.stat, CONSCIOUS, "A big hit killed a criminal in stamina crit")
-	TEST_ASSERT_EQUAL(runner.health, 19, "A big hit on a criminal in stamina crit did not stop 1 under the downed line")
+	TEST_ASSERT_EQUAL(runner.health, 29, "A big hit on a criminal in stamina crit did not stop 1 under the downed line")
 
 	// Small hits add up to the same line and no further.
 	var/mob/living/basic/bounty_criminal/normal/chipped = allocate(__IMPLIED_TYPE__)
-	for(var/i in 1 to 20)
+	for(var/i in 1 to 30)
 		chipped.adjustBruteLoss(7)
 		if(chipped.is_downed())
 			break
 	TEST_ASSERT(chipped.is_downed(), "Small hits never downed a criminal")
-	TEST_ASSERT(chipped.health > 0 && chipped.health <= 30, "Small hits left a downed criminal at [chipped.health]")
+	TEST_ASSERT(chipped.health > 0 && chipped.health <= 45, "Small hits left a downed criminal at [chipped.health]")
 
 	// Fire and heat burn it like a suited person (BOUNTY_CRIMINAL_MAX_TEMP 1500, BOUNTY_CRIMINAL_BURN_DAMAGE 3 a second), but not past the mercy line.
 	var/mob/living/basic/bounty_criminal/normal/burning = allocate(__IMPLIED_TYPE__)
 	burning.bodytemperature = 3000
 	burning.Life(2)
-	TEST_ASSERT(burning.health < 120, "Heat did not hurt a criminal")
-	burning.adjustBruteLoss(burning.health - 31)
-	TEST_ASSERT_EQUAL(burning.health, 31, "The burning criminal was not brought near the line")
+	TEST_ASSERT(burning.health < 180, "Heat did not hurt a criminal")
+	burning.adjustBruteLoss(burning.health - 46)
+	TEST_ASSERT_EQUAL(burning.health, 46, "The burning criminal was not brought near the line")
 	burning.bodytemperature = 3000
 	burning.Life(2)
 	TEST_ASSERT_EQUAL(burning.stat, CONSCIOUS, "Heat killed a criminal on its feet")
-	TEST_ASSERT_EQUAL(burning.health, 29, "Heat took a criminal on its feet past the downed line")
+	TEST_ASSERT_EQUAL(burning.health, 44, "Heat took a criminal on its feet past the downed line")
 
 // ===== DOWNED AND GETTING UP =====
 
@@ -141,7 +141,7 @@
 
 	// Healing raises its health, not its state.
 	criminal.adjustBruteLoss(-500)
-	TEST_ASSERT_EQUAL(criminal.health, 120, "A downed criminal could not be healed")
+	TEST_ASSERT_EQUAL(criminal.health, 180, "A downed criminal could not be healed")
 	TEST_ASSERT(criminal.is_downed(), "Healing stood a downed criminal up")
 
 	// A stamina hit starts the clock over.
@@ -173,7 +173,7 @@
 	TEST_ASSERT(criminal.body_stand_up(), "A stirring criminal could not get up")
 	TEST_ASSERT(!criminal.is_downed(), "A criminal that got up is still downed")
 	TEST_ASSERT_EQUAL(signal_count("recovered"), 1, "Getting up did not send the recovered signal once")
-	TEST_ASSERT_EQUAL(criminal.health, 120, "A criminal healed while down did not get up with its health")
+	TEST_ASSERT_EQUAL(criminal.health, 180, "A criminal healed while down did not get up with its health")
 	TEST_ASSERT(!HAS_TRAIT(criminal, TRAIT_FLOORED), "A criminal that got up is still on the floor")
 	TEST_ASSERT(!HAS_TRAIT(criminal, "bounty_held"), "A criminal that got up is still held") // TRAIT_BOUNTY_HELD
 	TEST_ASSERT(!HAS_TRAIT(criminal, TRAIT_AI_PAUSED), "A criminal that got up still has its AI paused")
@@ -185,8 +185,8 @@
 	other.body_stir()
 	TEST_ASSERT(other.body_stirring, "A downed criminal did not stir when its time came")
 	TEST_ASSERT(other.body_stand_up(), "A downed criminal did not get up")
-	// BOUNTY_RECOVER_TO 35: 42 of 120
-	TEST_ASSERT_EQUAL(other.health, 42, "A criminal got up with the wrong health")
+	// BOUNTY_RECOVER_TO 35: 63 of 180
+	TEST_ASSERT_EQUAL(other.health, 63, "A criminal got up with the wrong health")
 
 	// Only mini-bosses rally: stamina does nothing to one that just got up, until the rally ends.
 	TEST_ASSERT(!other.body_is_rallying(), "A normal criminal rallies")
@@ -581,12 +581,12 @@
 	var/turf/here = run_loc_floor_bottom_left
 	var/list/site = list(here.x - 2, here.y - 2, here.x + 4, here.y + 4, here.z)
 
-	// An explosion with nobody near is automated too: it stops at the floor (BOUNTY_AUTOMATED_FLOOR 40: 48 of 120).
+	// An explosion with nobody near is automated too: it stops at the floor (BOUNTY_AUTOMATED_FLOOR 40: 72 of 180).
 	var/mob/living/basic/bounty_criminal/normal/unwatched = allocate(__IMPLIED_TYPE__)
 	unwatched.site_bounds = site
 	unwatched.ex_act(EXPLODE_HEAVY)
 	unwatched.ex_act(EXPLODE_HEAVY)
-	TEST_ASSERT_EQUAL(unwatched.health, 48, "An explosion nobody set took a criminal on its site past the floor")
+	TEST_ASSERT_EQUAL(unwatched.health, 72, "An explosion nobody set took a criminal on its site past the floor")
 
 	var/mob/living/basic/bounty_criminal/normal/criminal = allocate(__IMPLIED_TYPE__)
 	criminal.site_bounds = site
@@ -595,7 +595,7 @@
 
 	// Nobody's mind behind it: it stops at the floor, on its feet.
 	criminal.adjustBruteLoss(500)
-	TEST_ASSERT_EQUAL(criminal.health, 48, "Automated damage took a criminal on its site past the floor")
+	TEST_ASSERT_EQUAL(criminal.health, 72, "Automated damage took a criminal on its site past the floor")
 	TEST_ASSERT(!criminal.is_downed(), "Automated damage downed a criminal on its site")
 
 	// A player's hit: only the mercy rule.
@@ -605,7 +605,7 @@
 	TEST_ASSERT(ledger.player_hit_now(), "A hunter with a mind did not count as a player")
 	TEST_ASSERT(criminal.body_has_grudge(hunter), "An attacker did not go on the grudge list")
 	criminal.adjustBruteLoss(500)
-	TEST_ASSERT_EQUAL(criminal.health, 29, "A player's hit on a criminal on its site did not stop at the downed line")
+	TEST_ASSERT_EQUAL(criminal.health, 44, "A player's hit on a criminal on its site did not stop at the downed line")
 	TEST_ASSERT(criminal.is_downed(), "A player's hit did not down the criminal")
 
 	// Down on its site, nothing automated finishes it off.
@@ -633,10 +633,11 @@
 	mech.remove_occupant(pilot)
 	target_ledger.player_hit_at = -1
 
-	// An explosion with someone near counts as theirs: only the mercy rule.
+	// An explosion with someone near counts as theirs: only the mercy rule. Three heavy blasts (60 each) reach the line.
 	target.ex_act(EXPLODE_HEAVY)
 	target.ex_act(EXPLODE_HEAVY)
-	TEST_ASSERT_EQUAL(target.health, 29, "An explosion beside a hunter was held at the automated floor")
+	target.ex_act(EXPLODE_HEAVY)
+	TEST_ASSERT_EQUAL(target.health, 44, "An explosion beside a hunter was held at the automated floor")
 	TEST_ASSERT(target.is_downed(), "An explosion beside a hunter did not down the criminal")
 
 	// Its own side's blows miss it while it is down.
@@ -645,13 +646,13 @@
 	var/datum/component/bounty_body/other_ledger = downed_off_site.GetComponent(/datum/component/bounty_body)
 	other_ledger.note_attacker(allocate(/mob/living/basic/bounty_companion))
 	downed_off_site.adjustBruteLoss(10)
-	TEST_ASSERT_EQUAL(downed_off_site.health, 29, "A companion's blow hurt a downed criminal")
+	TEST_ASSERT_EQUAL(downed_off_site.health, 44, "A companion's blow hurt a downed criminal")
 
 	// Off its site, automated damage gets the mercy rule only.
 	var/mob/living/basic/bounty_criminal/normal/stray = allocate(__IMPLIED_TYPE__)
 	stray.site_bounds = list(here.x + 5, here.y + 5, here.x + 6, here.y + 6, here.z)
 	stray.adjustBruteLoss(500)
-	TEST_ASSERT_EQUAL(stray.health, 29, "Automated damage off its site did not stop at the downed line")
+	TEST_ASSERT_EQUAL(stray.health, 44, "Automated damage off its site did not stop at the downed line")
 
 // ===== THE LEASH AND WHO IT FIGHTS =====
 
@@ -769,7 +770,7 @@
 	stowaway.body_add_grudge(crew)
 	TEST_ASSERT(stowaway.may_attack(crew), "A criminal aboard a ship may not fight someone it holds a grudge against")
 	stowaway.adjustBruteLoss(500)
-	TEST_ASSERT_EQUAL(stowaway.health, 29, "The automated floor held a criminal aboard a ship")
+	TEST_ASSERT_EQUAL(stowaway.health, 44, "The automated floor held a criminal aboard a ship")
 	qdel(stowaway)
 
 	// Off its leash aboard ship A, it walks about that ship and back to its site, never on into
@@ -881,7 +882,7 @@
 	TEST_ASSERT_EQUAL(runner.posting(), posting, "A spawned criminal lost its posting")
 	TEST_ASSERT_EQUAL(runner.real_name, "Tess Harlow", "A spawned criminal lost its name")
 	TEST_ASSERT_EQUAL(runner.gender, FEMALE, "A spawned criminal lost its gender")
-	TEST_ASSERT_EQUAL(runner.maxHealth, 80, "A meek criminal has the wrong health") // BOUNTY_MEEK_HEALTH
+	TEST_ASSERT_EQUAL(runner.maxHealth, 120, "A meek criminal has the wrong health") // BOUNTY_MEEK_HEALTH
 	TEST_ASSERT(HAS_TRAIT(runner, "mission_field_mob"), "A wanted criminal is not kept from the planet sweep") // TRAIT_MISSION_FIELD_MOB
 	// BOUNTY_MEEK_STAMINA 90 on a pool of 100: three 30-point disabler shots
 	runner.adjustStaminaLoss(30)
@@ -890,16 +891,16 @@
 	runner.adjustStaminaLoss(30)
 	TEST_ASSERT(runner.has_status_effect(/datum/status_effect/incapacitating/stamcrit), "Three disabler shots did not stamina-crit a meek criminal")
 
-	// Normal: health by tier and style (BOUNTY_NORMAL_HEALTH_PETTY 90 x BOUNTY_STYLE_HEALTH_BRAWLER 1.2), pace by style.
+	// Normal: health by tier and style (BOUNTY_NORMAL_HEALTH_PETTY 140 x BOUNTY_STYLE_HEALTH_BRAWLER 1.2), pace by style.
 	var/datum/bounty_record/brawler_record = new
 	brawler_record.archetype = "normal" // BOUNTY_ARCHETYPE_NORMAL
 	brawler_record.tier = 1 // BOUNTY_TIER_PETTY
 	brawler_record.style = "brawler" // BOUNTY_STYLE_BRAWLER
 	var/mob/living/basic/bounty_criminal/normal/brawler = spawn_bounty_criminal(brawler_record, run_loc_floor_bottom_left, null)
 	spawned += brawler
-	TEST_ASSERT_EQUAL(brawler.maxHealth, 108, "A petty brawler has the wrong health")
-	TEST_ASSERT_EQUAL(brawler.health, 108, "A petty brawler did not start at full health")
-	TEST_ASSERT_EQUAL(brawler.speed, 1.6, "A brawler has the wrong pace") // BOUNTY_BODY_NORMAL_SPEED_MELEE
+	TEST_ASSERT_EQUAL(brawler.maxHealth, 168, "A petty brawler has the wrong health")
+	TEST_ASSERT_EQUAL(brawler.health, 168, "A petty brawler did not start at full health")
+	TEST_ASSERT_EQUAL(brawler.speed, 1.25, "A brawler has the wrong pace") // BOUNTY_BODY_NORMAL_SPEED_MELEE
 	TEST_ASSERT(!HAS_TRAIT(brawler, "mission_field_mob"), "A criminal with no posting is kept from the planet sweep")
 	var/datum/bounty_record/gunman_record = new
 	gunman_record.archetype = "normal"
@@ -907,9 +908,9 @@
 	gunman_record.style = "pistol" // BOUNTY_STYLE_PISTOL
 	var/mob/living/basic/bounty_criminal/normal/gunman = spawn_bounty_criminal(gunman_record, run_loc_floor_bottom_left, null)
 	spawned += gunman
-	// BOUNTY_NORMAL_HEALTH_MOST 150 x BOUNTY_STYLE_HEALTH_PISTOL 0.9
-	TEST_ASSERT_EQUAL(gunman.maxHealth, 135, "A Most Wanted gunman has the wrong health")
-	TEST_ASSERT_EQUAL(gunman.speed, 1.8, "A gunman has the wrong pace") // BOUNTY_BODY_NORMAL_SPEED_RANGED
+	// BOUNTY_NORMAL_HEALTH_MOST 220 x BOUNTY_STYLE_HEALTH_PISTOL 0.9
+	TEST_ASSERT_EQUAL(gunman.maxHealth, 198, "A Most Wanted gunman has the wrong health")
+	TEST_ASSERT_EQUAL(gunman.speed, 1.4, "A gunman has the wrong pace") // BOUNTY_BODY_NORMAL_SPEED_RANGED
 
 	// Mini-bosses by kit; never at a trader outpost, where a normal criminal stands in.
 	var/datum/bounty_record/boss_record = new

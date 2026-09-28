@@ -154,7 +154,7 @@
 /// Between them
 #define BOUNTY_MEEK_PISTOL_GAP (0.2 SECONDS)
 /// Brute per shot; bullet armour applies
-#define BOUNTY_MEEK_PISTOL_DAMAGE 10
+#define BOUNTY_MEEK_PISTOL_DAMAGE 15
 /// One volley per cornering
 #define BOUNTY_MEEK_PISTOL_COOLDOWN (6 SECONDS)
 /// They only aim at someone this close
@@ -172,12 +172,12 @@
 // ===== NORMAL (combat.md 6.2, spec C7) =====
 
 /// Speed in a fight, by style
-#define BOUNTY_NORMAL_SPEED_MELEE 1.6
-#define BOUNTY_NORMAL_SPEED_RANGED 1.8
+#define BOUNTY_NORMAL_SPEED_MELEE 1.25
+#define BOUNTY_NORMAL_SPEED_RANGED 1.4
 /// Style damage by tier
-#define BOUNTY_NORMAL_DAMAGE_PETTY 0.85
-#define BOUNTY_NORMAL_DAMAGE_WANTED 1
-#define BOUNTY_NORMAL_DAMAGE_MOST 1.2
+#define BOUNTY_NORMAL_DAMAGE_PETTY 1
+#define BOUNTY_NORMAL_DAMAGE_WANTED 1.15
+#define BOUNTY_NORMAL_DAMAGE_MOST 1.3
 /// Noticed at this range (someone armed, cuffs or a warrant in hand)
 #define BOUNTY_NORMAL_NOTICE_RANGE 6
 /// Someone with a weapon drawn this close, while they are aware of them, starts the fight
@@ -211,9 +211,9 @@
 #define BOUNTY_COMPANIONS_MIN 0
 #define BOUNTY_COMPANIONS_MAX 2
 /// Health before the style's multiplier
-#define BOUNTY_COMPANION_HEALTH 70
+#define BOUNTY_COMPANION_HEALTH 110
 /// Share of a Wanted criminal's style damage
-#define BOUNTY_COMPANION_DAMAGE 0.7
+#define BOUNTY_COMPANION_DAMAGE 0.9
 /// Below this share of health a companion may run (a BOUNTY_COMPANION_FLEE_CHANCE roll, once)
 #define BOUNTY_COMPANION_FLEE_BELOW 0.3
 #define BOUNTY_COMPANION_FLEE_CHANCE 50
@@ -226,16 +226,16 @@
 
 #define BOUNTY_BRAWLER_HEALTH 1.2
 #define BOUNTY_BRAWLER_STAMINA 0.8
-#define BOUNTY_BRAWLER_DAMAGE_LOW 8
-#define BOUNTY_BRAWLER_DAMAGE_HIGH 11
+#define BOUNTY_BRAWLER_DAMAGE_LOW 14
+#define BOUNTY_BRAWLER_DAMAGE_HIGH 18
 #define BOUNTY_BRAWLER_INTERVAL (1 SECONDS)
 /// Chance a punch shoves the target back a tile and staggers them for a second
 #define BOUNTY_BRAWLER_SHOVE_CHANCE 20
 #define BOUNTY_BRAWLER_STAGGER (1 SECONDS)
 
 #define BOUNTY_KNIFE_HEALTH 1
-#define BOUNTY_KNIFE_DAMAGE_LOW 7
-#define BOUNTY_KNIFE_DAMAGE_HIGH 10
+#define BOUNTY_KNIFE_DAMAGE_LOW 13
+#define BOUNTY_KNIFE_DAMAGE_HIGH 17
 #define BOUNTY_KNIFE_INTERVAL (0.8 SECONDS)
 /// Blood lost per second per cut, how long a cut bleeds, and the most cuts that bleed at once
 #define BOUNTY_KNIFE_BLEED 0.5
@@ -243,8 +243,8 @@
 #define BOUNTY_KNIFE_MAX_CUTS 3
 
 #define BOUNTY_PISTOL_HEALTH 0.9
-#define BOUNTY_PISTOL_DAMAGE_LOW 12
-#define BOUNTY_PISTOL_DAMAGE_HIGH 14
+#define BOUNTY_PISTOL_DAMAGE_LOW 18
+#define BOUNTY_PISTOL_DAMAGE_HIGH 22
 #define BOUNTY_PISTOL_INTERVAL (0.25 SECONDS)
 /// Keeps about this far away
 #define BOUNTY_PISTOL_RANGE 5
@@ -258,11 +258,18 @@
 #define BOUNTY_PISTOL_STRING_GAP (3 SECONDS)
 /// Degrees each shot may stray, either way: they empty the magazine rather than line up every shot
 #define BOUNTY_PISTOL_SPREAD 5
+/// Armour penetration of every bounty NPC's bullets (criminals, companions, the kingpin's crew, Club Volga, the Heavy): hunters come in good armour
+#define BOUNTY_BULLET_AP 25
+/// A shotgun pellet's, and the meek's little holdout's
+#define BOUNTY_PELLET_AP 10
+#define BOUNTY_HOLDOUT_AP 15
+/// Armour penetration of their fists, knives, clubs and bottles
+#define BOUNTY_MELEE_AP 15
 
 #define BOUNTY_SHOTGUN_HEALTH 1
 /// Total damage of a blast that lands every pellet
-#define BOUNTY_SHOTGUN_DAMAGE_LOW 16
-#define BOUNTY_SHOTGUN_DAMAGE_HIGH 24
+#define BOUNTY_SHOTGUN_DAMAGE_LOW 32
+#define BOUNTY_SHOTGUN_DAMAGE_HIGH 44
 #define BOUNTY_SHOTGUN_INTERVAL (1.2 SECONDS)
 #define BOUNTY_SHOTGUN_RANGE 2
 #define BOUNTY_SHOTGUN_PELLETS 4
@@ -277,14 +284,14 @@
 #define BOUNTY_SHOTGUN_RELOAD (3 SECONDS)
 
 #define BOUNTY_CLUB_HEALTH 1.1
-#define BOUNTY_CLUB_DAMAGE_LOW 5
-#define BOUNTY_CLUB_DAMAGE_HIGH 7
-#define BOUNTY_CLUB_STAMINA 18
+#define BOUNTY_CLUB_DAMAGE_LOW 9
+#define BOUNTY_CLUB_DAMAGE_HIGH 12
+#define BOUNTY_CLUB_STAMINA 25
 #define BOUNTY_CLUB_INTERVAL (1.1 SECONDS)
 
 #define BOUNTY_BOTTLE_HEALTH 0.9
-#define BOUNTY_BOTTLE_DAMAGE_LOW 9
-#define BOUNTY_BOTTLE_DAMAGE_HIGH 12
+#define BOUNTY_BOTTLE_DAMAGE_LOW 13
+#define BOUNTY_BOTTLE_DAMAGE_HIGH 17
 #define BOUNTY_BOTTLE_INTERVAL (1.2 SECONDS)
 #define BOUNTY_BOTTLE_RANGE 4
 #define BOUNTY_BOTTLE_MIN_RANGE 2

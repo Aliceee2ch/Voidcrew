@@ -226,7 +226,7 @@
 #define BOUNTY_HEAVY_BURST_SHOTS 10
 /// How long the burst takes to fire
 #define BOUNTY_HEAVY_BURST_TIME (1.5 SECONDS)
-#define BOUNTY_HEAVY_BURST_DAMAGE 9
+#define BOUNTY_HEAVY_BURST_DAMAGE 12
 /// Full width of the cone the rounds go into, in degrees
 #define BOUNTY_HEAVY_BURST_ARC 30
 /// Extra width, in degrees, of the cone marked on the floor, so edge tiles a round can cross are marked too (P4)

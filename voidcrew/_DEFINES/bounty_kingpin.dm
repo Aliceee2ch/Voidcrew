@@ -40,7 +40,7 @@
 
 // ===== HIS REVOLVER =====
 
-#define BOUNTY_KINGPIN_REVOLVER_DAMAGE 30
+#define BOUNTY_KINGPIN_REVOLVER_DAMAGE 35
 /// The aim line before each shot; he never fires without it
 #define BOUNTY_KINGPIN_REVOLVER_AIM (0.5 SECONDS)
 /// From one aim to the next
@@ -75,8 +75,8 @@
 
 /// A fixed crew of six (kingpin.md 3.4), one per map post
 #define BOUNTY_KINGPIN_GOONS 6
-#define BOUNTY_GOON_HEALTH 90
-/// A goon's stamina pool, the way P2 sets a criminal's: max_stamina 100, with a coefficient of 100 / BOUNTY_GOON_HEALTH, so 3 disabler hits stamcrit him. tg's basic mobs compare raw points with this percentage when the crit ends, so it must be 100.
+#define BOUNTY_GOON_HEALTH 150
+/// A goon's stamina pool, the way P2 sets a criminal's: max_stamina 100, with a coefficient of 100 / BOUNTY_GOON_HEALTH, so 5 disabler hits stamcrit him. tg's basic mobs compare raw points with this percentage when the crit ends, so it must be 100.
 #define BOUNTY_GOON_MAX_STAMINA 100
 /// Percent of it that stamcrits him. Just under 100, for float rounding.
 #define BOUNTY_GOON_STAMCRIT_AT 99.9
@@ -84,14 +84,14 @@
 #define BOUNTY_GOON_WEAPON_SMG "smg"
 #define BOUNTY_GOON_WEAPON_SHOTGUN "shotgun"
 
-#define BOUNTY_GOON_PISTOL_DAMAGE_MIN 12
-#define BOUNTY_GOON_PISTOL_DAMAGE_MAX 14
+#define BOUNTY_GOON_PISTOL_DAMAGE_MIN 18
+#define BOUNTY_GOON_PISTOL_DAMAGE_MAX 22
 #define BOUNTY_GOON_PISTOL_COOLDOWN (0.3 SECONDS)
 #define BOUNTY_GOON_PISTOL_ROUNDS 17
 #define BOUNTY_GOON_PISTOL_RELOAD (2 SECONDS)
 
-#define BOUNTY_GOON_SMG_DAMAGE_MIN 7
-#define BOUNTY_GOON_SMG_DAMAGE_MAX 9
+#define BOUNTY_GOON_SMG_DAMAGE_MIN 11
+#define BOUNTY_GOON_SMG_DAMAGE_MAX 14
 /// Shots in a burst, and the gap between them
 #define BOUNTY_GOON_SMG_BURST 5
 #define BOUNTY_GOON_SMG_BURST_GAP (0.1 SECONDS)
@@ -102,8 +102,8 @@
 #define BOUNTY_GOON_SMG_BURSTS 6
 #define BOUNTY_GOON_SMG_RELOAD (2.5 SECONDS)
 
-#define BOUNTY_GOON_SHOTGUN_DAMAGE_MIN 16
-#define BOUNTY_GOON_SHOTGUN_DAMAGE_MAX 24
+#define BOUNTY_GOON_SHOTGUN_DAMAGE_MIN 30
+#define BOUNTY_GOON_SHOTGUN_DAMAGE_MAX 40
 /// Tiles: he walks in to this before he fires
 #define BOUNTY_GOON_SHOTGUN_RANGE 2
 /// The pump before each blast

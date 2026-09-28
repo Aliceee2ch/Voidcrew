@@ -38,11 +38,11 @@
 #define BOUNTY_CRIMINAL_NO_SENTIENCE 0
 
 /// Health of a meek criminal, every tier
-#define BOUNTY_MEEK_HEALTH 80
+#define BOUNTY_MEEK_HEALTH 120
 /// Health of a normal criminal by tier, before the style's multiplier (C7)
-#define BOUNTY_NORMAL_HEALTH_PETTY 90
-#define BOUNTY_NORMAL_HEALTH_WANTED 120
-#define BOUNTY_NORMAL_HEALTH_MOST 150
+#define BOUNTY_NORMAL_HEALTH_PETTY 140
+#define BOUNTY_NORMAL_HEALTH_WANTED 180
+#define BOUNTY_NORMAL_HEALTH_MOST 220
 /// P0's name for the normal criminal's health: the Wanted value
 #define BOUNTY_NORMAL_HEALTH BOUNTY_NORMAL_HEALTH_WANTED
 
@@ -66,8 +66,8 @@
 /// Pace of a meek criminal: its sprint (P3 slows it while winded)
 #define BOUNTY_BODY_MEEK_SPEED 1.1
 /// Pace of a normal criminal with a melee style, and with a ranged one (pistol, bottle)
-#define BOUNTY_BODY_NORMAL_SPEED_MELEE 1.6
-#define BOUNTY_BODY_NORMAL_SPEED_RANGED 1.8
+#define BOUNTY_BODY_NORMAL_SPEED_MELEE 1.25
+#define BOUNTY_BODY_NORMAL_SPEED_RANGED 1.4
 
 // ===== STAMINA =====
 // max_stamina stays at 100 on every criminal: basic mobs leave stamina crit by comparing raw stamina

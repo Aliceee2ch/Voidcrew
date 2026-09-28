@@ -684,7 +684,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 /mob/living/basic/bounty_kingpin_goon/Initialize(mapload)
 	. = ..()
-	// Their own copy: 3 disabler hits (30 each) fill the pool of BOUNTY_GOON_MAX_STAMINA
+	// Their own copy: 5 disabler hits (30 each) fill the pool of BOUNTY_GOON_MAX_STAMINA
 	damage_coeff = damage_coeff.Copy()
 	damage_coeff[STAMINA] = BOUNTY_GOON_MAX_STAMINA / BOUNTY_GOON_HEALTH
 	gender = prob(75) ? MALE : FEMALE
@@ -2093,6 +2093,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /obj/projectile/bullet/bounty_kingpin
 	name = "bullet"
 	damage = 13
+	armour_penetration = BOUNTY_BULLET_AP
 	embed_type = null
 	shrapnel_type = null
 	/// Weakref to the crew whose shot it is (/datum/bounty_kingpin_crew)

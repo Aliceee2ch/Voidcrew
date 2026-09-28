@@ -512,6 +512,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 /obj/projectile/bullet/bounty_mafia
 	name = "bullet"
 	damage = BOUNTY_MOBSTER_PISTOL_DAMAGE_MIN
+	armour_penetration = BOUNTY_BULLET_AP
 	embed_type = null
 	shrapnel_type = null
 
@@ -642,6 +643,7 @@ GLOBAL_LIST_EMPTY(bounty_mafia_rooms)
 	melee_damage_lower = BOUNTY_MOBSTER_KNIFE_DAMAGE_MIN
 	melee_damage_upper = BOUNTY_MOBSTER_KNIFE_DAMAGE_MAX
 	melee_attack_cooldown = BOUNTY_MOBSTER_KNIFE_COOLDOWN
+	armour_penetration = BOUNTY_MELEE_AP
 	faction = list(FACTION_RUSSIAN, BOUNTY_MAFIA_FACTION)
 	sentience_type = SENTIENCE_BOSS
 	// They talk to the hunters, so they speak Common

@@ -86,13 +86,13 @@
 	TEST_ASSERT(!istype(rocket, /obj/projectile/bullet/rocket), "The launch fired tg's rocket")
 	TEST_ASSERT_EQUAL(rocket.rocket_target, get_turf(hunter), "The rocket isn't aimed at the marker")
 
-	// It lands on the marker: 60 brute and a knockdown (BOUNTY_MECH_ROCKET_DAMAGE), once a volley
+	// It lands on the marker: 70 brute and a knockdown (BOUNTY_MECH_ROCKET_DAMAGE), once a volley
 	var/turf/marker_turf = get_turf(hunter)
 	var/list/volley = rocket.rocket_volley
 	var/list/hit = rocket.rocket_detonate(marker_turf)
 	TEST_ASSERT(hunter in hit, "The rocket missed the hunter standing on the marker")
 	var/first = hunter.getBruteLoss()
-	TEST_ASSERT_EQUAL(first, 60, "The rocket didn't do 60 brute to an unarmoured hunter") // BOUNTY_MECH_ROCKET_DAMAGE
+	TEST_ASSERT_EQUAL(first, 70, "The rocket didn't do 70 brute to an unarmoured hunter") // BOUNTY_MECH_ROCKET_DAMAGE
 	TEST_ASSERT(hunter.IsKnockdown(), "The rocket didn't knock the hunter down")
 	TEST_ASSERT(QDELETED(rocket), "The rocket outlived its burst")
 	var/obj/projectile/bullet/bounty_mafia_rocket/second = new(spot(1, 2))
@@ -152,7 +152,7 @@
 	var/landed_brute = watch_flight(rockets[1], target, timeline)
 	var/seen = "Hits: [length(target_hits) ? target_hits.Join("; ") : "none"]. Brute by tenth of a second: [timeline.Join(", ")]"
 	TEST_ASSERT(QDELETED(rockets[1]), "The rocket never reached its marker. [seen]")
-	TEST_ASSERT_EQUAL(landed_brute, 60, "The rocket didn't hit the hunter on its marker. [seen]") // BOUNTY_MECH_ROCKET_DAMAGE
+	TEST_ASSERT_EQUAL(landed_brute, 70, "The rocket didn't hit the hunter on its marker. [seen]") // BOUNTY_MECH_ROCKET_DAMAGE
 	TEST_ASSERT_EQUAL(target.getBruteLoss(), landed_brute, "The hunter's brute changed after the rocket burst. [seen]")
 	TEST_ASSERT_EQUAL(bystander.getBruteLoss(), 0, "The rocket hit someone it flew past on the way")
 	// explosion() would have gone off, and flattened the table beside the marker
@@ -406,7 +406,7 @@
 	TEST_ASSERT(don in ejected, "The mech didn't announce the don")
 	TEST_ASSERT_EQUAL(don.posting_ref?.resolve(), posting, "The don didn't keep the mech's posting")
 	TEST_ASSERT_EQUAL(don.name, "Viktor Sokolov", "The don isn't named for his posting")
-	TEST_ASSERT_EQUAL(don.maxHealth, 150, "The don's health is wrong") // BOUNTY_DON_HEALTH
+	TEST_ASSERT_EQUAL(don.maxHealth, 250, "The don's health is wrong") // BOUNTY_DON_HEALTH
 	TEST_ASSERT_EQUAL(don.don_busy, "stagger", "The don isn't dazed as he climbs out")
 	TEST_ASSERT_EQUAL(don.don_wreck_ref?.resolve(), wreck, "The don doesn't know his wreck")
 
@@ -443,8 +443,8 @@
 	var/mob/living/basic/trooper/russian/mafia/lieutenant/second = allocate(/mob/living/basic/trooper/russian/mafia/lieutenant, spot(3, 1))
 	TEST_ASSERT_EQUAL(first.mafia_lieutenant_role, "tommy", "The first lieutenant isn't Tommy") // BOUNTY_LIEUTENANT_TOMMY
 	TEST_ASSERT_EQUAL(second.mafia_lieutenant_role, "brute", "The second lieutenant isn't Brute") // BOUNTY_LIEUTENANT_BRUTE
-	TEST_ASSERT_EQUAL(first.maxHealth, 220, "Tommy's health is wrong") // BOUNTY_LIEUTENANT_TOMMY_HEALTH
-	TEST_ASSERT_EQUAL(second.maxHealth, 240, "Brute's health is wrong") // BOUNTY_LIEUTENANT_BRUTE_HEALTH
+	TEST_ASSERT_EQUAL(first.maxHealth, 350, "Tommy's health is wrong") // BOUNTY_LIEUTENANT_TOMMY_HEALTH
+	TEST_ASSERT_EQUAL(second.maxHealth, 400, "Brute's health is wrong") // BOUNTY_LIEUTENANT_BRUTE_HEALTH
 	TEST_ASSERT(istype(first.mafia_gun, /datum/bounty_mafia_gun/tommy), "Tommy has no Tommy gun")
 	TEST_ASSERT_NULL(second.mafia_gun, "Brute has a gun")
 	for(var/mob/living/basic/trooper/russian/mafia/lieutenant/lieutenant as anything in list(first, second))
@@ -504,8 +504,8 @@
 
 /datum/unit_test/voidcrew_bounty_lair_mafia/goons/Run()
 	var/mob/living/basic/trooper/russian/mafia/pistol/gunman = allocate(/mob/living/basic/trooper/russian/mafia/pistol, spot(0, 0))
-	TEST_ASSERT_EQUAL(gunman.maxHealth, 75, "The gunman's health is wrong") // BOUNTY_MOBSTER_PISTOL_HEALTH
-	TEST_ASSERT(gunman.speed > 1.5, "The gunman outruns a player")
+	TEST_ASSERT_EQUAL(gunman.maxHealth, 120, "The gunman's health is wrong") // BOUNTY_MOBSTER_PISTOL_HEALTH
+	TEST_ASSERT(gunman.speed < 1.5, "The gunman can't keep up with a running player")
 	var/mob/living/carbon/human/consistent/hunter = hunter_at(spot(4, 0), as_client = TRUE)
 	TEST_ASSERT(!gunman.mafia_is_ready(), "The gunman is ready before seeing anyone")
 

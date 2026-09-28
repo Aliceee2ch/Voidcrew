@@ -1211,6 +1211,7 @@
 /obj/projectile/bullet/bounty_boss_heavy
 	name = "heavy round"
 	damage = BOUNTY_HEAVY_BURST_DAMAGE
+	armour_penetration = BOUNTY_BULLET_AP
 	range = BOUNTY_HEAVY_BURST_RANGE
 	demolition_mod = 0
 

@@ -223,7 +223,7 @@
 	TEST_ASSERT_EQUAL(criminal.ai_controller.blackboard["bb_bounty_ammo"], 0, "Seventeen shots did not empty the magazine") // BB_BOUNTY_AMMO
 	TEST_ASSERT(bounty_style_health_mult("brawler") > 1, "The brawler is not sturdier") // BOUNTY_STYLE_BRAWLER
 	TEST_ASSERT(bounty_ai_apply_style(criminal, "club", 1.2), "The club style would not apply") // BOUNTY_STYLE_CLUB
-	TEST_ASSERT_EQUAL(criminal.melee_damage_upper, round(7 * 1.2), "The club's damage did not take the tier") // BOUNTY_CLUB_DAMAGE_HIGH x BOUNTY_NORMAL_DAMAGE_MOST
+	TEST_ASSERT_EQUAL(criminal.melee_damage_upper, round(12 * 1.2), "The club's damage did not take the tier") // BOUNTY_CLUB_DAMAGE_HIGH x the tier multiplier given
 
 /// Every activity kind starts with its anchor in place
 /datum/unit_test/voidcrew_bounty_ai/activities

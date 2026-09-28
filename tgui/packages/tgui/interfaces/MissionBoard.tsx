@@ -200,7 +200,11 @@ const MissionBoardContent = () => {
     'available' | 'active' | 'bounties' | 'broadcasts'
   >('available');
 
-  const huntingCount = bounties.filter((b) => b.is_hunting).length;
+  // Ship bounties and wanted criminals share the tab
+  const huntingCount =
+    bounties.filter((b) => b.is_hunting).length +
+    wanted.filter((w) => w.hunting_by_us).length;
+  const bountyCount = bounties.length + wanted.length;
 
   return (
     <Stack fill vertical>
@@ -280,20 +284,7 @@ const MissionBoardContent = () => {
             onClick={() => setCurrentTab('bounties')}
             icon="skull"
           >
-            Bounties ({huntingCount}/{bounties.length})
-            {wanted.length > 0 ? (
-              <Box
-                inline
-                ml={1}
-                px={0.5}
-                bold
-                color="white"
-                backgroundColor="red"
-                style={{ borderRadius: '0.6em' }}
-              >
-                {wanted.length}
-              </Box>
-            ) : null}
+            Bounties ({huntingCount}/{bountyCount})
           </Tabs.Tab>
           <Tabs.Tab
             selected={currentTab === 'broadcasts'}

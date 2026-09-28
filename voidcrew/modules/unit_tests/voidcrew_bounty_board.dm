@@ -230,6 +230,20 @@
 
 // ===== THE CLOCK =====
 
+/// Taking an offer queues its mugshot, and the boards resend their static data once, when it's built, not first with an empty picture
+/datum/unit_test/voidcrew_bounty_board/offer_mugshot
+
+/datum/unit_test/voidcrew_bounty_board/offer_mugshot/Run()
+	var/obj/structure/overmap/ship/ship = board_test_ship()
+	var/datum/criminal_bounty/offer = board_test_posting(1, ship)
+	offer.record.mugshot = null
+	var/serial_before = offer.static_data_serial
+	TEST_ASSERT_EQUAL(offer.hunt(ship), TRUE, "The ship could not take its offer")
+	TEST_ASSERT_EQUAL(offer.static_data_serial, serial_before, "Taking an offer resent the boards before its picture was built")
+	TEST_ASSERT(offer.record.identity_mugshot_queued, "Taking an offer didn't queue its picture")
+	offer.board_on_mugshot_ready(offer.record)
+	TEST_ASSERT(offer.static_data_serial > serial_before, "The boards weren't told the picture is ready")
+
 /// 45 minutes, held while a ship hunts it, for up to 30 minutes a hunt (12.1)
 /datum/unit_test/voidcrew_bounty_board/expiry
 

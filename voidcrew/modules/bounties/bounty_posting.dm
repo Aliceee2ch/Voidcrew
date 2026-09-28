@@ -181,8 +181,12 @@
 	if(private_to)
 		board_accepted = TRUE
 		expires_at = world.time + BOUNTY_PRIVATE_DURATION
-		// An offer's mugshot is only built once it is taken (AR-G1): the board resends its static data
-		static_data_serial++
+		// An offer's mugshot is only built once it is taken (AR-G1). The boards resend their static data
+		// once it's ready (board_on_mugshot_ready()), not first with an empty picture and again with it.
+		if(record?.mugshot)
+			static_data_serial++
+		else if(record)
+			bounty_queue_mugshot(record)
 	board_push_waypoint(ship)
 	ship.ship_notify("WANTED: now hunting [record?.name]. [board_place_text()].", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
 	log_game("BOUNTY: [ship.name] is hunting the [board_log_name()]")

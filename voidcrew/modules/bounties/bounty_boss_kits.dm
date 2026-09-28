@@ -301,6 +301,7 @@
 	damage_coeff = list(BRUTE = BOUNTY_PYROMANIAC_BRUTE_MOD, BURN = BOUNTY_PYROMANIAC_BURN_MOD, TOX = 1, STAMINA = BOUNTY_BOSS_STAMINA_FRESH * 100 / BOUNTY_BOSS_STAMINA, OXY = 1)
 	melee_damage_lower = BOUNTY_PYROMANIAC_MELEE_MIN
 	melee_damage_upper = BOUNTY_PYROMANIAC_MELEE_MAX
+	armour_penetration = BOUNTY_PYROMANIAC_MELEE_AP
 	melee_damage_type = BURN
 	melee_attack_cooldown = BOUNTY_PYROMANIAC_MELEE_COOLDOWN
 	attack_verb_continuous = "burns"
@@ -460,14 +461,10 @@
 	health = BOUNTY_DEMOLITIONIST_HEALTH_1
 	speed = BOUNTY_DEMOLITIONIST_SPEED
 	damage_coeff = list(BRUTE = BOUNTY_DEMOLITIONIST_BRUTE_MOD, BURN = BOUNTY_DEMOLITIONIST_BURN_MOD, TOX = 1, STAMINA = BOUNTY_BOSS_STAMINA_FRESH * 100 / BOUNTY_BOSS_STAMINA, OXY = 1)
-	melee_damage_lower = BOUNTY_DEMOLITIONIST_MELEE_MIN
-	melee_damage_upper = BOUNTY_DEMOLITIONIST_MELEE_MAX
 	melee_attack_cooldown = BOUNTY_DEMOLITIONIST_MELEE_COOLDOWN
-	attack_verb_continuous = "cracks"
-	attack_verb_simple = "crack"
-	attack_sound = 'sound/items/weapons/genhit1.ogg'
 	attack_vis_effect = ATTACK_EFFECT_SMASH
 	boss_kit = BOUNTY_KIT_DEMOLITIONIST
+	boss_weapon = BOUNTY_DEMOLITIONIST_CROWBAR
 	boss_ability_types = list(
 		/datum/action/cooldown/mob_cooldown/bounty_boss/grenade,
 		/datum/action/cooldown/mob_cooldown/bounty_boss/breach,
@@ -529,7 +526,7 @@
 	glasses = /obj/item/clothing/glasses/welding
 	gloves = /obj/item/clothing/gloves/color/black
 	shoes = /obj/item/clothing/shoes/workboots
-	r_hand = /obj/item/crowbar/red
+	r_hand = BOUNTY_DEMOLITIONIST_CROWBAR
 
 /**
  * Grenade: it pulls the pin and a mark shows where it is aiming, then it throws. The grenade lands
@@ -791,16 +788,10 @@
 	health = BOUNTY_GHOST_HEALTH_1
 	speed = BOUNTY_GHOST_SPEED
 	damage_coeff = list(BRUTE = BOUNTY_GHOST_BRUTE_MOD, BURN = BOUNTY_GHOST_BURN_MOD, TOX = 1, STAMINA = BOUNTY_BOSS_STAMINA_FRESH * 100 / BOUNTY_BOSS_STAMINA, OXY = 1)
-	melee_damage_lower = BOUNTY_GHOST_MELEE_MIN
-	melee_damage_upper = BOUNTY_GHOST_MELEE_MAX
-	armour_penetration = BOUNTY_GHOST_MELEE_AP
 	melee_attack_cooldown = BOUNTY_GHOST_MELEE_COOLDOWN
-	sharpness = SHARP_EDGED
-	attack_verb_continuous = "slashes"
-	attack_verb_simple = "slash"
-	attack_sound = 'sound/items/weapons/bladeslice.ogg'
 	attack_vis_effect = ATTACK_EFFECT_SLASH
 	boss_kit = BOUNTY_KIT_GHOST
+	boss_weapon = BOUNTY_GHOST_KNIFE
 	boss_ability_types = list(
 		/datum/action/cooldown/mob_cooldown/bounty_boss/dash,
 		/datum/action/cooldown/mob_cooldown/bounty_boss/cloak,
@@ -837,7 +828,7 @@
 	mask = /obj/item/clothing/mask/bandana/black
 	gloves = /obj/item/clothing/gloves/color/black
 	shoes = /obj/item/clothing/shoes/sneakers/black
-	r_hand = /obj/item/knife/combat
+	r_hand = BOUNTY_GHOST_KNIFE
 
 /// Its cuts bleed, and after a couple of them it breaks off for a while
 /mob/living/basic/bounty_criminal/boss/ghost/melee_attack(atom/target, list/modifiers, ignore_cooldown = FALSE)
@@ -1028,10 +1019,10 @@
 	playsound(victim, 'sound/items/weapons/bladeslice.ogg', 70, TRUE)
 	victim.visible_message(span_danger("[boss] darts in and slashes [victim]!"), span_userdanger("[boss] darts in and slashes you!"))
 	if(ismecha(victim))
-		boss.boss_hit(victim, BOUNTY_GHOST_DASH_DAMAGE, BRUTE, MELEE, 0, BOUNTY_GHOST_MELEE_AP)
+		boss.boss_hit(victim, BOUNTY_GHOST_DASH_DAMAGE, BRUTE, MELEE, 0, BOUNTY_GHOST_DASH_AP)
 		return
 	var/mob/living/person = victim
-	person.apply_damage(BOUNTY_GHOST_DASH_DAMAGE, BRUTE, BODY_ZONE_CHEST, person.run_armor_check(BODY_ZONE_CHEST, MELEE, armour_penetration = BOUNTY_GHOST_MELEE_AP, silent = TRUE), sharpness = SHARP_EDGED)
+	person.apply_damage(BOUNTY_GHOST_DASH_DAMAGE, BRUTE, BODY_ZONE_CHEST, person.run_armor_check(BODY_ZONE_CHEST, MELEE, armour_penetration = BOUNTY_GHOST_DASH_AP, silent = TRUE), sharpness = SHARP_EDGED)
 	boss.boss_cut(person)
 
 /// Cloak: the air around it shimmers, then it fades to a faint distortion that half of all hits miss
@@ -1095,14 +1086,10 @@
 	mob_size = MOB_SIZE_LARGE
 	speed = BOUNTY_HEAVY_SPEED
 	damage_coeff = list(BRUTE = BOUNTY_HEAVY_BRUTE_MOD, BURN = BOUNTY_HEAVY_BURN_MOD, TOX = 1, STAMINA = BOUNTY_HEAVY_STAMINA_FRESH * 100 / BOUNTY_HEAVY_STAMINA, OXY = 1)
-	melee_damage_lower = BOUNTY_HEAVY_MELEE_MIN
-	melee_damage_upper = BOUNTY_HEAVY_MELEE_MAX
 	melee_attack_cooldown = BOUNTY_HEAVY_MELEE_COOLDOWN
-	attack_verb_continuous = "clubs"
-	attack_verb_simple = "club"
-	attack_sound = 'sound/items/weapons/genhit3.ogg'
 	attack_vis_effect = ATTACK_EFFECT_SMASH
 	boss_kit = BOUNTY_KIT_HEAVY
+	boss_weapon = BOUNTY_HEAVY_GUN
 	boss_stamina_pool = BOUNTY_HEAVY_STAMINA
 	boss_stamina_fresh = BOUNTY_HEAVY_STAMINA_FRESH
 	boss_ability_types = list(
@@ -1126,7 +1113,7 @@
 	head = /obj/item/clothing/head/helmet/swat
 	gloves = /obj/item/clothing/gloves/combat
 	shoes = /obj/item/clothing/shoes/jackboots
-	r_hand = /obj/item/gun/ballistic/automatic/l6_saw
+	r_hand = BOUNTY_HEAVY_GUN
 
 /**
  * Suppressive burst: the gun spins up with a whirr, a red laser sight settles on the target's tile
@@ -1188,6 +1175,10 @@
 	shots_left--
 	var/turf/origin = get_turf(boss)
 	var/obj/projectile/bullet/bounty_boss_heavy/bullet = new(origin)
+	// Its gun's own rounds, no further than the marked cone
+	bounty_real_weapon(BOUNTY_HEAVY_GUN).load(bullet)
+	bullet.range = BOUNTY_HEAVY_BURST_RANGE
+	bullet.maximum_range = BOUNTY_HEAVY_BURST_RANGE
 	bullet.firer = boss
 	bullet.fired_from = boss
 	bullet.ignored_factions = boss.faction.Copy()
@@ -1207,11 +1198,12 @@
 	if(istype(boss) && boss.boss_busy == "burst" && boss.boss_busy_serial == serial)
 		boss.boss_clear_busy(serial)
 
-/// The Heavy's rounds: no further than the marked cone, and hard on structures only where the boss may break them
+/**
+ * The Heavy's rounds: its belt-fed gun's own (BOUNTY_HEAVY_GUN, loaded as they are fired), no
+ * further than the marked cone, and hard on structures only where the boss may break them
+ */
 /obj/projectile/bullet/bounty_boss_heavy
 	name = "heavy round"
-	damage = BOUNTY_HEAVY_BURST_DAMAGE
-	armour_penetration = BOUNTY_BULLET_AP
 	range = BOUNTY_HEAVY_BURST_RANGE
 	demolition_mod = 0
 

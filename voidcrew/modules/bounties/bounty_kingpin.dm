@@ -177,7 +177,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /// The kingpin in a shootout: the same, with his revolver out (worn look only; he carries no real gun)
 /datum/outfit/bounty_kingpin/armed
 	name = "Bounty kingpin: armed"
-	r_hand = /obj/item/gun/ballistic/revolver
+	r_hand = BOUNTY_KINGPIN_REVOLVER
 
 /// A goon at ease: black suit, black tie, sunglasses
 /datum/outfit/bounty_kingpin_goon
@@ -192,15 +192,15 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /// Goons with their guns out (worn looks only; goons carry no real guns and drop none)
 /datum/outfit/bounty_kingpin_goon/pistol
 	name = "Kingpin goon: pistol"
-	r_hand = /obj/item/gun/ballistic/automatic/pistol
+	r_hand = BOUNTY_GOON_PISTOL_GUN
 
 /datum/outfit/bounty_kingpin_goon/smg
 	name = "Kingpin goon: SMG"
-	r_hand = /obj/item/gun/ballistic/automatic/mini_uzi
+	r_hand = BOUNTY_GOON_SMG_GUN
 
 /datum/outfit/bounty_kingpin_goon/shotgun
 	name = "Kingpin goon: shotgun"
-	r_hand = /obj/item/gun/ballistic/shotgun/automatic/combat
+	r_hand = BOUNTY_GOON_SHOTGUN_GUN
 
 // =========================================================================
 // THE KINGPIN
@@ -220,8 +220,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	ai_controller = null
 	/// His goons, the shootout, the table and the offer (/datum/bounty_kingpin_crew). He deletes it.
 	var/datum/bounty_kingpin_crew/kingpin_crew
-	/// Rounds left in his revolver
-	var/kingpin_rounds = BOUNTY_KINGPIN_REVOLVER_ROUNDS
+	/// Rounds left in his revolver (a full cylinder at Initialize)
+	var/kingpin_rounds = 0
 	/// world.time he may start his next aim
 	var/kingpin_next_aim_at = 0
 	/// The timer that fires the aimed shot, while he aims
@@ -236,6 +236,10 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/kingpin_next_surrender_roll = 0
 	/// Between two of his lines
 	COOLDOWN_DECLARE(kingpin_say_cooldown)
+
+/mob/living/basic/bounty_criminal/kingpin/Initialize(mapload)
+	. = ..()
+	kingpin_rounds = bounty_kingpin_revolver().magazine
 
 /mob/living/basic/bounty_criminal/kingpin/Destroy()
 	kingpin_cancel_aim()
@@ -498,6 +502,10 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 // ===== HIS REVOLVER =====
 
+/// His revolver: the one in his hand, whose rounds and cylinder are his (bounty_real_weapon())
+/proc/bounty_kingpin_revolver()
+	return bounty_real_weapon(BOUNTY_KINGPIN_REVOLVER)
+
 /// Whether he can shoot now: awake, not down, not cuffed, not stunned, not given up
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_able()
 	if(stat != CONSCIOUS || downed || is_restrained() || body_is_stunned())
@@ -531,7 +539,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	if(!crew.valid_target(target) || !bounty_kingpin_clear_shot(src, target))
 		return FALSE
 	kingpin_rounds--
-	bounty_kingpin_shoot(src, crew.shot_target(target), BOUNTY_KINGPIN_REVOLVER_DAMAGE, 4, 'sound/items/weapons/gun/revolver/shot.ogg', crew)
+	bounty_kingpin_shoot(src, crew.shot_target(target), bounty_kingpin_revolver(), crew)
 	return TRUE
 
 /// Drops his aim, if he has one
@@ -544,7 +552,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 /// He reloads: BOUNTY_KINGPIN_REVOLVER_RELOAD with nothing fired, a window for the hunters
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_reload()
-	kingpin_rounds = BOUNTY_KINGPIN_REVOLVER_ROUNDS
+	kingpin_rounds = bounty_kingpin_revolver().magazine
 	kingpin_next_aim_at = world.time + BOUNTY_KINGPIN_REVOLVER_RELOAD
 	visible_message(span_notice("[src] breaks open [p_their()] revolver and reloads."), vision_distance = COMBAT_MESSAGE_RANGE)
 	playsound(src, 'sound/items/weapons/gun/revolver/load_bullet.ogg', 50, TRUE)
@@ -659,7 +667,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/datum/weakref/goon_crew_ref
 	/// Weakref to who they are shooting at
 	var/datum/weakref/goon_target_ref
-	/// Rounds (or bursts, or shells) left before a reload
+	/// Rounds (or shells) left before a reload
 	var/goon_rounds = 0
 	/// world.time they may fire next
 	var/goon_next_fire_at = 0
@@ -756,14 +764,19 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		deltimer(goon_windup_timer)
 		goon_windup_timer = null
 
-/// A full magazine for their gun
-/proc/bounty_kingpin_goon_mag(weapon)
+/// A goon's gun by BOUNTY_GOON_WEAPON_*: the one in his hand, loaded as it is (bounty_real_weapon())
+/proc/bounty_kingpin_goon_gun(weapon)
 	switch(weapon)
 		if(BOUNTY_GOON_WEAPON_SMG)
-			return BOUNTY_GOON_SMG_BURSTS
+			return bounty_real_weapon(BOUNTY_GOON_SMG_GUN)
 		if(BOUNTY_GOON_WEAPON_SHOTGUN)
-			return BOUNTY_GOON_SHOTGUN_SHELLS
-	return BOUNTY_GOON_PISTOL_ROUNDS
+			return bounty_real_weapon(BOUNTY_GOON_SHOTGUN_GUN, BOUNTY_GOON_SHOTGUN_AMMO)
+	return bounty_real_weapon(BOUNTY_GOON_PISTOL_GUN)
+
+/// A full magazine (or tube) for their gun
+/proc/bounty_kingpin_goon_mag(weapon)
+	var/datum/bounty_real_weapon/gun = bounty_kingpin_goon_gun(weapon)
+	return gun.magazine
 
 /// How long their gun takes to reload
 /proc/bounty_kingpin_goon_reload(weapon)
@@ -1841,7 +1854,6 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 			goon.goon_windup_timer = addtimer(CALLBACK(src, PROC_REF(goon_finish_windup), WEAKREF(goon), WEAKREF(target)), BOUNTY_GOON_SHOTGUN_WINDUP, TIMER_STOPPABLE | TIMER_DELETE_ME)
 		else
 			goon.goon_next_fire_at = world.time + BOUNTY_GOON_PISTOL_COOLDOWN
-			goon.goon_rounds--
 			goon_fire(goon, target)
 	return TRUE
 
@@ -1854,7 +1866,6 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/mob/living/target = target_ref?.resolve()
 	if(crew_state != BOUNTY_KINGPIN_FIGHTING || !goon.goon_able() || !valid_target(target) || !bounty_kingpin_clear_shot(goon, target))
 		return
-	goon.goon_rounds--
 	if(goon.goon_weapon == BOUNTY_GOON_WEAPON_SHOTGUN)
 		if(get_dist(goon, target) <= BOUNTY_GOON_SHOTGUN_RANGE)
 			goon_fire(goon, target)
@@ -1871,15 +1882,12 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		return
 	goon_fire(goon, target)
 
-/// One shot from `goon`'s gun at `target` (at the mech they drive, if they drive one)
+/// One round from `goon`'s gun at `target` (at the mech they drive, if they drive one), if one is left: every pellet of a shell
 /datum/bounty_kingpin_crew/proc/goon_fire(mob/living/basic/bounty_kingpin_goon/goon, mob/living/target)
-	var/atom/aim_at = shot_target(target)
-	switch(goon.goon_weapon)
-		if(BOUNTY_GOON_WEAPON_SMG)
-			return bounty_kingpin_shoot(goon, aim_at, rand(BOUNTY_GOON_SMG_DAMAGE_MIN, BOUNTY_GOON_SMG_DAMAGE_MAX), BOUNTY_GOON_SMG_SPREAD, 'sound/items/weapons/gun/smg/shot.ogg', src)
-		if(BOUNTY_GOON_WEAPON_SHOTGUN)
-			return bounty_kingpin_shoot(goon, aim_at, rand(BOUNTY_GOON_SHOTGUN_DAMAGE_MIN, BOUNTY_GOON_SHOTGUN_DAMAGE_MAX), BOUNTY_GOON_SHOTGUN_SPREAD, 'sound/items/weapons/gun/shotgun/shot.ogg', src, BOUNTY_GOON_SHOTGUN_RANGE + 1)
-	return bounty_kingpin_shoot(goon, aim_at, rand(BOUNTY_GOON_PISTOL_DAMAGE_MIN, BOUNTY_GOON_PISTOL_DAMAGE_MAX), BOUNTY_GOON_PISTOL_SPREAD, 'sound/items/weapons/gun/pistol/shot.ogg', src)
+	if(goon.goon_rounds <= 0)
+		return null
+	goon.goon_rounds--
+	return bounty_kingpin_shoot(goon, shot_target(target), bounty_kingpin_goon_gun(goon.goon_weapon), src)
 
 /// The kingpin's turn: aim at whoever hurt him most, or reload. Never while drawing. Returns TRUE if he sees a hunter.
 /datum/bounty_kingpin_crew/proc/boss_tick(mob/living/basic/bounty_criminal/kingpin/kingpin, list/hunters)
@@ -2087,15 +2095,12 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /**
  * # A shot from the kingpin's crew
  *
- * Brute, and bullet armour applies. It passes through anyone the crew isn't fighting (bystanders,
- * the crew itself, guests bound by his deal): only a hunter it reaches can be hit. No shrapnel.
+ * The real round of the gun that fires it (bounty_kingpin_shoot()). It passes through anyone the
+ * crew isn't fighting (bystanders, the crew itself, guests bound by his deal): only a hunter it
+ * reaches can be hit.
  */
 /obj/projectile/bullet/bounty_kingpin
 	name = "bullet"
-	damage = 13
-	armour_penetration = BOUNTY_BULLET_AP
-	embed_type = null
-	shrapnel_type = null
 	/// Weakref to the crew whose shot it is (/datum/bounty_kingpin_crew)
 	var/datum/weakref/kingpin_crew_ref
 
@@ -2106,30 +2111,35 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 			return FALSE
 	return ..()
 
-/// `shooter` fires one shot of `damage` at `target`, with `spread` degrees of spread, for `crew`; `range` tiles at most, if given. Returns the projectile.
-/proc/bounty_kingpin_shoot(mob/living/shooter, mob/living/target, damage, spread, sound, datum/bounty_kingpin_crew/crew, range)
+/**
+ * `shooter` fires one round of `weapon` (a /datum/bounty_real_weapon) at `target` for `crew`: every
+ * pellet of a shell, each with the real round's numbers and spread. Returns the first projectile.
+ */
+/proc/bounty_kingpin_shoot(mob/living/shooter, atom/target, datum/bounty_real_weapon/weapon, datum/bounty_kingpin_crew/crew)
 	var/turf/start = get_turf(shooter)
-	if(!start || !target)
+	if(!start || !target || !weapon)
 		return null
-	var/obj/projectile/bullet/bounty_kingpin/bullet = new(start)
-	bullet.damage = damage
-	bullet.spread = spread
-	if(range)
-		bullet.range = range
-	bullet.kingpin_crew_ref = crew ? WEAKREF(crew) : null
-	bullet.starting = start
-	bullet.firer = shooter
-	bullet.fired_from = shooter
-	bullet.yo = target.y - start.y
-	bullet.xo = target.x - start.x
-	bullet.original = target
-	bullet.aim_projectile(target, shooter)
-	if(sound)
-		playsound(shooter, sound, 60, TRUE)
+	var/obj/projectile/bullet/bounty_kingpin/first
+	for(var/pellet in 1 to weapon.pellets)
+		var/obj/projectile/bullet/bounty_kingpin/bullet = new(start)
+		weapon.load(bullet)
+		bullet.kingpin_crew_ref = crew ? WEAKREF(crew) : null
+		bullet.starting = start
+		bullet.firer = shooter
+		bullet.fired_from = shooter
+		bullet.yo = target.y - start.y
+		bullet.xo = target.x - start.x
+		bullet.original = target
+		bullet.aim_projectile(target, shooter, null, weapon.shot_spread())
+		if(QDELETED(bullet))
+			continue
+		first ||= bullet
+		INVOKE_ASYNC(bullet, TYPE_PROC_REF(/obj/projectile, fire))
+	if(weapon.fire_sound)
+		playsound(shooter, weapon.fire_sound, 60, TRUE)
 	if(crew)
 		crew.crew_shots++
-	INVOKE_ASYNC(bullet, TYPE_PROC_REF(/obj/projectile, fire))
-	return bullet
+	return first
 
 /**
  * Whether a shot from `from` would reach `target`: in range, on the same level, and nothing in the

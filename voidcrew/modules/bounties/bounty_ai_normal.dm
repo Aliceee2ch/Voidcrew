@@ -12,7 +12,8 @@
  *   rolled on the hit that crosses BOUNTY_SURRENDER_BELOW and on later hits, with two hunters near;
  * - breaking off and retreating when badly hurt with nobody near. They never regenerate.
  * It also owns the fighting styles every bounty fighter uses (criminals, companions, the meek's
- * holdout): /datum/bounty_style, their projectiles, and the cut a knife or a bottle leaves.
+ * holdout): /datum/bounty_style and their projectiles. Every blow and shot is the real weapon's
+ * (bounty_weapons.dm).
  *
  * The shared vars are declared in bounty_types.dm and nowhere else; a var only P3 uses has an
  * `ai_` prefix.
@@ -125,7 +126,7 @@
 	ai_add_grudge(target)
 	var/datum/bounty_style/style = bounty_ai_style(src)
 	ai_set_pace(style?.speed || BOUNTY_NORMAL_SPEED_MELEE)
-	ai_hand = bounty_ai_update_held(src, ai_hand, style?.held_look)
+	ai_hand = bounty_ai_update_held(src, ai_hand, bounty_ai_held_look(src))
 	if(fresh)
 		ai_bark(bark || "fight_start")
 	ai_rally_companions(target)
@@ -448,6 +449,20 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 		return null
 	return GLOB.bounty_styles[controller.blackboard[BB_BOUNTY_STYLE]]
 
+/// The item a fighter fights with and shows in their hand (a typepath), or null for bare fists
+/proc/bounty_ai_held_look(mob/living/basic/fighter)
+	var/datum/ai_controller/controller = fighter?.ai_controller
+	if(QDELETED(controller))
+		return null
+	return controller.blackboard[BB_BOUNTY_WEAPON]
+
+/// The real weapon a fighter fights with: the item in their hand, loaded as their style loads it. Null with no style.
+/proc/bounty_ai_real_weapon(mob/living/basic/fighter)
+	var/datum/bounty_style/style = bounty_ai_style(fighter)
+	if(!style)
+		return null
+	return bounty_real_weapon(bounty_ai_held_look(fighter), style.ammo_type)
+
 // A style's health multiplier is P2's bounty_style_health_mult() (bounty_criminal.dm), from the combat.md defines.
 
 /// Stamina damage multiplier of a style (the brawler shrugs off some): P2 folds it into damage_coeff[STAMINA]
@@ -455,25 +470,36 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	var/datum/bounty_style/style = GLOB.bounty_styles[style_key]
 	return style ? style.stamina_mult : 1
 
-/// Puts style `key` on `fighter` with its damage times `damage_mult`: melee numbers, the gun, the blackboard
-/proc/bounty_ai_apply_style(mob/living/basic/fighter, key, damage_mult = 1)
+/**
+ * Puts style `key` on `fighter`: its weapon (the style's heavy_look if `heavy` and it has one), a
+ * full magazine, and the blow and the gun that weapon gives.
+ */
+/proc/bounty_ai_apply_style(mob/living/basic/fighter, key, heavy = FALSE)
 	var/datum/bounty_style/style = GLOB.bounty_styles[key]
 	var/datum/ai_controller/controller = fighter?.ai_controller
 	if(!style || QDELETED(controller))
 		return FALSE
+	var/weapon_type = (heavy && style.heavy_look) || style.held_look
+	var/datum/bounty_real_weapon/weapon = bounty_real_weapon(weapon_type, style.ammo_type)
 	controller.set_blackboard_key(BB_BOUNTY_STYLE, key)
-	controller.set_blackboard_key(BB_BOUNTY_DAMAGE_MULT, damage_mult)
-	controller.set_blackboard_key(BB_BOUNTY_AMMO, style.magazine)
+	if(weapon_type)
+		controller.set_blackboard_key(BB_BOUNTY_WEAPON, weapon_type)
+	else
+		controller.clear_blackboard_key(BB_BOUNTY_WEAPON)
+	controller.set_blackboard_key(BB_BOUNTY_AMMO, weapon.magazine)
 	controller.clear_blackboard_key(BB_BOUNTY_RELOAD_UNTIL)
 	controller.clear_blackboard_key(BB_BOUNTY_WINDUP_UNTIL)
-	style.apply(fighter, damage_mult)
+	style.apply(fighter, weapon)
 	return TRUE
 
 /**
- * How someone fights (combat.md 6.2, at the Wanted tier; the tier's multiplier scales the damage).
- * Criminals, companions and the meek's holdout share these. Melee styles hit through the mob's own
- * melee attack; ranged ones shoot through its ranged_attacks component, with a wind-up telegraph
- * where the style has one. Nothing here is a real weapon, and nothing drops.
+ * How someone fights (combat.md 6.2). Criminals, companions and the meek's holdout share these.
+ * Every blow and shot is the real weapon's (bounty_weapons.dm): the item the style puts in their
+ * hand gives its damage, wounds, armour penetration, rounds and magazine, so a 9mm is a 9mm
+ * whoever fires it. The style only sets the timing: how fast they swing or fire, the telegraph, the
+ * reload and the distance they keep. Melee styles hit through the mob's own melee attack; ranged
+ * ones shoot through its ranged_attacks component. Nothing is spawned for the fight, and nothing
+ * drops.
  */
 /datum/bounty_style
 	/// BOUNTY_STYLE_*
@@ -484,26 +510,19 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	var/health_mult = 1
 	/// Stamina damage multiplier (P2 applies it to a criminal)
 	var/stamina_mult = 1
-	/// Damage per hit at the Wanted tier (for a split style: the whole blast)
-	var/damage_low = 8
-	var/damage_high = 11
 	/// Between attacks
 	var/interval = 1.4 SECONDS
 	/// Speed in a fight
 	var/speed = BOUNTY_NORMAL_SPEED_MELEE
-	/// Shown in their hand while fighting (a typepath, never a real item)
+	/// The real item they fight with, shown in their hand (a typepath; null for bare fists)
 	var/held_look
-	var/verb_continuous = "punches"
-	var/verb_simple = "punch"
-	var/attack_sound = SFX_PUNCH
-	var/sharpness = NONE
-	/// Ranged: what it fires, how many per attack and how far apart
+	/// The heavier real item a Wanted criminal carries instead, if the style has one
+	var/heavy_look
+	/// What a gun is loaded with instead of what it comes with (a shotgun's buckshot)
+	var/ammo_type
+	/// Ranged: the NPCs' own projectile a round flies as, and the sound of a throw (a gun sounds like itself)
 	var/projectile_type
 	var/projectile_sound
-	var/shots = 1
-	var/shot_gap = 0
-	/// The damage is shared between the shots of one attack (a shotgun's pellets)
-	var/split_damage = FALSE
 	/// The ranged behavior that keeps this style's distance
 	var/ranged_behavior = /datum/ai_behavior/basic_ranged_attack/bounty
 	/// Anyone closer than this and they step back (0: never)
@@ -512,30 +531,23 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	var/windup = 0
 	var/windup_message
 	var/windup_sound
-	/// Rounds before a reload (0: never), and how long a reload takes
-	var/magazine = 0
+	/// How long a reload takes once the magazine is spent, and what it sounds like
 	var/reload_time = 0
 	var/reload_sound
 
-/// Sets the melee numbers and the gun on `fighter`
-/datum/bounty_style/proc/apply(mob/living/basic/fighter, damage_mult)
-	fighter.melee_damage_lower = max(1, round(damage_low * damage_mult))
-	fighter.melee_damage_upper = max(fighter.melee_damage_lower, round(damage_high * damage_mult))
+/// Sets `weapon`'s blow and gun on `fighter`, at this style's pace
+/datum/bounty_style/proc/apply(mob/living/basic/fighter, datum/bounty_real_weapon/weapon)
 	fighter.melee_attack_cooldown = interval
-	fighter.attack_verb_continuous = verb_continuous
-	fighter.attack_verb_simple = verb_simple
-	fighter.attack_sound = attack_sound
-	fighter.sharpness = sharpness
-	fighter.melee_damage_type = BRUTE
+	weapon.apply_melee(fighter)
 	var/datum/component/ranged_attacks/gun = fighter.GetComponent(/datum/component/ranged_attacks)
 	if(!gun || !projectile_type)
 		return
 	gun.casing_type = null
 	gun.projectile_type = projectile_type
-	gun.projectile_sound = projectile_sound
+	gun.projectile_sound = weapon.fire_sound || projectile_sound
 	gun.cooldown_time = interval
-	gun.burst_shots = shots > 1 ? shots : null
-	gun.burst_intervals = shot_gap
+	gun.burst_shots = null
+	gun.burst_intervals = 0
 
 /// Anything extra a melee hit does
 /datum/bounty_style/proc/on_melee_hit(mob/living/basic/fighter, mob/living/target)
@@ -548,8 +560,9 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 /// The telegraph: what they say, show and sound like before the shot
 /datum/bounty_style/proc/telegraph(mob/living/basic/fighter, atom/target)
 	fighter.face_atom(target)
-	if(held_look)
-		bounty_ai_hold(fighter, held_look)
+	var/look = bounty_ai_held_look(fighter)
+	if(look)
+		bounty_ai_hold(fighter, look)
 	if(windup_message)
 		fighter.visible_message(span_warning(replacetext(windup_message, "%USER", "[fighter]")))
 	if(windup_sound)
@@ -561,6 +574,8 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
  */
 /datum/bounty_style/proc/ranged_tick(mob/living/basic/fighter, atom/target)
 	var/datum/ai_controller/controller = fighter.ai_controller
+	var/datum/bounty_real_weapon/weapon = bounty_ai_real_weapon(fighter)
+	var/magazine = weapon?.magazine
 	var/now = world.time
 	var/reload_until = controller.blackboard[BB_BOUNTY_RELOAD_UNTIL]
 	if(reload_until)
@@ -602,25 +617,53 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	if(QDELETED(controller))
 		return
 	controller.set_blackboard_key(BB_BOUNTY_LAST_SHOT, world.time)
-	if(magazine)
+	var/datum/bounty_real_weapon/weapon = bounty_ai_real_weapon(fighter)
+	if(weapon?.magazine)
 		controller.set_blackboard_key(BB_BOUNTY_AMMO, max(0, controller.blackboard[BB_BOUNTY_AMMO] - 1))
 
-/// Rolls a shot's damage as it is fired
+/**
+ * Loads a shot as it leaves the gun: the real round's numbers and its spread, and the rest of a
+ * shell's pellets fired alongside it (one shell, one shot from the magazine). A thrown bottle
+ * takes the bottle's throw. Called inside the projectile's fire(): must not sleep.
+ */
 /datum/bounty_style/proc/prepare_projectile(mob/living/basic/fighter, obj/projectile/shot)
-	if(!istype(shot, /obj/projectile/bullet/bounty) && !istype(shot, /obj/projectile/bounty_bottle))
+	var/datum/bounty_real_weapon/weapon = bounty_ai_real_weapon(fighter)
+	if(!weapon)
 		return
-	var/mult = fighter.ai_controller?.blackboard[BB_BOUNTY_DAMAGE_MULT] || 1
-	var/damage = rand(damage_low, damage_high) * mult
-	if(split_damage && shots > 1)
-		damage /= shots
-	shot.damage = round(damage, 0.1)
+	if(istype(shot, /obj/projectile/bounty_bottle))
+		weapon.load_thrown(shot)
+		return
+	var/obj/projectile/bullet/bounty/bullet = shot
+	if(!istype(bullet) || bullet.round_loaded)
+		return
+	bullet.round_loaded = TRUE
+	if(!weapon.load(bullet))
+		return
+	bullet.set_angle(bullet.angle + weapon.shot_spread())
+	for(var/pellet in 2 to weapon.pellets)
+		INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(bounty_ai_fire_pellet), fighter, weapon, bullet.type, bullet.original)
 
+/// Another pellet of the shell `fighter` just fired at `target`, with its own spread
+/proc/bounty_ai_fire_pellet(mob/living/basic/fighter, datum/bounty_real_weapon/weapon, shot_type, atom/target)
+	var/turf/start = get_turf(fighter)
+	if(!start || QDELETED(fighter) || QDELETED(target))
+		return null
+	var/obj/projectile/bullet/bounty/pellet = new shot_type(start)
+	pellet.round_loaded = TRUE
+	weapon.load(pellet)
+	pellet.firer = fighter
+	pellet.fired_from = fighter
+	pellet.aim_projectile(target, fighter, null, weapon.shot_spread())
+	if(QDELETED(pellet))
+		return null
+	pellet.fire()
+	return pellet
+
+/// Bare fists: a human's punch
 /datum/bounty_style/brawler
 	key = BOUNTY_STYLE_BRAWLER
 	health_mult = BOUNTY_BRAWLER_HEALTH
 	stamina_mult = BOUNTY_BRAWLER_STAMINA
-	damage_low = BOUNTY_BRAWLER_DAMAGE_LOW
-	damage_high = BOUNTY_BRAWLER_DAMAGE_HIGH
 	interval = BOUNTY_BRAWLER_INTERVAL
 
 /// Now and then a punch shoves them back a tile (never onto lava, into a chasm or out into space, M5) and staggers them; no stun
@@ -632,54 +675,39 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	fighter.visible_message(span_warning("[fighter] shoves [target] back!"))
 	playsound(target, 'sound/items/weapons/shove.ogg', 50, TRUE)
 
+/// The blade's own cuts bleed, as a real one's do
 /datum/bounty_style/knife
 	key = BOUNTY_STYLE_KNIFE
 	health_mult = BOUNTY_KNIFE_HEALTH
-	damage_low = BOUNTY_KNIFE_DAMAGE_LOW
-	damage_high = BOUNTY_KNIFE_DAMAGE_HIGH
 	interval = BOUNTY_KNIFE_INTERVAL
 	held_look = /obj/item/knife/kitchen
-	verb_continuous = "slashes"
-	verb_simple = "slash"
-	attack_sound = 'sound/items/weapons/bladeslice.ogg'
-	sharpness = SHARP_EDGED
-
-/// A cut that bleeds until it is dressed
-/datum/bounty_style/knife/on_melee_hit(mob/living/basic/fighter, mob/living/target)
-	target.apply_status_effect(/datum/status_effect/bounty_cut, BOUNTY_KNIFE_BLEED_TIME, BOUNTY_KNIFE_BLEED, BOUNTY_KNIFE_MAX_CUTS)
+	heavy_look = /obj/item/knife/combat
 
 /datum/bounty_style/club
 	key = BOUNTY_STYLE_CLUB
 	health_mult = BOUNTY_CLUB_HEALTH
-	damage_low = BOUNTY_CLUB_DAMAGE_LOW
-	damage_high = BOUNTY_CLUB_DAMAGE_HIGH
 	interval = BOUNTY_CLUB_INTERVAL
 	held_look = /obj/item/melee/baseball_bat
-	verb_continuous = "clubs"
-	verb_simple = "club"
-	attack_sound = 'sound/items/weapons/genhit1.ogg'
+	heavy_look = /obj/item/melee/baseball_bat/ablative
 
-/// Wears them down: stamina on every hit (about six to stamina-crit someone unarmoured)
+/// A bat knocks them back a tile or two, gently, as tg's bat does; never onto lava, into a chasm or out into space
 /datum/bounty_style/club/on_melee_hit(mob/living/basic/fighter, mob/living/target)
-	var/mult = fighter.ai_controller?.blackboard[BB_BOUNTY_DAMAGE_MULT] || 1
-	target.adjustStaminaLoss(BOUNTY_CLUB_STAMINA * mult)
+	if(QDELETED(target) || target.stat == DEAD)
+		return
+	bounty_throw_back(fighter, target, rand(1, 2), prob(60) ? 1 : 4, gentle = TRUE)
 
 /datum/bounty_style/pistol
 	key = BOUNTY_STYLE_PISTOL
 	ranged = TRUE
 	health_mult = BOUNTY_PISTOL_HEALTH
-	damage_low = BOUNTY_PISTOL_DAMAGE_LOW
-	damage_high = BOUNTY_PISTOL_DAMAGE_HIGH
 	interval = BOUNTY_PISTOL_INTERVAL
 	speed = BOUNTY_NORMAL_SPEED_RANGED
-	held_look = /obj/item/gun/ballistic/automatic/pistol
+	held_look = /obj/item/gun/ballistic/automatic/pistol/aps
 	projectile_type = /obj/projectile/bullet/bounty
-	projectile_sound = 'sound/items/weapons/gun/pistol/shot.ogg'
 	windup = BOUNTY_PISTOL_WINDUP
 	windup_message = "%USER raises a pistol."
 	windup_sound = 'sound/items/weapons/gun/pistol/rack_small.ogg'
 	min_range = BOUNTY_PISTOL_MIN_RANGE
-	magazine = BOUNTY_PISTOL_MAGAZINE
 	reload_time = BOUNTY_PISTOL_RELOAD
 	reload_sound = 'sound/items/weapons/gun/pistol/mag_insert.ogg'
 
@@ -695,34 +723,29 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 		controller.clear_blackboard_key(BB_BOUNTY_LAST_SHOT)
 	return ..()
 
+/// Buckshot: every pellet of a shell, one shell a shot
 /datum/bounty_style/shotgun
 	key = BOUNTY_STYLE_SHOTGUN
 	ranged = TRUE
 	health_mult = BOUNTY_SHOTGUN_HEALTH
-	damage_low = BOUNTY_SHOTGUN_DAMAGE_LOW
-	damage_high = BOUNTY_SHOTGUN_DAMAGE_HIGH
 	interval = BOUNTY_SHOTGUN_INTERVAL
 	speed = BOUNTY_NORMAL_SPEED_RANGED
 	held_look = /obj/item/gun/ballistic/shotgun
-	projectile_type = /obj/projectile/bullet/bounty/pellet
-	projectile_sound = 'sound/items/weapons/gun/shotgun/shot.ogg'
-	shots = BOUNTY_SHOTGUN_PELLETS
-	shot_gap = 0
-	split_damage = TRUE
+	heavy_look = /obj/item/gun/ballistic/shotgun/automatic/combat
+	ammo_type = /obj/item/ammo_casing/shotgun/buckshot
+	projectile_type = /obj/projectile/bullet/bounty
 	ranged_behavior = /datum/ai_behavior/basic_ranged_attack/bounty/close
 	windup = BOUNTY_SHOTGUN_WINDUP
 	windup_message = "%USER pumps the shotgun."
 	windup_sound = 'sound/items/weapons/gun/shotgun/rack.ogg'
-	magazine = BOUNTY_SHOTGUN_SHELLS
 	reload_time = BOUNTY_SHOTGUN_RELOAD
 	reload_sound = 'sound/items/weapons/gun/shotgun/insert_shell.ogg'
 
+/// A beer bottle, thrown: it hits with the bottle's throwforce, and breaks
 /datum/bounty_style/bottle
 	key = BOUNTY_STYLE_BOTTLE
 	ranged = TRUE
 	health_mult = BOUNTY_BOTTLE_HEALTH
-	damage_low = BOUNTY_BOTTLE_DAMAGE_LOW
-	damage_high = BOUNTY_BOTTLE_DAMAGE_HIGH
 	interval = BOUNTY_BOTTLE_INTERVAL
 	speed = BOUNTY_NORMAL_SPEED_RANGED
 	held_look = /obj/item/reagent_containers/cup/glass/bottle/beer
@@ -741,34 +764,24 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 /datum/bounty_style/holdout
 	key = BOUNTY_STYLE_HOLDOUT
 	ranged = TRUE
-	damage_low = BOUNTY_MEEK_PISTOL_DAMAGE
-	damage_high = BOUNTY_MEEK_PISTOL_DAMAGE
 	interval = BOUNTY_MEEK_PISTOL_GAP * 0.8
 	speed = BOUNTY_MEEK_SPRINT_SPEED
 	held_look = /obj/item/gun/ballistic/automatic/pistol
 	projectile_type = /obj/projectile/bullet/bounty/holdout
-	projectile_sound = 'sound/items/weapons/gun/pistol/shot.ogg'
 
 // ===== WHAT THEY FIRE =====
 
 /**
- * A criminal's bullet: nothing embeds, no shrapnel, no casing left behind. It never hits the
- * shooter's own gang, and off their site or at a trader outpost it passes anyone the body's rules
- * leave alone (AR-C8, AR-D1; bounty_ai_may_hit(), so a companion's shots don't depend on its
- * criminal being up, H3): only a direct target is hit regardless.
+ * A criminal's bullet or pellet: the real round's numbers are put on it as it is fired
+ * (/datum/bounty_style/proc/prepare_projectile()), embedding and all. It never hits the shooter's
+ * own gang, and off their site or at a trader outpost it passes anyone the body's rules leave alone
+ * (AR-C8, AR-D1; bounty_ai_may_hit(), so a companion's shots don't depend on its criminal being up,
+ * H3): only a direct target is hit regardless.
  */
 /obj/projectile/bullet/bounty
 	name = "bullet"
-	damage = BOUNTY_PISTOL_DAMAGE_LOW
-	embed_type = null
-	shrapnel_type = null
-	wound_bonus = -10
-	armour_penetration = BOUNTY_BULLET_AP
-	/// Degrees it may stray either way: fired fast, not every shot is lined up
-	var/stray = BOUNTY_PISTOL_SPREAD
-
-/obj/projectile/bullet/bounty/aim_projectile(atom/target, atom/source, list/modifiers = null, deviation = 0)
-	return ..(target, source, modifiers, deviation + rand(-stray, stray))
+	/// The round's numbers are on it already: a pellet fired alongside a shell's first
+	var/round_loaded = FALSE
 
 /obj/projectile/bullet/bounty/can_hit_target(atom/target, direct_target = FALSE, ignore_loc = FALSE, cross_failed = FALSE)
 	. = ..()
@@ -777,29 +790,18 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	if(!bounty_ai_may_hit(firer, target))
 		return FALSE
 
+/// The meek's holdout fires these
 /obj/projectile/bullet/bounty/holdout
 	name = "small bullet"
-	damage = BOUNTY_MEEK_PISTOL_DAMAGE
-	armour_penetration = BOUNTY_HOLDOUT_AP
-
-/// A shotgun pellet: short reach, each one strays a little
-/obj/projectile/bullet/bounty/pellet
-	name = "pellet"
-	icon_state = "pellet"
-	damage = 5
-	range = BOUNTY_SHOTGUN_REACH
-	armour_penetration = BOUNTY_PELLET_AP
-	stray = BOUNTY_SHOTGUN_SPREAD
 
 /**
- * A thrown bottle: it flies slower than a bullet and smashes where it lands, leaving broken glass
- * on the floor (a decal, never a weapon). A hit may leave a cut that bleeds.
+ * A thrown bottle: it flies slower than a bullet, hits with the bottle's throw, and smashes where it
+ * lands, leaving broken glass on the floor (a decal, never a weapon).
  */
 /obj/projectile/bounty_bottle
 	name = "bottle"
 	icon = 'icons/obj/drinks/bottles.dmi'
 	icon_state = "beer"
-	damage = BOUNTY_BOTTLE_DAMAGE_LOW
 	damage_type = BRUTE
 	armor_flag = MELEE
 	speed = 0.6
@@ -818,9 +820,6 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 
 /obj/projectile/bounty_bottle/on_hit(atom/target, blocked = 0, pierce_hit)
 	. = ..()
-	if(isliving(target) && blocked < 100 && prob(BOUNTY_BOTTLE_SHARD_CHANCE))
-		var/mob/living/cut = target
-		cut.apply_status_effect(/datum/status_effect/bounty_cut/shard, BOUNTY_BOTTLE_SHARD_TIME, BOUNTY_BOTTLE_SHARD_BLEED, 1)
 	smash(get_turf(target))
 
 /obj/projectile/bounty_bottle/on_range()
@@ -835,66 +834,3 @@ GLOBAL_LIST_INIT(bounty_styles, init_bounty_styles())
 	if(!isgroundlessturf(where) && !isspaceturf(where))
 		new /obj/effect/decal/cleanable/glass(where)
 	playsound(where, 'sound/effects/glass/glassbr3.ogg', 50, TRUE)
-
-// ===== CUTS =====
-
-/**
- * A cut from a knife or a broken bottle: it bleeds a little every second for a while, more with
- * each new cut up to a cap, until a dressing goes on or the wound is treated.
- */
-/datum/status_effect/bounty_cut
-	id = "bounty_cut"
-	duration = BOUNTY_KNIFE_BLEED_TIME
-	tick_interval = 1 SECONDS
-	status_type = STATUS_EFFECT_REFRESH
-	alert_type = null
-	/// Blood lost per second per cut
-	var/rate = BOUNTY_KNIFE_BLEED
-	/// Cuts bleeding now, and the most that bleed at once
-	var/cuts = 1
-	var/max_cuts = BOUNTY_KNIFE_MAX_CUTS
-	/// Brute at the last tick: any healing (sutures, a medkit) stops the bleeding
-	var/last_brute = 0
-
-/datum/status_effect/bounty_cut/on_creation(mob/living/new_owner, new_duration, new_rate, new_max_cuts)
-	if(new_duration)
-		duration = new_duration
-	if(new_rate)
-		rate = new_rate
-	if(new_max_cuts)
-		max_cuts = new_max_cuts
-	return ..()
-
-/datum/status_effect/bounty_cut/on_apply()
-	if(owner.stat == DEAD || !owner.can_bleed())
-		return FALSE
-	last_brute = owner.getBruteLoss()
-	return TRUE
-
-/datum/status_effect/bounty_cut/refresh(effect, new_duration, new_rate, new_max_cuts)
-	cuts = min(cuts + 1, max_cuts)
-	duration = world.time + (new_duration || initial(duration))
-
-/datum/status_effect/bounty_cut/tick(seconds_between_ticks)
-	if(owner.stat == DEAD || bounty_cut_dressed(owner) || owner.getBruteLoss() < last_brute - 0.5)
-		qdel(src)
-		return
-	last_brute = owner.getBruteLoss()
-	owner.bleed(rate * cuts * seconds_between_ticks)
-
-/// A cut from a broken bottle: its own bleed, beside any knife cuts
-/datum/status_effect/bounty_cut/shard
-	id = "bounty_shard_cut"
-	duration = BOUNTY_BOTTLE_SHARD_TIME
-	rate = BOUNTY_BOTTLE_SHARD_BLEED
-	max_cuts = 1
-
-/// Whether `patient` has a dressing on anywhere
-/proc/bounty_cut_dressed(mob/living/patient)
-	if(!iscarbon(patient))
-		return FALSE
-	var/mob/living/carbon/body = patient
-	for(var/obj/item/bodypart/part as anything in body.bodyparts)
-		if(part.current_gauze)
-			return TRUE
-	return FALSE

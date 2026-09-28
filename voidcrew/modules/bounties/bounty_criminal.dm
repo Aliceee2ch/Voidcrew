@@ -69,8 +69,6 @@
 	basic_mob_flags = NONE
 	// Batons knock them down, as they do people.
 	status_flags = CANPUSH | CANSTUN | CANKNOCKDOWN
-	// Hunters come in good armour
-	armour_penetration = BOUNTY_MELEE_AP
 	max_stamina = BOUNTY_CRIMINAL_MAX_STAMINA
 	stamina_crit_threshold = BOUNTY_CRIMINAL_STAMCRIT_AT
 	stamina_regen_time = BOUNTY_NORMAL_STAMCRIT_TIME

@@ -95,7 +95,7 @@ About 70% of Petty criminals and 30% of Wanted ones are meek. They never start a
 About 70% of Wanted criminals and 30% of Petty ones are normal. A Wanted criminal on a pirate ship is always normal.
 
 - They notice anyone holding a weapon, cuffs or a warrant within 6 tiles. Cuffs or a warrant and they stop and watch you. A weapon out and they fight.
-- Each has one fighting style: fists (tougher, and harder to stun), a knife (cuts that bleed), a pistol (keeps its distance and empties a 17-round magazine before reloading), a shotgun (close range, reloads after six shells), a club (drains your stamina) or thrown bottles.
+- Each has one fighting style: fists (tougher, and harder to stun), a knife (cuts that bleed), a pistol (keeps its distance and empties a 15-round magazine before reloading), a shotgun loaded with buckshot (close range, reloads after four shells), a baseball bat (knocks you back) or thrown bottles. Wanted criminals carry a combat knife, a metal bat or a combat shotgun instead. Their weapons hit like the real thing.
 - They may have up to two companions who fight beside them. Companions pay nothing. They may run when badly hurt or when their criminal goes down, and give up for good once stunned.
 - Below 40% health, with two hunters nearby who can see them, they may give up and put their hands up. Someone who has given up counts as stunned: cuff them for full pay. Stop hitting them, because they can still be downed.
 - Badly hurt with nobody around, they break off and retreat. They never heal.
@@ -195,7 +195,7 @@ Now and then a crime boss holds court in the lounge at the Undertow Exchange, on
 **The shootout.** "No deal", or any attack on him or a goon, starts it.
 
 - The goons reach for their guns for about half a second before anyone fires. No more than two of them draw on one hunter at once. Three carry pistols, two shotguns and one an SMG. They stay near the sofa, and never shoot anyone who is down.
-- He never leaves the sofa. Before each shot he aims his revolver at someone with a red line for half a second. Each shot does 35 damage, and he reloads after six.
+- He never leaves the sofa. Before each shot he aims his .357 revolver at someone with a red line for half a second. He reloads after seven shots.
 - Once his goons are down and he's below 40% health, he may give up. He goes down at 25% and gets up after 60 seconds unless cuffed. Five disabler hits in quick succession stun him.
 - When he falls, half the goons left run for it.
 - The outpost's turrets stay out of it. Fighting his crew earns no outpost strikes, but hitting other players still does.
@@ -215,8 +215,8 @@ A mob nightclub run by Arkady Sokolov, placed in the Contested or Lawless Zone f
 - You clear it room by room: foyer, cloakroom, casino, main floor, kitchen, VIP lounge, counting room and back office. About two dozen goons keep to their own rooms. The walls can't be broken, and teleporters don't work inside.
 - The staff room off the main floor has two rechargers, a first aid locker and no goons. The counting room's vault has a loot cache.
 - Two lieutenants hold the back office: **Tommy** with a Tommy gun, and **Brute**, whose punches can knock you down. Kill both and the garage door opens.
-- The don waits in the garage in his Mauler. Its health grows with the number of hunters. Its rocket volley marks the floor under each hunter it can see, then fires one rocket at each mark, so get behind a pillar. Its machine gun shows a red cone first. An EMP stalls it for 2 seconds. It comes after anyone who hurts it, so you can't pick it off from out of its sight. If nobody fights it for a minute, it goes back to full health.
-- When the mech breaks, the don climbs out and fights on foot with a pistol from behind the wreck. He can't be cuffed. His **gold signet ring** is the trophy.
+- The don waits in the garage in his Mauler. Its health grows with the number of hunters. Its rocket volley marks the floor under each hunter it can see, then fires one rocket at each mark, so get behind a pillar. Its machine gun shows a red cone first. Up close it stomps, throwing you back. An EMP stalls it for 2 seconds. It comes after anyone who hurts it, so you can't pick it off from out of its sight. If nobody fights it for a minute, it goes back to full health.
+- When the mech breaks, the don climbs out and fights on foot with his gold Desert Eagle from behind the wreck. He can't be cuffed. His **gold signet ring** is the trophy.
 - Nobody in the club shoots a hunter who is down.
 
 ### The lich

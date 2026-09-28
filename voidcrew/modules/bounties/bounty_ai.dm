@@ -293,21 +293,16 @@
 /mob/living/basic/bounty_criminal/proc/ai_wanted_style()
 	return null
 
-/// Their style's damage multiplier, by tier (combat.md 6.2)
-/mob/living/basic/bounty_criminal/proc/ai_damage_mult()
-	switch(record?.tier)
-		if(BOUNTY_TIER_PETTY)
-			return BOUNTY_NORMAL_DAMAGE_PETTY
-		if(BOUNTY_TIER_MOST_WANTED)
-			return BOUNTY_NORMAL_DAMAGE_MOST
-	return BOUNTY_NORMAL_DAMAGE_WANTED
+/// Whether they carry their style's heavier weapon: every tier above Petty. A 9mm is a 9mm; the tier only picks the gun.
+/mob/living/basic/bounty_criminal/proc/ai_heavy_weapon()
+	return record?.tier != BOUNTY_TIER_PETTY
 
 /// Puts their style on them, once the record says which it is. Cheap when nothing changed.
 /mob/living/basic/bounty_criminal/proc/ai_update_style()
 	var/key = ai_wanted_style()
 	if(!key || QDELETED(ai_controller) || ai_controller.blackboard[BB_BOUNTY_STYLE] == key)
 		return
-	bounty_ai_apply_style(src, key, ai_damage_mult())
+	bounty_ai_apply_style(src, key, ai_heavy_weapon())
 
 /**
  * Whether they can do anything at all: alive, on their feet, free and not giving up. Knocked down,
@@ -874,7 +869,11 @@
 
 /datum/ai_controller/basic_controller/bounty/proc/on_pre_melee(mob/living/basic/source, atom/target, proximity, list/modifiers)
 	SIGNAL_HANDLER
-	return may_strike(target) ? NONE : COMPONENT_HOSTILE_NO_ATTACK
+	if(!may_strike(target))
+		return COMPONENT_HOSTILE_NO_ATTACK
+	// Each swing picks one of the weapon's own verbs, as a player's does
+	bounty_ai_real_weapon(source)?.pick_verb(source)
+	return NONE
 
 /datum/ai_controller/basic_controller/bounty/proc/on_post_melee(mob/living/basic/source, atom/target, result)
 	SIGNAL_HANDLER

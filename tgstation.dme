@@ -6960,6 +6960,7 @@
 #include "voidcrew\modules\bounties\bounty_restraints.dm"
 #include "voidcrew\modules\bounties\bounty_turn_in.dm"
 #include "voidcrew\modules\bounties\bounty_types.dm"
+#include "voidcrew\modules\bounties\bounty_weapons.dm"
 #include "voidcrew\modules\captain_management\captain_management.dm"
 #include "voidcrew\modules\captain_management\command_transfer.dm"
 #include "voidcrew\modules\captain_management\ship_applications.dm"

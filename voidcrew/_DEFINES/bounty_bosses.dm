@@ -106,6 +106,7 @@
 /// Its torch: burn damage
 #define BOUNTY_PYROMANIAC_MELEE_MIN 10
 #define BOUNTY_PYROMANIAC_MELEE_MAX 14
+#define BOUNTY_PYROMANIAC_MELEE_AP 15
 #define BOUNTY_PYROMANIAC_MELEE_COOLDOWN (1 SECONDS)
 /// Flamer: a pilot light hiss, an orange cone
 #define BOUNTY_PYROMANIAC_FLAMER_WINDUP (0.5 SECONDS)
@@ -135,9 +136,8 @@
 #define BOUNTY_DEMOLITIONIST_BRUTE_MOD 0.85
 #define BOUNTY_DEMOLITIONIST_BURN_MOD 0.85
 #define BOUNTY_DEMOLITIONIST_SPEED 1.7
-/// Its crowbar
-#define BOUNTY_DEMOLITIONIST_MELEE_MIN 8
-#define BOUNTY_DEMOLITIONIST_MELEE_MAX 12
+/// Its crowbar: the look in its hand and every number of its blows (bounty_real_weapon())
+#define BOUNTY_DEMOLITIONIST_CROWBAR /obj/item/crowbar/red
 #define BOUNTY_DEMOLITIONIST_MELEE_COOLDOWN (1 SECONDS)
 /// It keeps this far from its target unless someone is right on it
 #define BOUNTY_DEMOLITIONIST_KEEP_MIN 4
@@ -173,10 +173,8 @@
 #define BOUNTY_GHOST_BRUTE_MOD 1
 #define BOUNTY_GHOST_BURN_MOD 1
 #define BOUNTY_GHOST_SPEED 1.2
-/// Its blade
-#define BOUNTY_GHOST_MELEE_MIN 12
-#define BOUNTY_GHOST_MELEE_MAX 16
-#define BOUNTY_GHOST_MELEE_AP 10
+/// Its blade: the look in its hand and every number of its blows (bounty_real_weapon())
+#define BOUNTY_GHOST_KNIFE /obj/item/knife/combat
 #define BOUNTY_GHOST_MELEE_COOLDOWN (0.7 SECONDS)
 /// Each cut bleeds this much brute a second for BOUNTY_GHOST_BLEED_TIME, up to BOUNTY_GHOST_BLEED_CAP a second
 #define BOUNTY_GHOST_BLEED_PER_CUT 1
@@ -186,8 +184,9 @@
 #define BOUNTY_GHOST_DASH_WINDUP (0.3 SECONDS)
 #define BOUNTY_GHOST_DASH_COOLDOWN (5 SECONDS)
 #define BOUNTY_GHOST_DASH_RANGE 5
-/// The dash's cut, its biggest hit (P4: combat.md B4 asks for the dash to be the biggest hit)
+/// The dash's cut, its biggest hit (P4: combat.md B4 asks for the dash to be the biggest hit), and its armour penetration
 #define BOUNTY_GHOST_DASH_DAMAGE 20
+#define BOUNTY_GHOST_DASH_AP 10
 /// Cloak: a shimmer, then a faint distortion
 #define BOUNTY_GHOST_CLOAK_WINDUP (0.3 SECONDS)
 #define BOUNTY_GHOST_CLOAK_TIME (6 SECONDS)
@@ -215,9 +214,8 @@
 /// 0 after review H3, as BOUNTY_BOSS_STAMINA_FRESH (combat.md had 0.15)
 #define BOUNTY_HEAVY_STAMINA_FRESH 0
 #define BOUNTY_HEAVY_STAMINA 180
-/// Its rifle butt
-#define BOUNTY_HEAVY_MELEE_MIN 14
-#define BOUNTY_HEAVY_MELEE_MAX 18
+/// Its belt-fed gun: the look in its hand, the rounds of its burst and the blow of its butt (bounty_real_weapon())
+#define BOUNTY_HEAVY_GUN /obj/item/gun/ballistic/automatic/l6_saw
 #define BOUNTY_HEAVY_MELEE_COOLDOWN (1.1 SECONDS)
 /// Suppressive burst: a spin-up whirr, a laser sight and a red cone
 #define BOUNTY_HEAVY_BURST_WINDUP (0.7 SECONDS)
@@ -226,7 +224,6 @@
 #define BOUNTY_HEAVY_BURST_SHOTS 10
 /// How long the burst takes to fire
 #define BOUNTY_HEAVY_BURST_TIME (1.5 SECONDS)
-#define BOUNTY_HEAVY_BURST_DAMAGE 12
 /// Full width of the cone the rounds go into, in degrees
 #define BOUNTY_HEAVY_BURST_ARC 30
 /// Extra width, in degrees, of the cone marked on the floor, so edge tiles a round can cross are marked too (P4)

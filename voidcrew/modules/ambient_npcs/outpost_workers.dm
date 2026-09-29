@@ -171,6 +171,8 @@
 	var/signs_left = WORKER_JANITOR_SIGNS
 	/// Tiles mopped lately: turf -> world.time
 	var/list/mopped
+	/// Mess they could not get to: turf -> world.time they may try again
+	var/list/unreachable
 
 /mob/living/basic/ambient_npc/outpost/worker/janitor/Initialize(mapload)
 	. = ..()
@@ -178,7 +180,16 @@
 
 /mob/living/basic/ambient_npc/outpost/worker/janitor/Destroy()
 	mopped = null
+	unreachable = null
 	return ..()
+
+/// They could not get to the mess on `tile`: it is left alone for a few minutes
+/mob/living/basic/ambient_npc/outpost/worker/janitor/proc/give_up_on(turf/tile)
+	if(!tile)
+		return
+	LAZYSET(unreachable, tile, world.time + WORKER_REMOP_TIME)
+	if(length(unreachable) > 12)
+		unreachable.Cut(1, 2)
 
 /mob/living/basic/ambient_npc/outpost/worker/janitor/pick_activity()
 	// What was on the floor before anyone looked is the map's, not a mess
@@ -208,7 +219,7 @@
 
 /// Where to stand to mop `tile`: beside it, or on it
 /mob/living/basic/ambient_npc/outpost/worker/janitor/proc/mop_spot(turf/tile, list/avoid)
-	if(!tile || !leash_ok(tile))
+	if(!tile || !leash_ok(tile) || LAZYACCESS(unreachable, tile) > world.time)
 		return null
 	var/turf/stand = free_tile_beside(tile, 1, avoid)
 	if(!stand && standable(tile, avoid))
@@ -392,6 +403,9 @@
 
 /datum/ambient_activity/mop_mess/spot_unreachable()
 	. = ..()
+	var/mob/living/basic/ambient_npc/outpost/worker/janitor/janitor = doer
+	if(istype(janitor))
+		janitor.give_up_on(mess_tile)
 	mess_tile = null
 
 /// Mopping round the floor with the mechanics' work loop when nothing needs cleaning
@@ -562,10 +576,21 @@
 		gardener.remember_tray(tray)
 	return AMBIENT_STEP_DONE
 
-/// Could not get there: nothing is watered from across the room
+/**
+ * Could not get there: nothing is watered from across the room. They move on to another tray next
+ * time, and a sink they cannot reach is given up on (the can is filled somewhere else).
+ */
 /datum/ambient_activity/tend_plants/spot_unreachable()
 	. = ..()
+	var/mob/living/basic/ambient_npc/outpost/worker/gardener/gardener = doer
+	var/obj/machinery/hydroponics/tray = target_ref?.resolve()
 	target_ref = null
+	if(!istype(gardener))
+		return
+	if(refilling)
+		gardener.can_water = WORKER_CAN_POURS
+	else if(istype(tray))
+		gardener.remember_tray(tray)
 
 // =========================================================================
 // THE BARBACK

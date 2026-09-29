@@ -1,7 +1,7 @@
 /**
  * Outpost owner shop (spec 3.3, R1, abuse review F-25 to F-27): the room at every rotation, what
  * the stock unit refuses, who may stock, price and take, listings, sales and their refusals,
- * hardened UI params, the stock unit and bot surviving abuse, teardown, and the UI payload.
+ * hardened UI params, the stock unit surviving abuse, teardown, and the UI payload.
  *
  * Voidcrew defines are not visible from test files, so prices, ids and sizes appear as literals.
  * The shop has one map per outpost style; the tests find the register, queue, staff side and
@@ -83,20 +83,16 @@
 		// The fixtures stand where the map puts them and the room knows them
 		var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()
 		var/obj/machinery/computer/outpost_shop_register/register = shop.register_ref?.resolve()
-		var/mob/living/basic/outpost_shop_bot/bot = shop.get_bot()
 		TEST_ASSERT_NOTNULL(stock, "The shop linked no stock unit at [rotation] degrees")
 		TEST_ASSERT_NOTNULL(register, "The shop linked no register at [rotation] degrees")
-		TEST_ASSERT_NOTNULL(bot, "The shop linked no bot at [rotation] degrees")
 		for(var/problem in shop.contract_problems())
 			TEST_FAIL("The shop at [rotation] degrees: [problem]")
 		var/turf/queue = shop_queue_turf(shop)
 		TEST_ASSERT_NOTNULL(queue, "No customer tile in front of the register at [rotation] degrees")
-		TEST_ASSERT_EQUAL(bot.register_ref?.resolve(), register, "The bot does not know its register at [rotation] degrees")
 		TEST_ASSERT_EQUAL(register.dir, get_dir(register, queue), "The register does not face the customers at [rotation] degrees")
 		TEST_ASSERT(HAS_TRAIT(stock, "outpost_property"), "The stock unit is not outpost property at [rotation] degrees")
 		TEST_ASSERT(stock.flags_1 & PREVENT_CONTENTS_EXPLOSION_1, "Explosions reach the stock at [rotation] degrees")
 		TEST_ASSERT(HAS_TRAIT(register, "outpost_property"), "The register is not outpost property at [rotation] degrees")
-		TEST_ASSERT(register.Adjacent(bot), "The bot is not behind the register at [rotation] degrees")
 		TEST_ASSERT(register.Adjacent(queue), "The queue tile does not reach the register at [rotation] degrees")
 
 		// One door out with a fan; the staff door opens freely only from the staff side
@@ -421,48 +417,32 @@
 	shop.set_open(owner, TRUE)
 	settle_room_air(shop.room_turfs())
 
-// ===== THE BOT AND TEARDOWN =====
+// ===== TEARDOWN =====
 
-/datum/unit_test/voidcrew_outpost_shop_bot
+/datum/unit_test/voidcrew_outpost_shop_teardown
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
-/datum/unit_test/voidcrew_outpost_shop_bot/Run()
-	var/obj/structure/overmap/dynamic/player_outpost/home = market_test_claim("shopbotowner")
-	TEST_ASSERT_NOTNULL(home, "The shop bot outpost did not load")
+/datum/unit_test/voidcrew_outpost_shop_teardown/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = market_test_claim("shopteardownowner")
+	TEST_ASSERT_NOTNULL(home, "The shop teardown outpost did not load")
 	var/result = place_test_shop(home, 0)
 	TEST_ASSERT(istype(result, /datum/outpost_upgrade/service/shop), "The shop was not placed: [result]")
 	var/datum/outpost_upgrade/service/shop/shop = result
 	var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()
-	var/mob/living/basic/outpost_shop_bot/bot = shop.get_bot()
-	var/turf/bot_spot = get_turf(bot)
-	var/turf/queue = shop_queue_turf(shop)
-	var/mob/living/carbon/human/owner = make_market_visitor(shop_staff_turf(shop), "shopbotowner", 0)
-	var/mob/living/carbon/human/visitor = make_market_visitor(queue, "shopbotvisitor", 0)
+	var/mob/living/carbon/human/owner = make_market_visitor(shop_staff_turf(shop), "shopteardownowner", 0)
 
-	bot.apply_damage(500, BRUTE)
-	TEST_ASSERT(bot.stat != DEAD, "The shop bot died")
-	TEST_ASSERT(!do_teleport(bot, queue, forced = TRUE), "A forced teleport moved the shop bot")
-	TEST_ASSERT_EQUAL(get_turf(bot), bot_spot, "The shop bot left its tile")
-	visitor.start_pulling(bot)
-	TEST_ASSERT(visitor.pulling != bot, "The shop bot can be pulled")
-	TEST_ASSERT(HAS_TRAIT(bot, "no_containment"), "The shop bot can be bagged")
-	TEST_ASSERT_NULL(bot.mind, "The shop bot has a mind")
-	TEST_ASSERT_EQUAL(bot.singularity_act(), 0, "A singularity ate the shop bot")
-
-	// Stock goes with the outpost (M4), and the bot never blocks deletion
+	// Stock goes with the outpost (M4)
 	var/obj/item/wrench/goods = allocate(__IMPLIED_TYPE__, get_turf(owner))
 	TEST_ASSERT_NULL(stock.stock_item(goods, owner), "The owner could not stock a wrench")
 	var/datum/outpost_manipulator/unit_test/panel = allocate(__IMPLIED_TYPE__, owner)
 	owner.forceMove(run_loc_floor_bottom_left)
-	visitor.forceMove(run_loc_floor_bottom_left)
-	TEST_ASSERT_NULL(panel.deletion_denial(home), "The shop bot blocked deleting the outpost: [panel.deletion_denial(home)]")
+	TEST_ASSERT_NULL(panel.deletion_denial(home), "The shop blocked deleting the outpost: [panel.deletion_denial(home)]")
 	settle_room_air(shop.room_turfs())
 	qdel(home)
 	var/deadline = world.time + 30 SECONDS
-	UNTIL((QDELETED(stock) && QDELETED(bot)) || world.time > deadline)
+	UNTIL(QDELETED(stock) || world.time > deadline)
 	TEST_ASSERT(QDELETED(stock), "The stock unit outlived its outpost")
 	TEST_ASSERT(QDELETED(goods), "Stock outlived its outpost")
-	TEST_ASSERT(QDELETED(bot), "The shop bot outlived its outpost")
 
 // ===== UI PAYLOAD =====
 

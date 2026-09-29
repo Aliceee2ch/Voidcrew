@@ -311,9 +311,6 @@
 /obj/effect/turf_decal/siding/wood{
 	dir = 2
 	},
-/mob/living/basic/outpost_shop_bot{
-	dir = 2
-	},
 /turf/open/indestructible/wood/parquet,
 /area/template_noop)
 "aN" = (

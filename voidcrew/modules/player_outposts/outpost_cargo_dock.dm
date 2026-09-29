@@ -38,8 +38,8 @@
 
 /**
  * What the ferry would crush if it landed now. A landing gibs every mob on its turfs and
- * deletes every anchored object there (/turf/proc/toShuttleMove()), so freight refuses to land
- * on any of these:
+ * deletes every anchored object there (/turf/proc/toShuttleMove()). Freight lands anyway; the
+ * room contract uses this so a new pad never comes with anything on it:
  * - a mob, alive or dead, or anything holding one (a person in a crate, locker, mech or body bag);
  * - anything anchored or dense.
  * Docking ports, effects and landmarks never count, nor does anything the crush spares

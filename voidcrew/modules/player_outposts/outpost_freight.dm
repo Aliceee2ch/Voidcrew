@@ -43,7 +43,7 @@
 /datum/voidcrew_cargo_shuttle/outpost/proc/dispatch_orders()
 	if(state != CARGO_SHUTTLE_AWAY || busy)
 		return "Freight is already dispatched"
-	var/error = availability_error() || pad_obstruction_error()
+	var/error = availability_error()
 	if(error)
 		return error
 	delivery_generation++
@@ -80,14 +80,6 @@
 	busy = FALSE
 	home.ship_notify("Freight inbound in [CARGO_SHUTTLE_WARMUP / (1 SECONDS)] seconds. Clear the cargo dock's landing pad.", "CARGO", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify.ogg', 30)
 	return null
-
-/// Why freight cannot land on the pad right now, or null when it is clear.
-/datum/voidcrew_cargo_shuttle/outpost/proc/pad_obstruction_error()
-	var/obj/docking_port/stationary/outpost_cargo_dock/pad = home?.cargo_dock_port()
-	var/atom/movable/obstruction = pad?.pad_obstruction()
-	if(!obstruction)
-		return null
-	return "Landing pad blocked by \the [obstruction]"
 
 /**
  * Timer callback, landing_warning_time before the ferry lands: the pad's alarm, and ripples
@@ -171,12 +163,10 @@
 			error = "Cargo dock is occupied"
 		else if(shuttle_port.canDock(pad) != SHUTTLE_CAN_DOCK)
 			error = "The cargo ferry does not fit the cargo dock"
-		else
-			// The landing would gib or delete whatever is on the pad, so it never lands on
-			// anything. Checked here, with nothing yielding before the move starts.
-			error = pad_obstruction_error()
-			if(!error && shuttle_port.initiate_docking(pad) != DOCKING_SUCCESS)
-				error = "Landing pad blocked"
+		// Like any shuttle it crushes whoever stays on the pad and wrecks anything bolted there.
+		// The dispatch notice, the pad's alarm and the ripples are the warning.
+		else if(shuttle_port.initiate_docking(pad) != DOCKING_SUCCESS)
+			error = "Landing pad blocked"
 	if(QDELETED(src) || operation_generation != delivery_generation)
 		return FALSE
 	if(!error)

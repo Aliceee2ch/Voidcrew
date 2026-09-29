@@ -130,9 +130,6 @@
 /turf/open/indestructible/white,
 /area/template_noop)
 "am" = (
-/mob/living/basic/outpost_shop_bot{
-	dir = 2
-	},
 /obj/effect/turf_decal/trimline/neutral/filled/line{
 	dir = 2
 	},

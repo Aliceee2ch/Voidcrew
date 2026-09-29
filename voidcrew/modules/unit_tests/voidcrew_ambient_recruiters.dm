@@ -38,7 +38,7 @@
 	TEST_ASSERT(syn_role.applies_to(undertow), "The Syndicate does not recruit at the Undertow")
 	TEST_ASSERT(!syn_role.applies_to(halcyon), "The Syndicate recruits at Halcyon")
 
-/// One of each side steps off the lift at Quartermain while players are there, never a second of either
+/// One of each side is already at their post at Quartermain when players come, and never a second of either, with players there or not
 /datum/unit_test/voidcrew_ambient_recruiters_arrival
 
 /datum/unit_test/voidcrew_ambient_recruiters_arrival/Run()
@@ -48,8 +48,19 @@
 	var/datum/ambient_outpost_role/recruiter/syndicate/syn_role = allocate(/datum/ambient_outpost_role/recruiter/syndicate)
 	var/list/roles = list(nt_role, syn_role)
 
-	place.arrivals_at = world.time
+	// Nobody there: both are made at their posts, not on the lift, and hold still
+	for(var/i in 1 to 5)
+		SSambient_npcs.update_outpost(place, 0, roles, 2)
+	TEST_ASSERT_EQUAL(place.count_role(/datum/ambient_outpost_role/recruiter/nanotrasen), 1, "An empty Quartermain has [place.count_role(/datum/ambient_outpost_role/recruiter/nanotrasen)] Nanotrasen recruiters, not one")
+	TEST_ASSERT_EQUAL(place.count_role(/datum/ambient_outpost_role/recruiter/syndicate), 1, "An empty Quartermain has [place.count_role(/datum/ambient_outpost_role/recruiter/syndicate)] Syndicate recruiters, not one")
+	for(var/mob/living/basic/ambient_npc/recruiter/recruiter in place.npcs)
+		TEST_ASSERT(get_dist(recruiter, run_loc_floor_top_right) > 1, "[recruiter] was made on or beside the lift, not at their post")
+		TEST_ASSERT(recruiter.activity?.arrived, "[recruiter] was made at the outpost with nothing to do")
+		TEST_ASSERT(HAS_TRAIT(recruiter, TRAIT_AI_PAUSED), "[recruiter] at an empty outpost is not holding still")
+
+	// A player comes: nobody more steps off the lift
 	for(var/i in 1 to 10)
+		place.arrivals_at = world.time
 		SSambient_npcs.update_outpost(place, 1, roles)
 		for(var/mob/living/basic/ambient_npc/recruiter/newcomer in run_loc_floor_top_right)
 			newcomer.forceMove(run_loc_floor_bottom_left)
@@ -60,8 +71,9 @@
 	TEST_ASSERT_EQUAL(syn_count, 1, "Quartermain has [syn_count] Syndicate recruiters, not one")
 
 	var/mob/living/basic/ambient_npc/recruiter/nanotrasen/nt_npc = locate() in place.npcs
-	TEST_ASSERT(istype(nt_npc), "No Nanotrasen recruiter arrived")
+	TEST_ASSERT(istype(nt_npc), "No Nanotrasen recruiter came")
 	TEST_ASSERT_EQUAL(nt_npc.rival_type, /mob/living/basic/ambient_npc/recruiter/syndicate, "A Nanotrasen recruiter does not know their rival")
+	TEST_ASSERT(!HAS_TRAIT(nt_npc, TRAIT_AI_PAUSED), "A recruiter still holds still with a player on the concourse")
 
 /// Talking to a recruiter gets a pitch line and, once per ten minutes, a pamphlet with nothing recorded about the player (D2)
 /datum/unit_test/voidcrew_ambient_recruiters_pamphlet

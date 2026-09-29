@@ -16,8 +16,9 @@
  * - the dock worker (Quartermain): hauls boxes along the intake row with the work loop, takes a
  *   coffee break in the crew room, and on the convoy carries crates from the lift to Sarge's
  *   counter for a minute and a half.
- * Staff duck when a fight breaks out and carry on; they do not leave. Their lines are in
- * strings/outpost_workers.json (AMBIENT_STRINGS_WORKERS).
+ * Staff duck when a fight breaks out and carry on; they do not leave. When players come they are
+ * already mid-job (settle_in()). Their lines are in strings/outpost_workers.json
+ * (AMBIENT_STRINGS_WORKERS).
  *
  * The trader outposts' mechanics (/mob/living/basic/outpost_loiterer/mechanic,
  * voidcrew/modules/trade/outpost_amenities.dm) are the engineers already and stay as they are.
@@ -194,6 +195,13 @@
 /mob/living/basic/ambient_npc/outpost/worker/janitor/pick_activity()
 	// What was on the floor before anyone looked is the map's, not a mess
 	ambient_outpost_mark_decor(place)
+	return ..()
+
+/// Found mid-job: mopping somewhere on the floor
+/mob/living/basic/ambient_npc/outpost/worker/janitor/settle_in()
+	ambient_outpost_mark_decor(place)
+	if(settle_at(/datum/ambient_activity/work/janitor))
+		return TRUE
 	return ..()
 
 /// Whether `tile` is a doorway or the tile before an airlock
@@ -408,6 +416,11 @@
 		janitor.give_up_on(mess_tile)
 	mess_tile = null
 
+/datum/ambient_activity/mop_mess/shift_times(delay)
+	. = ..()
+	mop_until = ambient_shifted(mop_until, delay)
+	dry_until = ambient_shifted(dry_until, delay)
+
 /// Mopping round the floor with the mechanics' work loop when nothing needs cleaning
 /datum/ambient_activity/work/janitor
 	name = "mopping"
@@ -459,6 +472,12 @@
 
 /mob/living/basic/ambient_npc/outpost/worker/gardener/Destroy()
 	tended = null
+	return ..()
+
+/// Found mid-job: at one of the outpost's trays with the watering can
+/mob/living/basic/ambient_npc/outpost/worker/gardener/settle_in()
+	if(settle_at(/datum/ambient_activity/tend_plants, null, 1))
+		return TRUE
 	return ..()
 
 /// Whether they watered `tray` lately
@@ -592,6 +611,10 @@
 	else if(istype(tray))
 		gardener.remember_tray(tray)
 
+/datum/ambient_activity/tend_plants/shift_times(delay)
+	. = ..()
+	done_at = ambient_shifted(done_at, delay)
+
 // =========================================================================
 // THE BARBACK
 // =========================================================================
@@ -635,6 +658,14 @@
 			return wash
 	// Glasses are looked for, and strolls taken, round the bar
 	return pick_anchored(routine, bar_spot, list(/datum/ambient_activity/collect_glasses, /datum/ambient_activity/wander))
+
+/// Found mid-job: wiping down tables round the bar
+/mob/living/basic/ambient_npc/outpost/worker/barback/settle_in()
+	var/list/bar = ambient_outpost_bar(place)
+	var/atom/bar_spot = length(bar) ? bar[1] : null
+	if(bar_spot && settle_at(/datum/ambient_activity/work/barback, null, AMBIENT_SETTLE_TRIES, bar_spot))
+		return TRUE
+	return ..()
 
 /// An empty drinking glass left on a table or the floor near `center` that they could reach, or null
 /mob/living/basic/ambient_npc/outpost/worker/barback/proc/find_glass(atom/center, list/avoid)
@@ -711,6 +742,10 @@
 	. = ..()
 	glass_ref = null
 
+/datum/ambient_activity/collect_glasses/shift_times(delay)
+	. = ..()
+	pick_at = ambient_shifted(pick_at, delay)
+
 /**
  * Washing up: the tray of empties to the nearest sink near the bar (or back over the bar to the
  * barkeep), and they are gone.
@@ -782,6 +817,10 @@
 	if(istype(barback))
 		barback.glasses = 0
 		barback.set_held(null)
+
+/datum/ambient_activity/wash_glasses/shift_times(delay)
+	. = ..()
+	done_at = ambient_shifted(done_at, delay)
 
 /// Wiping down tables with the mechanics' work loop
 /datum/ambient_activity/work/barback
@@ -871,6 +910,15 @@
 /mob/living/basic/ambient_npc/outpost/worker/dock/pick_activity()
 	// The coffee break is taken by the crew room's machine
 	return pick_anchored(routine, ambient_outpost_find(get_outpost(), /obj/machinery/vending/coffee), list(/datum/ambient_activity/drink/coffee))
+
+/// Found mid-job hauling freight, or else on a coffee break by the crew room's machine
+/mob/living/basic/ambient_npc/outpost/worker/dock/settle_in()
+	if(settle_at(/datum/ambient_activity/work/dock))
+		return TRUE
+	var/obj/machinery/vending/coffee/machine = ambient_outpost_find(get_outpost(), /obj/machinery/vending/coffee)
+	if(machine && settle_at(/datum/ambient_activity/drink/coffee, machine, 1))
+		return TRUE
+	return ..()
 
 /// The convoy is in: everything down, and the crates come off the lift
 /mob/living/basic/ambient_npc/outpost/worker/dock/react_convoy(obj/structure/overmap/trader_outpost/outpost)
@@ -988,6 +1036,10 @@
 	. = ..()
 	trips_left = 0
 	ends_at = world.time
+
+/datum/ambient_activity/convoy_unload/shift_times(delay)
+	. = ..()
+	wait_until = ambient_shifted(wait_until, delay)
 
 // =========================================================================
 // WHO WORKS WHERE

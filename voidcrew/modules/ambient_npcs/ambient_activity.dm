@@ -10,7 +10,10 @@
  * replaces it at once if it outranks it (`priority`).
  *
  * The runner is an AI planning subtree, so it only runs while the NPC's AI is on (a living player
- * near), and nothing here costs anything while nobody watches.
+ * near), and nothing here costs anything while nobody watches. At a trader outpost nobody is on,
+ * their AI is off and their activity's times are moved on when someone comes (shift_times()), so
+ * they carry on where they stopped. Someone who was there all along is set going at their
+ * activity's spot without walking there, part-way in (settle_in(), settle_here(), settle()).
  *
  * Working at an object reuses the trader mechanics' work loop as it is
  * (voidcrew/modules/player_outposts/outpost_ambient_work.dm): /datum/ambient_activity/work puts an
@@ -101,6 +104,78 @@
 	activity?.spot_unreachable()
 
 // =========================================================================
+// SETTLING IN (already there when players come)
+// =========================================================================
+
+/**
+ * They were here before anyone came: set going at something from their routine, at its own spot
+ * and part-way through it. Called once, just after they are made at their place
+ * (/datum/ambient_outpost_role/proc/settle()), while nobody watches. TRUE if they are at an
+ * activity; if nothing could be set up they stand somewhere out of the way, and their routine
+ * starts when someone comes. Override to start them at something in particular (settle_at()).
+ */
+/mob/living/basic/ambient_npc/proc/settle_in()
+	// Where they were made is only somewhere on the floor: first somewhere they may stand
+	move_to_settle_tile()
+	for(var/attempt in 1 to AMBIENT_SETTLE_TRIES)
+		if(pick_activity() && settle_here())
+			return TRUE
+		end_activity()
+		if(!move_to_settle_tile())
+			break
+	return FALSE
+
+/**
+ * Settles them at an `activity_type` made with `anchor`: from a free tile of their place's floor
+ * (within `radius` of `near`, if given), then from others, up to `tries` places in all. For
+ * activities that look round where the NPC stands (the work loop). TRUE if settled.
+ */
+/mob/living/basic/ambient_npc/proc/settle_at(activity_type, atom/anchor, tries = AMBIENT_SETTLE_TRIES, atom/near, radius = 6)
+	if(near || !standable(get_turf(src)))
+		move_to_settle_tile(near, radius)
+	for(var/attempt in 1 to tries)
+		if(start_activity(new activity_type(src, anchor)) && settle_here())
+			return TRUE
+		end_activity()
+		if(attempt < tries && !move_to_settle_tile(near, radius))
+			break
+	return FALSE
+
+/**
+ * Puts them at their current activity's spot as if they had walked there long ago, starts it there
+ * (arrive()) and sets it part-way in (settle()). Their leash is anchored where they end up. FALSE
+ * when they have no activity or its spot is taken.
+ */
+/mob/living/basic/ambient_npc/proc/settle_here()
+	if(!activity)
+		return FALSE
+	if(!activity.at_spot())
+		var/turf/stand = activity.spot
+		if(!isturf(stand) || (stand != loc && (locate(/mob/living) in stand)))
+			stand = activity.spot_distance ? free_tile_beside(activity.spot, activity.spot_distance) : null
+		if(!stand)
+			return FALSE
+		forceMove(stand)
+		if(!activity.at_spot())
+			return FALSE
+	home = get_turf(src)
+	activity.arrived = TRUE
+	activity.arrive()
+	if(!activity)
+		return FALSE
+	activity.settle()
+	return TRUE
+
+/// Moves them (with nobody watching) to a free tile of their place's floor they could stand on, within `radius` of `near` if given. FALSE if there is none.
+/mob/living/basic/ambient_npc/proc/move_to_settle_tile(atom/near, radius = 6)
+	var/turf/tile = place?.settle_turf(src, near, radius)
+	if(!tile)
+		return FALSE
+	forceMove(tile)
+	home = tile
+	return TRUE
+
+// =========================================================================
 // SPOTS
 // =========================================================================
 
@@ -175,7 +250,8 @@
 	if(seat.has_buckled_mobs() && !(src in seat.buckled_mobs))
 		return FALSE
 	for(var/mob/living/other in seat.loc)
-		if(other != src && other.density)
+		// A body lying there counts too
+		if(other != src && (other.density || other.stat == DEAD))
 			return FALSE
 	return seat.loc == loc || standable(seat.loc, avoid)
 
@@ -388,6 +464,21 @@
 /datum/ambient_activity/proc/set_duration()
 	ends_at = world.time + rand(duration_low, duration_high)
 
+/**
+ * They have been at it a while: the outpost was busy before anyone came (settle_here(), just after
+ * arrive()). The default brings its end nearer. Override to start further in; call the parent.
+ */
+/datum/ambient_activity/proc/settle()
+	ends_at = ambient_part_way(ends_at)
+
+/**
+ * They stood still for `delay` (nobody at their outpost): every world.time it waits for moves on by
+ * as much, so it carries on where it stopped. Override for your own times; call the parent.
+ */
+/datum/ambient_activity/proc/shift_times(delay)
+	ends_at = ambient_shifted(ends_at, delay)
+	next_line = ambient_shifted(next_line, delay)
+
 /// A line for `context` now and then: no sooner than `low` to `high` after the last one, and only when the NPC's own and place's pauses allow
 /datum/ambient_activity/proc/chatter(context = AMBIENT_LINE_IDLE, low = 20 SECONDS, high = 45 SECONDS)
 	if(world.time < next_line)
@@ -463,6 +554,10 @@
 /datum/ambient_activity/wander/spot_unreachable()
 	. = ..()
 	stops_left = min(stops_left, 1)
+
+/datum/ambient_activity/wander/shift_times(delay)
+	. = ..()
+	linger_until = ambient_shifted(linger_until, delay)
 
 /// A seat, beside a table if `needs_table`, for a while
 /datum/ambient_activity/sit
@@ -568,6 +663,10 @@
 /datum/ambient_activity/drink/spot_unreachable()
 	. = ..()
 	seat_ref = null
+
+/datum/ambient_activity/drink/shift_times(delay)
+	. = ..()
+	next_sip = ambient_shifted(next_sip, delay)
 
 /**
  * Talking with another NPC: the one who starts it walks over; the other stops what it was doing
@@ -740,6 +839,18 @@
 	. = ..()
 	drop_worker()
 
+// Found mid-job: the job has less of it left
+/datum/ambient_activity/work/settle()
+	. = ..()
+	if(!QDELETED(worker))
+		worker.work_ends_at = ambient_part_way(worker.work_ends_at)
+
+/datum/ambient_activity/work/shift_times(delay)
+	. = ..()
+	if(!QDELETED(worker))
+		worker.work_ends_at = ambient_shifted(worker.work_ends_at, delay)
+		worker.next_work_at = ambient_shifted(worker.next_work_at, delay)
+
 /**
  * Leaving: to their place's exit (a trader outpost's hangar lift), then they fade. Anyone who can't
  * get there, or is still walking after AMBIENT_LEAVE_TIMEOUT, fades where they are. `delay` keeps
@@ -781,6 +892,11 @@
 
 /datum/ambient_activity/leave/spot_unreachable()
 	doer.fade_out()
+
+/datum/ambient_activity/leave/shift_times(delay)
+	. = ..()
+	wait_until = ambient_shifted(wait_until, delay)
+	give_up_at = ambient_shifted(give_up_at, delay)
 
 /// Back onto their leash, to where they were made
 /datum/ambient_activity/go_home

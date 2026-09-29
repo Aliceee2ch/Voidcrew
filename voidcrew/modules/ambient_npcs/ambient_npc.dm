@@ -7,10 +7,12 @@
  * What every ambient NPC gets (spec 2.2, 2.3, 2.5):
  * - a look: a random person in their outfit (outpost_npc_looks.dm), with working looks when they
  *   do work at objects;
- * - protections: no dragging, buckling, closets, crates or bags; no teleports, polymorph or type
- *   change; SENTIENCE_HUMANOID (sentience, transference and lazarus refuse them); immune to air,
- *   cold, heat and weather damage; a leash they walk back to, or fade from;
- * - godmode (`invulnerable`) at trader outposts, or killable with `death_loot` dropped once;
+ * - protections: no dragging (a body neither), buckling, closets, crates or bags; no teleports,
+ *   polymorph or type change; SENTIENCE_HUMANOID (sentience, transference and lazarus refuse them);
+ *   immune to air, cold, heat and weather damage; a leash they walk back to, or fade from;
+ * - killable: a body lies down and drops a little cash (and any `death_loot`) once, never again
+ *   after a revive; at a trader outpost, hurting one is violence there (the outpost's strikes, and
+ *   everyone near ducks), and turrets never shoot them (FACTION_TURRET while they belong to it);
  * - a passive AI: no targeting subtree, so outpost turrets never read them as wild hostiles;
  * - dialogue from a JSON file with per-NPC and per-place cooldowns, replies to other NPCs, and an
  *   answer for a player who talks to them (an empty hand);
@@ -32,11 +34,6 @@
 		real_name = name
 	home = get_turf(src)
 	GLOB.ambient_npcs += src
-	if(invulnerable)
-		// Hitting them does nothing and is not a strike (the loiterer and trader rule)
-		ADD_TRAIT(src, TRAIT_GODMODE, AMBIENT_NPC_TRAIT)
-		// Belt and braces: outpost turrets skip their own faction outright
-		faction |= FACTION_TURRET
 	// A closet sweeps its tile without asking the drag path (#131); bags and boxes ask this trait
 	add_traits(list(TRAIT_NO_CONTAINMENT, TRAIT_NO_STORAGE_INSERT, TRAIT_WEATHER_IMMUNE), AMBIENT_NPC_TRAIT)
 	RegisterSignal(src, COMSIG_MOUSEDROP_ONTO, PROC_REF(refuse_drag))
@@ -228,6 +225,48 @@
 	return stat == CONSCIOUS && !fading && !HAS_TRAIT(src, TRAIT_INCAPACITATED)
 
 // =========================================================================
+// HOLDING STILL (nobody at their outpost)
+// =========================================================================
+
+/**
+ * Nobody is at their outpost: they stop where they are, mid-whatever. Their AI goes off
+ * (TRAIT_AI_PAUSED), and resume_routine() later moves everything they wait for on by as long as
+ * they stood, so nothing they do runs on while nobody watches. Override to put away anything that
+ * would tick on by itself; call the parent.
+ */
+/mob/living/basic/ambient_npc/proc/pause_routine()
+	if(paused_at)
+		return
+	paused_at = max(world.time, 1)
+	ADD_TRAIT(src, TRAIT_AI_PAUSED, AMBIENT_PAUSED_TRAIT)
+
+// Holding still at an empty outpost: nothing about them moves on (they are proof against air, cold and heat anyway)
+/mob/living/basic/ambient_npc/Life(seconds_per_tick = SSMOBS_DT, times_fired)
+	if(paused_at && !client)
+		return
+	return ..()
+
+/// Someone is back: they carry on from where they stopped. Override to bring back what pause_routine() put away; call the parent.
+/mob/living/basic/ambient_npc/proc/resume_routine()
+	if(!paused_at)
+		return
+	var/stood = world.time - paused_at
+	paused_at = 0
+	if(stood > 0)
+		shift_times(stood)
+	REMOVE_TRAIT(src, TRAIT_AI_PAUSED, AMBIENT_PAUSED_TRAIT)
+
+/**
+ * They stood still for `delay`: every world.time they wait for (their next line, the end of their
+ * visit, their activity's steps) moves on by as much. Override for your own; call the parent.
+ */
+/mob/living/basic/ambient_npc/proc/shift_times(delay)
+	next_line_at = ambient_shifted(next_line_at, delay)
+	activity_retry_at = ambient_shifted(activity_retry_at, delay)
+	leash_broken_at = ambient_shifted(leash_broken_at, delay)
+	activity?.shift_times(delay)
+
+// =========================================================================
 // DEATH
 // =========================================================================
 
@@ -244,16 +283,32 @@
 		place?.npc_died(src)
 	drop_loot()
 
-/// Their death loot, once: a revived NPC killed again drops nothing
+/// Their cash and death loot, once: a revived NPC killed again drops nothing
 /mob/living/basic/ambient_npc/proc/drop_loot()
-	if(loot_dropped || !length(death_loot))
+	if(loot_dropped)
 		return
 	loot_dropped = TRUE
 	var/turf/drop_turf = drop_location()
 	if(!drop_turf)
 		return
+	var/cash = (death_cash_high > 0) ? rand(max(0, death_cash_low), death_cash_high) : 0
+	if(cash && place)
+		cash = place.cash_for(src, cash)
+	if(cash > 0)
+		new /obj/item/stack/spacecash/c1(drop_turf, cash)
 	for(var/item_type in death_loot)
 		new item_type(drop_turf)
+
+// A body lies down, and gets up again if they are revived. Types that turn as they lie (rotate_on_lying) turn by themselves.
+/mob/living/basic/ambient_npc/look_dead()
+	. = ..()
+	if(!rotate_on_lying)
+		transform = matrix().Turn(90)
+
+/mob/living/basic/ambient_npc/look_alive()
+	. = ..()
+	if(!rotate_on_lying)
+		transform = matrix()
 
 // =========================================================================
 // DIALOGUE
@@ -420,17 +475,19 @@
 	SIGNAL_HANDLER
 	if(!(attack_flags & (ATTACKER_DAMAGING_ATTACK | ATTACKER_STAMINA_ATTACK | ATTACKER_SHOVING)))
 		return
+	// Their place hears of it first (a trader outpost counts a real blow as violence), even if it killed them
+	place?.npc_attacked(src, attacker, attack_flags)
 	react_attacked(attacker)
 
 /**
- * Someone went for them. Override: a killable NPC fights back or runs (PB). The default is a line,
+ * Someone went for them. Override: a planet NPC fights back or runs (PB). The default is a line,
  * and at a trader outpost they duck out to the lift. Never sleeps.
  */
 /mob/living/basic/ambient_npc/proc/react_attacked(atom/attacker)
 	if(stat != CONSCIOUS || fading || !reaction_ready("attacked"))
 		return
 	speak_context(AMBIENT_LINE_ATTACKED, attacker, force = TRUE)
-	if(invulnerable && istype(place, /datum/ambient_place/outpost))
+	if(istype(place, /datum/ambient_place/outpost))
 		start_activity(new /datum/ambient_activity/leave(src, null, 1 SECONDS))
 
 /**

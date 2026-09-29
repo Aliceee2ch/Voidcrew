@@ -87,6 +87,84 @@
 		npc.end_activity()
 		qdel(npc)
 
+	// ...or be found there already, holding still, and never on or beside the lift
+	for(var/npc_type in subtypesof(/mob/living/basic/ambient_npc/outpost))
+		var/mob/living/basic/ambient_npc/npc = pa_npc(npc_type, pa_tile(1, 1), place)
+		npc.settle_in()
+		TEST_ASSERT(get_dist(npc, pa_tile(4, 4)) > 1, "[npc_type] was found on or beside the lift")
+		TEST_ASSERT(HAS_TRAIT(npc, TRAIT_AI_PAUSED), "[npc_type] at an empty outpost is not holding still")
+		qdel(npc)
+
+// =========================================================================
+// ALREADY THERE WHEN PLAYERS COME
+// =========================================================================
+
+/**
+ * Found already at the outpost: a customer at the counter part-way through their visit, a drinker
+ * on a stool with a glass and at most two stages in, holding still until a player comes. Then the
+ * time they stood still is added to what they were waiting for, and a drunk's slurring keeps.
+ */
+/datum/unit_test/voidcrew_ambient_outpost_settle
+
+/datum/unit_test/voidcrew_ambient_outpost_settle/Run()
+	// Dram behind a counter at the top left: the one tile in front of it is (0, 2). A bar stool at a table.
+	var/obj/structure/overmap/trader_outpost/outpost = ambient_test_outpost()
+	var/mob/living/basic/outpost_trader/dram = pa_trader(outpost, pa_tile(0, 4), pa_tile(0, 3), /datum/outpost_shop/vendor/dregs_bar)
+	var/obj/structure/chair/stool/bar/stool = allocate(/obj/structure/chair/stool/bar, pa_tile(2, 1))
+	allocate(/obj/structure/table, pa_tile(2, 0))
+	var/datum/ambient_place/outpost/place = pa_place(outpost)
+
+	// A customer at the counter, part-way through their visit
+	var/mob/living/basic/ambient_npc/outpost/customer/customer = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(4, 0), place)
+	customer.stalls_left = 2
+	TEST_ASSERT(customer.settle_in(), "A customer could not be found already at the outpost")
+	var/datum/ambient_activity/shop_visit/visit = customer.activity
+	TEST_ASSERT(istype(visit), "A customer found at an outpost with a free counter is [customer.activity?.name || "doing nothing"], not shopping")
+	TEST_ASSERT_EQUAL(get_turf(customer), pa_tile(0, 2), "A customer was found somewhere other than the front of the counter")
+	TEST_ASSERT_EQUAL(visit.stage, "counter", "A customer found at the counter is still walking to it") // VISIT_COUNTER
+	TEST_ASSERT(customer.leave_at > world.time && customer.leave_at <= world.time + 4800, "A customer found at the outpost leaves in [(customer.leave_at - world.time) / 10] seconds") // PATRON_VISIT_HIGH
+	TEST_ASSERT(HAS_TRAIT(customer, TRAIT_AI_PAUSED), "A customer at an empty outpost is not holding still")
+
+	// A drinker on the stool with a glass in hand, having ordered long ago, a stage or two in at most
+	var/mob/living/basic/ambient_npc/outpost/drinker/drinker = pa_npc(/mob/living/basic/ambient_npc/outpost/drinker, pa_tile(4, 1), place)
+	drinker.set_bar(dram, dram, "bar_dregs")
+	TEST_ASSERT(drinker.settle_in(), "A drinker could not be found already at the bar")
+	var/datum/ambient_activity/drink/bar/drink = drinker.activity
+	TEST_ASSERT(istype(drink), "A drinker found at the bar is [drinker.activity?.name || "doing nothing"], not drinking")
+	TEST_ASSERT_EQUAL(drinker.buckled, stool, "A drinker found at the bar is not on the stool")
+	TEST_ASSERT(istype(drinker.held_item, /obj/item/reagent_containers/cup/glass/drinkingglass), "A drinker found at the bar has no glass")
+	TEST_ASSERT(drinker.ordered, "A drinker found at the bar still has to go and order")
+	TEST_ASSERT(drinker.drunk >= 0 && drinker.drunk <= 2, "A drinker was found [drinker.drunk] stages drunk")
+	TEST_ASSERT(!drinker.cut_off, "A drinker was found already cut off")
+	TEST_ASSERT(HAS_TRAIT(drinker, TRAIT_AI_PAUSED), "A drinker at an empty outpost is not holding still")
+
+	// Say they stood still for ten minutes: a player comes and they carry on where they stopped
+	var/sip_before = drink.next_sip
+	var/order_before = visit.order_at
+	var/leave_before = customer.leave_at
+	customer.paused_at = world.time - 6000
+	drinker.paused_at = world.time - 6000
+	SSambient_npcs.update_outpost(place, 1, list())
+	TEST_ASSERT(!HAS_TRAIT(customer, TRAIT_AI_PAUSED) && !HAS_TRAIT(drinker, TRAIT_AI_PAUSED), "A player came and the outpost's people still hold still")
+	TEST_ASSERT_EQUAL(drink.next_sip, sip_before + 6000, "Ten minutes standing still were not added to a drinker's next sip")
+	TEST_ASSERT_EQUAL(visit.order_at, order_before + 6000, "Ten minutes standing still were not added to a customer's order")
+	TEST_ASSERT_EQUAL(customer.leave_at, leave_before + 6000, "Ten minutes standing still counted towards a customer's visit")
+
+	// A drunk's slurring does not wear off while nobody is there
+	drinker.get_drunker(3 - drinker.drunk)
+	TEST_ASSERT(drinker.has_status_effect(/datum/status_effect/speech/slurring/generic), "A stage 3 drinker does not slur")
+	SSambient_npcs.update_outpost(place, 0, list(), 0)
+	TEST_ASSERT(!drinker.has_status_effect(/datum/status_effect/speech/slurring/generic), "A drunk's slurring ran on with nobody there")
+	SSambient_npcs.update_outpost(place, 1, list())
+	TEST_ASSERT(drinker.has_status_effect(/datum/status_effect/speech/slurring/generic), "A drunk stopped slurring after holding still")
+
+	// The janitor is found at something, where they may stand
+	var/mob/living/basic/ambient_npc/outpost/worker/janitor/janitor = pa_npc(/mob/living/basic/ambient_npc/outpost/worker/janitor, pa_tile(4, 0), place)
+	SSambient_npcs.update_outpost(place, 0, list(), 0)
+	TEST_ASSERT(janitor.settle_in(), "The janitor could not be found already at work")
+	TEST_ASSERT(janitor.activity?.arrived, "The janitor found at the outpost is still on their way to something")
+	TEST_ASSERT(janitor.standable(get_turf(janitor)), "The janitor was found where outpost staff keep off")
+
 // =========================================================================
 // CUSTOMERS (owner item 3)
 // =========================================================================
@@ -104,7 +182,7 @@
 	TEST_ASSERT(length(ambient_dialogue_lines("outpost_patrons.json", "pike", "trader_reply")), "Pike has no answers for his customers")
 
 	var/mob/living/basic/ambient_npc/outpost/customer/customer = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(0, 0), place)
-	TEST_ASSERT(HAS_TRAIT(customer, TRAIT_GODMODE), "A customer can be hurt")
+	TEST_ASSERT(!HAS_TRAIT(customer, TRAIT_GODMODE), "A customer cannot be hurt")
 	for(var/turf/spot as anything in ambient_counter_spots(customer, pike))
 		TEST_ASSERT_EQUAL(get_dist(spot, pike), 2, "A customer would be served from [spot], beside the trader")
 		TEST_ASSERT(locate(/obj/structure/table) in get_step(pike, get_dir(pike, spot)), "A customer would be served from [spot], with no counter between")
@@ -416,6 +494,10 @@
 	var/datum/ambient_place/outpost/place = pa_place(outpost)
 	var/mob/living/basic/ambient_npc/outpost/worker/dock/worker = pa_npc(/mob/living/basic/ambient_npc/outpost/worker/dock, pa_tile(0, 0), place)
 
+	// The convoy comes on a timer, players or not: with nobody on the concourse nobody stirs
+	SEND_SIGNAL(outpost, "trader_outpost_convoy") // COMSIG_TRADER_OUTPOST_CONVOY
+	TEST_ASSERT(!istype(worker.activity, /datum/ambient_activity/convoy_unload), "The dock worker unloaded a convoy with nobody on the concourse")
+	SSambient_npcs.update_outpost(place, 1, list())
 	SEND_SIGNAL(outpost, "trader_outpost_convoy") // COMSIG_TRADER_OUTPOST_CONVOY
 	var/datum/ambient_activity/convoy_unload/unload = worker.activity
 	TEST_ASSERT(istype(unload), "The convoy did not set the dock worker unloading")
@@ -507,6 +589,16 @@
 	qdel(angler)
 	TEST_ASSERT(QDELETED(chair), "The angler left their folding chair behind")
 
+	// Found already at the pond when players come: in a chair at the edge, with a line out
+	var/mob/living/basic/ambient_npc/outpost/angler/regular = pa_npc(/mob/living/basic/ambient_npc/outpost/angler, pa_tile(1, 1), place)
+	TEST_ASSERT(regular.settle_in(), "The angler could not be found already at the pond")
+	var/datum/ambient_activity/fish/fishing = regular.activity
+	TEST_ASSERT(istype(fishing), "The angler found at the pond is [regular.activity?.name || "doing nothing"], not fishing (PB's fishing activity)")
+	TEST_ASSERT_NOTNULL(fishing.float, "The angler found at the pond has no line in the water")
+	TEST_ASSERT(istype(regular.buckled, /obj/structure/chair), "The angler found at the pond is not in a chair")
+	TEST_ASSERT(get_dist(regular, pond_tile) <= 2, "The angler found at the pond is sitting away from the water")
+	TEST_ASSERT(HAS_TRAIT(regular, TRAIT_AI_PAUSED), "The angler at an empty outpost is not holding still")
+
 // =========================================================================
 // KEEPING CLEAR
 // =========================================================================
@@ -556,3 +648,96 @@
 	janitor.end_activity()
 	TEST_ASSERT(!janitor.crouching, "The janitor stayed down after the fight")
 	TEST_ASSERT(!janitor.fading, "The janitor left over a fight")
+
+// =========================================================================
+// KILLING
+// =========================================================================
+
+/**
+ * Every outpost NPC can be killed: they die of their wounds and drop 5 to 30 cr once, never again
+ * after a revive, and the outpost's turrets count them as its own. A killed person's place stays
+ * empty a good while, made up neither in place nor off the lift; the outpost's people drop no more
+ * than 300 cr between them; a blow to one is violence at the outpost; bodies are taken away.
+ */
+/datum/unit_test/voidcrew_ambient_outpost_deaths
+
+/datum/unit_test/voidcrew_ambient_outpost_deaths/Run()
+	var/obj/structure/overmap/trader_outpost/outpost = ambient_test_outpost()
+	var/datum/ambient_place/outpost/place = pa_place(outpost)
+
+	// Each of them dies, and drops a little cash, once
+	var/turf/spot = pa_tile(1, 1)
+	var/list/types = subtypesof(/mob/living/basic/ambient_npc/outpost) + subtypesof(/mob/living/basic/ambient_npc/recruiter)
+	for(var/npc_type in types)
+		place.cash_dropped = 0
+		var/cash_before = ambient_test_cash_on(spot)
+		var/mob/living/basic/ambient_npc/npc = pa_npc(npc_type, spot, place)
+		TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_GODMODE), "[npc_type] cannot be hurt")
+		TEST_ASSERT(FACTION_TURRET in npc.faction, "The outpost's turrets would shoot [npc_type]")
+		npc.apply_damage(npc.maxHealth * 2, BRUTE)
+		TEST_ASSERT_EQUAL(npc.stat, DEAD, "[npc_type] did not die of their wounds")
+		var/dropped = ambient_test_cash_on(spot) - cash_before
+		TEST_ASSERT(dropped >= 5 && dropped <= 30, "[npc_type] dropped [dropped] cr, not 5 to 30") // AMBIENT_DEATH_CASH_LOW/HIGH
+		npc.revive(ADMIN_HEAL_ALL)
+		npc.death()
+		TEST_ASSERT_EQUAL(ambient_test_cash_on(spot) - cash_before, dropped, "[npc_type] dropped cash again after a revive")
+		qdel(npc)
+
+	// A killed person's place stays empty a good while
+	var/datum/ambient_outpost_role/core_test/role = allocate(/datum/ambient_outpost_role/core_test)
+	role.npc_type = /mob/living/basic/ambient_npc/outpost/customer
+	role.max_count = 1
+	var/list/roles = list(role)
+	SSambient_npcs.update_outpost(place, 0, roles, 5)
+	TEST_ASSERT_EQUAL(place.count_role(role.type), 1, "The role was not filled in place")
+	var/list/settled = place.living_npcs()
+	var/mob/living/basic/ambient_npc/victim = settled[1]
+	victim.apply_damage(victim.maxHealth * 2, BRUTE)
+	TEST_ASSERT_EQUAL(place.killed_slots(role.type), 1, "A killing did not leave its place empty")
+	var/list/until = place.killed_until[role.type]
+	TEST_ASSERT(until[1] - world.time >= 11900 && until[1] - world.time <= 12000, "A killed person's place opens again in [(until[1] - world.time) / 10] seconds, not twenty minutes") // AMBIENT_OUTPOST_KILLED_SLOT_TIME
+	// Nobody there: the body goes, and nobody is made in their place
+	place.needs_settling = TRUE
+	TEST_ASSERT_EQUAL(SSambient_npcs.update_outpost(place, 0, roles, 5), 0, "A killed person was made up in place at once")
+	TEST_ASSERT(QDELETED(victim), "A body stayed at an outpost nobody is on")
+	// A player comes: nobody off the lift for them either
+	for(var/i in 1 to 3)
+		place.arrivals_at = world.time
+		SSambient_npcs.update_outpost(place, 1, roles)
+	TEST_ASSERT_EQUAL(place.count_role(role.type), 0, "A killed person was replaced off the lift at once")
+	// Once their place opens again, someone comes
+	until[1] = world.time - 1
+	place.arrivals_at = world.time
+	SSambient_npcs.update_outpost(place, 1, roles)
+	TEST_ASSERT_EQUAL(place.count_role(role.type), 1, "A killed person's place never opened again")
+	for(var/mob/living/basic/ambient_npc/arrival in pa_tile(4, 4))
+		arrival.forceMove(pa_tile(0, 4))
+
+	// The outpost's people drop no more than 300 cr between them in a round
+	place.cash_dropped = 295
+	var/turf/purse_spot = pa_tile(0, 0)
+	var/mob/living/basic/ambient_npc/outpost/customer/rich = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, purse_spot, place)
+	rich.death()
+	var/last_cash = ambient_test_cash_on(purse_spot)
+	TEST_ASSERT(last_cash <= 5, "Someone dropped [last_cash] cr with 5 left under the outpost's cap") // AMBIENT_OUTPOST_CASH_CAP
+	var/mob/living/basic/ambient_npc/outpost/customer/broke = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, purse_spot, place)
+	broke.death()
+	TEST_ASSERT_EQUAL(ambient_test_cash_on(purse_spot), last_cash, "Someone dropped cash past the outpost's cap")
+
+	// A real blow to one of them is violence at the outpost: a strike, and everyone near ducks and goes
+	var/mob/living/carbon/human/consistent/brute = allocate(/mob/living/carbon/human/consistent, pa_tile(4, 0))
+	brute.mind_initialize()
+	var/mob/living/basic/ambient_npc/outpost/customer/witness = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(2, 0), place)
+	var/mob/living/basic/ambient_npc/outpost/customer/target = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(3, 1), place)
+	SEND_SIGNAL(target, COMSIG_ATOM_WAS_ATTACKED, brute, ATTACKER_DAMAGING_ATTACK)
+	TEST_ASSERT(outpost.aggressor_strikes[brute.mind], "A blow to one of the outpost's people was no strike")
+	TEST_ASSERT(istype(witness.activity, /datum/ambient_activity/leave), "Nobody near ducked and left when one of the outpost's people was hit")
+
+	// With players there a body lies a while, then is taken away
+	var/mob/living/basic/ambient_npc/outpost/customer/body = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(1, 2), place)
+	body.death()
+	SSambient_npcs.update_outpost(place, 1, list())
+	TEST_ASSERT(!body.fading && !QDELETED(body), "A body was taken away the moment someone died in front of players")
+	body.timeofdeath = world.time - 3001 // AMBIENT_OUTPOST_BODY_TIME
+	SSambient_npcs.update_outpost(place, 1, list())
+	TEST_ASSERT(QDELETED(body) || body.fading, "A body lay at the outpost past five minutes with players there")

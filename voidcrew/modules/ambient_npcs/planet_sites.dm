@@ -243,7 +243,6 @@
 /mob/living/basic/ambient_npc/planet
 	name = "drifter"
 	desc = "Someone living rough."
-	invulnerable = FALSE
 	dialogue_file = AMBIENT_STRINGS_PLANETS
 	dialogue_section = "any"
 	routine = list(

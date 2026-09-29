@@ -3,7 +3,8 @@
  *
  * Owner: PA (trader outpost life). P0 made this file as a stub; only PA edits it.
  *
- * Built here (spec 3.3): one angler at Halcyon's pond while players are on the concourse. They pick
+ * Built here (spec 3.3): one angler at Halcyon's pond, already fishing with a line out when players
+ * come (settle_in()), part-way through their stay; one who goes home is replaced off the lift. They pick
  * a spot at the pond's edge (an empty chair there, or a folding chair they bring, which goes when
  * they do), and fish with /datum/ambient_activity/fish, which PB owns (planet_fishers.dm): the line,
  * the wait and the catches, anchored on the water turf. Until PB's activity lands its setup()
@@ -108,6 +109,24 @@
 		fish_sessions++
 		return activity
 	return start_activity(new /datum/ambient_activity/pond_sit(src))
+
+/// Here a while already: at the pond's edge in their chair with a line out, part-way through their stay
+/mob/living/basic/ambient_npc/outpost/angler/settle_in()
+	leave_at = ambient_part_way(leave_at)
+	if(find_pond_spot())
+		// PB's fishing, anchored on the water (planet_fishers.dm)
+		if(settle_at(/datum/ambient_activity/fish, water, 1))
+			fish_sessions++
+			return TRUE
+		if(settle_at(/datum/ambient_activity/pond_sit, null, 1))
+			return TRUE
+	return ..()
+
+/mob/living/basic/ambient_npc/outpost/angler/shift_times(delay)
+	. = ..()
+	leave_at = ambient_shifted(leave_at, delay)
+	next_watch_at = ambient_shifted(next_watch_at, delay)
+	next_show_at = ambient_shifted(next_show_at, delay)
 
 /// Whether `tile` is a place at the pond's edge they could fish from into `pond`
 /mob/living/basic/ambient_npc/outpost/angler/proc/fishing_spot_ok(turf/tile, turf/open/water/pond)
@@ -360,6 +379,10 @@
 /datum/ambient_activity/show_catch/spot_unreachable()
 	. = ..()
 	ends_at = world.time
+
+/datum/ambient_activity/show_catch/shift_times(delay)
+	. = ..()
+	next_step_at = ambient_shifted(next_step_at, delay)
 
 /// One angler at Halcyon's pond
 /datum/ambient_outpost_role/angler

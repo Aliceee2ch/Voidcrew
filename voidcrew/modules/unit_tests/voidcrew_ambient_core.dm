@@ -11,9 +11,8 @@
 /mob/living/basic/ambient_npc/core_test
 	routine = list(/datum/ambient_activity/idle = 1)
 
-/// One who can be killed, with something to drop
+/// One with something to drop besides their cash
 /mob/living/basic/ambient_npc/core_test/killable
-	invulnerable = FALSE
 	death_loot = list(/obj/item/pickaxe)
 
 /// One who only ever sits down
@@ -60,26 +59,34 @@
 // THE BASE NPC
 // =========================================================================
 
-/// Nobody drags, boxes, teleports, polymorphs or hurts an outpost NPC; turrets read it as harmless; a killable one drops its loot once
+/// Nobody drags, boxes, teleports or polymorphs an ambient NPC; they can be hurt; an outpost's turrets count its people as their own; a killed one drops its cash and loot once
 /datum/unit_test/voidcrew_ambient_npc_protections
 
 /datum/unit_test/voidcrew_ambient_npc_protections/Run()
 	var/mob/living/basic/ambient_npc/core_test/npc = allocate(/mob/living/basic/ambient_npc/core_test, run_loc_floor_bottom_left)
 	TEST_ASSERT(npc in GLOB.ambient_npcs, "An ambient NPC is not on the list")
 	TEST_ASSERT_EQUAL(npc.sentience_type, SENTIENCE_HUMANOID, "Sentience or transference potions would work on an ambient NPC")
-	TEST_ASSERT(HAS_TRAIT(npc, TRAIT_GODMODE), "An outpost NPC can be hurt")
+	TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_GODMODE), "An ambient NPC cannot be hurt")
 	TEST_ASSERT(HAS_TRAIT(npc, "no_containment"), "An ambient NPC can be shut in a closet") // TRAIT_NO_CONTAINMENT
 	TEST_ASSERT(HAS_TRAIT(npc, TRAIT_NO_STORAGE_INSERT), "An ambient NPC can be put in a bag")
 	TEST_ASSERT(HAS_TRAIT(npc, TRAIT_WEATHER_IMMUNE), "Weather hurts an ambient NPC")
 	TEST_ASSERT(!npc.unsuitable_atmos_damage && !npc.unsuitable_cold_damage && !npc.unsuitable_heat_damage, "An ambient NPC dies in vacuum or cold")
-	TEST_ASSERT(FACTION_TURRET in npc.faction, "Outpost turrets do not count an outpost NPC as their own")
 	TEST_ASSERT(!is_hostile_creature(npc), "Outpost turrets would shoot an ambient NPC as a wild hostile")
 	TEST_ASSERT(npc.name != initial(npc.name), "An ambient NPC has no name of their own")
 
-	// Godmode: a heavy blow does nothing
+	// An outpost's turrets count its people as their own, and only while they belong to it
+	var/obj/structure/overmap/trader_outpost/outpost = ambient_test_outpost()
+	npc.set_place(SSambient_npcs.outpost_place(outpost))
+	TEST_ASSERT(FACTION_TURRET in npc.faction, "Outpost turrets do not count an outpost's people as their own")
+	npc.set_place(null)
+	TEST_ASSERT(!(FACTION_TURRET in npc.faction), "Someone gone from an outpost is still one of its turrets' own")
+
+	// A blow hurts them
 	var/health_before = npc.health
-	npc.apply_damage(50, BRUTE)
-	TEST_ASSERT_EQUAL(npc.health, health_before, "A blow hurt an outpost NPC")
+	npc.apply_damage(20, BRUTE)
+	TEST_ASSERT(npc.health < health_before, "A blow did not hurt an ambient NPC")
+	npc.revive(ADMIN_HEAL_ALL)
+	health_before = npc.health
 
 	// Teleports of any kind leave them where they are
 	var/turf/start = get_turf(npc)
@@ -116,21 +123,31 @@
 	leashed.forceMove(far_outside)
 	TEST_ASSERT(leashed.own_step_allowed(outside), "An ambient NPC off their leash may not step back towards it")
 
-	// A killable one dies, drops its loot once, and a revived one killed again drops nothing more
+	// Killed: a body that lies down, their cash and loot once, and nothing more from a revived one killed again
 	var/turf/loot_turf = run_loc_floor_top_right
 	var/mob/living/basic/ambient_npc/core_test/killable/victim = allocate(/mob/living/basic/ambient_npc/core_test/killable, loot_turf)
-	TEST_ASSERT(!HAS_TRAIT(victim, TRAIT_GODMODE), "A killable NPC is in godmode")
-	victim.death()
-	TEST_ASSERT_EQUAL(victim.stat, DEAD, "A killable NPC did not die")
-	TEST_ASSERT_EQUAL(count_pickaxes(loot_turf), 1, "A killable NPC dropped [count_pickaxes(loot_turf)] of its loot, not one")
+	victim.apply_damage(victim.maxHealth * 2, BRUTE)
+	TEST_ASSERT_EQUAL(victim.stat, DEAD, "An ambient NPC did not die of their wounds")
+	TEST_ASSERT(!victim.density, "An ambient NPC's body still blocks the way")
+	TEST_ASSERT_EQUAL(count_pickaxes(loot_turf), 1, "A killed NPC dropped [count_pickaxes(loot_turf)] of its loot, not one")
+	var/cash = ambient_test_cash_on(loot_turf)
+	TEST_ASSERT(cash >= 5 && cash <= 30, "A killed NPC dropped [cash] cr, not 5 to 30") // AMBIENT_DEATH_CASH_LOW/HIGH
 	victim.revive(ADMIN_HEAL_ALL)
+	TEST_ASSERT_EQUAL(victim.stat, CONSCIOUS, "A revived NPC is not up again")
 	victim.death()
 	TEST_ASSERT_EQUAL(count_pickaxes(loot_turf), 1, "A revived NPC dropped its loot again")
+	TEST_ASSERT_EQUAL(ambient_test_cash_on(loot_turf), cash, "A revived NPC dropped cash again")
 
 /datum/unit_test/voidcrew_ambient_npc_protections/proc/count_pickaxes(turf/where)
 	. = 0
 	for(var/obj/item/pickaxe/pick in where)
 		.++
+
+/// The credits in cash lying on `where`
+/datum/unit_test/proc/ambient_test_cash_on(turf/where)
+	. = 0
+	for(var/obj/item/stack/spacecash/money in where)
+		. += money.get_item_credit_value()
 
 /// Dialogue: lines come from the file with the core's as a fallback, placeholders fill, and cooldowns hold
 /datum/unit_test/voidcrew_ambient_npc_dialogue
@@ -154,7 +171,12 @@
 // PRESENCE AT A TRADER OUTPOST
 // =========================================================================
 
-/// Nobody arrives while the concourse is empty; the first arrivals step off the lift after 30 to 60 seconds, one at a time, up to the cap; three minutes after the last player everyone goes
+/**
+ * While nobody is on the concourse its roles are filled in place, a few people a tick, each already
+ * at what they do and holding still with their AI off; a player wakes them and they carry on where
+ * they stopped; while players are there, anyone who left is replaced off the lift, one at a time, up
+ * to the cap; when the players leave nobody is deleted, and everyone holds still again.
+ */
 /datum/unit_test/voidcrew_ambient_outpost_presence
 
 /datum/unit_test/voidcrew_ambient_outpost_presence/Run()
@@ -166,68 +188,106 @@
 	var/datum/ambient_outpost_role/core_test/role = allocate(/datum/ambient_outpost_role/core_test)
 	role.npc_type = /mob/living/basic/ambient_npc/core_test
 	var/list/roles = list(role)
+	var/turf/lift = run_loc_floor_top_right
 
-	// Nobody there: nobody comes
-	SSambient_npcs.update_outpost(place, 0, roles)
+	// Nobody there: the role is filled in place, no more than the tick's share at a time
+	TEST_ASSERT_EQUAL(SSambient_npcs.update_outpost(place, 0, roles, 2), 2, "The first tick at an empty outpost did not make two people in place")
 	TEST_ASSERT(!place.occupied, "An empty concourse counts as occupied")
-	TEST_ASSERT_EQUAL(length(place.npcs), 0, "Someone arrived at an empty concourse")
+	TEST_ASSERT_EQUAL(SSambient_npcs.update_outpost(place, 0, roles, 2), 1, "The rest of the role was not made in place on the next tick")
+	TEST_ASSERT_EQUAL(SSambient_npcs.update_outpost(place, 0, roles, 2), 0, "More people were made in place than the role wants")
+	TEST_ASSERT_EQUAL(length(place.npcs), 3, "An empty outpost has [length(place.npcs)] people for a role of three")
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
+		TEST_ASSERT_EQUAL(npc.place, place, "Someone made in place does not belong to the outpost")
+		TEST_ASSERT_EQUAL(npc.role, role.type, "Someone made in place does not know their role")
+		TEST_ASSERT(get_dist(npc, lift) > 1, "[npc] was made on or beside the lift, not in place")
+		TEST_ASSERT(npc.activity?.arrived, "[npc] was made in place but is not yet at what they do")
+		TEST_ASSERT_EQUAL(npc.home, get_turf(npc), "[npc]'s leash is not anchored where they were made")
+		// Their AI is off with nobody there
+		TEST_ASSERT(HAS_TRAIT_FROM(npc, TRAIT_AI_PAUSED, "ambient_paused"), "[npc] at an empty outpost is not held still") // AMBIENT_PAUSED_TRAIT
+		TEST_ASSERT(npc.paused_at, "[npc] at an empty outpost does not know when they stopped")
+		TEST_ASSERT(!npc.ai_controller.able_to_run, "[npc]'s AI can run at an empty outpost")
+		TEST_ASSERT_EQUAL(npc.ai_controller.ai_status, AI_STATUS_OFF, "[npc]'s AI is on at an empty outpost")
 
-	// A player arrives: nobody steps off the lift for 30 to 60 seconds
+	// Their clocks stop while nobody is there: say this one stood still for five minutes
+	var/mob/living/basic/ambient_npc/sleeper = place.npcs[1]
+	var/ends_before = sleeper.activity.ends_at
+	var/line_before = sleeper.next_line_at
+	TEST_ASSERT(ends_before, "Someone made in place is doing something with no end")
+	sleeper.paused_at = world.time - 3000
+
+	// A player comes: everyone carries on where they stopped, and nobody else comes while the roles are full
 	SSambient_npcs.update_outpost(place, 1, roles)
 	TEST_ASSERT(place.occupied, "A concourse with a player on it is not occupied")
-	TEST_ASSERT(place.arrivals_at >= world.time + 300 && place.arrivals_at <= world.time + 600, "The first arrival is due in [(place.arrivals_at - world.time) / 10] seconds") // AMBIENT_OUTPOST_ARRIVAL_DELAY_LOW/HIGH
-	TEST_ASSERT_EQUAL(length(place.npcs), 0, "Someone arrived the moment a player did")
+	TEST_ASSERT_EQUAL(length(place.npcs), 3, "Someone came while every role was full")
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
+		TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_AI_PAUSED), "[npc] is still held still with a player on the concourse")
+		TEST_ASSERT(!npc.paused_at, "[npc] still counts as stopped with a player on the concourse")
+		TEST_ASSERT(npc.ai_controller.able_to_run, "[npc]'s AI cannot run with a player on the concourse")
+	TEST_ASSERT_EQUAL(sleeper.activity.ends_at, ends_before + 3000, "Five minutes standing still were not added to what someone was doing")
+	TEST_ASSERT_EQUAL(sleeper.next_line_at, line_before + 3000, "Five minutes standing still were not added to someone's next line")
 
-	// Once it is time: one at a time, off the lift, and never onto a lift someone stands on
-	place.arrivals_at = world.time
-	var/list/arrived = list()
-	for(var/i in 1 to 3)
-		SSambient_npcs.update_outpost(place, 1, roles)
-		TEST_ASSERT_EQUAL(length(place.npcs), i, "[length(place.npcs)] people have arrived after [i] ticks")
-		var/mob/living/basic/ambient_npc/newcomer = place.npcs[i]
-		TEST_ASSERT_EQUAL(get_turf(newcomer), run_loc_floor_top_right, "Someone arrived somewhere other than the lift")
-		TEST_ASSERT_EQUAL(newcomer.place, place, "An arrival does not belong to the outpost")
-		TEST_ASSERT_EQUAL(newcomer.role, role.type, "An arrival does not know their role")
-		TEST_ASSERT(newcomer.leash_ok(run_loc_floor_bottom_left), "An arrival is leashed off the concourse")
-		SSambient_npcs.update_outpost(place, 1, roles)
-		TEST_ASSERT_EQUAL(length(place.npcs), i, "Someone stepped off the lift onto someone else")
-		newcomer.forceMove(run_loc_floor_bottom_left)
-		arrived += newcomer
-	// The role is full
+	// Turnover while a player is there: two go, and their replacements step off the lift one at a time
+	qdel(place.npcs[3])
+	qdel(place.npcs[2])
 	SSambient_npcs.update_outpost(place, 1, roles)
-	TEST_ASSERT_EQUAL(length(place.npcs), 3, "A role brought more than its count")
+	TEST_ASSERT_EQUAL(length(place.npcs), 2, "[length(place.npcs) - 1] people came off the lift at once")
+	var/mob/living/basic/ambient_npc/newcomer = place.npcs[2]
+	TEST_ASSERT_EQUAL(get_turf(newcomer), lift, "A replacement with a player there came somewhere other than the lift")
+	TEST_ASSERT_EQUAL(newcomer.role, role.type, "A replacement does not know their role")
+	TEST_ASSERT(!HAS_TRAIT(newcomer, TRAIT_AI_PAUSED), "A replacement with a player there is held still")
+	TEST_ASSERT(newcomer.leash_ok(run_loc_floor_bottom_left), "A replacement is leashed off the concourse")
+	newcomer.forceMove(run_loc_floor_bottom_left)
+	SSambient_npcs.update_outpost(place, 1, roles)
+	TEST_ASSERT_EQUAL(length(place.npcs), 2, "The next replacement did not wait its turn at the lift")
+	place.arrivals_at = world.time
+	SSambient_npcs.update_outpost(place, 1, roles)
+	TEST_ASSERT_EQUAL(length(place.npcs), 3, "The second replacement never came")
+	for(var/mob/living/basic/ambient_npc/arrival in lift)
+		arrival.forceMove(run_loc_floor_bottom_left)
 
 	// Never more than the outpost's cap, whatever the roles want
 	role.max_count = 50
 	for(var/i in 1 to 15)
+		place.arrivals_at = world.time
 		SSambient_npcs.update_outpost(place, 1, roles)
-		for(var/mob/living/basic/ambient_npc/newcomer in run_loc_floor_top_right)
-			newcomer.forceMove(run_loc_floor_bottom_left)
-	TEST_ASSERT_EQUAL(length(place.living_npcs()), 10, "A trader outpost has [length(place.living_npcs())] transient NPCs, not the cap of 10") // AMBIENT_OUTPOST_TRANSIENT_CAP
+		for(var/mob/living/basic/ambient_npc/arrival in lift)
+			arrival.forceMove(run_loc_floor_bottom_left)
+	TEST_ASSERT_EQUAL(length(place.living_npcs()), 10, "A trader outpost has [length(place.living_npcs())] NPCs, not the cap of 10") // AMBIENT_OUTPOST_TRANSIENT_CAP
 
 	// A fight near them: they duck and head off
-	var/mob/living/basic/ambient_npc/witness = arrived[1]
+	var/mob/living/basic/ambient_npc/witness = place.npcs[1]
 	var/mob/living/carbon/human/brawler = allocate(/mob/living/carbon/human/consistent, run_loc_floor_bottom_left)
 	SEND_SIGNAL(outpost, "trader_outpost_violence", brawler) // COMSIG_TRADER_OUTPOST_VIOLENCE
 	TEST_ASSERT(istype(witness.activity, /datum/ambient_activity/leave), "A witness to a fight did not head for the lift")
 	TEST_ASSERT(witness.crouching, "A witness to a fight did not duck")
-	TEST_ASSERT_EQUAL(witness.activity.spot, run_loc_floor_top_right, "A witness is leaving somewhere other than the lift")
+	TEST_ASSERT_EQUAL(witness.activity.spot, lift, "A witness is leaving somewhere other than the lift")
 
-	// The players leave: everyone stays through the grace, then goes at once
-	SSambient_npcs.update_outpost(place, 0, roles)
-	TEST_ASSERT(place.occupied, "The concourse emptied the moment the players left")
-	TEST_ASSERT(length(place.living_npcs()), "The crowd left the moment the players did")
-	place.last_player_at = world.time - 1801 // AMBIENT_OUTPOST_GRACE
+	// The players leave: nobody goes, however long it stays empty; everyone holds still, and nobody is made past the cap
 	var/list/everyone = place.npcs.Copy()
-	SSambient_npcs.update_outpost(place, 0, roles)
-	TEST_ASSERT(!place.occupied, "The concourse is still occupied three minutes after the last player")
-	TEST_ASSERT_EQUAL(length(place.npcs), 0, "[length(place.npcs)] NPCs are still at an outpost nobody has visited for three minutes")
-	for(var/mob/living/basic/ambient_npc/gone as anything in everyone)
-		TEST_ASSERT(QDELETED(gone), "[gone] is still in the world after the concourse emptied")
+	for(var/i in 1 to 5)
+		SSambient_npcs.update_outpost(place, 0, roles, 10)
+	TEST_ASSERT(!place.occupied, "The concourse is still occupied with nobody on it")
+	TEST_ASSERT_EQUAL(length(place.npcs), length(everyone), "[length(place.npcs)] people are at an outpost that had [length(everyone)] before the players left")
+	for(var/mob/living/basic/ambient_npc/npc as anything in everyone)
+		TEST_ASSERT(!QDELETED(npc), "[npc] was deleted when the players left")
+		TEST_ASSERT(HAS_TRAIT_FROM(npc, TRAIT_AI_PAUSED, "ambient_paused"), "[npc] is not held still after the players left") // AMBIENT_PAUSED_TRAIT
+		TEST_ASSERT(!npc.ai_controller.able_to_run, "[npc]'s AI can run after the players left")
 
-	// The next player starts it all again
+	// Someone who left while players were there is made up in place once they have gone
+	role.max_count = 3
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs.Copy())
+		qdel(npc)
+	place.needs_settling = TRUE
+	SSambient_npcs.update_outpost(place, 0, roles, 10)
+	TEST_ASSERT_EQUAL(length(place.npcs), 3, "An empty outpost's role was not made up in place")
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
+		TEST_ASSERT(get_dist(npc, lift) > 1, "[npc] was made up on or beside the lift, not in place")
+
+	// The next player wakes them all again
 	SSambient_npcs.update_outpost(place, 1, roles)
-	TEST_ASSERT(place.occupied && place.arrivals_at > world.time, "A returning player did not start the arrivals again")
+	TEST_ASSERT(place.occupied, "A returning player did not wake the outpost")
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
+		TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_AI_PAUSED), "[npc] is still held still after a player came back")
 
 // =========================================================================
 // PLANET SITES

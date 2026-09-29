@@ -182,13 +182,15 @@ GLOBAL_LIST_EMPTY(ambient_ship_places)
 // =========================================================================
 
 /**
- * Someone found far from anywhere who will join a ship's crew if asked. Killable, drops nothing.
+ * Someone found far from anywhere who will join a ship's crew if asked. Killable, drops nothing
+ * (not even cash: a crew's own deckhands are no purse).
  * Subtypes set their look, their dialogue section and what they do while wild.
  */
 /mob/living/basic/ambient_npc/stray
 	name = "stranded spacer"
 	desc = "Someone a long way from anywhere."
-	invulnerable = FALSE
+	death_cash_low = 0
+	death_cash_high = 0
 	rotate_on_lying = TRUE
 	dialogue_file = AMBIENT_STRINGS_STRAYS
 	dialogue_section = "stranded"

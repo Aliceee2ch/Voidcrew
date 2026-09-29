@@ -15,18 +15,40 @@
 
 // ===== SUBSYSTEM =====
 
-/// SSambient_npcs ticks this often
-#define AMBIENT_SUBSYSTEM_WAIT (10 SECONDS)
+/// SSambient_npcs ticks this often: a trader outpost's people start moving within this of a player reaching its concourse
+#define AMBIENT_SUBSYSTEM_WAIT (2 SECONDS)
 
 // ===== TRADER OUTPOSTS (2.4) =====
 
-/// Most transient NPCs at one trader outpost at once
+/// Most ambient NPCs at one trader outpost at once, made in place or off the lift
 #define AMBIENT_OUTPOST_TRANSIENT_CAP 10
-/// The first arrivals step off the lift this long after the first player reaches the concourse
-#define AMBIENT_OUTPOST_ARRIVAL_DELAY_LOW (30 SECONDS)
-#define AMBIENT_OUTPOST_ARRIVAL_DELAY_HIGH (60 SECONDS)
-/// Once nobody has been on the concourse this long, every transient NPC there is deleted
-#define AMBIENT_OUTPOST_GRACE (3 MINUTES)
+/// While players are on a concourse, someone steps off the lift at most this often (to replace someone who left)
+#define AMBIENT_OUTPOST_ARRIVAL_EVERY (10 SECONDS)
+/// People made in place at the trader outposts per tick of SSambient_npcs, all outposts together
+#define AMBIENT_OUTPOST_SETTLE_PER_FIRE 2
+/// Nobody is made in place until this long after the round starts, out of its busiest moments
+#define AMBIENT_OUTPOST_SETTLE_DELAY (20 SECONDS)
+/// Random tiles tried when looking for somewhere to make someone, or to set them going
+#define AMBIENT_SETTLE_TRIES 4
+/// Trait source: nobody is on their outpost's concourse, so their AI is off (TRAIT_AI_PAUSED) and their clock is stopped
+#define AMBIENT_PAUSED_TRAIT "ambient_paused"
+/**
+ * A killed outpost NPC's place in their role stays empty this long, made in place or off the lift.
+ * Longer than the outpost's mark on the killer (OUTPOST_AGGRESSION_MARK_DURATION, 15 minutes) and
+ * well past any one visit (a customer stays 4 to 8), so killing never brings anyone sooner than
+ * leaving would: at most three refills of one place an hour, whatever the killer does.
+ */
+#define AMBIENT_OUTPOST_KILLED_SLOT_TIME (20 MINUTES)
+/// Most cash the people of one trader outpost drop when killed, all of them together, in a round
+#define AMBIENT_OUTPOST_CASH_CAP 300
+/// A body at a trader outpost is taken away this long after death while players are there; at once when nobody is
+#define AMBIENT_OUTPOST_BODY_TIME (5 MINUTES)
+
+// ===== DEATH =====
+
+/// Cash an ambient NPC has on them when killed, dropped once (a stack of one-credit bills)
+#define AMBIENT_DEATH_CASH_LOW 5
+#define AMBIENT_DEATH_CASH_HIGH 30
 /// An outpost's public floor is worked out again this often while it is occupied
 #define AMBIENT_OUTPOST_FLOOR_REFRESH (10 MINUTES)
 /// NPCs this far from a fight at an outpost duck and leave
@@ -176,7 +198,7 @@
 #define COMSIG_AMBIENT_NPC_DIED "ambient_npc_died"
 /// From an ambient NPC when a new activity starts: (datum/ambient_activity/activity)
 #define COMSIG_AMBIENT_NPC_ACTIVITY_STARTED "ambient_npc_activity_started"
-/// From SSambient_npcs on a trader outpost when its first ambient NPC is due: (datum/ambient_place/outpost/place)
+/// From SSambient_npcs on a trader outpost when a player reaches its concourse and its people carry on: (datum/ambient_place/outpost/place)
 #define COMSIG_AMBIENT_OUTPOST_OCCUPIED "ambient_outpost_occupied"
-/// From SSambient_npcs on a trader outpost after its ambient NPCs were cleared: (datum/ambient_place/outpost/place)
+/// From SSambient_npcs on a trader outpost when the last player leaves its concourse and its people hold still: (datum/ambient_place/outpost/place)
 #define COMSIG_AMBIENT_OUTPOST_EMPTIED "ambient_outpost_emptied"

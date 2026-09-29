@@ -1,0 +1,29 @@
+{
+	"_owner": "The Undertow's pole dancer (outpost_dancer.dm). Placeholders: {name}, {other}, {place}.",
+	"dancer": {
+		"idle": [
+			"Feet needed a break.",
+			"Back in a minute.",
+			"Just catching my breath."
+		],
+		"talk": [
+			"Enjoying the show?",
+			"Tips go in the jar, not my hand.",
+			"Careful, I bite when I dance."
+		],
+		"attacked": [
+			"Hey! Watch it!",
+			"Keep your hands to yourself!"
+		],
+		"violence": [
+			"That's my cue to leave!",
+			"Not sticking around for this!"
+		],
+		"dance": [
+			"Come on, don't be shy.",
+			"Watch this.",
+			"Tips go in the jar!",
+			"You're not so bad yourself."
+		]
+	}
+}

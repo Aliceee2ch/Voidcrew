@@ -6924,6 +6924,7 @@
 #include "voidcrew\modules\ambient_npcs\convict.dm"
 #include "voidcrew\modules\ambient_npcs\faction_recruiters.dm"
 #include "voidcrew\modules\ambient_npcs\outpost_angler.dm"
+#include "voidcrew\modules\ambient_npcs\outpost_dancer.dm"
 #include "voidcrew\modules\ambient_npcs\outpost_patrons.dm"
 #include "voidcrew\modules\ambient_npcs\outpost_workers.dm"
 #include "voidcrew\modules\ambient_npcs\planet_fishers.dm"

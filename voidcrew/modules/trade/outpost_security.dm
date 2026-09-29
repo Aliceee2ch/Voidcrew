@@ -201,6 +201,8 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 		return FALSE
 	if(in_faction(creature)) // Traders, loiterers, bots and the other turrets.
 		return FALSE
+	if(HAS_TRAIT(creature, TRAIT_OUTPOST_RESIDENT)) // Whatever the outpost was built with.
+		return FALSE
 	return is_hostile_creature(creature)
 
 // The stock scan only ever asks assess_perp() about humans; with turret_flags NONE it

@@ -7476,6 +7476,7 @@
 #include "voidcrew\modules\trade\outpost_hangar.dm"
 #include "voidcrew\modules\trade\outpost_missions.dm"
 #include "voidcrew\modules\trade\outpost_quests.dm"
+#include "voidcrew\modules\trade\outpost_residents.dm"
 #include "voidcrew\modules\trade\outpost_security.dm"
 #include "voidcrew\modules\trade\planetary_goods.dm"
 #include "voidcrew\modules\trade\rumor_charts.dm"

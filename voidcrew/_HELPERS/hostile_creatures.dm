@@ -79,11 +79,6 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
 		if(bounty_turret_ignores(creature, istype(get_area(creature), /area/voidcrew/trader_outpost)))
 			return FALSE
 
-	// Bees keep the hydroponics apiaries. Their stock AI hunts anything that stings-worthy, so they
-	// read as aggressive, and a turret over the garden would wipe out the hive.
-	if(istype(creature, /mob/living/basic/bee))
-		return FALSE
-
 	// The /hostile branch of the old simple animal tree is aggressive by definition; its
 	// retaliate-only subtypes were all moved over to /mob/living/basic long ago.
 	if(istype(creature, /mob/living/simple_animal/hostile))

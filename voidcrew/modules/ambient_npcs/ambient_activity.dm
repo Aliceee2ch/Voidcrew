@@ -195,6 +195,10 @@
 		return FALSE
 	return ignore_floor || !place || place.spot_allowed(tile, src)
 
+/// Whether they could stand about on `tile`: standable, and their place's loiter rules. `ignore` is not counted in the crowd (their chat partner).
+/mob/living/basic/ambient_npc/proc/loiter_spot_ok(turf/tile, list/avoid, atom/ignore)
+	return standable(tile, avoid) && (!place || place.loiter_ok(tile, src, ignore))
+
 /**
  * The nearest free tile within `distance` of `thing` they could stand on (not its own tile), or
  * null. Right beside it (distance 1), nothing may stand between them (Adjacent(): no wall, glass or

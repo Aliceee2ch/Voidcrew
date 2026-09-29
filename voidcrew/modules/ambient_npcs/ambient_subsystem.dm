@@ -538,6 +538,10 @@ SUBSYSTEM_DEF(ambient_npcs)
 /datum/ambient_place/proc/spot_allowed(turf/tile, mob/living/basic/ambient_npc/npc)
 	return TRUE
 
+/// Whether `npc` may stand about on `tile` here (idle, a stroll, a queue). Override.
+/datum/ambient_place/proc/loiter_ok(turf/tile, mob/living/basic/ambient_npc/npc, atom/ignore)
+	return TRUE
+
 /// Where `npc` leaves from (a lift), or null to fade where they stand. Override.
 /datum/ambient_place/proc/exit_turf(mob/living/basic/ambient_npc/npc)
 	return null

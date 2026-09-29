@@ -126,6 +126,7 @@
 	if(!account.adjust_money(-OUTPOST_LOCKER_RENTAL_FEE, "Trader Outpost: locker rental"))
 		balloon_alert(user, "insufficient credits!")
 		return TRUE
+	metric_outpost_service("locker_rental", user, src, OUTPOST_LOCKER_RENTAL_FEE, 0, type)
 	id_card = WEAKREF(id)
 	name = "[id.registered_name]'s stash locker"
 	desc = "A torpedo-rated stash locker, rented for the shift by [id.registered_name]. The management guarantees the lock, not the contents' legality."

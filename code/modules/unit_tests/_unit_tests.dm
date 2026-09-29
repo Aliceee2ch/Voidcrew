@@ -353,6 +353,7 @@
 #include "voidcrew_drug_lab.dm"
 #include "voidcrew_drug_recipe.dm"
 #include "voidcrew_dynamic_events.dm"
+#include "voidcrew_economy_metrics.dm"
 #include "voidcrew_fleet_waypoints.dm"
 #include "voidcrew_helpers.dm"
 #include "voidcrew_hull_containment.dm"

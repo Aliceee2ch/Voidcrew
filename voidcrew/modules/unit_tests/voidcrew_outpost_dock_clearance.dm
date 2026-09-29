@@ -72,7 +72,8 @@
 	home.ship_act(pilot, visitor_ship)
 	for(var/datum/outpost_berth/berth as anything in home.berths)
 		TEST_ASSERT_NULL(berth, "A refused dock left berth [berth?.berth_number] claimed")
-	TEST_ASSERT_EQUAL(visitor_ship.dock_index, 0, "A refused dock left the ship holding a pad index")
+	// A ship that never held a pad has a null index, one that handed its pad back has 0: either means none
+	TEST_ASSERT(!visitor_ship.dock_index, "A refused dock left the ship holding pad index [visitor_ship.dock_index]")
 	TEST_ASSERT_EQUAL(visitor_ship.state, previous_state, "A refused dock did not restore the ship's state")
 	TEST_ASSERT_NULL(visitor_ship.docked, "The ship docked at a claim without a hangar lift")
 	TEST_ASSERT(!home.concerned, "A refused dock left the outpost busy")

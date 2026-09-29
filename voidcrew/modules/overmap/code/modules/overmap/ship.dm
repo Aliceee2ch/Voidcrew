@@ -2601,6 +2601,8 @@
 				// Start undock cooldown
 				COOLDOWN_START(src, undock_cooldown, UNDOCK_COOLDOWN_TIME)
 				SEND_SIGNAL(src, COMSIG_VOIDCREW_SHIP_DOCKED)
+				if(crash_dock_pending) // finish_crash_land() is waiting for this dock
+					on_crash_dock_complete()
 				// The counterpart to the "complete_dock UNDOCKING" line further down, whose
 				// absence is why a round-4 strand could not be diagnosed from the logs at all:
 				// 168 undock lines and not one for docking. The attempt count is the useful

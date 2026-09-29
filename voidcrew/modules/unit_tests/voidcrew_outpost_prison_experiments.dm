@@ -640,6 +640,7 @@
 	hulk_ledger.note_attacker(visitor)
 	TEST_ASSERT_EQUAL(hulk.choose_target(), visitor, "The hulk did not fight back with nobody from the wing home")
 	prison.crew_home_override = TRUE
+	visitor.key = null // a test key on a deleted mob is a runtime; the fixture only clears keys at the end
 	qdel(visitor)
 
 	// The hulk knocks prisoners flat and never kills them.

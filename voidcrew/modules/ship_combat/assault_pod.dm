@@ -122,6 +122,7 @@
 		return
 
 	exploded = TRUE
+	ship_metric_missile_hit(src, "hull")
 
 	playsound_ship(impact_turf, impact_sound, 80, TRUE, 12, target_ship)
 

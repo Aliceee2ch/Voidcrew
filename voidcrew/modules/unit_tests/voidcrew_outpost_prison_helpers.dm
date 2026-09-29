@@ -28,12 +28,15 @@
 /// A loaded claim with a running prison wing placed north of its shell, unrotated, so authored
 /// map coordinates apply. The prison's own clock is stopped; tests drive it with tick(). Trouble
 /// (threats, fights, riots, escapes) is off, so these tests see the quiet side on its own;
-/// trouble_test_claim() turns it back on.
-/datum/unit_test/voidcrew_outpost_management/proc/prison_test_claim(owner_key)
+/// trouble_test_claim() turns it back on. The wing is drawn in `style`, by default the test
+/// claim's own (the default style's): every style's wing is the same tile for tile.
+/datum/unit_test/voidcrew_outpost_management/proc/prison_test_claim(owner_key, style)
 	var/obj/structure/overmap/dynamic/player_outpost/home = upgrade_test_claim(owner_key)
 	if(!home)
 		TEST_NOTICE(src, "The test claim for [owner_key] did not load")
 		return null
+	if(style)
+		home.outpost_style = style
 	var/datum/outpost_upgrade/prison/blueprint = new(home)
 	home.outpost_upgrades["prison"] = blueprint
 	var/turf/bottom_left = locate(home.template_bottom_left.x, home.template_bottom_left.y + home.shell_template.height + 3, home.upgrade_level_z())

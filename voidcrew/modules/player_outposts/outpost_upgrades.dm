@@ -184,6 +184,13 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	style ||= outpost?.outpost_style || OUTPOST_STYLE_DEFAULT
 	return outpost_upgrade_template(outpost_style_map(wanted, style))
 
+/// Every map this upgrade can build, in every style: its room's family and, when it has one, its left room's
+/datum/outpost_upgrade/proc/all_map_types()
+	var/list/maps = outpost_style_maps(template_type)
+	. = maps.Copy()
+	if(left_template_type)
+		. |= outpost_style_maps(left_template_type)
+
 /// The baked preview's asset name for `style` (as get_template()), or null until it exists
 /datum/outpost_upgrade/proc/preview_asset(style)
 	var/datum/map_template/template = get_template(style = style)
@@ -821,7 +828,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	var/largest = 1
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
 		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
-		for(var/map_type in outpost_style_maps(upgrade.template_type))
+		for(var/map_type in upgrade.all_map_types())
 			var/datum/map_template/template = outpost_upgrade_template(map_type)
 			if(template)
 				largest = max(largest, template.width, template.height)
@@ -956,7 +963,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	assets = list()
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
 		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
-		for(var/map_type in outpost_style_maps(upgrade.template_type))
+		for(var/map_type in upgrade.all_map_types())
 			var/preview = outpost_map_preview_name(map_type)
 			if(fexists("[OUTPOST_PREVIEW_DIR][preview].png"))
 				assets["[preview].png"] = file("[OUTPOST_PREVIEW_DIR][preview].png")

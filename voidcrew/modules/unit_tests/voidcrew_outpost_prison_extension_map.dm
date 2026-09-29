@@ -1,8 +1,8 @@
 /**
- * The cell block extension's two maps (voidcrew/modules/player_outposts/outpost_prison_extension.dm),
- * loaded raw beside a raw prison wing the way they join it, before any code opens a seam: a right-hand
- * extension on the wing's east wall, a second one chained onto its far wall, and a left-hand one on
- * the wing's west wall.
+ * The cell block extension's two rooms (voidcrew/modules/player_outposts/outpost_prison_extension.dm),
+ * in every style, loaded raw beside a raw prison wing of the same style the way they join it, before
+ * any code opens a seam: a right-hand extension on the wing's east wall, a second one chained onto its
+ * far wall, and a left-hand one on the wing's west wall.
  *
  * Voidcrew defines are not visible from test files, so values appear as literals.
  */
@@ -55,13 +55,16 @@
 	return null
 
 /datum/unit_test/voidcrew_outpost_prison_extension_map
-	var/datum/turf_reservation/reserved
-	/// Canvas (0,0), south-west of the left extension. Canvas x = wing x + 12: left extension 1-13,
-	/// wing 13-29, right extension 29-41, chained extension 41-53.
+	/// One canvas per style
+	var/list/datum/turf_reservation/reservations = list()
+	/// Canvas (0,0) of the style being checked, south-west of the left extension. Canvas x = wing x + 12:
+	/// left extension 1-13, wing 13-29, right extension 29-41, chained extension 41-53.
 	var/turf/origin
+	/// The style being checked, for the failure messages
+	var/style
 
 /datum/unit_test/voidcrew_outpost_prison_extension_map/Destroy()
-	QDEL_NULL(reserved)
+	QDEL_LIST(reservations)
 	origin = null
 	return ..()
 
@@ -136,20 +139,30 @@
 	return jointext(sort_list(lines), "; ")
 
 /datum/unit_test/voidcrew_outpost_prison_extension_map/Run()
-	var/datum/map_template/wing = new("voidcrew/_maps/map_files/outposts/outpost_upgrade_prison.dmm")
-	var/datum/map_template/right = new("voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension.dmm")
-	var/datum/map_template/left = new("voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension_left.dmm")
+	var/list/wings = outpost_style_maps(/datum/map_template/outpost_upgrade/prison)
+	TEST_ASSERT(length(wings) >= 2, "The prison wing has fewer than two styles")
+	for(var/datum/map_template/wing_type as anything in wings)
+		style = initial(wing_type.outpost_style)
+		var/datum/map_template/right_type = outpost_style_map(/datum/map_template/outpost_upgrade/prison_extension/right, style)
+		var/datum/map_template/left_type = outpost_style_map(/datum/map_template/outpost_upgrade/prison_extension/left, style)
+		TEST_ASSERT(right_type && initial(right_type.outpost_style) == style, "The right-hand extension has no [style] map")
+		TEST_ASSERT(left_type && initial(left_type.outpost_style) == style, "The left-hand extension has no [style] map")
+		check_style(new wing_type, new right_type, new left_type)
+
+/// Lays one style's wing and extensions on a canvas of their own and checks them
+/datum/unit_test/voidcrew_outpost_prison_extension_map/proc/check_style(datum/map_template/wing, datum/map_template/right, datum/map_template/left)
 	for(var/datum/map_template/extension as anything in list(right, left))
 		TEST_ASSERT_EQUAL(extension.width, 13, "[extension.mappath] should be 13 wide, a 12-tile slice and its seam column")
 		TEST_ASSERT_EQUAL(extension.height, wing.height, "[extension.mappath] should be as tall as the prison wing")
-	reserved = SSmapping.request_turf_block_reservation(55, 18, 1)
-	TEST_ASSERT_NOTNULL(reserved, "Could not reserve room for the wing and three extensions")
+	var/datum/turf_reservation/reserved = SSmapping.request_turf_block_reservation(55, 18, 1)
+	TEST_ASSERT_NOTNULL(reserved, "Could not reserve room for the [style] wing and three extensions")
+	reservations += reserved
 	origin = reserved.bottom_left_turfs[1]
 
 	// The wing, then each extension with its seam column on the wall it joins, as placement would.
-	TEST_ASSERT_NOTNULL(wing.load_rotated(canvas(13, 1), 0), "The prison wing did not load")
+	TEST_ASSERT_NOTNULL(wing.load_rotated(canvas(13, 1), 0), "The [style] prison wing did not load")
 	var/list/wing_cell = cell_room(locate(/obj/machinery/door/airlock/security/glass/outpost_prison_cell) in canvas(15, 12))
-	TEST_ASSERT_NOTNULL(wing_cell, "The wing's cell 1 was not found behind its door at (3,12)")
+	TEST_ASSERT_NOTNULL(wing_cell, "The [style] wing's cell 1 was not found behind its door at (3,12)")
 	check_extension(right, "right", 29, 29, wing_cell)
 	check_extension(right, "right", 41, 29, wing_cell)
 	check_extension(left, "left", 1, 13, wing_cell)
@@ -165,7 +178,7 @@
 	var/seam_x = right_hand ? at_x : at_x + 12
 	var/far_x = right_hand ? at_x + 12 : at_x
 	var/inward = right_hand ? EAST : WEST
-	var/label = "The [side]-hand extension at canvas x [at_x]"
+	var/label = "The [style] [side]-hand extension at canvas x [at_x]"
 	var/list/openings = vc_test_prison_joint_openings()
 
 	// Its seam column is all template_noop: the wall it joins is untouched by the load.
@@ -283,8 +296,8 @@
 	for(var/y in 1 to 16)
 		var/turf/far_tile = canvas(far_x, y)
 		var/turf/wing_tile = canvas(wing_wall_x, y)
-		TEST_ASSERT_EQUAL(vc_test_prison_wall_shape(far_tile), vc_test_prison_wall_shape(wing_tile), "[label]'s far wall at row [y] differs from the wing's [side] wall")
-		TEST_ASSERT_EQUAL(far_tile.type, wing_tile.type, "[label]'s far wall at row [y] is a different turf from the wing's [side] wall")
+		TEST_ASSERT_EQUAL(vc_test_prison_wall_shape(far_tile), vc_test_prison_wall_shape(wing_tile), "[label]'s far wall at row [y] differs from the [style] wing's [side] wall")
+		TEST_ASSERT_EQUAL(far_tile.type, wing_tile.type, "[label]'s far wall at row [y] is a different turf from the [style] wing's [side] wall")
 	TEST_ASSERT_EQUAL(length(snaps), 1, "[label] should carry one joint, at the bottom of its far wall")
 	var/obj/effect/landmark/outpost_upgrade_snap/snap = snaps[1]
 	TEST_ASSERT_EQUAL(get_turf(snap), canvas(far_x, 1), "[label]'s joint is not at the bottom of its far wall")

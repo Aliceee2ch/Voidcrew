@@ -15,10 +15,18 @@
 	var/area/voidcrew/player_outpost/prison/wing = get_area(thing)
 	return istype(wing) ? wing.prison : null
 
-/// Authored with its entrance on the south edge; placement rotates it.
+/// Authored with its entrance on the south edge; placement rotates it. One map per outpost style
+/// (outpost_styles.dm), all the same wing tile for tile: the prison code and its tests read its layout.
 /datum/map_template/outpost_upgrade/prison
 	name = "Outpost Prison Wing"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison.dmm"
+
+/datum/map_template/outpost_upgrade/prison/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/prison/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /datum/outpost_upgrade/prison
 	id = "prison"

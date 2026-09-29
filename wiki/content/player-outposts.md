@@ -43,7 +43,7 @@ Load eligible goods onto the ferry and dispatch it to export them. Payment goes 
 
 ## Upgrades
 
-The **Rooms** tab of the management console sells prefabricated rooms: the free **cargo dock**, a **prison wing** where the outpost is paid to hold prisoners, **cell block extensions** for the wing (see [Prison Wing](prison-wing.md)), and the service rooms your outpost can sell to visiting crews, such as the cloning bay, medical lab, shop, storage and teleporter. The cargo dock and the service rooms come in your outpost's style: a run-down outpost gets run-down rooms, a clean one gets clean rooms. The layout differs between styles, but the room does the same job either way. Buying one needs management and treasury permission and is paid from the outpost bank. Until the room is placed, **Cancel purchase** refunds the full price.
+The **Rooms** tab of the management console sells prefabricated rooms: the free **cargo dock**, a **prison wing** where the outpost is paid to hold prisoners, **cell block extensions** for the wing (see [Prison Wing](prison-wing.md)), and the service rooms your outpost can sell to visiting crews, such as the cloning bay, medical lab, shop, storage and teleporter. Every room comes in your outpost's style: a run-down outpost gets run-down rooms, a clean one gets clean rooms. The layout can differ between styles, but the room does the same job either way. Buying one needs management and treasury permission and is paid from the outpost bank. Until the room is placed, **Cancel purchase** refunds the full price.
 
 Press **Place** to open the placement map, a plan of the ground around the outpost:
 

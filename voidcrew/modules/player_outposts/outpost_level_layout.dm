@@ -186,6 +186,13 @@
  * teardown runs (/datum/space_level/proc/wipe_turfs()).
  */
 /datum/outpost_zone/proc/wipe()
+	// The sweep below cannot delete docking ports (non-forced qdel is refused), and a stranded
+	// one would be adopted by the next ferry or hull loaded here. A visiting hull's is never touched.
+	var/list/obj/docking_port/ports = SSshuttle.mobile_docking_ports + SSshuttle.stationary_docking_ports
+	for(var/obj/docking_port/port as anything in ports)
+		if(QDELETED(port) || port.z != z_value || !contains_turf(get_turf(port)) || is_encounter_visiting_hull(port))
+			continue
+		qdel(port, force = TRUE)
 	var/datum/space_level/level = z_value && z_value <= length(SSmapping.z_list) ? SSmapping.z_list[z_value] : null
 	if(level)
 		var/list/turf/ground = get_block()
@@ -272,3 +279,35 @@
 			if(istype(edge_turf, /turf/cordon))
 				edge_turf.air_update_turf(TRUE, TRUE)
 		CHECK_TICK
+
+/// The player outpost whose level is `z`, or null
+/proc/player_outpost_on_level(z)
+	if(!z)
+		return null
+	for(var/obj/structure/overmap/dynamic/player_outpost/home as anything in GLOB.player_outposts)
+		var/datum/space_level/level = LAZYACCESS(home.mapzone?.z_levels, 1)
+		if(level?.z_value == z)
+			return home
+	return null
+
+/**
+ * Whether a teleport onto `destination` crosses between the zones of a player outpost's level and
+ * the rest of it (check_teleport_valid()). The zones share the habitat's level but are only
+ * reached by the hangar lift: a crystal at the habitat's edge must not drop anyone into a ship in
+ * a berth, or out of one past the outpost's docking rules.
+ *
+ * Only same-level moves are judged, so a pad aboard a ship in a berth still takes its crew home
+ * from elsewhere. An imprecise teleport is also held to the zone it was aimed at (`wanted`).
+ */
+/proc/outpost_zone_teleport_refused(turf/origin, turf/destination, turf/wanted)
+	if(!destination)
+		return FALSE
+	var/obj/structure/overmap/dynamic/player_outpost/home = player_outpost_on_level(destination.z)
+	if(!home)
+		return FALSE
+	var/datum/outpost_zone/landing = home.zone_at(destination)
+	if(wanted?.z == destination.z && home.zone_at(wanted) != landing)
+		return TRUE
+	if(origin?.z == destination.z && home.zone_at(origin) != landing)
+		return TRUE
+	return FALSE

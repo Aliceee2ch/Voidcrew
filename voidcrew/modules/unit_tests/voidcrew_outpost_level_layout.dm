@@ -105,6 +105,21 @@
 	TEST_ASSERT(habitat_player in listeners, "A player in the habitat does not hear the outpost's notices")
 	TEST_ASSERT(!(berth_player in listeners), "A player in a berth zone hears the outpost's notices")
 
+	// A ship's rooms are not NOTELEPORT, but a docked hull in a berth is still out of reach of a
+	// crystal thrown at the habitat's edge, and nobody aboard it can blink out into the habitat.
+	var/area/shuttle/voidcrew/hull_room = allocate(/area/shuttle/voidcrew)
+	var/turf/deck_one = locate(far_berth.low_x + 5, far_berth.low_y + 5, z)
+	var/turf/deck_two = locate(far_berth.low_x + 6, far_berth.low_y + 5, z)
+	var/list/area/original_areas = list(deck_one.loc, deck_two.loc)
+	deck_one.change_area(deck_one.loc, hull_room)
+	deck_two.change_area(deck_two.loc, hull_room)
+	TEST_ASSERT(!check_teleport_valid(habitat_player, deck_two), "A teleport from the habitat reached a ship in a berth")
+	TEST_ASSERT(!check_teleport_valid(berth_player, inside), "A teleport from a ship in a berth reached the habitat")
+	TEST_ASSERT(check_teleport_valid(berth_player, deck_two), "A teleport inside one ship in a berth was refused")
+	TEST_ASSERT(!check_teleport_valid(habitat_player, locate(build[1] + 4, build[4] - 3, z), original_destination = deck_two), "An imprecise teleport aimed into a berth landed in the habitat")
+	deck_one.change_area(hull_room, original_areas[1])
+	deck_two.change_area(hull_room, original_areas[2])
+
 /// What is wrong with a wiped zone, or null when every tile is bare space in the vacant area.
 /proc/outpost_zone_leftovers(datum/outpost_zone/zone)
 	var/area/vacant = GLOB.areas_by_type[/area/voidcrew/outpost_vacant]
@@ -178,3 +193,120 @@
 
 	var/list/new_reservations = (SSmapping.turf_reservations || list()) - reservations_before
 	TEST_ASSERT(!length(new_reservations), "Ship bay installs reserved [length(new_reservations)] turf block\s")
+
+/**
+ * An outpost never takes more than one z-level. After founding, the four berths filled, the ship
+ * bay installed, a ship built to order in it (its hidden copy loaded into the shipyard zone) and a
+ * freight delivery taken (the ferry waiting in the pen), no turf reservation was made for any of
+ * it and world.maxz has not grown. Flight transit a hull reserves for itself ("transit for ...")
+ * is the ship's, not the outpost's.
+ */
+/datum/unit_test/voidcrew_checkpoints/outpost_one_level
+	/// Bare mobile ports standing in for visiting hulls; docking ports only delete when forced.
+	var/list/obj/docking_port/mobile/fake_ports = list()
+	var/saved_import_total
+	var/saved_export_total
+
+/datum/unit_test/voidcrew_checkpoints/outpost_one_level/Destroy()
+	for(var/obj/docking_port/mobile/voidcrew/port as anything in fake_ports)
+		if(QDELETED(port))
+			continue
+		if(port.current_ship)
+			port.current_ship.shuttle = null
+		port.current_ship = null
+		qdel(port, force = TRUE)
+	fake_ports.Cut()
+	if(!isnull(saved_import_total))
+		SSeconomy.import_total = saved_import_total
+		SSeconomy.export_total = saved_export_total
+	return ..()
+
+/// A ship record with a bare mobile port of the given size; nothing is placed in the world.
+/datum/unit_test/voidcrew_checkpoints/outpost_one_level/proc/fake_hull(width, height)
+	var/obj/structure/overmap/ship/ship = allocate(/obj/structure/overmap/ship)
+	var/obj/docking_port/mobile/voidcrew/port = new(run_loc_floor_bottom_left)
+	fake_ports += port
+	port.current_ship = ship
+	port.width = width
+	port.height = height
+	port.dwidth = round(width / 2)
+	port.port_direction = NORTH
+	ship.shuttle = port
+	return ship
+
+/datum/unit_test/voidcrew_checkpoints/outpost_one_level/Run()
+	saved_import_total = SSeconomy.import_total
+	saved_export_total = SSeconomy.export_total
+	var/obj/structure/overmap/dynamic/player_outpost/registry_test/home = allocate(/obj/structure/overmap/dynamic/player_outpost/registry_test)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
+	home.founder_ckey = "onelevelfounder"
+	TEST_ASSERT(home.load_level(), "The outpost did not load")
+	var/level_z = home.upgrade_level_z()
+	var/maxz_after_founding = world.maxz
+	var/list/reservations_before = SSmapping.turf_reservations?.Copy() || list()
+
+	// Four berths, one ship in each, all on the outpost's level; a fifth ship is turned away.
+	var/list/datum/outpost_berth/berths = list()
+	for(var/number in 1 to 4)
+		var/datum/outpost_berth/berth = home.allocate_berth(fake_hull(4 + number * 10, 6 + number * 7))
+		TEST_ASSERT_NOTNULL(berth, "Berth [number] was not allocated")
+		TEST_ASSERT_EQUAL(berth.get_bottom_left()?.z, level_z, "Berth [number] is not on the outpost's level")
+		TEST_ASSERT_EQUAL(berth.zone?.kind, "berth", "Berth [number] is not in a berth zone")
+		berths += berth
+	TEST_ASSERT_NULL(home.allocate_berth(fake_hull(5, 5)), "A fifth ship was given a berth")
+
+	// The ship bay.
+	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
+	var/datum/outpost_berth/ship_bay/bay = LAZYACCESS(home.bay_berths, 1)
+	TEST_ASSERT_EQUAL(bay?.get_bottom_left()?.z, level_z, "The ship bay is not on the outpost's level")
+
+	// A ship built to order in the bay, from a hidden copy in the shipyard zone.
+	var/mob/living/carbon/human/buyer = make_player(run_loc_floor_bottom_left, "onelevelbuyer")
+	var/datum/ship_order/order = new(smallest_order_hull())
+	var/datum/checkpoint_construction/order/purchase = new(null, home, order, buyer, null, null, TRUE, TRUE)
+	TEST_ASSERT_EQUAL(purchase.bay, bay, "The order could not reserve the ship bay")
+	TEST_ASSERT(purchase.prepare(), "The order did not start: [purchase.error]")
+	var/datum/outpost_zone/yard = home.level_zone("yard")
+	TEST_ASSERT(yard.is_held_by(purchase), "The order's hidden copy is not held in the shipyard")
+	TEST_ASSERT(yard.contains_turf(get_turf(purchase.port)), "The order's hidden copy is not in the shipyard")
+	finish_job(purchase)
+	TEST_ASSERT(QDELETED(purchase) && bay.ship, "The ordered ship was not handed over")
+	test_ships += bay.ship
+	TEST_ASSERT(outpost_zone_wait_vacant(yard), "The shipyard was never cleared after the build")
+	var/problem = outpost_zone_leftovers(yard)
+	TEST_ASSERT_NULL(problem, "The shipyard was left dirty: [problem]")
+
+	// A freight delivery: the ferry waits in the pen, lands on the cargo dock, and leaves.
+	var/placed = place_test_cargo_dock(home)
+	TEST_ASSERT(istype(placed, /datum/outpost_upgrade/cargo_dock), "The cargo dock could not be placed: [placed]")
+	home.treasury.account_balance = 10000
+	var/datum/supply_pack/voidcrew_outpost_cancel_during_generation/pack = new
+	var/datum/supply_order/freight_order = new(pack)
+	freight_order.manifest_can_fail = FALSE
+	home.cargo_cart += freight_order
+	var/datum/voidcrew_cargo_shuttle/outpost/ferry = home.freight
+	TEST_ASSERT_NULL(ferry.call_shuttle(), "Freight was not dispatched")
+	var/datum/outpost_zone/pen = home.level_zone("pen")
+	TEST_ASSERT(pen.is_held_by(ferry), "The inbound ferry does not hold the pen")
+	TEST_ASSERT(pen.contains_turf(get_turf(ferry.shuttle_port)), "The inbound ferry is not waiting in the pen")
+	TEST_ASSERT_NULL(ferry.transit_reservation, "The inbound ferry reserved turfs")
+	deltimer(ferry.warmup_timer)
+	TEST_ASSERT(ferry.complete_arrival(), "Freight did not land: [ferry.last_error]")
+	TEST_ASSERT(outpost_zone_wait_vacant(pen), "The pen was never cleared after the ferry landed")
+	problem = outpost_zone_leftovers(pen)
+	TEST_ASSERT_NULL(problem, "The pen was left dirty: [problem]")
+	TEST_ASSERT(ferry.send_shuttle(), "The ferry could not be sent away")
+	deltimer(ferry.warmup_timer)
+	TEST_ASSERT(ferry.complete_departure(), "The ferry could not depart: [ferry.last_error]")
+
+	var/list/attributable = list()
+	for(var/datum/turf_reservation/reservation as anything in (SSmapping.turf_reservations || list()) - reservations_before)
+		if(findtext(reservation.requester, "transit for ") == 1)
+			continue
+		attributable += "[reservation.requester || "unnamed"] ([reservation.width]x[reservation.height])"
+	TEST_ASSERT(!length(attributable), "The outpost reserved turfs: [attributable.Join("; ")]")
+	TEST_ASSERT_EQUAL(world.maxz, maxz_after_founding, "world.maxz grew after the outpost was founded")
+
+	for(var/datum/outpost_berth/berth as anything in berths)
+		berth.release(force = TRUE)
+	settle_test_cargo_dock(home)

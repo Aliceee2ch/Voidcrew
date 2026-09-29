@@ -3,12 +3,16 @@
  *
  * Owner: P0 seams (frozen).
  *
- * Ambient NPCs exist only while players are near (spec 2.4):
- * - Trader outposts. Every tick it counts living players with a client on each loaded outpost's
- *   concourse. The first arrivals step off the hangar lift 30 to 60 seconds after the first player,
- *   one at a time, by /datum/ambient_outpost_role (PA, PD); nobody on the concourse for three
- *   minutes and every transient NPC there is deleted (nobody is there to see them walk out).
- *   Outposts never unload, so this is the only thing keeping them cheap.
+ * Where ambient NPCs are (spec 2.4):
+ * - Trader outposts. Their people are there all round, already at what they do when players come.
+ *   Every tick it counts living players with a client on each loaded outpost's concourse. While
+ *   nobody is there, every /datum/ambient_outpost_role (PA, PD) short of its count is filled in place,
+ *   a few people a tick, each made at its activity's own spot and part-way through it (settle()), and
+ *   everyone holds still: their AI is off and their clocks are stopped (pause_routine()), so an empty
+ *   outpost costs nothing but the count. When a player comes, they carry on where they stopped;
+ *   anyone who leaves then (a customer done shopping, a drunk walked out) goes by the hangar lift,
+ *   and replacements step off it, one at a time, paced by the roles' gaps. Nobody is deleted for
+ *   the outpost being empty.
  * - Planets. SSplanet_mobs asks it for a planet's people when it populates the planet for arriving
  *   players, before the fauna, and charges them to the same budget; its grace sweep deletes them
  *   with the fauna. At the first arrival the planet's sites are rolled for the round
@@ -26,7 +30,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 	// list the subsystems it needs in `dependencies`.
 	flags = SS_BACKGROUND | SS_NO_INIT | SS_POST_FIRE_TIMING
 	runlevels = RUNLEVEL_GAME | RUNLEVEL_POSTGAME
-	/// Trader outpost -> /datum/ambient_place/outpost, made when a player is first seen there
+	/// Trader outpost -> /datum/ambient_place/outpost, made the first time the outpost is seen loaded
 	var/list/outposts = list()
 	/// SSplanet_mobs tracker key -> /datum/ambient_planet
 	var/list/planets = list()
@@ -52,26 +56,27 @@ SUBSYSTEM_DEF(ambient_npcs)
 	if(!ambient_auto)
 		return
 	hook_weather()
+	// People are made in place a few a tick, all outposts together, and not in the round's first busy moments
+	var/settle_budget = (world.time >= SSticker.round_start_time + AMBIENT_OUTPOST_SETTLE_DELAY) ? AMBIENT_OUTPOST_SETTLE_PER_FIRE : 0
 	for(var/obj/structure/overmap/trader_outpost/outpost as anything in GLOB.trader_outposts)
 		if(QDELETED(outpost) || !outpost.loaded)
 			continue
-		var/list/players = outpost_players(outpost)
-		var/datum/ambient_place/outpost/place = outposts[outpost]
+		var/datum/ambient_place/outpost/place = outpost_place(outpost)
 		if(!place)
-			if(!length(players))
-				continue
-			place = outpost_place(outpost)
-		update_outpost(place, length(players))
+			continue
+		settle_budget -= update_outpost(place, length(outpost_players(outpost)), null, settle_budget)
 		check_shootout(place)
 	prune_field_sites()
 
 /datum/controller/subsystem/ambient_npcs/stat_entry(msg)
 	var/occupied = 0
+	var/outpost_npcs = 0
 	for(var/outpost in outposts)
 		var/datum/ambient_place/outpost/place = outposts[outpost]
+		outpost_npcs += length(place.npcs)
 		if(place.occupied)
 			occupied++
-	msg = "NPC:[length(GLOB.ambient_npcs)]|O:[occupied]/[length(outposts)]|P:[length(planets)]|F:[length(field_sites)]"
+	msg = "NPC:[length(GLOB.ambient_npcs)]|O:[occupied]/[length(outposts)] ([outpost_npcs])|P:[length(planets)]|F:[length(field_sites)]"
 	return ..()
 
 // =========================================================================
@@ -137,31 +142,80 @@ SUBSYSTEM_DEF(ambient_npcs)
 	return place
 
 /**
- * One tick of `place`'s presence, with `players` on its concourse now. `roles` overrides the roles
- * that may arrive (tests); null for all of them.
+ * One tick of `place`, with `players` on its concourse now.
+ *
+ * Nobody there: its people hold still where they are (their AI off, their clocks stopped), and any
+ * role short of its count is filled in place, up to `settle_budget` people this tick
+ * (settle_outpost()). Nobody is ever deleted for the outpost being empty.
+ *
+ * Someone there: its people carry on where they stopped, and anyone who has left is replaced off
+ * the lift, one at a time (arrive_next()).
+ *
+ * `roles` overrides the roles (tests); null for all of them. Returns how many people were made in
+ * place this tick.
  */
-/datum/controller/subsystem/ambient_npcs/proc/update_outpost(datum/ambient_place/outpost/place, players, list/roles)
+/datum/controller/subsystem/ambient_npcs/proc/update_outpost(datum/ambient_place/outpost/place, players, list/roles, settle_budget = AMBIENT_OUTPOST_SETTLE_PER_FIRE)
 	var/obj/structure/overmap/trader_outpost/outpost = place?.outpost()
 	if(!outpost)
-		return
-	if(players > 0)
+		return 0
+	place.players = max(0, players)
+	if(place.players)
 		if(!place.occupied)
-			place.occupied = TRUE
-			place.arrivals_at = world.time + rand(AMBIENT_OUTPOST_ARRIVAL_DELAY_LOW, AMBIENT_OUTPOST_ARRIVAL_DELAY_HIGH)
-			SEND_SIGNAL(outpost, COMSIG_AMBIENT_OUTPOST_OCCUPIED, place)
-		place.players = players
-		place.last_player_at = world.time
-		if(world.time >= place.arrivals_at)
-			arrive_next(place, roles)
-		return
-	place.players = 0
-	if(place.occupied && world.time - place.last_player_at >= AMBIENT_OUTPOST_GRACE)
-		clear_outpost(place)
+			wake_outpost(place)
+		clear_bodies(place)
+		if(world.time >= place.arrivals_at && arrive_next(place, roles))
+			place.arrivals_at = world.time + AMBIENT_OUTPOST_ARRIVAL_EVERY
+		return 0
+	if(place.occupied)
+		still_outpost(place)
+	clear_bodies(place)
+	// A killed person's place has opened again
+	if(place.refill_at && world.time >= place.refill_at)
+		place.refill_at = 0
+		place.needs_settling = TRUE
+	return settle_outpost(place, roles, settle_budget)
+
+/// A player reached `place`'s concourse: everyone there carries on from where they stopped
+/datum/controller/subsystem/ambient_npcs/proc/wake_outpost(datum/ambient_place/outpost/place)
+	place.occupied = TRUE
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
+		if(!QDELETED(npc))
+			npc.resume_routine()
+	var/obj/structure/overmap/trader_outpost/outpost = place.outpost()
+	if(outpost)
+		SEND_SIGNAL(outpost, COMSIG_AMBIENT_OUTPOST_OCCUPIED, place)
+
+/// The last player left `place`'s concourse: everyone there holds still, mid-whatever, until someone comes
+/datum/controller/subsystem/ambient_npcs/proc/still_outpost(datum/ambient_place/outpost/place)
+	place.occupied = FALSE
+	// Anyone who went while players were here is made up in place
+	place.needs_settling = TRUE
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
+		if(!QDELETED(npc))
+			npc.pause_routine()
+	var/obj/structure/overmap/trader_outpost/outpost = place.outpost()
+	if(outpost)
+		SEND_SIGNAL(outpost, COMSIG_AMBIENT_OUTPOST_EMPTIED, place)
 
 /**
- * The next person off the lift at `place`: one role that is due (under its count and past its
- * gap), weighted, while the outpost is under AMBIENT_OUTPOST_TRANSIENT_CAP and the lift has room.
- * Returns the NPC, or null.
+ * Takes the bodies at `place` away: at once while nobody is on the concourse to see, or
+ * AMBIENT_OUTPOST_BODY_TIME after the death while players are (they fade, as if carried off).
+ * Never one an admin is in.
+ */
+/datum/controller/subsystem/ambient_npcs/proc/clear_bodies(datum/ambient_place/outpost/place)
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs.Copy())
+		if(QDELETED(npc) || npc.stat != DEAD || npc.fading || npc.ckey)
+			continue
+		if(!place.occupied)
+			npc.fade_out(instant = TRUE)
+		else if(world.time >= npc.timeofdeath + AMBIENT_OUTPOST_BODY_TIME)
+			npc.fade_out()
+
+/**
+ * The next person off the lift at `place`: one role that is due (short of its count, less anyone
+ * killed lately, and past its gap), weighted, while the outpost is under
+ * AMBIENT_OUTPOST_TRANSIENT_CAP and the lift has room. Only while players are there
+ * (update_outpost()). Returns the NPC, or null.
  */
 /datum/controller/subsystem/ambient_npcs/proc/arrive_next(datum/ambient_place/outpost/place, list/roles)
 	var/obj/structure/overmap/trader_outpost/outpost = place?.outpost()
@@ -173,7 +227,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 			continue
 		if(place.role_next_at[role.type] > world.time)
 			continue
-		if(place.count_role(role.type) >= role.wanted(place))
+		if(place.open_slots(role) <= 0)
 			continue
 		due[role] = max(1, role.weight)
 	if(!length(due))
@@ -185,21 +239,38 @@ SUBSYSTEM_DEF(ambient_npcs)
 	place.role_next_at[chosen.type] = world.time + rand(chosen.gap_low, chosen.gap_high)
 	return chosen.arrive(place, arrival)
 
-/// Nobody has been on `place`'s concourse for the grace: every transient NPC there goes at once
-/datum/controller/subsystem/ambient_npcs/proc/clear_outpost(datum/ambient_place/outpost/place)
-	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs.Copy())
-		// Never someone an admin is driving
-		if(!QDELETED(npc) && !npc.ckey)
-			npc.fade_out(instant = TRUE)
-	place.occupied = FALSE
-	place.players = 0
-	place.last_player_at = 0
-	place.arrivals_at = 0
-	place.role_next_at.Cut()
-	place.shootout_refuge = null
-	var/obj/structure/overmap/trader_outpost/outpost = place.outpost()
-	if(outpost)
-		SEND_SIGNAL(outpost, COMSIG_AMBIENT_OUTPOST_EMPTIED, place)
+/**
+ * Fills `place`'s roles in place while nobody is on its concourse: each role up to its count (less
+ * anyone killed lately), under AMBIENT_OUTPOST_TRANSIENT_CAP, at most `budget` people this call.
+ * Each is made already at what they do (/datum/ambient_outpost_role/proc/settle()) and holds still
+ * until someone comes. `roles` overrides the roles (tests); null for all of them. Returns how many
+ * were made.
+ */
+/datum/controller/subsystem/ambient_npcs/proc/settle_outpost(datum/ambient_place/outpost/place, list/roles, budget = AMBIENT_OUTPOST_SETTLE_PER_FIRE)
+	var/obj/structure/overmap/trader_outpost/outpost = place?.outpost()
+	if(!outpost || place.occupied || !place.needs_settling || budget <= 0)
+		return 0
+	var/made = 0
+	var/living = length(place.living_npcs())
+	for(var/datum/ambient_outpost_role/role as anything in (roles || get_outpost_roles()))
+		if(living >= AMBIENT_OUTPOST_TRANSIENT_CAP)
+			break
+		if(!role.npc_type || !role.applies_to(outpost))
+			continue
+		var/missing = place.open_slots(role)
+		while(missing > 0 && living < AMBIENT_OUTPOST_TRANSIENT_CAP)
+			if(made >= budget)
+				// More next tick
+				return made
+			if(!role.settle(place))
+				break
+			made++
+			living++
+			missing--
+	// Every role had its turn: nothing more until someone comes and goes, or a killed person's place opens
+	place.needs_settling = FALSE
+	place.refill_at = place.next_slot_opening()
+	return made
 
 /// Sends everyone at `place` for cover while the kingpin's crew fights there, and back when it is over
 /datum/controller/subsystem/ambient_npcs/proc/check_shootout(datum/ambient_place/outpost/place)
@@ -444,6 +515,14 @@ SUBSYSTEM_DEF(ambient_npcs)
 /datum/ambient_place/proc/npc_died(mob/living/basic/ambient_npc/npc)
 	return
 
+/// `attacker` went for `npc` here (`attack_flags`: ATTACKER_*), the blow already landed. Override. Never sleeps.
+/datum/ambient_place/proc/npc_attacked(mob/living/basic/ambient_npc/npc, atom/attacker, attack_flags)
+	return
+
+/// How much of `amount` cash `npc` drops, killed here. Override to cap it.
+/datum/ambient_place/proc/cash_for(mob/living/basic/ambient_npc/npc, amount)
+	return amount
+
 /// Its NPCs who are alive and not leaving
 /datum/ambient_place/proc/living_npcs()
 	. = list()
@@ -461,6 +540,14 @@ SUBSYSTEM_DEF(ambient_npcs)
 
 /// Where `npc` leaves from (a lift), or null to fade where they stand. Override.
 /datum/ambient_place/proc/exit_turf(mob/living/basic/ambient_npc/npc)
+	return null
+
+/**
+ * A free tile where someone could be found already here (settle()), or null: `npc` must be able to
+ * stand there if given; within `radius` of `near` if given. Override: places with no floor to settle
+ * on have none.
+ */
+/datum/ambient_place/proc/settle_turf(mob/living/basic/ambient_npc/npc, atom/near, radius = 6)
 	return null
 
 /// The band's health multiplier for a killable NPC here
@@ -517,11 +604,76 @@ SUBSYSTEM_DEF(ambient_npcs)
 		if(get_dist(npc, offender) <= AMBIENT_VIOLENCE_RANGE)
 			npc.react_violence(offender)
 
+/// The convoy is in. It comes on a timer, players or not; with nobody here to see it, nobody stirs.
 /datum/ambient_place/outpost/proc/on_convoy(datum/source)
 	SIGNAL_HANDLER
+	if(!occupied)
+		return
 	var/obj/structure/overmap/trader_outpost/outpost = outpost()
 	for(var/mob/living/basic/ambient_npc/npc as anything in living_npcs())
 		npc.react_convoy(outpost)
+
+// Its turrets never shoot its own people; with nobody on the concourse, whoever joins holds still until someone comes
+/datum/ambient_place/outpost/add_npc(mob/living/basic/ambient_npc/npc)
+	. = ..()
+	npc.faction |= FACTION_TURRET
+	if(!occupied)
+		npc.pause_routine()
+
+// Gone from here (moved elsewhere): none of this place's cover any more
+/datum/ambient_place/outpost/remove_npc(mob/living/basic/ambient_npc/npc)
+	. = ..()
+	if(!QDELETED(npc))
+		npc.faction -= FACTION_TURRET
+		npc.resume_routine()
+
+// Killed here: their place in their role stays empty a good while (AMBIENT_OUTPOST_KILLED_SLOT_TIME)
+/datum/ambient_place/outpost/npc_died(mob/living/basic/ambient_npc/npc)
+	if(!npc.role)
+		return
+	var/opens_at = world.time + AMBIENT_OUTPOST_KILLED_SLOT_TIME
+	var/list/until = killed_until[npc.role]
+	if(!until)
+		until = list()
+		killed_until[npc.role] = until
+	until += opens_at
+	refill_at = refill_at ? min(refill_at, opens_at) : opens_at
+
+// A real blow is violence at the outpost, as against a visitor: its strikes, and everyone near ducks (register_aggression())
+/datum/ambient_place/outpost/npc_attacked(mob/living/basic/ambient_npc/npc, atom/attacker, attack_flags)
+	if(!(attack_flags & ATTACKER_DAMAGING_ATTACK) || !isliving(attacker))
+		return
+	var/obj/structure/overmap/trader_outpost/outpost = outpost()
+	outpost?.register_aggression(attacker)
+
+// Its people drop no more than AMBIENT_OUTPOST_CASH_CAP between them in a round
+/datum/ambient_place/outpost/cash_for(mob/living/basic/ambient_npc/npc, amount)
+	. = clamp(AMBIENT_OUTPOST_CASH_CAP - cash_dropped, 0, amount)
+	cash_dropped += .
+
+/// How many of role `role_type`'s places are empty for a killing, forgetting the ones that have opened again
+/datum/ambient_place/outpost/proc/killed_slots(role_type)
+	var/list/until = killed_until[role_type]
+	if(!length(until))
+		return 0
+	for(var/time in until.Copy())
+		if(time <= world.time)
+			until -= time
+	if(!length(until))
+		killed_until -= role_type
+	return length(until)
+
+/// How many more of `role` it could have now: its count, less those here and those killed lately
+/datum/ambient_place/outpost/proc/open_slots(datum/ambient_outpost_role/role)
+	return role.wanted(src) - count_role(role.type) - killed_slots(role.type)
+
+/// world.time the next killed person's place opens again, or 0
+/datum/ambient_place/outpost/proc/next_slot_opening()
+	. = 0
+	for(var/role_type in killed_until)
+		for(var/time in killed_until[role_type])
+			if(time > world.time && (!. || time < .))
+				. = time
 
 /// How many of its living NPCs came as role `role_type`
 /datum/ambient_place/outpost/proc/count_role(role_type)
@@ -563,8 +715,38 @@ SUBSYSTEM_DEF(ambient_npcs)
 /datum/ambient_place/outpost/exit_turf(mob/living/basic/ambient_npc/npc)
 	return bounty_outpost_exit_turf(npc, outpost())
 
+// The public floor, never on the lift or right beside it (people step off there), with nothing on it
+/datum/ambient_place/outpost/settle_turf(mob/living/basic/ambient_npc/npc, atom/near, radius = 6)
+	var/obj/structure/overmap/trader_outpost/outpost = outpost()
+	var/list/floor = get_public_floor()
+	if(!outpost || !length(floor))
+		return null
+	var/turf/middle = get_turf(near)
+	for(var/attempt in 1 to AMBIENT_SETTLE_TRIES * 4)
+		var/turf/tile
+		if(middle)
+			tile = locate(middle.x + rand(-radius, radius), middle.y + rand(-radius, radius), middle.z)
+			if(!tile || !floor[tile])
+				continue
+		else
+			tile = pick(floor)
+		if(!ambient_ground_ok(tile) || tile.is_blocked_turf(exclude_mobs = FALSE))
+			continue
+		var/by_the_lift = FALSE
+		for(var/turf/alcove as anything in outpost.lobby_alcove_turfs)
+			if(alcove.z == tile.z && get_dist(alcove, tile) <= 1)
+				by_the_lift = TRUE
+				break
+		if(by_the_lift || (npc && !npc.standable(tile)))
+			continue
+		return tile
+	return null
+
 /datum/ambient_place/outpost/describe()
-	return "[name]: [occupied ? "occupied" : "empty"], [players] player\s, [length(living_npcs())] NPC\s"
+	var/killed = 0
+	for(var/role_type in killed_until.Copy())
+		killed += killed_slots(role_type)
+	return "[name]: [occupied ? "occupied" : "quiet"], [players] player\s, [length(living_npcs())] NPC\s, [killed] place\s empty for a killing, [cash_dropped] cr dropped"
 
 // ----- planet and field sites -----
 
@@ -610,8 +792,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 		return null
 	var/mob/living/basic/ambient_npc/npc = new npc_type(where)
 	npc.set_place(src)
-	if(!npc.invulnerable)
-		npc.scale_health(health_multiplier())
+	npc.scale_health(health_multiplier())
 	state = AMBIENT_SITE_ACTIVE
 	return npc
 
@@ -753,7 +934,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 /datum/ambient_outpost_role/proc/wanted(datum/ambient_place/outpost/place)
 	return max_count
 
-/// One of it steps off the lift at `where`. Returns the NPC. Override to dress or brief them.
+/// One of it steps off the lift at `where` (a replacement, while players are there). Returns the NPC. Override to dress or brief them.
 /datum/ambient_outpost_role/proc/arrive(datum/ambient_place/outpost/place, turf/where)
 	if(!npc_type)
 		return null
@@ -763,9 +944,38 @@ SUBSYSTEM_DEF(ambient_npcs)
 	npc.fade_in()
 	return npc
 
+/**
+ * One of it who was here all along: made on the concourse floor while nobody is there to see, and
+ * set going at what they do, at its own spot and part-way through it (the NPC's settle_in()). They
+ * hold still until someone comes. Returns the NPC, or null when there is no floor for them. Override
+ * to dress or brief them; settle_in() is the NPC's side.
+ */
+/datum/ambient_outpost_role/proc/settle(datum/ambient_place/outpost/place)
+	if(!npc_type || !istype(place))
+		return null
+	var/turf/start = place.settle_turf()
+	if(!start)
+		return null
+	var/mob/living/basic/ambient_npc/npc = new npc_type(start)
+	npc.role = type
+	npc.set_place(place)
+	npc.settle_in()
+	return npc
+
 // =========================================================================
 // HELPERS
 // =========================================================================
+
+/// `deadline` (a world.time) brought forward to somewhere between a quarter and all of what is left of it: someone who has been at it a while
+/proc/ambient_part_way(deadline)
+	var/left = deadline - world.time
+	if(left <= 0)
+		return deadline
+	return world.time + rand(round(left / 4), left)
+
+/// `time` (a world.time someone waits for) moved on by `delay`; 0 (not waiting) stays 0
+/proc/ambient_shifted(time, delay)
+	return time ? time + delay : time
 
 /// Whether `tile` is within `distance` of any turf in `others`
 /proc/ambient_too_close(turf/tile, list/others, distance)

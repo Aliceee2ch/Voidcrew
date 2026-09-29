@@ -31,8 +31,9 @@ GLOBAL_LIST_EMPTY(ambient_npcs)
  * being dragged, boxed, teleported or turned into something else, environment-proof, kept to a
  * leash, talking from a dialogue file and going about a routine of activities.
  *
- * Two flavours, set per type: `invulnerable` (godmode, the trader outpost rule: hitting them does
- * nothing and is not a strike) and killable (planet NPCs, with `death_loot` dropped once).
+ * Anyone can be killed. A body drops a little cash (`death_cash_low` to `death_cash_high`, capped
+ * by their place) and any `death_loot`, once: never again after a revive. Hurting one at a trader
+ * outpost is violence there, like hurting a visitor.
  */
 /mob/living/basic/ambient_npc
 	name = "spacer"
@@ -82,10 +83,11 @@ GLOBAL_LIST_EMPTY(ambient_npcs)
 	/// A real item they carry for an activity (a drink), in their contents, never dropped by a hit
 	var/obj/item/held_item
 
-	// ----- Flavour -----
-	/// Godmode: hitting them does nothing (trader outposts). FALSE for killable planet NPCs.
-	var/invulnerable = TRUE
-	/// Item types dropped on death, once (killable NPCs only)
+	// ----- Death -----
+	/// Cash they carry, dropped on death once (their place may cap it: ambient_place/proc/cash_for()). 0 for none.
+	var/death_cash_low = AMBIENT_DEATH_CASH_LOW
+	var/death_cash_high = AMBIENT_DEATH_CASH_HIGH
+	/// Item types dropped on death, once
 	var/list/death_loot
 	/// Their death loot has dropped: a revived NPC does not drop it again
 	var/loot_dropped = FALSE
@@ -142,6 +144,8 @@ GLOBAL_LIST_EMPTY(ambient_npcs)
 	var/glasses_left = 0
 	/// Fading out: nothing starts any more
 	var/fading = FALSE
+	/// world.time they stopped where they were because nobody was at their outpost (pause_routine()), or 0 while they carry on
+	var/paused_at = 0
 
 // =========================================================================
 // ACTIVITIES
@@ -198,20 +202,28 @@ GLOBAL_LIST_EMPTY(ambient_npcs)
 	var/band
 
 /**
- * A trader outpost's concourse, while players come and go. Made the first time a player is seen
- * there; kept for the round (outposts never unload).
+ * A trader outpost's concourse and the people who are there all round. Made the first time
+ * SSambient_npcs sees the outpost loaded; kept for the round (outposts never unload). Its roles
+ * are filled in place while nobody is on the concourse, and its people hold still until someone
+ * comes; while players are there, anyone who leaves is replaced by the lift.
  */
 /datum/ambient_place/outpost
 	/// The outpost
 	var/datum/weakref/outpost_ref
-	/// Someone has been on the concourse and the grace has not run out
+	/// A player is on the concourse: its people carry on, and anyone who leaves is replaced by the lift
 	var/occupied = FALSE
 	/// Living players with a client on the concourse at the last tick
 	var/players = 0
 	/// world.time the next arrival may step off the lift
 	var/arrivals_at = 0
-	/// world.time a player was last seen on the concourse
-	var/last_player_at = 0
+	/// Its roles may be short: they are filled in place while nobody is here
+	var/needs_settling = TRUE
+	/// world.time a killed person's place opens again and it is worth filling roles in place, or 0
+	var/refill_at = 0
+	/// Role type -> world.times its killed people's places stay empty until (AMBIENT_OUTPOST_KILLED_SLOT_TIME)
+	var/list/killed_until = list()
+	/// Cash its people have dropped when killed this round (AMBIENT_OUTPOST_CASH_CAP)
+	var/cash_dropped = 0
 	/// The concourse's public floor (turf = TRUE), from the lift, and when it was worked out
 	var/list/public_floor
 	var/floor_built_at = 0
@@ -300,13 +312,15 @@ GLOBAL_LIST_EMPTY(ambient_npcs)
 	var/npc_type
 
 /**
- * One kind of transient NPC at trader outposts (PA, PD subtype it). Shared instances, one per type;
- * a role with no `npc_type` never arrives.
+ * One kind of NPC at trader outposts (PA, PD subtype it). Shared instances, one per type; a role
+ * with no `npc_type` never comes. Its people are already there, at what they do, when players
+ * reach an outpost (settle()); while players are there, anyone who left is replaced off the lift
+ * (arrive()).
  */
 /datum/ambient_outpost_role
 	/// Short text for the admin verb
 	var/name = "visitor"
-	/// The NPC type that arrives
+	/// The NPC type that comes
 	var/npc_type
 	/// Outpost types it comes to (/obj/structure/overmap/trader_outpost/*); empty for all
 	var/list/outpost_types = list()

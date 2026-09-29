@@ -10,8 +10,8 @@
  * far side and is gone for the round. Click the peddler for the radial: Trade opens the ordinary
  * TraderShop window on the peddler's own small shop (credits only, no vouchers anywhere); Talk gets
  * a word, and once per crew, where the nearest ruin on this planet lies. The shop buys a few
- * planetary goods, for less than the outposts pay. The peddler cannot be hurt; the pony and the
- * guard can. A dead pony closes the shop: the stock was on its back.
+ * planetary goods, for less than the outposts pay. Anyone in the caravan can be killed. A dead pony
+ * closes the shop (the stock was on its back), and so does a dead peddler.
  *
  * In yellow and red, three walks in ten are jumped once on the road: the guard shouts, and five
  * seconds later a pack of pirates comes at the caravan from ten tiles out, kept near it and paid for
@@ -229,13 +229,15 @@
 	can_idle = FALSE
 
 /**
- * The peddler: cannot be hurt, owns a shop, leads the caravan along its route (the site's data:
- * "route", the waypoints; "camps", the waypoints it camps at; "leg", the last one reached).
+ * The peddler: owns a shop, leads the caravan along its route (the site's data: "route", the
+ * waypoints; "camps", the waypoints it camps at; "leg", the last one reached). Killable like
+ * anyone; a trader carries more cash than most, and the shop dies with them.
  */
 /mob/living/basic/ambient_npc/planet/peddler
 	name = "peddler"
 	desc = "A walking trader under a wide hat, bags hanging off every strap."
-	invulnerable = TRUE
+	death_cash_low = 30
+	death_cash_high = 80
 	outfit = /datum/outfit/ambient_peddler
 	dialogue_section = "peddler"
 	speech_pace = 0.8
@@ -371,13 +373,23 @@
 	SStgui.close_uis(shop_ui)
 	speak_context("pack_lost", null, force = TRUE)
 
-// Cannot be hurt; a word, and the guard deals with it
+// A word, the guard deals with it, and the peddler gets out of the way
 /mob/living/basic/ambient_npc/planet/peddler/react_attacked(atom/attacker)
 	if(stat != CONSCIOUS || fading || !reaction_ready("attacked"))
 		return
 	speak_context(AMBIENT_LINE_ATTACKED, attacker, force = TRUE)
 	if(isliving(attacker))
 		camp_alert(attacker)
+		run_from(attacker)
+
+// Killed: the shop goes with them. Its stock is a ledger, never items on the body.
+/mob/living/basic/ambient_npc/planet/peddler/death(gibbed)
+	var/was_alive = stat != DEAD
+	. = ..()
+	if(!was_alive)
+		return
+	shop_closed = TRUE
+	SStgui.close_uis(shop_ui)
 
 /**
  * The caravan's next move: camp at a camp stop not yet camped at, walk to the next waypoint (jumped
@@ -439,6 +451,9 @@
 	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	maxHealth = 60
 	health = 60
+	// A pony carries bags, not a purse
+	death_cash_low = 0
+	death_cash_high = 0
 	speak_emote = list("neighs")
 	ai_controller = /datum/ai_controller/basic_controller/ambient_npc/roaming
 	routine = list(/datum/ambient_activity/idle = 1)

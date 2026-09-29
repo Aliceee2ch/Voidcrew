@@ -51,6 +51,8 @@ ADMIN_VERB(ambient_npc_spawn, R_ADMIN|R_DEBUG, "Ambient NPCs: Spawn", "Spawn an 
 		to_chat(user, span_warning("Nothing was spawned."))
 		return
 	to_chat(user, span_notice("Spawned [choice]."))
+	if(outpost_place && !outpost_place.occupied && !istype(picked, /datum/ambient_site_kind))
+		to_chat(user, span_notice("No living player is on this concourse: it holds still until one is."))
 	message_admins("[key_name_admin(user)] spawned [choice] at [ADMIN_VERBOSEJMP(here)].")
 	log_admin("[key_name(user)] spawned [choice] at [AREACOORD(here)].")
 	BLACKBOX_LOG_ADMIN_VERB("Spawn Ambient NPC")

@@ -109,7 +109,7 @@
 	TEST_ASSERT_EQUAL(ambient_ambush_size(1), 0, "Caravans are jumped in green") // ZONE_GREEN
 	TEST_ASSERT(ambient_ambush_size(3) > ambient_ambush_size(2), "A red ambush is no bigger than a yellow one") // ZONE_RED, ZONE_YELLOW
 
-	// Everyone has lines of their own; only the peddler cannot be hurt
+	// Everyone has lines of their own, and anyone can be hurt
 	var/list/people = list(
 		/mob/living/basic/ambient_npc/planet/miner,
 		/mob/living/basic/ambient_npc/planet/lava_fisher,
@@ -124,10 +124,7 @@
 		TEST_ASSERT_EQUAL(npc.dialogue_file, "planet_npcs.json", "[npc_type] does not talk from the planet file") // AMBIENT_STRINGS_PLANETS
 		TEST_ASSERT(length(ambient_dialogue_lines("planet_npcs.json", npc.dialogue_section, "talk")), "[npc_type] has no talk lines of their own") // AMBIENT_LINE_TALK
 		TEST_ASSERT(length(npc.get_lines("attacked")), "[npc_type] has nothing to say when attacked") // AMBIENT_LINE_ATTACKED
-		if(npc_type == /mob/living/basic/ambient_npc/planet/peddler)
-			TEST_ASSERT(HAS_TRAIT(npc, TRAIT_GODMODE), "The peddler can be hurt")
-		else
-			TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_GODMODE), "[npc_type] cannot be hurt")
+		TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_GODMODE), "[npc_type] cannot be hurt")
 
 // =========================================================================
 // FISHING
@@ -528,7 +525,7 @@
 // THE PEDDLER
 // =========================================================================
 
-/// The caravan: a peddler who cannot be hurt, a pony and a guard; a credits-only shop that buys for less than an outpost; a dead pony closes the shop and stays dead; a camp that is packed up, and a walk off the planet that spends the site
+/// The caravan: a peddler, a pony and a guard, all killable; a credits-only shop that buys for less than an outpost; a dead pony closes the shop and stays dead; a camp that is packed up, and a walk off the planet that spends the site; a killed peddler drops a trader's cash once, and the shop dies with them
 /datum/unit_test/voidcrew_ambient_pb/peddler
 
 /datum/unit_test/voidcrew_ambient_pb/peddler/Run()
@@ -544,7 +541,7 @@
 	TEST_ASSERT_NOTNULL(peddler, "The caravan has no peddler")
 	TEST_ASSERT_NOTNULL(pony, "The caravan has no pony")
 	TEST_ASSERT_NOTNULL(guard, "A yellow caravan has no guard")
-	TEST_ASSERT(HAS_TRAIT(peddler, TRAIT_GODMODE), "The peddler can be hurt")
+	TEST_ASSERT(!HAS_TRAIT(peddler, TRAIT_GODMODE), "The peddler cannot be hurt")
 	TEST_ASSERT(!HAS_TRAIT(pony, TRAIT_GODMODE), "The pony cannot be hurt")
 
 	// Credits only, and less than an outpost pays
@@ -597,3 +594,15 @@
 	TEST_ASSERT_EQUAL(site.state, "spent", "The caravan left and the site was not spent") // AMBIENT_SITE_SPENT
 	TEST_ASSERT(peddler.fading, "The peddler did not walk off")
 	TEST_ASSERT(!kind.realize(site), "A caravan that walked off came back")
+
+	// A killed peddler: a trader's cash, once, and the shop goes with them
+	var/turf/body_turf = room_turf(1, 1)
+	var/mob/living/basic/ambient_npc/planet/peddler/victim = allocate(/mob/living/basic/ambient_npc/planet/peddler, body_turf)
+	victim.apply_damage(victim.maxHealth * 2, BRUTE)
+	TEST_ASSERT_EQUAL(victim.stat, DEAD, "The peddler did not die of their wounds")
+	TEST_ASSERT(victim.shop_closed, "The shop stayed open with the peddler dead")
+	var/cash = ambient_test_cash_on(body_turf)
+	TEST_ASSERT(cash >= 30 && cash <= 80, "A killed peddler dropped [cash] cr, not a trader's 30 to 80")
+	victim.revive(ADMIN_HEAL_ALL)
+	victim.death()
+	TEST_ASSERT_EQUAL(ambient_test_cash_on(body_turf), cash, "A revived peddler dropped cash again")

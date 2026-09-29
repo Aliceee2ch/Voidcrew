@@ -261,6 +261,14 @@
 	. = ..()
 	seat_ref = null
 
+// The angler at a trader outpost stands still with the line out while nobody is there
+/datum/ambient_activity/fish/shift_times(delay)
+	. = ..()
+	reel_at = ambient_shifted(reel_at, delay)
+	bite_at = ambient_shifted(bite_at, delay)
+	showing_until = ambient_shifted(showing_until, delay)
+	recast_at = ambient_shifted(recast_at, delay)
+
 /// The fish source of `spot` (lava, a pond, the sea), as tg's own NPC fishing asks for it, or null
 /proc/ambient_fish_source(atom/spot)
 	if(!spot)

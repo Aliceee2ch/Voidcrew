@@ -11,7 +11,7 @@
  *
  * Where: Nanotrasen at Halcyon (trader_outpost/general) and Quartermain (trader_outpost/outfitter);
  * the Syndicate at Quartermain and the Undertow (trader_outpost/black_market). One of each per
- * outpost while players are present (/datum/ambient_outpost_role, max_count 1).
+ * outpost (/datum/ambient_outpost_role, max_count 1), already at their post when players come.
  */
 
 /// A player who talks to a recruiter may have another pamphlet after this
@@ -67,6 +67,18 @@
 /mob/living/basic/ambient_npc/recruiter/Destroy()
 	pamphlet_cooldowns = null
 	return ..()
+
+/// Already at their post when players come: a few steps from the lift lobby, working the crowd
+/mob/living/basic/ambient_npc/recruiter/settle_in()
+	var/datum/ambient_place/outpost/outpost_place = place
+	var/obj/structure/overmap/trader_outpost/outpost = istype(outpost_place) ? outpost_place.outpost() : null
+	var/turf/post = length(outpost?.lobby_alcove_turfs) ? ambient_waiting_spot(src, pick(outpost.lobby_alcove_turfs), 3, 6) : null
+	if(post)
+		forceMove(post)
+	else if(!standable(get_turf(src)))
+		move_to_settle_tile()
+	// Standing about: no posters go up with nobody there to read them
+	return !!start_activity(new /datum/ambient_activity/idle(src)) && settle_here()
 
 // An empty hand gets a pitch, and a pamphlet once every ten minutes
 /mob/living/basic/ambient_npc/recruiter/talked_to(mob/living/user)

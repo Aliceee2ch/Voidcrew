@@ -73,6 +73,7 @@
 	TEST_ASSERT(stray.is_wild(), "A new stray is not wild")
 	TEST_ASSERT(!HAS_TRAIT(stray, TRAIT_GODMODE), "A stray can't be hurt")
 	TEST_ASSERT(!length(stray.death_loot), "A stray drops something when killed")
+	TEST_ASSERT(!stray.death_cash_high, "A stray drops cash when killed")
 
 	// The crew a player belongs to
 	TEST_ASSERT_NULL(ambient_crew_ship(leader), "A player with no crew has a ship")

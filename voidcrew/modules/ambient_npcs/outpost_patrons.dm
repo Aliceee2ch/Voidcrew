@@ -7,14 +7,16 @@
  * - /mob/living/basic/ambient_npc/outpost: the base for everyone PA brings to a trader outpost
  *   (customers, drinkers, the staff in outpost_workers.dm, the angler in outpost_angler.dm). They
  *   keep out of the pond, doorways, the lift's mouth, the kingpin's lounge and the bees.
- * - Customers: off the lift, to one or two counters, a line for that trader and the trader's
- *   answer in the trader's own voice, off with a paper bag, maybe a seat, then back to the lift.
- *   They yield the counter to players and wait in line.
+ * - Customers: to one or two counters, a line for that trader and the trader's answer in the
+ *   trader's own voice, off with a paper bag, maybe a seat, then back to the lift. They yield the
+ *   counter to players and wait in line. When players come, some are already at a counter and some
+ *   are done shopping, part-way through their visit; one who leaves is replaced off the lift.
  * - Drinkers: at the Dregs, the Chowder Pot and Quartermain's crew room. They order from the
  *   barkeep (coffee at the crew room), sit, sip a real glass and get drunker every two sips of
  *   something strong: chatty, loud and singing, slurring and swaying, then asleep on a sofa. The
  *   barkeep cuts them off; the barback (outpost_workers.dm) walks them to the lift, or they wake
- *   and go by themselves. A drink handed to them is drunk.
+ *   and go by themselves. A drink handed to them is drunk. When players come, they are already
+ *   in their seats with a glass, some a stage or two in.
  * - The outpost population rules: the /datum/ambient_outpost_role subtypes for both.
  * - The helpers the whole package shares: traders and their counters, a trader's answer, the bar,
  *   mess for the janitor.
@@ -79,7 +81,7 @@
 // =========================================================================
 
 /**
- * Everyone PA brings to a trader outpost. Godmode and passive like every outpost NPC (P0). Their
+ * Everyone PA brings to a trader outpost. Passive like every outpost NPC, and killable (P0). Their
  * activities never send them into the pond, into or beside a doorway, into the lift's mouth, into
  * the kingpin's lounge or near an apiary.
  */
@@ -606,6 +608,18 @@
 			return visit
 	return ..()
 
+/// Here a while already: part-way through their visit, at a counter, or done there with a bag in hand
+/mob/living/basic/ambient_npc/outpost/customer/settle_in()
+	leave_at = ambient_part_way(leave_at)
+	if(prob(40))
+		stalls_left--
+		set_held(/obj/item/storage/box/papersack)
+	return ..()
+
+/mob/living/basic/ambient_npc/outpost/customer/shift_times(delay)
+	. = ..()
+	leave_at = ambient_shifted(leave_at, delay)
+
 /// Whether they already bought from `trader` this visit
 /mob/living/basic/ambient_npc/outpost/customer/proc/has_visited(mob/living/basic/outpost_trader/trader)
 	for(var/datum/weakref/ref as anything in visited)
@@ -757,6 +771,12 @@
 	if(!trader || !approach(trader))
 		given_up = TRUE
 
+/datum/ambient_activity/shop_visit/shift_times(delay)
+	. = ..()
+	queue_until = ambient_shifted(queue_until, delay)
+	order_at = ambient_shifted(order_at, delay)
+	done_at = ambient_shifted(done_at, delay)
+
 // =========================================================================
 // DRINKERS (owner item 2)
 // =========================================================================
@@ -853,6 +873,42 @@
 		if(order)
 			return order
 	return start_activity(new /datum/ambient_activity/drink/bar(src, get_bar()))
+
+/**
+ * Here a while already: in a seat near the bar (or at a table) with a glass in hand, having ordered
+ * long ago, and some of them a stage or two in. With no seat or table to be had, their routine
+ * starts when someone comes.
+ */
+/mob/living/basic/ambient_npc/outpost/drinker/settle_in()
+	if(!get_bar() && !find_bar())
+		return ..()
+	ordered = TRUE
+	if(!start_activity(new /datum/ambient_activity/drink/bar(src, get_bar())) || !settle_here())
+		end_activity()
+		return ..()
+	var/stages = pick(0, 1, 1, 2)
+	if(stages && bar_section == PATRON_BAR_CREW_ROOM)
+		// Off the coffee and onto something stronger already
+		var/obj/item/reagent_containers/cup/glass/drinkingglass/glass = held_item
+		if(istype(glass))
+			glass.reagents.clear_reagents()
+			glass.reagents.add_reagent(/datum/reagent/consumable/ethanol/beer, 25)
+			set_held(glass)
+		coffee_sips = -INFINITY
+	if(stages)
+		get_drunker(stages)
+	strong_sips = rand(0, PATRON_SIPS_PER_STAGE - 1)
+	return TRUE
+
+// Slurring would wear off by itself while they sit still
+/mob/living/basic/ambient_npc/outpost/drinker/pause_routine()
+	. = ..()
+	remove_status_effect(/datum/status_effect/speech/slurring/generic)
+
+/mob/living/basic/ambient_npc/outpost/drinker/resume_routine()
+	. = ..()
+	if(drunk >= 3)
+		set_slurring_if_lower(10 MINUTES)
 
 /// Their lines for being talked to depend on how far gone they are
 /mob/living/basic/ambient_npc/outpost/drinker/get_lines(context)
@@ -982,7 +1038,9 @@
 	if(!asleep)
 		return
 	asleep = FALSE
-	animate(src, transform = standing_transform || matrix(), time = 0.4 SECONDS)
+	// Killed where they slept: a body stays down
+	if(stat != DEAD)
+		animate(src, transform = standing_transform || matrix(), time = 0.4 SECONDS)
 	standing_transform = null
 
 /**
@@ -1083,6 +1141,10 @@
 	. = ..()
 	ends_at = world.time
 
+/datum/ambient_activity/bar_order/shift_times(delay)
+	. = ..()
+	done_at = ambient_shifted(done_at, delay)
+
 /**
  * A night at the bar: a seat near it (a bar stool if one is free, then a sofa, then a table), a real
  * glass of what the bar pours, a sip every 20 to 40 seconds, and a stage drunker every two sips of
@@ -1170,6 +1232,10 @@
 		glass.reagents?.clear_reagents()
 	return ..()
 
+/datum/ambient_activity/drink/bar/shift_times(delay)
+	. = ..()
+	next_sway = ambient_shifted(next_sway, delay)
+
 /**
  * Sleeping it off: over to a sofa if there is one near (the floor if not), down, and snoring for a
  * few minutes. Then they wake and go, unless the barback walks them out first.
@@ -1238,6 +1304,11 @@
 /datum/ambient_activity/sleep_it_off/spot_unreachable()
 	. = ..()
 	sofa_ref = null
+
+/datum/ambient_activity/sleep_it_off/shift_times(delay)
+	. = ..()
+	next_snore = ambient_shifted(next_snore, delay)
+	escort_at = ambient_shifted(escort_at, delay)
 
 /// Someone at `place` could walk `drunk` to the lift: a free barback there, half the time
 /proc/ambient_outpost_call_escort(datum/ambient_place/outpost/place, mob/living/basic/ambient_npc/drunk)

@@ -88,6 +88,9 @@ SUBSYSTEM_DEF(overmap)
 	setup_space_ruins()
 	setup_trader_outposts()
 	setup_dangers()
+#ifndef UNIT_TESTS
+	spawn_derelict_outpost() // this round's derelict outpost: on the chart, built when a ship docks (voidcrew/modules/derelict_outposts)
+#endif
 	schedule_vestige_ruins()
 	schedule_contested_caches()
 	schedule_lich_lair()
@@ -191,7 +194,9 @@ SUBSYSTEM_DEF(overmap)
 		// derelict in the field - none of the three clocks above should run against it
 		// at all, occupied or not. Unlike every other site type, presence doesn't even
 		// enter into it here.
-		if(istype(ship.docked, /obj/structure/overmap/dynamic/player_outpost))
+		// An unclaimed derelict outpost is nobody's home: its visitors' hulls take the ordinary clocks (voidcrew/modules/derelict_outposts)
+		var/obj/structure/overmap/dynamic/player_outpost/home_outpost = ship.docked
+		if(istype(home_outpost) && home_outpost.shelters_docked_hulls())
 			ship.crewless_since = 0
 			ship.site_dead_since = 0
 			ship.site_dead_undock_refused = FALSE

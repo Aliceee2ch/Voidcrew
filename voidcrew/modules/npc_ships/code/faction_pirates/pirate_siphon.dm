@@ -316,6 +316,8 @@
 		var/run_take = get_run_take()
 		target.ship_notify("Data siphon connection severed. Total credits lost: [run_take]. Accounts unlock in [SIPHON_ACCOUNT_LOCK_GRACE / 10] seconds.", "FINANCE", SHIP_NOTIFY_WARNING, 'voidcrew/sound/notify2.ogg', 25)
 		owner?.ship_notify("Siphon link lost. Total credits acquired: [run_take].", "SIPHON", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify2.ogg', 25)
+	if(was_active)
+		siphon_metric_run_ended(owner, target, get_run_take())
 
 	target_ship_ref = null
 	STOP_PROCESSING(SSobj, src)
@@ -394,6 +396,7 @@
 	// Log the recovery
 	var/obj/structure/overmap/ship/owner = get_owner_ship()
 	log_game("[key_name(user)] recovered [credits_stored] siphoned credits from [owner ? owner.name : "unknown ship"]'s data siphon.")
+	siphon_metric_looted(src, user, credits_stored)
 
 	credits_stored = 0
 	run_start_credits = 0

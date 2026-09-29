@@ -381,6 +381,7 @@
 #include "voidcrew_missions.dm"
 #include "voidcrew_mining_input.dm"
 #include "voidcrew_mission_gps.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_mission_metrics.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_npc_boarding_docking.dm"
 #include "voidcrew_npc_disarm.dm"
 #include "voidcrew_player_outpost.dm"

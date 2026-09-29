@@ -122,10 +122,13 @@ SUBSYSTEM_DEF(ambient_npcs)
 		if(ambient_in_bounds(get_turf(player), bounds))
 			. += player
 
-/// A free tile of `outpost`'s hangar lift alcove, where someone arriving steps off, or null
+/// A tile of `outpost`'s hangar lift alcove where someone arriving steps off, or null. Nobody comes up while anyone is still in the lift.
 /datum/controller/subsystem/ambient_npcs/proc/lift_arrival_turf(obj/structure/overmap/trader_outpost/outpost)
 	if(!length(outpost?.lobby_alcove_turfs))
 		return null
+	for(var/turf/alcove as anything in outpost.lobby_alcove_turfs)
+		if(locate(/mob/living) in alcove)
+			return null
 	for(var/turf/alcove as anything in shuffle(outpost.lobby_alcove_turfs.Copy()))
 		if(!alcove.is_blocked_turf(exclude_mobs = FALSE))
 			return alcove

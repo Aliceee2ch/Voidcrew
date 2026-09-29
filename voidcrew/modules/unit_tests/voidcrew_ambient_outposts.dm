@@ -888,3 +888,15 @@
 	body.timeofdeath = world.time - 3001 // AMBIENT_OUTPOST_BODY_TIME
 	SSambient_npcs.update_outpost(place, 1, list())
 	TEST_ASSERT(QDELETED(body) || body.fading, "A body lay at the outpost past five minutes with players there")
+
+/// Nobody new comes up the lift while someone is still in it
+/datum/unit_test/voidcrew_ambient_outpost_lift_one_at_a_time
+
+/datum/unit_test/voidcrew_ambient_outpost_lift_one_at_a_time/Run()
+	var/obj/structure/overmap/trader_outpost/outpost = pa_typed_outpost(/obj/structure/overmap/trader_outpost/general)
+	outpost.lobby_alcove_turfs = list(run_loc_floor_top_right, get_step(run_loc_floor_top_right, WEST))
+	TEST_ASSERT_NOTNULL(SSambient_npcs.lift_arrival_turf(outpost), "An empty lift had no room for an arrival")
+	var/mob/living/basic/ambient_npc/waiting = allocate(/mob/living/basic/ambient_npc, run_loc_floor_top_right)
+	TEST_ASSERT_NULL(SSambient_npcs.lift_arrival_turf(outpost), "Someone came up while [waiting] was still in the lift")
+	waiting.forceMove(run_loc_floor_bottom_left)
+	TEST_ASSERT_NOTNULL(SSambient_npcs.lift_arrival_turf(outpost), "The lift stayed shut after [waiting] stepped out")

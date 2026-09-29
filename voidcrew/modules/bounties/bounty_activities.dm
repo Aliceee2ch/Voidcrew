@@ -368,7 +368,7 @@
 
 /**
  * Someone to talk to within `range`: their own companions first; otherwise someone at hand who is
- * awake and not played (a patron, a loiterer, another blended patron, one of their own faction).
+ * awake and not played (a patron, an outpost regular, another blended patron, one of their own faction).
  */
 /mob/living/basic/bounty_criminal/proc/ai_find_chat_partner(range = BOUNTY_ACTIVITY_RANGE, patrons_only = FALSE)
 	var/turf/here = get_turf(src)
@@ -382,7 +382,7 @@
 	for(var/mob/living/basic/other in range(range, here))
 		if(other == src || other.stat != CONSCIOUS || other.client)
 			continue
-		if(istype(other, /mob/living/basic/outpost_loiterer))
+		if(istype(other, /mob/living/basic/ambient_npc))
 			options += other
 		else if(istype(other, /mob/living/basic/bounty_criminal))
 			var/mob/living/basic/bounty_criminal/patron = other

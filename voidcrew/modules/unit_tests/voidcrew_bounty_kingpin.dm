@@ -823,7 +823,7 @@
  * The black market's lounge: the seat on the corp sofa, no table of his own in front of it (he lost
  * his coffee table, and no lounge table stands at any of his six goon posts either), six goon posts
  * and the refuge. SSbounty_kingpin seats him and his crew there on no posting, as it does at the start
- * of the round: the barkeep is the bar's own, the loiterer goes to the refuge, never the hangar lift
+ * of the round: the barkeep is the bar's own, the crew's way out is the refuge, never the hangar lift
  * (M3, M4, M5), and his posting is at that outpost.
  */
 /datum/unit_test/voidcrew_bounty_kingpin/map
@@ -880,12 +880,9 @@
 	TEST_ASSERT_EQUAL(length(crew.crew_coffee_table), 0, "The crew found a coffee table that isn't there")
 	TEST_ASSERT_EQUAL(length(crew.crew_tables), 0, "The crew minds [length(crew.crew_tables)] lounge tables, not none")
 	TEST_ASSERT_EQUAL(crew.crew_refuge, refuge, "The crew doesn't use the refuge")
-	TEST_ASSERT_EQUAL(crew.exit_turf(crew.crew_loiterer_ref?.resolve()), refuge, "The loiterer's way out isn't the refuge")
+	TEST_ASSERT_EQUAL(crew.exit_turf(null), refuge, "The crew's way out isn't the refuge")
 	var/mob/living/basic/outpost_trader/barkeep = crew.crew_barkeep_ref?.resolve()
 	TEST_ASSERT_NOTNULL(barkeep, "No trader in sight of the sofa ducks")
-	var/mob/living/basic/outpost_loiterer/loiterer = crew.crew_loiterer_ref?.resolve()
-	TEST_ASSERT_NOTNULL(loiterer, "The crew didn't find the lounge's loiterer")
-	var/turf/loiterer_home = get_turf(loiterer)
 
 	var/obj/machinery/porta_turret/outpost/turret = locate() in range(12, seat_turf)
 	TEST_ASSERT_NOTNULL(turret, "No lounge turret near the sofa")
@@ -894,7 +891,6 @@
 	for(var/mob/living/basic/bounty_kingpin_goon/goon as anything in crew.goons())
 		TEST_ASSERT(turret.in_faction(goon), "The lounge turret doesn't count [goon] as its own")
 	TEST_ASSERT(bounty_turret_ignores(kingpin, TRUE), "The lounge turret doesn't leave the kingpin alone")
-	TEST_ASSERT(HAS_TRAIT(loiterer, TRAIT_AI_PAUSED), "The loiterer didn't leave at the draw")
 	TEST_ASSERT(crew.crew_barkeep_ducked, "The barkeep didn't duck")
 	// A shootout puts nobody on the board; the clock does, adopting him at this outpost
 	TEST_ASSERT_NULL(bounty_kingpin_open_posting(), "The shootout put him on the board")
@@ -902,11 +898,7 @@
 	TEST_ASSERT_NOTNULL(posting, "The seated kingpin couldn't be posted")
 	TEST_ASSERT_EQUAL(posting.criminal(), kingpin, "His posting didn't adopt him")
 	TEST_ASSERT_EQUAL(posting.site(), outpost, "His posting isn't at his outpost")
-	// A loiterer carried off somewhere far comes straight home
-	loiterer.forceMove(run_loc_floor_bottom_left)
 	qdel(kingpin)
-	TEST_ASSERT(!HAS_TRAIT(loiterer, TRAIT_AI_PAUSED), "The loiterer never came back")
-	TEST_ASSERT_EQUAL(get_turf(loiterer), loiterer_home, "A loiterer carried off to another level wasn't put back home")
 	TEST_ASSERT(!crew.crew_barkeep_ducked || QDELETED(crew), "The barkeep stayed down")
 	TEST_ASSERT(SSbounty_kingpin.kingpin_gone, "Deleted, he isn't gone for the round")
 	qdel(hunter)

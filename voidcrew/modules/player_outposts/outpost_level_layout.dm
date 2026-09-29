@@ -97,6 +97,11 @@
 	var/z_value
 	/// OUTPOST_ZONE_VACANT, _BUILDING, _IN_USE or _WIPING
 	var/state = OUTPOST_ZONE_VACANT
+	/// Whatever holds the zone while it is not vacant: a berth, the ship bay, a hull copy, the ferry
+	var/datum/weakref/holder
+	/// Set while the outpost is deleted: its level teardown wipes everything, so holders let go
+	/// without wiping their own zone
+	var/retired = FALSE
 
 /datum/outpost_zone/New(key, kind, number, list/rect, z_value)
 	src.key = key
@@ -107,6 +112,10 @@
 	high_x = rect[3]
 	high_y = rect[4]
 	src.z_value = z_value
+
+/datum/outpost_zone/Destroy()
+	holder = null
+	return ..()
 
 /datum/outpost_zone/proc/get_bottom_left()
 	return locate(low_x, low_y, z_value)
@@ -131,6 +140,60 @@
 /datum/outpost_zone/proc/is_vacant()
 	return state == OUTPOST_ZONE_VACANT
 
+/// Takes a vacant zone for `new_holder` before anything is loaded into it. FALSE if it is taken.
+/datum/outpost_zone/proc/claim(datum/new_holder)
+	if(state != OUTPOST_ZONE_VACANT)
+		return FALSE
+	state = OUTPOST_ZONE_BUILDING
+	holder = WEAKREF(new_holder)
+	return TRUE
+
+/// The holder finished loading into the zone.
+/datum/outpost_zone/proc/occupy()
+	if(state == OUTPOST_ZONE_BUILDING)
+		state = OUTPOST_ZONE_IN_USE
+
+/// Whether `thing` holds this zone. Still true while `thing` is being deleted.
+/datum/outpost_zone/proc/is_held_by(datum/thing)
+	return IS_WEAKREF_OF(thing, holder)
+
+/**
+ * Gives the zone back: everything on it is wiped (wipe()) and it is vacant again. The wipe
+ * runs asynchronously, since holders let go from Destroy() and signal handlers. Calling it
+ * again while it wipes, or on a vacant zone, does nothing.
+ */
+/datum/outpost_zone/proc/release()
+	if(state == OUTPOST_ZONE_VACANT || state == OUTPOST_ZONE_WIPING)
+		return
+	holder = null
+	// A deleted outpost's level teardown wipes the whole level; nothing to do here.
+	if(retired || QDELETED(src))
+		state = OUTPOST_ZONE_VACANT
+		return
+	state = OUTPOST_ZONE_WIPING
+	INVOKE_ASYNC(src, PROC_REF(wipe))
+
+/// A holder deleted while its map was still loading leaves the zone to its loader. This covers
+/// a load that never returns: long after, a zone still building for nobody is given back.
+/datum/outpost_zone/proc/release_stalled_build()
+	if(state == OUTPOST_ZONE_BUILDING && !holder?.resolve())
+		log_mapping("OUTPOST ZONE: [key] at z[z_value] was still building for a deleted holder, wiping it.")
+		release()
+
+/**
+ * Deletes everything on the zone but observers (landmarks included), turns every tile back
+ * into space in the vacant area and marks the zone vacant. The same sweep a map-zone slot
+ * teardown runs (/datum/space_level/proc/wipe_turfs()).
+ */
+/datum/outpost_zone/proc/wipe()
+	var/datum/space_level/level = z_value && z_value <= length(SSmapping.z_list) ? SSmapping.z_list[z_value] : null
+	if(level)
+		var/list/turf/ground = get_block()
+		level.wipe_turfs(ground, ground, outpost_vacant_area(), list(low_x, low_y, high_x, high_y), throttled = FALSE)
+	if(QDELETED(src))
+		return
+	state = OUTPOST_ZONE_VACANT
+
 /obj/structure/overmap/dynamic/player_outpost
 	/// The fixed zones on the outpost's level, layout key -> /datum/outpost_zone
 	var/list/datum/outpost_zone/level_zones = list()
@@ -142,6 +205,16 @@
 /// The zone a berth number loads into, or null
 /obj/structure/overmap/dynamic/player_outpost/proc/berth_zone(number)
 	return level_zones["[OUTPOST_ZONE_BERTH][number]"]
+
+// Hangar berths load into the berth zones instead of turf reservations (outpost_hangar.dm).
+/obj/structure/overmap/dynamic/player_outpost/berths_on_level()
+	return TRUE
+
+/obj/structure/overmap/dynamic/player_outpost/berth_capacity()
+	return OUTPOST_LEVEL_BERTHS
+
+/obj/structure/overmap/dynamic/player_outpost/berth_zone_for(berth_number)
+	return berth_zone(berth_number)
 
 /// The zone containing `location`, or null (the build region and the gutters are no zone)
 /obj/structure/overmap/dynamic/player_outpost/proc/zone_at(turf/location)

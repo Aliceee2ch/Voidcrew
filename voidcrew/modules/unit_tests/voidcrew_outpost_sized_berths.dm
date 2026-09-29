@@ -3,11 +3,14 @@
  *
  * Checks the sizing formula, then allocates real berths for a small, a largest and a
  * turned hull, several at once, and docks every purchasable class into one. Each berth
- * must reserve exactly the formula's size, fit the dock to the hull, leave clear deck
- * round the pad, reach the elevator, and hand its turfs back when released.
+ * must be exactly the formula's size, fit the dock to the hull, leave clear deck round the
+ * pad, reach the elevator, and hand its turfs back when released. A player outpost builds its
+ * berths in the berth zones on its own level (outpost_level_layout.dm) and never reserves
+ * turfs; a trader outpost keeps reserving them, and is checked too.
  *
  * Fork defines are included after the tests, so sizes are written out here:
- * 56x40 is RESERVE_DOCK_MAX_SIZE_LONG x RESERVE_DOCK_MAX_SIZE_SHORT.
+ * 56x40 is RESERVE_DOCK_MAX_SIZE_LONG x RESERVE_DOCK_MAX_SIZE_SHORT; a berth zone is 66x59,
+ * four to a claim (OUTPOST_BERTH_ZONE_WIDTH/HEIGHT, OUTPOST_LEVEL_BERTHS).
  */
 /datum/unit_test/voidcrew_outpost_sized_berths
 	var/list/obj/structure/overmap/ship/test_ships = list()
@@ -39,6 +42,7 @@
 	TEST_ASSERT(home.has_hangar_elevator(), "The berth test outpost has no hangar elevator")
 
 	// Small, largest and turned hulls, covering all four ways the dock can face.
+	var/list/reservations_before = SSmapping.turf_reservations?.Copy() || list()
 	var/list/fake_facings = list()
 	fake_facings |= check_fake_berth(home, 5, 7, NORTH, "small, faces west")
 	fake_facings |= check_fake_berth(home, 7, 5, NORTH, "small, faces south")
@@ -51,6 +55,13 @@
 		TEST_ASSERT("[facing]" in fake_facings, "No test hull faced [dir2text(facing)] in its berth")
 	TEST_ASSERT_NULL(home.allocate_berth(fake_ship(57, 20, NORTH)), "A hull longer than any berth was given one")
 	check_several_berths(home)
+	var/list/new_reservations = (SSmapping.turf_reservations || list()) - reservations_before
+	TEST_ASSERT(!length(new_reservations), "Berthing at a player outpost reserved [length(new_reservations)] turf block\s")
+
+	// Trader outposts still build their berths in turf reservations.
+	var/obj/structure/overmap/trader_outpost/market = allocate(/obj/structure/overmap/trader_outpost/general)
+	check_fake_berth(market, 5, 7, NORTH, "trader, small")
+	check_fake_berth(market, 56, 40, NORTH, "trader, largest")
 
 	var/list/facings = list()
 	for(var/label in SSmapping.ship_purchase_list)
@@ -133,15 +144,52 @@
 	ship.shuttle = port
 	return ship
 
-/datum/unit_test/voidcrew_outpost_sized_berths/proc/check_fake_berth(obj/structure/overmap/dynamic/player_outpost/home, width, height, port_direction, label)
+/datum/unit_test/voidcrew_outpost_sized_berths/proc/check_fake_berth(obj/structure/overmap/home, width, height, port_direction, label)
 	var/obj/structure/overmap/ship/ship = fake_ship(width, height, port_direction)
 	var/datum/outpost_berth/berth = home.allocate_berth(ship)
 	TEST_ASSERT_NOTNULL(berth, "No berth for the [label] hull")
 	var/datum/outpost_berth_layout/layout = check_berth_layout(berth, ship.shuttle, label)
+	check_zone_placement(berth, label)
 	check_dock_fit(berth, ship.shuttle, layout, label)
 	check_elevator_reachable(berth, layout, null, label)
 	. = "[berth.dock.dir]"
 	release_and_check(berth, label)
+
+/**
+ * A player outpost's berth is built along the south edge of its own berth zone, centred, holds
+ * no reservation, and its dock is kept inside the hangar when dragged. A trader berth has no zone.
+ */
+/datum/unit_test/voidcrew_outpost_sized_berths/proc/check_zone_placement(datum/outpost_berth/berth, label)
+	if(!istype(berth.outpost, /obj/structure/overmap/dynamic/player_outpost))
+		TEST_ASSERT_NULL(berth.zone, "[label]: a trader berth took a level zone")
+		TEST_ASSERT(!QDELETED(berth.reservation), "[label]: a trader berth holds no reservation")
+		return
+	var/obj/structure/overmap/dynamic/player_outpost/home = berth.outpost
+	var/datum/outpost_zone/zone = berth.zone
+	TEST_ASSERT_NOTNULL(zone, "[label]: the berth has no zone")
+	TEST_ASSERT_NULL(berth.reservation, "[label]: the berth holds a turf reservation")
+	TEST_ASSERT_EQUAL(zone, home.berth_zone(berth.berth_number), "[label]: berth [berth.berth_number] is not in its own zone")
+	TEST_ASSERT_EQUAL(zone.state, "in use", "[label]: the zone is [zone.state], not in use")
+	TEST_ASSERT(zone.is_held_by(berth), "[label]: the zone is held by something else")
+	var/turf/low = berth.get_bottom_left()
+	var/turf/high = berth.get_top_right()
+	TEST_ASSERT(zone.contains_turf(low) && zone.contains_turf(high), "[label]: the hangar spills out of its zone")
+	TEST_ASSERT_EQUAL(low.y, zone.low_y, "[label]: the hangar does not stand on the zone's south edge")
+	var/west_gap = low.x - zone.low_x
+	var/east_gap = zone.high_x - high.x
+	TEST_ASSERT(abs(west_gap - east_gap) <= 1, "[label]: the hangar is not centred in its zone ([west_gap] west, [east_gap] east)")
+	TEST_ASSERT_EQUAL(low.z, home.upgrade_level_z(), "[label]: the berth is not on the outpost's level")
+	TEST_ASSERT_EQUAL(berth.dock.site_rect?.Join(","), "[low.x],[low.y],[high.x],[high.y]", "[label]: the dock does not keep to its hangar")
+	// A dock dragged off with a hull is pulled back inside the hangar, not the whole outpost.
+	var/turf/home_turf = get_turf(berth.dock)
+	berth.dock.forceMove(locate(low.x + 1, max(1, low.y - 20), low.z))
+	clamp_reserve_dock_to_site(berth.dock)
+	var/list/coords = berth.dock.return_coords()
+	TEST_ASSERT(min(coords[1], coords[3]) >= low.x && max(coords[1], coords[3]) <= high.x && min(coords[2], coords[4]) >= low.y && max(coords[2], coords[4]) <= high.y, \
+		"[label]: a dragged dock was not clamped back into its hangar")
+	berth.dock.forceMove(home_turf)
+	berth.dock.dwidth = 0
+	berth.dock.dheight = 0
 
 /// Checks size, pad, walls, area, fixtures and signs. Returns the layout it expected.
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/check_berth_layout(datum/outpost_berth/berth, obj/docking_port/mobile/shuttle, label)
@@ -266,6 +314,9 @@
 	return TRUE
 
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/release_and_check(datum/outpost_berth/berth, label)
+	if(berth.zone)
+		release_and_check_zone(berth, label)
+		return
 	var/datum/turf_reservation/reservation = berth.reservation
 	var/turf/low = berth.get_bottom_left()
 	var/turf/high = berth.get_top_right()
@@ -282,6 +333,46 @@
 		sleep(world.tick_lag)
 	TEST_ASSERT(low.turf_flags & UNUSED_RESERVATION_TURF, "[label]: the berth's turfs never returned to the free pool")
 	TEST_ASSERT(high.turf_flags & UNUSED_RESERVATION_TURF, "[label]: the berth's far corner never returned to the free pool")
+
+/// A released zoned berth wipes its zone back to vacant space, then the zone can be used again.
+/datum/unit_test/voidcrew_outpost_sized_berths/proc/release_and_check_zone(datum/outpost_berth/berth, label)
+	var/datum/outpost_zone/zone = berth.zone
+	var/obj/structure/overmap/host = berth.outpost
+	var/slot = berth.berth_number
+	berth.release()
+	TEST_ASSERT(QDELETED(berth), "[label]: an empty berth was not released")
+	TEST_ASSERT_NULL(LAZYACCESS(host.berths, slot), "[label]: the elevator still offers a released berth")
+	TEST_ASSERT(zone.state == "wiping" || zone.state == "vacant", "[label]: the released zone is [zone.state]")
+	wait_for_vacant(zone, label)
+	check_zone_clean(zone, label)
+
+/// Waits (bounded) for a zone's wipe to finish.
+/datum/unit_test/voidcrew_outpost_sized_berths/proc/wait_for_vacant(datum/outpost_zone/zone, label)
+	var/timeout = world.time + 60 SECONDS
+	while(world.time < timeout && !zone.is_vacant())
+		sleep(world.tick_lag)
+	TEST_ASSERT(zone.is_vacant(), "[label]: the zone was never wiped back to vacant")
+
+/// Every tile of a vacant zone is bare space in the vacant area with nothing left on it.
+/datum/unit_test/voidcrew_outpost_sized_berths/proc/check_zone_clean(datum/outpost_zone/zone, label)
+	var/area/vacant = GLOB.areas_by_type[/area/voidcrew/outpost_vacant]
+	var/leftovers = 0
+	var/wrong_turfs = 0
+	var/wrong_areas = 0
+	var/first_problem
+	for(var/turf/tile as anything in zone.get_block())
+		if(!isspaceturf(tile))
+			wrong_turfs++
+			first_problem ||= "([tile.x],[tile.y]) is [tile.type]"
+		if(tile.loc != vacant)
+			wrong_areas++
+			first_problem ||= "([tile.x],[tile.y]) is in [tile.loc?.type]"
+		for(var/atom/movable/thing as anything in tile)
+			if(thing == tile.lighting_object || isobserver(thing))
+				continue
+			leftovers++
+			first_problem ||= "[thing.type] left at ([tile.x],[tile.y])"
+	TEST_ASSERT(!wrong_turfs && !wrong_areas && !leftovers, "[label]: the wiped zone has [wrong_turfs] non-space tiles, [wrong_areas] tiles outside the vacant area and [leftovers] leftovers; first: [first_problem]")
 
 /// Three berths of different sizes at once: separate ground, separate floors, all released.
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/check_several_berths(obj/structure/overmap/dynamic/player_outpost/home)
@@ -348,6 +439,7 @@
 
 		// Leave for transit; the berth may only go once the hull is off it.
 		var/datum/turf_reservation/reservation = berth.reservation
+		var/datum/outpost_zone/zone = berth.zone
 		var/obj/docking_port/stationary/transit/transit = ship.shuttle.assigned_transit
 		if(QDELETED(transit))
 			transit = SSshuttle.generate_transit_dock(ship.shuttle)
@@ -361,6 +453,9 @@
 		var/hull_tiles_before = count_hull_tiles(ship.shuttle)
 		home.on_ship_undock_complete(ship)
 		TEST_ASSERT(QDELETED(berth) && QDELETED(reservation), "[label]: the berth outlived the departed ship")
+		if(zone)
+			wait_for_vacant(zone, label)
+			check_zone_clean(zone, label)
 		TEST_ASSERT_EQUAL(count_hull_tiles(ship.shuttle), hull_tiles_before, "[label]: berth teardown touched the departed hull")
 	ship.shuttle?.admin_delete_shuttle()
 
@@ -370,24 +465,39 @@
 		if(port.shuttle_areas[get_area(tile)] && !isspaceturf(tile))
 			.++
 
-/// Deleting the host frees every berth it holds.
+/// Deleting the host frees every berth it holds, and the berths' zones go with its level.
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/check_host_deletion()
 	var/obj/structure/overmap/dynamic/player_outpost/doomed = new
 	doomed.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
 	TEST_ASSERT(doomed.load_level(), "Could not load the deletion test outpost")
-	var/list/datum/turf_reservation/reservations = list()
+	var/level_z = doomed.upgrade_level_z()
+	var/list/datum/outpost_berth/held = list()
+	var/list/datum/outpost_zone/zones = list()
 	for(var/size in list(5, 20))
 		var/datum/outpost_berth/berth = doomed.allocate_berth(fake_ship(size, size + 4, NORTH))
 		TEST_ASSERT_NOTNULL(berth, "No berth at the outpost being deleted")
-		reservations += berth.reservation
+		TEST_ASSERT_NULL(berth.reservation, "A berth at the outpost being deleted holds a reservation")
+		held += berth
+		zones += berth.zone
+	var/datum/outpost_berth/first_berth = held[1]
+	var/turf/berth_corner = first_berth.get_bottom_left()
 	qdel(doomed)
-	for(var/datum/turf_reservation/reservation as anything in reservations)
-		TEST_ASSERT(QDELETED(reservation), "Deleting the outpost leaked a berth reservation")
+	for(var/datum/outpost_berth/berth as anything in held)
+		TEST_ASSERT(QDELETED(berth), "Deleting the outpost left berth [berth.berth_number] behind")
+	for(var/datum/outpost_zone/zone as anything in zones)
+		TEST_ASSERT(QDELETED(zone), "Deleting the outpost left its [zone.key] zone behind")
+	// The level goes back to the pool as bare space: no berth walls, no vacant area. The level
+	// teardown yields, so give it a moment.
+	var/timeout = world.time + 30 SECONDS
+	while(world.time < timeout && !(isspaceturf(berth_corner) && istype(get_area(berth_corner), /area/space)))
+		sleep(world.tick_lag)
+	TEST_ASSERT(isspaceturf(berth_corner) && istype(get_area(berth_corner), /area/space), "Deleting the outpost left a berth standing on z[level_z]")
 
 /**
- * The berth ground procs agree with the reservation that holds the ground today, for a trader
- * outpost berth, a player outpost berth and a player outpost's ship bay: the corners, the size,
- * the block, and which tiles are on it. Given-back ground reads as none.
+ * The berth ground procs agree with what holds the ground: the reservation for a trader outpost
+ * berth and a player outpost's ship bay, the hangar loaded into its zone for a player outpost
+ * berth. The corners, the size, the block, and which tiles are on it. Given-back ground reads as
+ * none.
  */
 /datum/unit_test/voidcrew_outpost_berth_ground
 
@@ -407,7 +517,7 @@
 	TEST_ASSERT(home.load_level(), "Could not load the berth ground test outpost")
 	var/datum/outpost_berth/home_berth = home.allocate_berth(allocate(/obj/structure/overmap/ship))
 	TEST_ASSERT_NOTNULL(home_berth, "The player outpost gave no berth")
-	check_ground(home_berth, "player outpost berth")
+	check_zone_ground(home_berth, "player outpost berth")
 	var/turf/home_corner = home_berth.get_bottom_left()
 	TEST_ASSERT(home.contains_service_turf(home_corner), "The player outpost berth is not outpost service ground")
 	TEST_ASSERT(home.contains_site_turf(home_corner), "The player outpost berth is not part of its outpost")
@@ -482,6 +592,32 @@
 		TEST_ASSERT(!berth.contains_turf(tile), "[label]: outside tile ([tile.x],[tile.y],[tile.z]) is on the berth's ground")
 	TEST_ASSERT(!berth.contains_turf(null), "[label]: nullspace is on the berth's ground")
 
+/// Every ground proc against the hangar a zoned berth loaded: corners, size, block and containment.
+/datum/unit_test/voidcrew_outpost_berth_ground/proc/check_zone_ground(datum/outpost_berth/berth, label)
+	var/datum/outpost_zone/zone = berth.zone
+	TEST_ASSERT_NOTNULL(zone, "[label]: holds no zone")
+	TEST_ASSERT_NULL(berth.reservation, "[label]: holds a reservation")
+	TEST_ASSERT(berth.has_ground(), "[label]: reports no ground")
+	var/turf/low = berth.hangar_bottom_left
+	var/turf/high = locate(low.x + berth.hangar_width - 1, low.y + berth.hangar_height - 1, low.z)
+	TEST_ASSERT_EQUAL(berth.get_bottom_left(), low, "[label]: wrong bottom-left corner")
+	TEST_ASSERT_EQUAL(berth.get_top_right(), high, "[label]: wrong top-right corner")
+	TEST_ASSERT_EQUAL(berth.get_width(), berth.hangar_width, "[label]: wrong width")
+	TEST_ASSERT_EQUAL(berth.get_height(), berth.hangar_height, "[label]: wrong height")
+	TEST_ASSERT(zone.contains_turf(low) && zone.contains_turf(high), "[label]: the ground is not inside its zone")
+	var/list/turf/ground = berth.get_block()
+	TEST_ASSERT_EQUAL(length(ground), berth.hangar_width * berth.hangar_height, "[label]: the block is the wrong size")
+	TEST_ASSERT_EQUAL(ground[1], low, "[label]: the block does not start at the bottom-left corner")
+	TEST_ASSERT_EQUAL(ground[length(ground)], high, "[label]: the block does not end at the top-right corner")
+	var/list/turf/inside = list(low, high, locate(low.x, high.y, low.z), locate(high.x, low.y, low.z))
+	var/list/turf/outside = list(get_step(low, WEST), get_step(high, EAST), get_step(high, NORTH), get_step(high, NORTHEAST), locate(low.x, low.y, low.z == 1 ? 2 : 1))
+	for(var/turf/tile as anything in inside)
+		TEST_ASSERT(berth.contains_turf(tile), "[label]: inside tile ([tile.x],[tile.y]) is off the berth's ground")
+	for(var/turf/tile as anything in outside)
+		if(tile)
+			TEST_ASSERT(!berth.contains_turf(tile), "[label]: outside tile ([tile.x],[tile.y],[tile.z]) is on the berth's ground")
+	TEST_ASSERT(!berth.contains_turf(null), "[label]: nullspace is on the berth's ground")
+
 /datum/unit_test/voidcrew_outpost_berth_ground/proc/check_no_ground(datum/outpost_berth/berth, turf/former_corner, label)
 	TEST_ASSERT(QDELETED(berth), "[label]: was not deleted")
 	TEST_ASSERT(!berth.has_ground(), "[label]: still reports ground")
@@ -491,3 +627,67 @@
 	TEST_ASSERT_EQUAL(berth.get_height(), 0, "[label]: still has a height")
 	TEST_ASSERT_EQUAL(length(berth.get_block()), 0, "[label]: still has a block")
 	TEST_ASSERT(!berth.contains_turf(former_corner), "[label]: still holds its old corner")
+
+/**
+ * A player outpost's berth zones churn cleanly: twenty visits of different sizes through the same
+ * zone leave it bare, eject whoever stayed behind, reap every berth area and never reserve turfs.
+ * A zone still being wiped is passed over, and the elevator offers only the claim's four berths.
+ */
+/datum/unit_test/voidcrew_outpost_berth_churn
+	parent_type = /datum/unit_test/voidcrew_outpost_sized_berths
+
+/datum/unit_test/voidcrew_outpost_berth_churn/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
+	home.founder_ckey = "berthchurnowner"
+	TEST_ASSERT(home.load_level(), "Could not load the churn test outpost")
+	TEST_ASSERT_EQUAL(home.berth_capacity(), 4, "A claim holds [home.berth_capacity()] berths, not its four zones")
+	var/list/reservations_before = SSmapping.turf_reservations?.Copy() || list()
+	var/berth_areas_before = count_berth_areas()
+	var/datum/outpost_zone/first_zone = home.berth_zone(1)
+
+	var/list/sizes = list(list(5, 7), list(56, 40), list(12, 30), list(40, 56), list(9, 21))
+	for(var/visit in 1 to 20)
+		var/list/size = sizes[(visit - 1) % length(sizes) + 1]
+		var/datum/outpost_berth/berth = home.allocate_berth(fake_ship(size[1], size[2], NORTH))
+		TEST_ASSERT_NOTNULL(berth, "Visit [visit]: no berth")
+		TEST_ASSERT_EQUAL(berth.zone, first_zone, "Visit [visit]: the berth did not reuse the first zone")
+		// Things left behind: loose kit, a stray landmark, and somebody still aboard.
+		var/turf/deck = berth.alcove_turfs[1]
+		new /obj/item/wrench(deck)
+		new /obj/effect/landmark/outpost_berth_dock(get_step(deck, NORTH))
+		var/mob/living/carbon/human/straggler = allocate(/mob/living/carbon/human/consistent, get_step(deck, NORTH))
+		straggler.mind_initialize()
+		release_and_check_zone(berth, "visit [visit]")
+		TEST_ASSERT(home.is_turf_buildable(get_turf(straggler)), "Visit [visit]: a visitor left in the berth was not taken to the concourse")
+		qdel(straggler)
+
+	TEST_ASSERT_EQUAL(count_berth_areas(), berth_areas_before, "Churn left berth areas behind")
+	var/list/new_reservations = (SSmapping.turf_reservations || list()) - reservations_before
+	TEST_ASSERT(!length(new_reservations), "Berth churn reserved [length(new_reservations)] turf block\s")
+
+	// A zone still being wiped is skipped rather than loaded over.
+	var/datum/outpost_berth/leaving = home.allocate_berth(fake_ship(5, 7, NORTH))
+	TEST_ASSERT_NOTNULL(leaving, "No berth for the wipe race")
+	leaving.release()
+	var/wiping = first_zone.state == "wiping"
+	var/datum/outpost_berth/next = home.allocate_berth(fake_ship(5, 7, NORTH))
+	TEST_ASSERT_NOTNULL(next, "No berth while another zone was wiping")
+	if(wiping)
+		TEST_ASSERT(next.zone != first_zone, "A berth was built into a zone that was still being wiped")
+	next.release()
+	wait_for_vacant(first_zone, "wipe race")
+	wait_for_vacant(home.berth_zone(2), "wipe race")
+
+	// The elevator lists the concourse and the claim's four berths.
+	var/obj/machinery/outpost_elevator/panel = LAZYACCESS(home.lobby_panels, 1)
+	TEST_ASSERT_NOTNULL(panel, "The claim has no lobby elevator panel")
+	var/list/panel_data = panel.ui_data(null)
+	var/list/floors = panel_data["floors"]
+	TEST_ASSERT_EQUAL(length(floors), 5, "The elevator lists [length(floors)] floors, not the concourse and four berths")
+
+/datum/unit_test/voidcrew_outpost_berth_churn/proc/count_berth_areas()
+	. = 0
+	for(var/area/voidcrew/outpost_hangar/berth/berth_area in GLOB.areas)
+		if(!QDELETED(berth_area))
+			.++

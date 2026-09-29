@@ -86,6 +86,10 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	GLOB.player_outposts += src
 
 /obj/structure/overmap/dynamic/player_outpost/Destroy()
+	// remove_mapzone() below wipes the whole level, so the zones let go without wiping their own
+	for(var/key in level_zones)
+		var/datum/outpost_zone/zone = level_zones[key]
+		zone.retired = TRUE
 	var/list/retired_registrations = checkpoints
 	checkpoints = list()
 	QDEL_LIST(retired_registrations)
@@ -118,12 +122,13 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	deltimer(area_sweep_timer)
 	area_sweep_timer = null
 	outpost_area = null
-	// Admin deletion must not leak hangar reservations (berths eject occupants
+	// Admin deletion must not leak hangar ground (berths eject occupants
 	// to the lobby, so release them while the mapzone still exists)
 	for(var/datum/outpost_berth/berth as anything in berths)
 		if(berth)
 			berth.release(force = TRUE)
 	berths = null
+	QDEL_LIST_ASSOC_VAL(level_zones)
 	remove_docks()
 	remove_mapzone()
 	return ..()

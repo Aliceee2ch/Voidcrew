@@ -163,6 +163,11 @@
 			port.dwidth -= shift_x
 			port.dheight -= shift_y
 
+/obj/docking_port/stationary
+	/// The ground this berth keeps its rectangle inside, list(low_x, low_y, high_x, high_y) on its
+	/// own z, when the map region it stands in is bigger than the berth (outpost_hangar.dm)
+	var/list/site_rect
+
 /**
  * Pulls a reserve berth's projected rectangle back inside the site that owns it.
  *
@@ -179,6 +184,9 @@
  * been dragged to: a berth already pulled across the gutter would otherwise be "clamped" to the
  * neighbour it just landed in. Same shape as the fit test in position_dock_across_from().
  *
+ * A berth that knows its own ground (site_rect) is kept inside that instead: on a player
+ * outpost's level every berth and the ship bay resolve to the one outpost-wide region.
+ *
  * Returns TRUE if it had to move anything.
  */
 /proc/clamp_reserve_dock_to_site(obj/docking_port/stationary/dock)
@@ -187,14 +195,16 @@
 	var/turf/here = get_turf(dock)
 	if(!here)
 		return FALSE
-	var/datum/site
-	if(dock.reserve_home_z)
-		site = map_region_for_turf(locate(dock.reserve_home_x, dock.reserve_home_y, dock.reserve_home_z))
-	if(isnull(site))
-		site = map_region_for_turf(here)
-	// No region at all - a mapped berth, a roundstart level - means there is nothing to be
-	// outside of, and the berth keeps the behaviour it had before packing.
-	var/list/site_rect = map_region_rect(site, here.z)
+	var/list/site_rect = dock.site_rect
+	if(!site_rect)
+		var/datum/site
+		if(dock.reserve_home_z)
+			site = map_region_for_turf(locate(dock.reserve_home_x, dock.reserve_home_y, dock.reserve_home_z))
+		if(isnull(site))
+			site = map_region_for_turf(here)
+		// No region at all - a mapped berth, a roundstart level - means there is nothing to be
+		// outside of, and the berth keeps the behaviour it had before packing.
+		site_rect = map_region_rect(site, here.z)
 	if(!site_rect)
 		return FALSE
 

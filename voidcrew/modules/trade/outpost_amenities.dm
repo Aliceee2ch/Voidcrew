@@ -223,7 +223,7 @@
 /mob/living/basic/outpost_loiterer/Initialize(mapload)
 	. = ..()
 	// A random person in the outfit, so two dockhands are two different people (outpost_npc_looks.dm)
-	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(set_outpost_npc_look), src, outfit_path, gender, random_outpost_npc_look_number())
+	INVOKE_ASYNC(src, PROC_REF(build_look))
 	// Unkillable, not protected: violence against them is pointless, not punished
 	ADD_TRAIT(src, TRAIT_GODMODE, INNATE_TRAIT)
 	// move_resist only stops pulling; drag-drops (buckling to beds, stuffing
@@ -233,6 +233,10 @@
 	// containment ban needs its own trait too (#131).
 	ADD_TRAIT(src, TRAIT_NO_CONTAINMENT, INNATE_TRAIT)
 	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, INNATE_TRAIT)
+
+/// Dresses the loiterer as a random person in their outfit. Can sleep.
+/mob/living/basic/outpost_loiterer/proc/build_look()
+	set_outpost_npc_look(src, outfit_path, gender, random_outpost_npc_look_number())
 
 /// Cancels any attempt to drag-drop the loiterer onto something (beds, crates,
 /// disposals, ...): they live here now, apparently, and they're staying.
@@ -286,40 +290,113 @@
 		living_pawn.Move(destination_turf, move_dir)
 	return TRUE
 
-// --- Green: the mechanic haunting Halcyon's repair bay ---
+// --- Green: the mechanics keeping Halcyon running ---
 
 /**
- * Hi-vis, hard hat, insulated gloves and a welder she has not put down in six
- * years. Everything here is the compressor job she is permanently mid-way
- * through, no ID, no radio, nothing that says anyone employs her.
+ * Hi-vis, a welding hard hat, insulated gloves and a full tool belt: everything for the
+ * compressor job she is permanently mid-way through. No ID, no radio, nothing that says anyone
+ * employs her. The other outfits are the rest of the crew; each mechanic wears one of them.
+ * Hands stay empty: a mechanic picks up a welder or a wrench only to work (outpost_ambient_work.dm).
  */
 /datum/outfit/outpost_mechanic
 	name = "Outpost mechanic"
 	uniform = /obj/item/clothing/under/rank/engineering/engineer/hazard
-	head = /obj/item/clothing/head/utility/hardhat/orange
+	head = /obj/item/clothing/head/utility/hardhat/welding/orange
 	gloves = /obj/item/clothing/gloves/color/yellow
 	belt = /obj/item/storage/belt/utility/full
 	shoes = /obj/item/clothing/shoes/workboots
-	r_hand = /obj/item/weldingtool
+
+/// Laborer's overalls and a proper welding helmet
+/datum/outfit/outpost_mechanic/overalls
+	name = "Outpost mechanic (overalls)"
+	uniform = /obj/item/clothing/under/misc/overalls
+	head = /obj/item/clothing/head/utility/welding
+	gloves = /obj/item/clothing/gloves/color/black
+	belt = /obj/item/storage/belt/utility
+
+/// A hazard vest over plain engineering blues, goggles pushed up on a yellow hard hat
+/datum/outfit/outpost_mechanic/hivis
+	name = "Outpost mechanic (hi-vis)"
+	uniform = /obj/item/clothing/under/rank/engineering/engineer
+	suit = /obj/item/clothing/suit/hazardvest
+	head = /obj/item/clothing/head/utility/hardhat
+	glasses = /obj/item/clothing/glasses/welding
+
+/// Coveralls over a grey jumpsuit and a beanie. Welding goggles for the hot work.
+/datum/outfit/outpost_mechanic/coveralls
+	name = "Outpost mechanic (coveralls)"
+	uniform = /obj/item/clothing/under/color/grey
+	suit = /obj/item/clothing/suit/apron/overalls
+	head = /obj/item/clothing/head/beanie/orange
+	glasses = /obj/item/clothing/glasses/welding
+	gloves = /obj/item/clothing/gloves/fingerless
+	belt = /obj/item/storage/belt/utility
+
+/// The atmos hand: blue welding hard hat, atmos jumpsuit
+/datum/outfit/outpost_mechanic/atmos
+	name = "Outpost mechanic (atmos)"
+	uniform = /obj/item/clothing/under/rank/engineering/atmospheric_technician
+	head = /obj/item/clothing/head/utility/hardhat/welding/dblue
+	gloves = /obj/item/clothing/gloves/color/black
 
 /mob/living/basic/outpost_loiterer/mechanic
 	name = "outpost mechanic"
 	desc = "Permanently mid-job. Nobody has ever seen the job finished."
-	gender = FEMALE
 	outfit_path = /datum/outfit/outpost_mechanic
+	// An unhurried walk between jobs
+	speed = 4
 	attacked_lines = list(
 		"Oi! I'm covered in welding fuel, you maniac!",
 		"Swing at the walls if you have to, they're rated for it. I'd rather you didn't swing at me.",
 	)
 	ai_controller = /datum/ai_controller/basic_controller/outpost_loiterer/mechanic
+	/// The outfits a mechanic can turn up in, one picked for each
+	var/list/outfit_choices = list(
+		/datum/outfit/outpost_mechanic,
+		/datum/outfit/outpost_mechanic/overalls,
+		/datum/outfit/outpost_mechanic/hivis,
+		/datum/outfit/outpost_mechanic/coveralls,
+		/datum/outfit/outpost_mechanic/atmos,
+	)
+	/// Which person in that outfit (outpost_npc_looks.dm)
+	var/look_number
+	/// "idle", "weld" and "tool" looks of this mechanic, once built
+	var/list/work_looks
 
+/mob/living/basic/outpost_loiterer/mechanic/Initialize(mapload)
+	outfit_path = pick(outfit_choices)
+	gender = pick(MALE, FEMALE)
+	look_number = random_outpost_npc_look_number()
+	. = ..()
+	// People: they keep out of doorways, and they change looks as they pick up tools
+	AddComponent(/datum/component/outpost_ambient_worker, list(
+		/datum/outpost_ambient_work/weld = 3,
+		/datum/outpost_ambient_work/wrench = 2,
+		/datum/outpost_ambient_work/panel = 2,
+		/datum/outpost_ambient_work/pipe = 2,
+	), TRUE, CALLBACK(src, PROC_REF(show_work_look)))
+
+/mob/living/basic/outpost_loiterer/mechanic/build_look()
+	work_looks = get_outpost_worker_looks(outfit_path, gender, look_number)
+	show_work_look(null)
+
+/// Shows the mechanic holding what `look` needs ("weld", "tool"), or empty-handed for null
+/mob/living/basic/outpost_loiterer/mechanic/proc/show_work_look(look)
+	if(QDELETED(src) || !work_looks)
+		return
+	apply_outpost_npc_look(src, work_looks[look || "idle"] || work_looks["idle"])
+
+/// Works while someone is around to see it, and talks now and then
 /datum/ai_controller/basic_controller/outpost_loiterer/mechanic
+	idle_behavior = null
 	planning_subtrees = list(
 		/datum/ai_planning_subtree/random_speech/outpost_mechanic,
+		/datum/ai_planning_subtree/outpost_ambient_work,
 	)
 
 /datum/ai_planning_subtree/random_speech/outpost_mechanic
-	speech_chance = 2
+	// Planning never stops while a mechanic is about, so a low chance keeps the old pace of chatter
+	speech_chance = 0.5
 	speak = list(
 		"Your port thruster sounds wrong. I can hear it from here. Through the hull.",
 		"Barnaby says I can't charge for advice, so: free advice, seal your ship.",
@@ -327,7 +404,7 @@
 		"You'd be amazed what people leave in the repair bay. Mostly blood.",
 		"Green zone's quiet. Too quiet. No, wait. That's the compressor again.",
 	)
-	emote_see = list("wipes her hands on an oily rag.", "taps a pipe thoughtfully.")
+	emote_see = list("wipes their hands on an oily rag.", "taps a pipe thoughtfully.")
 
 // --- Yellow: the dockhand who has seen every crew type come through ---
 

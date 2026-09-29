@@ -20,8 +20,8 @@
  * already mid-job (settle_in()). Their lines are in strings/outpost_workers.json
  * (AMBIENT_STRINGS_WORKERS).
  *
- * The trader outposts' mechanics (/mob/living/basic/outpost_loiterer/mechanic,
- * voidcrew/modules/trade/outpost_amenities.dm) are the engineers already and stay as they are.
+ * Halcyon's mechanics are now the ambient mechanic role (outpost_regulars.dm), reusing the
+ * mechanic outfits from outpost_amenities.dm and this same work loop.
  * /datum/ambient_activity/work runs the same work loop (outpost_ambient_work.dm): the janitor mops,
  * the barback wipes and the dock worker hauls with it.
  *
@@ -947,6 +947,8 @@
 	var/obj/item/reagent_containers/cup/glass/drinkingglass/glass = doer?.held_item
 	if(istype(glass))
 		glass.reagents?.clear_reagents()
+	if(!QDELETED(doer) && !ambient_outpost_has_barback(doer.place))
+		table_ref = null
 	return ..()
 
 /**
@@ -983,11 +985,11 @@
 		return FALSE
 	var/list/lift_spots = list()
 	for(var/turf/alcove as anything in outpost.lobby_alcove_turfs)
-		var/turf/spot = ambient_waiting_spot(doer, alcove, 2, 3, failed_spots)
+		var/turf/spot = ambient_waiting_spot(doer, alcove, 2, 3, failed_spots, loiter = FALSE)
 		if(spot)
 			lift_spots += spot
 	pickup = ambient_nearest_tile(doer, lift_spots)
-	dropoff = ambient_waiting_spot(doer, trader, 3, 4, failed_spots)
+	dropoff = ambient_waiting_spot(doer, trader, 3, 4, failed_spots, loiter = FALSE)
 	if(!pickup || !dropoff)
 		return FALSE
 	trader_ref = WEAKREF(trader)
@@ -1045,15 +1047,11 @@
 // WHO WORKS WHERE
 // =========================================================================
 
-/// A janitor at every trader outpost
+/// A janitor at Quartermain
 /datum/ambient_outpost_role/janitor
 	name = "janitor"
 	npc_type = /mob/living/basic/ambient_npc/outpost/worker/janitor
-	outpost_types = list(
-		/obj/structure/overmap/trader_outpost/general,
-		/obj/structure/overmap/trader_outpost/outfitter,
-		/obj/structure/overmap/trader_outpost/black_market,
-	)
+	outpost_types = list(/obj/structure/overmap/trader_outpost/outfitter)
 	max_count = 1
 	weight = 3
 	gap_low = 1 MINUTES
@@ -1069,25 +1067,22 @@
 	gap_low = 1 MINUTES
 	gap_high = 2 MINUTES
 
-/// A barback at the Chowder Pot and at the Dregs
+/// A barback at the Dregs
 /datum/ambient_outpost_role/barback
 	name = "barback"
 	npc_type = /mob/living/basic/ambient_npc/outpost/worker/barback
-	outpost_types = list(
-		/obj/structure/overmap/trader_outpost/general,
-		/obj/structure/overmap/trader_outpost/black_market,
-	)
+	outpost_types = list(/obj/structure/overmap/trader_outpost/black_market)
 	max_count = 1
 	weight = 3
 	gap_low = 1 MINUTES
 	gap_high = 2 MINUTES
 
-/// Two dock workers at Quartermain
+/// A dock worker at Quartermain
 /datum/ambient_outpost_role/dock_worker
 	name = "dock worker"
 	npc_type = /mob/living/basic/ambient_npc/outpost/worker/dock
 	outpost_types = list(/obj/structure/overmap/trader_outpost/outfitter)
-	max_count = 2
+	max_count = 1
 	weight = 3
 	gap_low = 1 MINUTES
 	gap_high = 3 MINUTES

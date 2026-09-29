@@ -792,6 +792,9 @@
 /mob/living/basic/outpost_prisoner/proc/trouble_target()
 	if(!trouble_can_act())
 		return null
+	// A bounty boss winding up a riot move, running it or reeling from it holds still (outpost_prison_boss_moves.dm)
+	if(boss_move_busy())
+		return null
 	var/mob/living/foe = creature_foe()
 	if(foe)
 		return foe

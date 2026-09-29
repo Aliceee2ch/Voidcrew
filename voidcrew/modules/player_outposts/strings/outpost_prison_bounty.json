@@ -55,6 +55,103 @@
 				"Hey, it's the {place} crew! Tell your captain I said hello.",
 				"The {place} crew! Nice work catching me, honestly."
 			]
+		},
+		"boss_move_charge": {
+			"any": [
+				"Out of my way!",
+				"Move or get moved.",
+				"Here I come!",
+				"You're going down.",
+				"Brace yourself."
+			],
+			"grumpy": [
+				"Should've stayed in the office.",
+				"I'm going through you."
+			],
+			"quiet": [
+				"Stand still.",
+				"This will hurt."
+			]
+		},
+		"boss_move_fire": {
+			"any": [
+				"Let's warm this place up.",
+				"Hope somebody brought water.",
+				"Everybody likes a fire.",
+				"Nice and dry, this bunk."
+			],
+			"grumpy": [
+				"Never liked that bunk anyway.",
+				"Burn, then."
+			],
+			"quiet": [
+				"Watch it go.",
+				"Pretty, isn't it?"
+			]
+		},
+		"boss_move_rig": {
+			"any": [
+				"Stand back from the door.",
+				"This door's coming down.",
+				"Everybody get clear.",
+				"Knock knock."
+			],
+			"grumpy": [
+				"I'm done knocking.",
+				"No door's held me yet."
+			],
+			"quiet": [
+				"Give it a few seconds.",
+				"Nobody touch that."
+			]
+		},
+		"boss_move_slip": {
+			"any": [
+				"You call these cuffs?",
+				"Almost there.",
+				"Should've checked these.",
+				"These are too loose."
+			],
+			"grumpy": [
+				"Cheap cuffs. Figures.",
+				"Nothing holds me for long."
+			],
+			"quiet": [
+				"Just a little more.",
+				"Easy now."
+			]
+		},
+		"boss_move_barricade": {
+			"any": [
+				"Come and get me.",
+				"Try getting past that.",
+				"Nobody comes through here.",
+				"Hold the line!"
+			],
+			"grumpy": [
+				"Stay on your side.",
+				"You want in? Earn it."
+			],
+			"quiet": [
+				"That'll hold.",
+				"Now we wait."
+			]
+		},
+		"boss_move_bribe": {
+			"any": [
+				"Take the rest of the shift off, officer.",
+				"Something for your trouble.",
+				"You didn't see anything.",
+				"Go get yourself a coffee."
+			],
+			"grumpy": [
+				"Take it and walk away.",
+				"Everyone has a price."
+			],
+			"quiet": [
+				"Look the other way.",
+				"A small gift. Go on."
+			]
 		}
 	}
 }

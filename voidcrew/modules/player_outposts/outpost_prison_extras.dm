@@ -102,6 +102,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 	leads_tick(seconds)
 	wildcard_tick(seconds)
 	wing_events_tick(seconds)
+	// The bounty bosses' riot moves (outpost_prison_boss_moves.dm)
+	boss_moves_tick(seconds)
 
 /// The prison is being deleted
 /datum/outpost_prison/proc/extras_destroy()
@@ -114,6 +116,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 	leads_destroy()
 	wildcard_destroy()
 	wing_events_destroy()
+	boss_moves_destroy()
 
 /// The outpost was abandoned, before its prisoners are transferred out
 /datum/outpost_prison/proc/extras_abandon()
@@ -132,6 +135,7 @@ GLOBAL_LIST_INIT(outpost_prisoner_extra_placeholders, list("{staff}", "{place}",
 	mail_prisoner_leaving(prisoner)
 	leads_prisoner_leaving(prisoner)
 	wildcard_prisoner_leaving(prisoner)
+	boss_moves_prisoner_leaving(prisoner)
 
 /// Something went on a serving hatch; TRUE if a package took the event and the usual call-out should not follow
 /datum/outpost_prison/proc/extras_hatch_stocked(obj/structure/table/reinforced/prison_hatch/hatch, list/stocked, mob/user)

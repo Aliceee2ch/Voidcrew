@@ -98,6 +98,15 @@ Some arrivals are criminals that ship crews caught alive for a [bounty](bounty-h
 
 Managers choose which ones the wing takes under **Bounty prisoners** on the warden's console: **All**, **No Most Wanted** or **None**. The warden's log names the next one at least a minute before they beam in, and the console shows their name beside the intake switch once they are the next transfer. See [After the catch](bounty-hunting.md#after-the-catch-prison-wings) for the full numbers.
 
+A caught mini-boss keeps one trick for a riot, used only on staff while your crew is on the outpost, and always with a moment's warning:
+
+- **Juggernaut.** Charges down a line marked on the floor and knocks down the first person in it; if he hits a wall instead, he's dazed for a moment.
+- **Pyromaniac.** Throws a match onto a bunk near you, and it and the tiles beside it burn for a few seconds; an extinguisher puts it out.
+- **Demolitionist.** Once a riot, packs a beeping charge against the door or window being broken, which goes off five seconds later and knocks down anyone beside it.
+- **Ghost.** Once a riot, works free of their cuffs unless you knock them down or drag them, then half your blows miss until one lands.
+- **Heavy.** Flips a mess table over toward you, or shoves a locker into the staff doorway.
+- **Kingpin.** Brings prisoners on the fence into his riots, and once a riot pays off a guard, who sits out 30 seconds; cuffed or bolted in his cell, he can do neither.
+
 ## Kessler Biolabs experiments
 
 Once the wing has prisoners, a researcher from Kessler Biolabs visits now and then, the first time 15 to 25 minutes after the first arrival and then 35 to 50 minutes after each experiment or offer is over. That time only counts while someone from the outpost is home. They only come when intake is open, nobody is rioting or loose, no stranger is in the wing, and the wing is kept well enough; in a filthy or dark wing they look round, complain and leave. The researcher waits in the office for about three minutes. Only managers can take or turn down the offer: click the researcher with an empty hand. Each offer turned down or left to lapse makes the next one pay 10% more, up to 30%.

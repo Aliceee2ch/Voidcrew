@@ -3534,7 +3534,6 @@
 "SN" = (
 /obj/machinery/light,
 /obj/structure/cable,
-/obj/machinery/light/floor,
 /obj/structure/railing/wooden_fence{
 	dir = 2
 	},

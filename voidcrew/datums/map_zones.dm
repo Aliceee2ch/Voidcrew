@@ -641,6 +641,10 @@
 	// The band is normally painted over bare space, but a recycled level's is painted over
 	// whatever the previous occupant left, so do not assume it is dark.
 	cordon_turf.scrub_lighting_for_teardown()
+	// Same raw swap, another casualty: components and detach-on-destroy elements stay bound to
+	// the coordinate instead of being freed - see scrub_datum_state_for_raw_swap() in
+	// voidcrew/edits/turf.dm.
+	cordon_turf.scrub_datum_state_for_raw_swap()
 	// Same raw-swap reason, second casualty: /turf/open/space/Destroy() is what takes a lit space
 	// turf back out of GLOB.starlight, and that never runs here either. The list entry is not
 	// merely stale - BYOND retargets it onto the cordon, set_starlight() then walks it
@@ -922,6 +926,10 @@
 		// transfer_area_lighting() -> update_ambient_bleed() -> disable_ambient_bleed(); this
 		// is belt to that braces, and the only cover on the corner-orphan path.
 		T.scrub_lighting_for_teardown()
+		// Same raw swap, another casualty: components and detach-on-destroy elements stay bound to
+		// the coordinate instead of being freed - see scrub_datum_state_for_raw_swap() in
+		// voidcrew/edits/turf.dm.
+		T.scrub_datum_state_for_raw_swap()
 		// END VOIDCREW EDIT
 		// The same raw swap orphans two more registrations that Destroy() would have cleared.
 		//

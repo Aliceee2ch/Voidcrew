@@ -1007,10 +1007,12 @@
 /datum/unit_test/voidcrew_outpost_prison_vendor/proc/buy(obj/machinery/vending/sustenance/outpost_prison/vendor, mob/living/carbon/human/buyer, datum/data/vending_product/record)
 	buyer.drop_all_held_items()
 	world.push_usr(buyer, CALLBACK(vendor, TYPE_PROC_REF(/obj/machinery/vending, vend), list("ref" = REF(record))))
+	// is_holding_item_of_type() answers FALSE, not null, when nothing was handed over
 	var/obj/item/bought = buyer.is_holding_item_of_type(record.product_path)
-	. = bought?.type
-	if(bought)
-		qdel(bought)
+	if(!bought)
+		return null
+	. = bought.type
+	qdel(bought)
 
 /datum/unit_test/voidcrew_outpost_prison_vendor/Run()
 	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("vendorowner")

@@ -669,6 +669,9 @@ GLOBAL_LIST_INIT(outpost_admin_prison_crew_modes, list("auto" = null, "home" = T
 		return "loose"
 	if(beaten_left > 0)
 		return "beaten"
+	// is_rioting() covers a breakout too; the panel tells them apart, as admin_activity_text() does
+	if(trouble == PRISONER_TROUBLE_BREAKOUT)
+		return "breaking out"
 	if(is_rioting())
 		return "rioting"
 	if(trouble == PRISONER_TROUBLE_FIGHT)

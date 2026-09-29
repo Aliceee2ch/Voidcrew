@@ -40,18 +40,18 @@ const WantedCard = (props: { entry: Entry; mugshot?: string }) => {
   return (
     <Section
       title={
-        <Box inline color={color}>
-          {entry.name}
-          {entry.alias ? ` "${entry.alias}"` : ''}
-        </Box>
-      }
-      buttons={
-        <Box inline bold color="gold">
-          {formatMoney(entry.reward)} cr
-          {vouchers > 0
-            ? ` + ${vouchers} voucher${vouchers > 1 ? 's' : ''}`
-            : ''}
-        </Box>
+        <Stack>
+          <Stack.Item grow minWidth={0} color={color}>
+            {entry.name}
+            {entry.alias ? ` "${entry.alias}"` : ''}
+          </Stack.Item>
+          <Stack.Item shrink={0} nowrap bold color="gold">
+            {formatMoney(entry.reward)} cr
+            {vouchers > 0
+              ? ` + ${vouchers} voucher${vouchers > 1 ? 's' : ''}`
+              : ''}
+          </Stack.Item>
+        </Stack>
       }
     >
       <Stack>

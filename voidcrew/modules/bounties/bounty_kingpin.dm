@@ -31,8 +31,8 @@
  *   unclaimed (run out, withdrawn), it leaves him in the lounge, alive, uncuffed and in business,
  *   when he is alive within his goons' leash of the sofa; otherwise he is removed as any criminal is,
  *   and gone.
- * - Talking: a radial on him. "We're here for you" only shows once his posting
- *   is up, open and lists him for that crew's ship; it gets his confront line and starts the
+ * - Talking: a radial on him. "We're here for you" and "Walk away" only show once his posting
+ *   is up, open and lists him for that crew's ship; the first gets his confront line and starts the
  *   shootout. Any attack on him or a goon starts it too. A warrant shown to him, or a reach for his
  *   wrists, only gets the confront line.
  * - The shootout (/datum/bounty_kingpin_crew): a 0.6 s telegraph where nobody fires ("the goons
@@ -460,17 +460,20 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		return FALSE
 	return posting.board_visible_to(get_crew_ship(user))
 
-/// The talk radial for `user`. "I'll take it" only while he has offered their crew his job. Sleeps.
+/// The talk radial for `user`. "We're here for you" and "Walk away" only while his posting is open to them; "I'll take it" only while he has offered their crew his job. Sleeps.
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_open_talk(mob/living/user)
 	if(!kingpin_talk_check(user))
 		return
 	var/list/options = list()
-	if(kingpin_confrontable(user))
+	var/confrontable = kingpin_confrontable(user)
+	if(confrontable)
 		options[BOUNTY_KINGPIN_TALK_HERE] = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_crime")
 	options[BOUNTY_KINGPIN_TALK_WORK] = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_talk")
 	if(kingpin_crew?.job_offered_to(get_crew_ship(user)))
 		options[BOUNTY_KINGPIN_TALK_TAKE_JOB] = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_yes")
-	options[BOUNTY_KINGPIN_TALK_WALK] = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_home")
+	// Walking away only means something while there's a price on him
+	if(confrontable)
+		options[BOUNTY_KINGPIN_TALK_WALK] = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_home")
 	var/choice = show_radial_menu(user, src, options, custom_check = CALLBACK(src, PROC_REF(kingpin_talk_check), user), tooltips = TRUE)
 	if(!choice || !kingpin_talk_check(user))
 		return

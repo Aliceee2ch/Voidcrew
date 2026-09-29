@@ -77,6 +77,7 @@
 
 	// Register for ship destruction signal
 	RegisterSignal(target_ship, COMSIG_SHIP_DESTROYED, PROC_REF(on_ship_destroyed))
+	npc_metric_bounty_posted(src)
 
 /datum/pirate_bounty/Destroy()
 	// Remove from global tracking first (prevents memory leak)
@@ -176,6 +177,7 @@
 		return FALSE
 
 	claiming_ships += WEAKREF(ship)
+	npc_metric_bounty_accepted(src, ship)
 	return TRUE
 
 /**
@@ -367,6 +369,7 @@
 
 	if(winner)
 		winner.ship_notify("BOUNTY COMPLETE: [name] - [reward_text] awarded!", "MISSION CONTROL", SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 50)
+	npc_metric_bounty_paid(src, winner, winner ? actual_reward : 0, item_rewards)
 
 	// Notify other claimants of failure
 	for(var/datum/weakref/ref in claiming_ships)
@@ -465,6 +468,7 @@
 	failed = TRUE
 	failure_reason = reason
 	clear_tracking_waypoints()
+	npc_metric_bounty_failed(src, reason)
 
 	// Notify all claimants
 	for(var/datum/weakref/ref in claiming_ships)

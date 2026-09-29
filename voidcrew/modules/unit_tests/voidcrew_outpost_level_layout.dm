@@ -107,7 +107,10 @@
 
 	// A ship's rooms are not NOTELEPORT, but a docked hull in a berth is still out of reach of a
 	// crystal thrown at the habitat's edge, and nobody aboard it can blink out into the habitat.
-	var/area/shuttle/voidcrew/hull_room = allocate(/area/shuttle/voidcrew)
+	// Not allocate(): `new` with a turf hands back an existing area of the type (a deleted one,
+	// here) and moves that turf into it with no bookkeeping. Made without a loc, it is fresh.
+	var/area/shuttle/voidcrew/hull_room = new
+	allocated += hull_room
 	var/turf/deck_one = locate(far_berth.low_x + 5, far_berth.low_y + 5, z)
 	var/turf/deck_two = locate(far_berth.low_x + 6, far_berth.low_y + 5, z)
 	var/list/area/original_areas = list(deck_one.loc, deck_two.loc)

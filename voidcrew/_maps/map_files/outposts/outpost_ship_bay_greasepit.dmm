@@ -81,11 +81,6 @@
 	icon_state = "combined_example"
 	},
 /area/voidcrew/outpost_hangar)
-"ai" = (
-/obj/effect/landmark/outpost_elevator_alcove,
-/obj/machinery/outpost_elevator/directional/south,
-/turf/open/indestructible/light,
-/area/voidcrew/outpost_hangar)
 "aj" = (
 /obj/structure/musician/piano{
 	name = "cantina piano";
@@ -155,11 +150,6 @@
 "aq" = (
 /obj/machinery/light/small/dim/directional/south,
 /turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"ar" = (
-/obj/effect/landmark/outpost_elevator_alcove,
-/obj/machinery/digital_clock/directional/south,
-/turf/open/indestructible/light,
 /area/voidcrew/outpost_hangar)
 "as" = (
 /obj/effect/turf_decal{
@@ -255,17 +245,6 @@
 /obj/machinery/light/cold/directional/south,
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"aD" = (
-/obj/structure/showcase{
-	icon = 'icons/mob/silicon/robots.dmi';
-	icon_state = "service_m";
-	name = "bartender droid";
-	desc = "A serving droid in a pressed jacket. It is powered down until someone fixes its voice box.";
-	dir = 1;
-	density = 0
-	},
-/turf/open/indestructible/hotelwood,
-/area/voidcrew/outpost_hangar)
 "aE" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/structure/table/wood,
@@ -322,11 +301,6 @@
 /turf/open/indestructible/plating{
 	color = "#978B7F"
 	},
-/area/voidcrew/outpost_hangar)
-"aI" = (
-/obj/effect/landmark/outpost_elevator_alcove,
-/obj/structure/sign/poster/official/random/directional/south,
-/turf/open/indestructible/light,
 /area/voidcrew/outpost_hangar)
 "aJ" = (
 /obj/machinery/light/small/directional/south,
@@ -478,19 +452,23 @@
 /obj/machinery/light/small/directional/south,
 /turf/open/indestructible/hoteltile,
 /area/voidcrew/outpost_hangar)
+"bd" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor3";
+	color = "#3F8C8C";
+	alpha = 150
+	},
+/turf/open/indestructible/plating,
+/area/voidcrew/outpost_hangar)
 "bm" = (
 /obj/structure/sign/poster/contraband/random/directional/west,
 /turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"bp" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#F4F1EC"
-	},
 /area/voidcrew/outpost_hangar)
 "bw" = (
 /obj/effect/turf_decal/tile/brown/fourcorners{
@@ -533,20 +511,6 @@
 	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
-"bP" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "bT" = (
 /turf/open/indestructible/plating{
 	icon_state = "r_plate-1"
@@ -582,12 +546,6 @@
 "ck" = (
 /obj/machinery/light/cold/directional/east,
 /turf/open/indestructible/dark/smooth_large,
-/area/voidcrew/outpost_hangar)
-"cp" = (
-/turf/open/indestructible/plating{
-	icon_state = "elevatorshaft";
-	color = "#F4F1EC"
-	},
 /area/voidcrew/outpost_hangar)
 "cq" = (
 /obj/effect/turf_decal{
@@ -637,14 +595,20 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"cJ" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2;
-	alpha = 70
+"cz" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor1";
+	color = "#2A2622";
+	alpha = 235
 	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
+/obj/structure/fluff/big_chain{
+	deconstructible = 0;
+	name = "hoist chain";
+	desc = "A chain hoist hanging from the shop gantry."
 	},
+/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "cK" = (
 /obj/effect/turf_decal/siding/wood{
@@ -675,17 +639,6 @@
 /obj/structure/closet/crate/bin,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"cQ" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8
-	},
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
 "cT" = (
 /obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
 	dir = 1
@@ -709,14 +662,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#C3B8AC"
-	},
-/area/voidcrew/outpost_hangar)
-"de" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
 "dg" = (
@@ -771,15 +716,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
-"dD" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "dE" = (
@@ -853,40 +789,12 @@
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"dM" = (
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
-"dS" = (
-/obj/structure/showcase{
-	icon = 'icons/mob/silicon/robots.dmi';
-	icon_state = "robot_old";
-	name = "powered-down droid";
-	desc = "A labour droid waiting its turn in the cradle. Its power cell has been pulled.";
-	dir = 8;
-	density = 0
-	},
-/turf/open/indestructible/dark/smooth_large,
-/area/voidcrew/outpost_hangar)
 "dT" = (
 /obj/structure/table/wood,
 /obj/item/reagent_containers/cup/glass/bottle/whiskey{
 	pixel_y = 8
 	},
 /turf/open/indestructible/hotelwood,
-/area/voidcrew/outpost_hangar)
-"dV" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
-	},
-/obj/structure/girder,
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "ea" = (
 /obj/effect/turf_decal/stripes/line{
@@ -1022,12 +930,6 @@
 /obj/structure/sign/warning/vacuum/external/directional/north,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"fJ" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "fK" = (
 /obj/effect/turf_decal/tile/brown/fourcorners{
 	dir = 2
@@ -1155,15 +1057,6 @@
 	},
 /turf/open/indestructible/dark,
 /area/voidcrew/outpost_hangar)
-"gG" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust"
-	},
-/area/voidcrew/outpost_hangar)
 "gJ" = (
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
@@ -1184,19 +1077,6 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"gO" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"gP" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "gR" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -1207,27 +1087,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
-	},
-/area/voidcrew/outpost_hangar)
-"hb" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"hd" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"he" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "hi" = (
@@ -1303,15 +1162,6 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
-"hw" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "hx" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal{
@@ -1321,18 +1171,6 @@
 	},
 /obj/structure/sign/warning/no_smoking/directional/east,
 /turf/open/indestructible/hoteltile,
-/area/voidcrew/outpost_hangar)
-"hA" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4;
-	alpha = 55
-	},
-/turf/open/indestructible/light{
-	icon_state = "light_off";
-	light_on = 0;
-	light_range = 0;
-	name = "dead landing light"
-	},
 /area/voidcrew/outpost_hangar)
 "hC" = (
 /obj/effect/decal/cleanable/dirt,
@@ -1407,20 +1245,6 @@
 	},
 /turf/open/indestructible/dark,
 /area/voidcrew/outpost_hangar)
-"hO" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 4
-	},
-/obj/effect/decal/cleanable/crayon{
-	icon_state = "i";
-	paint_colour = "#E8C547";
-	name = "floor stencil";
-	desc = "Yellow floor paint, scuffed by a lot of boots."
-	},
-/turf/open/indestructible/plating{
-	color = "#C3B8AC"
-	},
-/area/voidcrew/outpost_hangar)
 "hQ" = (
 /obj/effect/turf_decal/sand/plating{
 	alpha = 45
@@ -1467,35 +1291,6 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
-"io" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
-"iq" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 1
-	},
-/obj/effect/turf_decal/arrows{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "iu" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -1535,14 +1330,6 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
-"iO" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust"
-	},
-/area/voidcrew/outpost_hangar)
 "iP" = (
 /turf/closed/indestructible{
 	name = "hangar door";
@@ -1564,27 +1351,9 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"jk" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2;
-	alpha = 55
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
 "jl" = (
 /turf/open/indestructible/plating{
 	icon_state = "foam_plating"
-	},
-/area/voidcrew/outpost_hangar)
-"jn" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	icon_state = "elevatorshaft";
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "jr" = (
@@ -1593,18 +1362,13 @@
 	},
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"jv" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
+"jt" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
 	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/machinery/outpost_elevator/directional/south,
+/turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "jz" = (
 /obj/effect/turf_decal/sand/plating{
@@ -1700,19 +1464,6 @@
 /obj/machinery/status_display/outpost_sign/directional/west,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"ki" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "kl" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/effects.dmi';
@@ -1729,15 +1480,6 @@
 	icon = 'icons/obj/pipes_n_cables/layer_cable.dmi';
 	icon_state = "l2-2";
 	color = "#D8B23A"
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"kp" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8;
-	alpha = 70
 	},
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
@@ -1766,15 +1508,6 @@
 /obj/machinery/door/airlock/maintenance/glass,
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"kB" = (
-/obj/effect/turf_decal/arrows{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "kD" = (
 /obj/effect/turf_decal/tile/brown/fourcorners{
 	dir = 2
@@ -1782,7 +1515,7 @@
 /obj/structure/noticeboard/directional/west,
 /obj/item/paper{
 	name = "bay rules";
-	default_raw_text = "<b>BAY RULES</b><br>1. No hot work within three metres of the fuel drums.<br>2. Hulls stay inside the yellow box.<br>3. Do not park on the landing lights.<br>4. If you spill it, you mop it. The mop is in the utility room.<br>5. Tools go back on the rack."
+	default_raw_text = "<b>BAY RULES</b><br>1. No hot work within three metres of the fuel drums.<br>2. Nobody on the pad while a hull comes in.<br>3. Leave the droids alone. They have work to do.<br>4. If you spill it, you mop it. The mop is in the utility room.<br>5. Tools go back on the rack."
 	},
 /obj/item/paper{
 	name = "parts list";
@@ -1848,47 +1581,10 @@
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"kX" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor3";
-	color = "#3F8C8C";
-	alpha = 150
-	},
-/turf/open/indestructible/plating{
-	icon_state = "elevatorshaft";
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
 "la" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"le" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor3";
-	color = "#3F8C8C";
-	alpha = 150
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
@@ -1926,26 +1622,16 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
-"lF" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 55
+"lE" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor5";
+	color = "#2A2622";
+	alpha = 140
 	},
 /turf/open/indestructible/plating{
-	icon_state = "plating_rust";
 	color = "#E6DFD7"
 	},
-/area/voidcrew/outpost_hangar)
-"lG" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/effects.dmi';
-	icon_state = "fuel_pool";
-	alpha = 110
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "lJ" = (
 /obj/machinery/light/directional/north,
@@ -1968,6 +1654,20 @@
 	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
+"lT" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged4";
+	alpha = 150
+	},
+/obj/effect/decal/cleanable/ash,
+/obj/structure/outpost_yard_droid/welder{
+	dir = 8
+	},
+/turf/open/indestructible/plating{
+	color = "#80746A"
+	},
+/area/voidcrew/outpost_hangar)
 "mb" = (
 /obj/structure/fluff/oldturret{
 	deconstructible = 0;
@@ -1987,14 +1687,6 @@
 	dir = 2
 	},
 /turf/open/indestructible/dark/smooth_large,
-/area/voidcrew/outpost_hangar)
-"mk" = (
-/obj/effect/turf_decal/arrows{
-	dir = 8
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
 /area/voidcrew/outpost_hangar)
 "ml" = (
 /obj/structure/chair/sofa/bench/tram/left{
@@ -2026,15 +1718,6 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
-"mr" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4;
-	alpha = 55
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
 "mC" = (
 /obj/effect/turf_decal/weather/dirt{
 	dir = 1
@@ -2057,13 +1740,6 @@
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
 	},
-/area/voidcrew/outpost_hangar)
-"mI" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 55
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "mK" = (
 /obj/effect/turf_decal{
@@ -2099,20 +1775,6 @@
 	},
 /turf/open/indestructible/hotelwood,
 /area/voidcrew/outpost_hangar)
-"mS" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4;
-	alpha = 70
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/effects.dmi';
-	icon_state = "fuel_pool";
-	alpha = 200
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "mV" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -2142,16 +1804,6 @@
 /obj/machinery/light/cold/directional/west,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"nq" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 70
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "nr" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -2173,21 +1825,6 @@
 	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
-"ny" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "gibbl2";
-	dir = 4;
-	color = "#2A2622";
-	alpha = 220
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
 "nB" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -2200,10 +1837,6 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"nC" = (
-/obj/effect/landmark/outpost_elevator_alcove,
-/turf/open/indestructible/light,
 /area/voidcrew/outpost_hangar)
 "nG" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -2235,22 +1868,6 @@
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"nS" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
-"nV" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust"
-	},
-/area/voidcrew/outpost_hangar)
 "nW" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -2260,14 +1877,6 @@
 /turf/open/indestructible/plating{
 	icon_state = "plating_rust";
 	color = "#D6CDC3"
-	},
-/area/voidcrew/outpost_hangar)
-"nY" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
 "of" = (
@@ -2288,15 +1897,6 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"oo" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "op" = (
 /obj/effect/turf_decal/weather/dirt{
 	dir = 1
@@ -2306,17 +1906,6 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"oq" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 4
-	},
-/obj/effect/turf_decal/arrows{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
 /area/voidcrew/outpost_hangar)
 "or" = (
 /obj/effect/decal/cleanable/dirt,
@@ -2358,15 +1947,6 @@
 	},
 /obj/structure/barrel/flaming,
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"oG" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#E6DFD7"
-	},
 /area/voidcrew/outpost_hangar)
 "oN" = (
 /obj/effect/turf_decal{
@@ -2435,17 +2015,6 @@
 	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
-"pm" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
 "pw" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
@@ -2480,18 +2049,6 @@
 	},
 /turf/open/indestructible/dark,
 /area/voidcrew/outpost_hangar)
-"qd" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 55
-	},
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
 "qe" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/effects.dmi';
@@ -2508,6 +2065,17 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
+	},
+/area/voidcrew/outpost_hangar)
+"qm" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "i";
+	paint_colour = "#E8C547";
+	name = "floor stencil";
+	desc = "Yellow floor paint, scuffed by a lot of boots."
+	},
+/turf/open/indestructible/plating{
+	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
 "qn" = (
@@ -2653,15 +2221,6 @@
 	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
-"qZ" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
 "rd" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
@@ -2684,6 +2243,16 @@
 /turf/open/indestructible/plating{
 	color = "#E6DFD7"
 	},
+/area/voidcrew/outpost_hangar)
+"rk" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "splatter1";
+	dir = 2;
+	color = "#2A2622";
+	alpha = 220
+	},
+/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "rn" = (
 /obj/structure/chair/wood{
@@ -2790,19 +2359,6 @@
 	icon_state = "combined_example"
 	},
 /area/voidcrew/outpost_hangar)
-"sk" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "splatter1";
-	dir = 2;
-	color = "#2A2622";
-	alpha = 220
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "sn" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -2830,26 +2386,6 @@
 	item_chair = null
 	},
 /turf/open/indestructible/hotelwood,
-/area/voidcrew/outpost_hangar)
-"su" = (
-/obj/effect/turf_decal/sand/plating{
-	alpha = 100
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	color = "#C3B8AC"
-	},
-/area/voidcrew/outpost_hangar)
-"sv" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
 /area/voidcrew/outpost_hangar)
 "sw" = (
 /obj/effect/turf_decal/stripes/line{
@@ -2916,14 +2452,6 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"sS" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "sY" = (
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
@@ -2933,19 +2461,6 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/plating{
 	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
-"th" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "ti" = (
@@ -3019,32 +2534,11 @@
 	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
-"tx" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2;
-	alpha = 55
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "tz" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
 	icon_state = "damaged5";
 	alpha = 120
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
-"tA" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor5";
-	color = "#2A2622";
-	alpha = 140
 	},
 /turf/open/indestructible/plating{
 	color = "#E6DFD7"
@@ -3162,15 +2656,6 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"uL" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "uP" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -3208,6 +2693,15 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
+"ve" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/structure/outpost_yard_droid/loader,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
 "vf" = (
 /obj/effect/turf_decal/sand/plating{
 	alpha = 75
@@ -3225,31 +2719,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
-	},
-/area/voidcrew/outpost_hangar)
-"vi" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 140
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"vj" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor3";
-	color = "#2A2622";
-	alpha = 190
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "vr" = (
@@ -3292,17 +2761,6 @@
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
 	},
-/area/voidcrew/outpost_hangar)
-"vH" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 200
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "vJ" = (
 /obj/effect/turf_decal/stripes/line{
@@ -3364,14 +2822,6 @@
 	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
-"wa" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 6
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "wd" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/effects.dmi';
@@ -3379,6 +2829,10 @@
 	alpha = 110
 	},
 /turf/open/indestructible/plating,
+/area/voidcrew/outpost_hangar)
+"wh" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "wn" = (
 /obj/effect/decal/cleanable/dirt,
@@ -3423,10 +2877,6 @@
 	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
-"wy" = (
-/obj/structure/barrel,
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "wA" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -3453,6 +2903,19 @@
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
 	},
+/area/voidcrew/outpost_hangar)
+"wX" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 140
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/effects.dmi';
+	icon_state = "fuel_pool";
+	alpha = 200
+	},
+/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "wZ" = (
 /obj/effect/turf_decal{
@@ -3584,6 +3047,18 @@
 /obj/machinery/status_display/outpost_sign/directional/north,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
+"xW" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "gibbl5";
+	dir = 1;
+	color = "#2A2622";
+	alpha = 170
+	},
+/turf/open/indestructible/plating{
+	color = "#F4F1EC"
+	},
+/area/voidcrew/outpost_hangar)
 "xZ" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -3612,15 +3087,6 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"yf" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "yg" = (
 /obj/machinery/barsign/all_access/directional/south,
 /turf/open/indestructible/dark/textured,
@@ -3634,16 +3100,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
-	},
-/area/voidcrew/outpost_hangar)
-"yk" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "yl" = (
@@ -3664,6 +3120,17 @@
 /obj/effect/turf_decal/bot,
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
+"yv" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor3";
+	color = "#2A2622";
+	alpha = 190
+	},
+/turf/open/indestructible/plating{
+	color = "#F4F1EC"
+	},
+/area/voidcrew/outpost_hangar)
 "yy" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -3673,21 +3140,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"yB" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged5";
-	alpha = 120
-	},
-/obj/effect/decal/cleanable/glass{
-	dir = 4
-	},
-/obj/structure/sign/warning/hot_temp/directional/east,
-/turf/open/indestructible/plating{
-	color = "#AEA296"
 	},
 /area/voidcrew/outpost_hangar)
 "yF" = (
@@ -3747,21 +3199,6 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"zc" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "splatter3";
-	dir = 8;
-	color = "#2A2622";
-	alpha = 220
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
 "zh" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -3775,22 +3212,6 @@
 "zi" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"zo" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/structure/showcase{
-	icon = 'icons/mob/silicon/robots.dmi';
-	icon_state = "engineer";
-	name = "loader droid";
-	desc = "A cargo loader droid with a seized hip joint. It has not moved in weeks.";
-	dir = 2;
-	density = 0
-	},
-/turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "zq" = (
 /obj/structure/closet/crate{
@@ -3809,32 +3230,12 @@
 /obj/machinery/airalarm/directional/east,
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"zG" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
 "zH" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/effects.dmi';
 	icon_state = "fuel_pool";
 	alpha = 110
 	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"zL" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 4
-	},
-/obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
 	},
@@ -3880,16 +3281,11 @@
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"zW" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
+"Ad" = (
+/obj/structure/outpost_yard_droid/labour{
+	dir = 4
 	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating,
+/turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "Ag" = (
 /obj/effect/turf_decal{
@@ -3920,23 +3316,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"Ap" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2;
-	alpha = 70
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "tracks";
-	dir = 1;
-	color = "#2A2622";
-	alpha = 104
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
 "Aq" = (
@@ -4042,14 +3421,6 @@
 	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
-"Be" = (
-/obj/effect/turf_decal/arrows{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "Bp" = (
 /obj/effect/turf_decal/tile/brown/fourcorners{
 	dir = 2
@@ -4081,29 +3452,11 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"By" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#C3B8AC"
-	},
-/area/voidcrew/outpost_hangar)
 "BF" = (
 /obj/structure/broken_flooring/corner{
 	dir = 8
 	},
 /turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"BH" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	icon_state = "foam_plating"
-	},
 /area/voidcrew/outpost_hangar)
 "BI" = (
 /obj/structure/sign/warning/doors/directional/north,
@@ -4117,14 +3470,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#AEA296"
-	},
-/area/voidcrew/outpost_hangar)
-"BL" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "BR" = (
@@ -4185,17 +3530,6 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"Cd" = (
-/obj/structure/showcase{
-	icon = 'icons/mob/silicon/robots.dmi';
-	icon_state = "robot_old";
-	name = "powered-down droid";
-	desc = "A labour droid switched off against the wall, waiting for a new power cell.";
-	dir = 4;
-	density = 0
-	},
-/turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
 "Cf" = (
 /obj/machinery/door/airlock/outpost/glass,
 /turf/open/indestructible/dark,
@@ -4214,6 +3548,18 @@
 	bottom_line = "BAY"
 	},
 /turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
+"Cs" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "splatter3";
+	dir = 8;
+	color = "#2A2622";
+	alpha = 220
+	},
+/turf/open/indestructible/plating{
+	color = "#E6DFD7"
+	},
 /area/voidcrew/outpost_hangar)
 "Cu" = (
 /obj/effect/decal/cleanable/dirt,
@@ -4273,29 +3619,6 @@
 "CQ" = (
 /obj/structure/barrel/flaming,
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"CV" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#C3B8AC"
-	},
-/area/voidcrew/outpost_hangar)
-"CX" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2;
-	alpha = 55
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor5";
-	color = "#2A2622";
-	alpha = 190
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
 /area/voidcrew/outpost_hangar)
 "Dh" = (
 /obj/effect/decal/cleanable/dirt,
@@ -4420,13 +3743,6 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"DR" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 70
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "DV" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/plating{
@@ -4482,12 +3798,6 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/plating{
 	color = "#C3B8AC"
-	},
-/area/voidcrew/outpost_hangar)
-"EH" = (
-/turf/open/indestructible/plating{
-	icon_state = "elevatorshaft";
-	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
 "EI" = (
@@ -4567,22 +3877,6 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"Fa" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 140
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/effects.dmi';
-	icon_state = "fuel_pool";
-	alpha = 200
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "Fc" = (
 /obj/structure/fluff/big_chain{
 	deconstructible = 0;
@@ -4655,6 +3949,12 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
+"Fw" = (
+/obj/structure/outpost_yard_droid/bartender{
+	dir = 1
+	},
+/turf/open/indestructible/hotelwood,
+/area/voidcrew/outpost_hangar)
 "Fy" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -4682,14 +3982,6 @@
 "FK" = (
 /obj/structure/extinguisher_cabinet/directional/west,
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"FP" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 9
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
 /area/voidcrew/outpost_hangar)
 "Gb" = (
 /obj/effect/turf_decal{
@@ -4727,24 +4019,6 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"Gv" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"Gw" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 55
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "Gx" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -4776,23 +4050,6 @@
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
 	},
-/area/voidcrew/outpost_hangar)
-"GG" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"GK" = (
-/obj/structure/closet/crate/engineering/electrical{
-	anchored = 1;
-	welded = 1;
-	can_weld_shut = 0
-	},
-/obj/effect/turf_decal/bot,
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "GL" = (
 /turf/open/indestructible{
@@ -4862,6 +4119,14 @@
 	icon_state = "recharge_floor"
 	},
 /area/voidcrew/outpost_hangar)
+"GW" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/structure/sign/poster/official/random/directional/south,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
 "GY" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -4884,15 +4149,6 @@
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"Ha" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1;
-	alpha = 55
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
 "Hd" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -4913,12 +4169,6 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
-"Hq" = (
-/obj/effect/turf_decal/arrows{
-	dir = 2
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "Hr" = (
 /obj/item/cigbutt{
 	pixel_x = -5;
@@ -4926,17 +4176,17 @@
 	},
 /turf/open/indestructible/hoteltile,
 /area/voidcrew/outpost_hangar)
+"Hv" = (
+/obj/structure/outpost_yard_droid/cleaner,
+/turf/open/indestructible{
+	name = "grated catwalk";
+	icon = 'icons/turf/floors/catwalk_plating.dmi';
+	icon_state = "combined_example"
+	},
+/area/voidcrew/outpost_hangar)
 "Hz" = (
 /obj/machinery/door/airlock/public/glass,
 /turf/open/indestructible/hotelwood,
-/area/voidcrew/outpost_hangar)
-"HC" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating{
-	icon_state = "elevatorshaft"
-	},
 /area/voidcrew/outpost_hangar)
 "HD" = (
 /obj/structure/chair/wood{
@@ -5094,13 +4344,6 @@
 /obj/machinery/airalarm/directional/west,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"Iu" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "Ix" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -5121,12 +4364,6 @@
 /obj/machinery/door/airlock/wood/glass,
 /turf/open/indestructible/hotelwood,
 /area/voidcrew/outpost_hangar)
-"IB" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/plating{
-	icon_state = "elevatorshaft"
-	},
-/area/voidcrew/outpost_hangar)
 "IG" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
@@ -5146,6 +4383,18 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
+"IU" = (
+/obj/machinery/status_display/outpost_sign/directional/west{
+	top_line = "SAFE";
+	bottom_line = "0 DAYS"
+	},
+/obj/structure/closet/crate/engineering/electrical{
+	anchored = 1;
+	welded = 1;
+	can_weld_shut = 0
+	},
+/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "IW" = (
 /obj/effect/turf_decal/siding/wood{
@@ -5235,24 +4484,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#C3B8AC"
-	},
-/area/voidcrew/outpost_hangar)
-"JI" = (
-/obj/effect/turf_decal/arrows{
-	dir = 8
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"JN" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "Kb" = (
@@ -5365,17 +4596,6 @@
 	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
-"KW" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
 "KX" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
@@ -5441,13 +4661,6 @@
 "Lu" = (
 /obj/structure/fence{
 	dir = 4
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"Lv" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2;
-	alpha = 70
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
@@ -5551,41 +4764,10 @@
 /obj/structure/closet/crate/bin,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"LZ" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8;
-	alpha = 55
-	},
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
 "Mf" = (
 /obj/machinery/light/warm/directional/west,
 /obj/structure/barrel,
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"Mg" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/light{
-	name = "landing light";
-	icon_state = "light_on_flicker-3";
-	light_color = "#FFB050";
-	light_range = 3
-	},
-/area/voidcrew/outpost_hangar)
-"Mk" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
 /area/voidcrew/outpost_hangar)
 "Ml" = (
 /obj/effect/turf_decal{
@@ -5596,6 +4778,17 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
+	},
+/area/voidcrew/outpost_hangar)
+"Mo" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor2";
+	color = "#2A2622";
+	alpha = 190
+	},
+/turf/open/indestructible/plating{
+	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
 "Mp" = (
@@ -5696,21 +4889,6 @@
 	color = "#E7C9A6"
 	},
 /area/voidcrew/outpost_hangar)
-"MJ" = (
-/obj/structure/showcase{
-	icon = 'icons/mob/silicon/robots.dmi';
-	icon_state = "janitor";
-	name = "cleaning droid";
-	desc = "A floor-cleaning droid parked by the mop. It gave up on the oil.";
-	dir = 2;
-	density = 0
-	},
-/turf/open/indestructible{
-	name = "grated catwalk";
-	icon = 'icons/turf/floors/catwalk_plating.dmi';
-	icon_state = "combined_example"
-	},
-/area/voidcrew/outpost_hangar)
 "MP" = (
 /obj/effect/turf_decal/delivery/white,
 /turf/open/indestructible/dark,
@@ -5734,19 +4912,6 @@
 	bottom_line = "OPEN"
 	},
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"MW" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
 /area/voidcrew/outpost_hangar)
 "Nd" = (
 /obj/effect/turf_decal{
@@ -5796,14 +4961,6 @@
 	pixel_y = -1
 	},
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"NH" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#D6CDC3"
-	},
 /area/voidcrew/outpost_hangar)
 "NU" = (
 /obj/effect/turf_decal/weather/dirt{
@@ -5891,18 +5048,9 @@
 	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
-"Os" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 140
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#D6CDC3"
-	},
+"Ow" = (
+/obj/effect/turf_decal/bot,
+/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "OB" = (
 /obj/effect/decal/cleanable/dirt,
@@ -6029,14 +5177,6 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"Pi" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust"
-	},
-/area/voidcrew/outpost_hangar)
 "Pn" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -6068,13 +5208,6 @@
 /turf/open/indestructible/plating{
 	color = "#C3B8AC"
 	},
-/area/voidcrew/outpost_hangar)
-"Pq" = (
-/obj/machinery/status_display/outpost_sign/directional/west{
-	top_line = "SAFE";
-	bottom_line = "0 DAYS"
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "Ps" = (
 /obj/effect/turf_decal{
@@ -6164,20 +5297,8 @@
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"Qa" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 2;
-	alpha = 70
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
-"Qb" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/structure/fence/door{
-	dir = 2
-	},
+"PW" = (
+/obj/structure/girder,
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "Qc" = (
@@ -6204,15 +5325,6 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"Qn" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8;
-	alpha = 55
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
 /area/voidcrew/outpost_hangar)
 "Qo" = (
 /obj/effect/turf_decal/weather/dirt{
@@ -6283,6 +5395,22 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
+"QQ" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged5";
+	alpha = 120
+	},
+/obj/effect/decal/cleanable/glass{
+	dir = 4
+	},
+/obj/structure/sign/warning/hot_temp/directional/east,
+/obj/structure/barrel,
+/turf/open/indestructible/plating{
+	color = "#AEA296"
+	},
+/area/voidcrew/outpost_hangar)
 "QR" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -6292,15 +5420,6 @@
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
 	},
-/area/voidcrew/outpost_hangar)
-"QU" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 4
-	},
-/obj/effect/turf_decal/arrows{
-	dir = 2
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "QW" = (
 /turf/open/indestructible/dark,
@@ -6325,13 +5444,6 @@
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
 	},
-/area/voidcrew/outpost_hangar)
-"Ri" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4;
-	alpha = 55
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "Ry" = (
 /obj/effect/turf_decal{
@@ -6377,6 +5489,11 @@
 	icon_state = "combined_example"
 	},
 /area/voidcrew/outpost_hangar)
+"RH" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/landmark/outpost_elevator_alcove,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
 "RI" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -6401,14 +5518,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
-	},
-/area/voidcrew/outpost_hangar)
-"RR" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 8
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "RS" = (
@@ -6496,6 +5605,14 @@
 	},
 /turf/open/indestructible/dark,
 /area/voidcrew/outpost_hangar)
+"SD" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/machinery/digital_clock/directional/south,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
 "SG" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/effects.dmi';
@@ -6546,18 +5663,6 @@
 	},
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
-"Tb" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor2";
-	color = "#2A2622";
-	alpha = 190
-	},
-/turf/open/indestructible/plating{
-	icon_state = "elevatorshaft";
-	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
 "Tc" = (
@@ -6699,15 +5804,6 @@
 /obj/machinery/door/airlock/public,
 /turf/open/indestructible/hoteltile,
 /area/voidcrew/outpost_hangar)
-"TO" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "TR" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -6718,6 +5814,12 @@
 /turf/open/indestructible/plating{
 	color = "#D6CDC3"
 	},
+/area/voidcrew/outpost_hangar)
+"TS" = (
+/obj/structure/outpost_yard_droid/labour{
+	dir = 8
+	},
+/turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
 "TU" = (
 /obj/effect/decal/cleanable/dirt,
@@ -6813,21 +5915,6 @@
 /obj/structure/sign/warning/engine_safety/directional/east,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"Uz" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 1
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "gibbl5";
-	dir = 1;
-	color = "#2A2622";
-	alpha = 170
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "UB" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal{
@@ -6846,14 +5933,6 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
-"UM" = (
-/obj/effect/turf_decal/trimline/yellow/filled/warning{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
 /area/voidcrew/outpost_hangar)
 "UN" = (
 /obj/effect/turf_decal{
@@ -6885,6 +5964,22 @@
 	dir = 1;
 	color = "#2A2622";
 	alpha = 76
+	},
+/turf/open/indestructible/plating{
+	color = "#E6DFD7"
+	},
+/area/voidcrew/outpost_hangar)
+"UX" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 200
+	},
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor3";
+	color = "#3F8C8C";
+	alpha = 150
 	},
 /turf/open/indestructible/plating{
 	color = "#E6DFD7"
@@ -6926,16 +6021,6 @@
 "Vf" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/dark/smooth_large,
-/area/voidcrew/outpost_hangar)
-"Vl" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor1";
-	color = "#2A2622";
-	alpha = 235
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "Vn" = (
 /obj/structure/table/reinforced,
@@ -7004,25 +6089,6 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"VJ" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged4";
-	alpha = 150
-	},
-/obj/effect/decal/cleanable/ash,
-/obj/structure/showcase{
-	icon = 'icons/mob/silicon/robots.dmi';
-	icon_state = "engineer";
-	name = "welding droid";
-	desc = "A heavy welding droid, switched off mid-job with its torch arm still raised.";
-	dir = 8;
-	density = 0
-	},
-/turf/open/indestructible/plating{
-	color = "#80746A"
-	},
-/area/voidcrew/outpost_hangar)
 "VQ" = (
 /obj/structure/fluff/commsbuoy_processor{
 	deconstructible = 0;
@@ -7051,6 +6117,13 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"VW" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/fence/door{
+	dir = 4
+	},
+/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "Wd" = (
 /obj/effect/decal/cleanable/dirt,
@@ -7114,17 +6187,6 @@
 /obj/structure/mirror/broken/directional/west,
 /turf/open/indestructible/hoteltile,
 /area/voidcrew/outpost_hangar)
-"WE" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 10
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "WG" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -7177,9 +6239,32 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
+"WO" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "gibbl2";
+	dir = 4;
+	color = "#2A2622";
+	alpha = 220
+	},
+/turf/open/indestructible/plating{
+	color = "#E6DFD7"
+	},
+/area/voidcrew/outpost_hangar)
 "WP" = (
 /obj/machinery/light/floor,
 /turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
+"WR" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor5";
+	color = "#2A2622";
+	alpha = 190
+	},
+/turf/open/indestructible/plating{
+	color = "#F4F1EC"
+	},
 /area/voidcrew/outpost_hangar)
 "WS" = (
 /obj/effect/decal/cleanable/crayon{
@@ -7216,14 +6301,6 @@
 	name = "grated catwalk";
 	icon = 'icons/turf/floors/catwalk_plating.dmi';
 	icon_state = "combined_example"
-	},
-/area/voidcrew/outpost_hangar)
-"WY" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
 "Xb" = (
@@ -7331,6 +6408,19 @@
 	color = "#E6DFD7"
 	},
 /area/voidcrew/outpost_hangar)
+"XG" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "tracks";
+	dir = 1;
+	color = "#2A2622";
+	alpha = 104
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/plating{
+	color = "#E6DFD7"
+	},
+/area/voidcrew/outpost_hangar)
 "XI" = (
 /obj/machinery/vending/snack{
 	tiltable = 0
@@ -7365,12 +6455,6 @@
 /turf/open/indestructible/plating{
 	color = "#F4F1EC"
 	},
-/area/voidcrew/outpost_hangar)
-"XQ" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 5
-	},
-/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "XT" = (
 /obj/effect/turf_decal/sand/plating{
@@ -7432,17 +6516,6 @@
 	},
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
-"Yk" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "Yn" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/light/small/directional/north,
@@ -7456,27 +6529,10 @@
 /obj/machinery/status_display/outpost_berth/directional/south,
 /turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
-"YD" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 4
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "YE" = (
 /turf/open/indestructible/plating{
 	icon_state = "r_plate-1";
 	color = "#E6DFD7"
-	},
-/area/voidcrew/outpost_hangar)
-"YH" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/turf/open/indestructible/plating{
-	icon_state = "plating_rust";
-	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
 "YI" = (
@@ -7537,14 +6593,6 @@
 	icon_state = "combined_example"
 	},
 /area/voidcrew/outpost_hangar)
-"YV" = (
-/obj/effect/turf_decal/trimline/yellow/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating{
-	color = "#F4F1EC"
-	},
-/area/voidcrew/outpost_hangar)
 "YZ" = (
 /turf/closed/indestructible/opsglass,
 /area/voidcrew/outpost_hangar)
@@ -7585,6 +6633,16 @@
 	},
 /obj/effect/turf_decal/box/white,
 /turf/open/indestructible/dark/textured,
+/area/voidcrew/outpost_hangar)
+"Zu" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/effects.dmi';
+	icon_state = "fuel_pool";
+	alpha = 200
+	},
+/turf/open/indestructible/plating{
+	color = "#F4F1EC"
+	},
 /area/voidcrew/outpost_hangar)
 "Zx" = (
 /obj/effect/turf_decal{
@@ -7758,7 +6816,7 @@ gJ
 Ub
 gJ
 XY
-Cd
+Ad
 vr
 Ug
 qA
@@ -7772,7 +6830,7 @@ Jd
 LA
 Jx
 yF
-ad
+Rz
 Vw
 ne
 ad
@@ -7830,7 +6888,7 @@ mi
 Vf
 ad
 ad
-dS
+TS
 cW
 HN
 ad
@@ -7861,7 +6919,7 @@ KV
 KV
 cZ
 qQ
-By
+qQ
 qQ
 cZ
 KV
@@ -7884,7 +6942,7 @@ Mp
 iV
 Ug
 mi
-Rz
+ad
 ad
 VU
 kw
@@ -7918,7 +6976,7 @@ sY
 sY
 NB
 NB
-Os
+vg
 TR
 sY
 sY
@@ -7975,7 +7033,7 @@ Ky
 Xi
 EN
 Cv
-UM
+Xi
 Xi
 Xi
 Xi
@@ -8010,7 +7068,7 @@ aR
 "}
 (7,1,1) = {"
 uh
-zo
+ve
 hT
 kl
 Ux
@@ -8031,8 +7089,8 @@ Av
 aW
 cf
 EN
-kB
-iq
+EN
+Gx
 Xi
 Xi
 Xi
@@ -8073,38 +7131,38 @@ KV
 sY
 Xi
 Xi
-dM
 Xi
-RR
-RR
-RR
-RR
-gO
-gO
+Xi
+Xi
+Xi
+Xi
+Xi
 aW
-gO
-le
-LZ
-gG
-iO
-bp
-JN
-Qn
-RR
-RR
-RR
-cQ
-RR
-RR
-RR
-RR
-RR
-RR
-RR
-kp
-JN
-JN
-dM
+aW
+aW
+aW
+bd
+aW
+VS
+VS
+EN
+EN
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+Xi
+EN
+EN
+Xi
 Xi
 Xi
 PK
@@ -8130,10 +7188,10 @@ Xg
 PK
 LH
 zh
-Ha
-FP
-GG
-GG
+LH
+LH
+Xi
+Xi
 Xi
 uP
 zR
@@ -8158,10 +7216,10 @@ Xi
 Xi
 Xi
 Xi
-GG
-YH
-WE
-Lv
+Xi
+EN
+Av
+aW
 aW
 KL
 HV
@@ -8187,8 +7245,8 @@ KV
 sY
 bJ
 bJ
-lF
-WY
+bJ
+LH
 Xi
 KL
 Cb
@@ -8217,7 +7275,7 @@ aW
 aW
 Gx
 EN
-Fa
+wX
 aW
 aW
 Xi
@@ -8230,7 +7288,7 @@ Qs
 Lu
 ga
 Ba
-dV
+cf
 dL
 ep
 as
@@ -8244,8 +7302,8 @@ KV
 sY
 Xo
 bJ
-oG
-kX
+bJ
+UX
 Xi
 Xi
 Ky
@@ -8260,7 +7318,7 @@ aW
 Xi
 Xi
 Xi
-EH
+LH
 LH
 LH
 Xi
@@ -8274,8 +7332,8 @@ Xi
 aW
 Av
 VS
-HC
-vi
+aW
+qv
 aW
 Xi
 sY
@@ -8301,7 +7359,7 @@ KV
 GO
 zh
 bJ
-io
+zh
 Xi
 Xi
 ue
@@ -8332,7 +7390,7 @@ aW
 aW
 aW
 qv
-tx
+aW
 aW
 Xi
 sY
@@ -8358,7 +7416,7 @@ jz
 sY
 Ky
 Cv
-Gw
+Xi
 Xi
 ue
 jl
@@ -8389,7 +7447,7 @@ aW
 aW
 aW
 aW
-Lv
+aW
 Xi
 Xi
 sY
@@ -8398,7 +7456,7 @@ ky
 or
 vy
 Av
-Qb
+VW
 aW
 Ag
 tq
@@ -8415,7 +7473,7 @@ ER
 sY
 Xi
 Xi
-he
+Xi
 Xi
 zi
 aW
@@ -8446,7 +7504,7 @@ aW
 aW
 aW
 aW
-sS
+Xi
 Xi
 Xi
 sY
@@ -8472,7 +7530,7 @@ Oo
 sY
 KL
 aW
-hb
+aW
 aW
 aW
 zi
@@ -8503,7 +7561,7 @@ aW
 aW
 aW
 aW
-oo
+KL
 Xi
 Wo
 sY
@@ -8529,7 +7587,7 @@ Xg
 GO
 Xi
 Av
-Iu
+ep
 aW
 aW
 zi
@@ -8560,7 +7618,7 @@ yM
 aW
 aW
 aW
-cJ
+Xi
 Xi
 LH
 sY
@@ -8572,7 +7630,7 @@ RS
 OR
 nM
 BW
-aW
+PW
 aW
 Gn
 aW
@@ -8586,7 +7644,7 @@ tv
 mp
 Xi
 VS
-nV
+VS
 qv
 aW
 aW
@@ -8617,7 +7675,7 @@ Xi
 aW
 aW
 aW
-sS
+Xi
 Ky
 LH
 sY
@@ -8643,7 +7701,7 @@ ER
 GO
 xy
 EN
-yk
+If
 EN
 Av
 aW
@@ -8674,7 +7732,7 @@ Xi
 Xi
 qM
 Xi
-sS
+Xi
 qM
 LH
 sY
@@ -8687,7 +7745,7 @@ Po
 zS
 Lb
 hn
-Pq
+IU
 bm
 aG
 aR
@@ -8700,7 +7758,7 @@ vS
 GO
 Xi
 Gx
-dD
+EN
 EN
 Xi
 aW
@@ -8731,7 +7789,7 @@ Xi
 Xi
 SG
 Am
-vj
+yv
 yy
 Xi
 sY
@@ -8757,7 +7815,7 @@ vS
 HV
 Xi
 Xi
-MW
+Gx
 EN
 Xi
 Xi
@@ -8788,7 +7846,7 @@ Xi
 Xi
 Gs
 Xi
-sS
+Xi
 Xi
 Xi
 sY
@@ -8814,7 +7872,7 @@ Xg
 qf
 LH
 LH
-Ha
+LH
 xy
 Xi
 Xi
@@ -8855,7 +7913,7 @@ sB
 kU
 aW
 ep
-Vl
+cz
 aW
 Aq
 NV
@@ -8871,8 +7929,8 @@ ER
 qf
 LH
 LH
-nY
-cp
+LH
+Xi
 Xi
 Xi
 Xi
@@ -8901,8 +7959,8 @@ LH
 LH
 LH
 LH
-Tb
-zc
+Mo
+Cs
 Xi
 Xi
 sY
@@ -8959,7 +8017,7 @@ dC
 LH
 UR
 Vc
-Ap
+XG
 Bt
 Ra
 gR
@@ -8985,7 +8043,7 @@ Xg
 sY
 Xi
 Xi
-pm
+Xi
 Xi
 Xi
 Xi
@@ -9016,7 +8074,7 @@ LH
 LH
 LH
 sZ
-KW
+Xi
 Sf
 Xi
 sY
@@ -9024,7 +8082,7 @@ KV
 iV
 gJ
 kU
-wy
+aW
 kJ
 PS
 Kf
@@ -9042,7 +8100,7 @@ Xg
 sY
 Xi
 Xi
-YV
+Xi
 Xi
 Xi
 Xi
@@ -9081,7 +8139,7 @@ KV
 iV
 gJ
 kU
-GK
+Ow
 aW
 aW
 aW
@@ -9099,7 +8157,7 @@ KV
 GO
 EX
 My
-lG
+wd
 Xi
 Xi
 LH
@@ -9130,7 +8188,7 @@ Xi
 Xi
 Xi
 Xi
-CX
+WR
 Gs
 To
 HV
@@ -9143,7 +8201,7 @@ ep
 ep
 nK
 la
-VJ
+lT
 HE
 ay
 aR
@@ -9156,7 +8214,7 @@ ER
 mp
 EX
 aW
-hb
+aW
 aW
 Xi
 LH
@@ -9187,7 +8245,7 @@ Xi
 Xi
 Xi
 Xi
-sk
+rk
 aW
 Xi
 lC
@@ -9201,7 +8259,7 @@ Vn
 oP
 uW
 dn
-yB
+QQ
 aL
 aR
 "}
@@ -9213,7 +8271,7 @@ vS
 XT
 vf
 aW
-hb
+aW
 aW
 Xi
 lz
@@ -9244,7 +8302,7 @@ Xi
 Xi
 Xi
 Xi
-fJ
+aW
 aW
 Xi
 sY
@@ -9270,7 +8328,7 @@ Dv
 sY
 Xi
 aW
-hb
+aW
 ep
 Xi
 LH
@@ -9301,7 +8359,7 @@ Xi
 Xi
 Xi
 Xi
-fJ
+aW
 aW
 KL
 sY
@@ -9327,7 +8385,7 @@ KV
 GO
 Xi
 QG
-hb
+aW
 xy
 Xi
 LH
@@ -9358,7 +8416,7 @@ Bc
 Xi
 Xi
 Xi
-sS
+Xi
 Xi
 Xi
 sY
@@ -9380,11 +8438,11 @@ aR
 Js
 Vd
 hT
-su
+Dv
 Hf
 KL
-QU
-Yk
+aW
+Av
 EN
 Xi
 LH
@@ -9415,11 +8473,11 @@ LH
 LH
 Xi
 Xi
-cJ
-oq
-zL
-de
-hO
+Xi
+Xi
+Ky
+sY
+qm
 iV
 qU
 Cf
@@ -9428,9 +8486,9 @@ QW
 QW
 QW
 ca
-nC
-nC
-aI
+wh
+RH
+GW
 aR
 "}
 (32,1,1) = {"
@@ -9440,8 +8498,8 @@ hT
 KV
 GO
 Ky
-Hq
-jv
+aW
+Cv
 EN
 EN
 cq
@@ -9473,7 +8531,7 @@ sZ
 LH
 Xi
 Xi
-Be
+Xi
 KL
 sY
 Mq
@@ -9485,9 +8543,9 @@ QD
 QW
 QW
 ca
-nC
-nC
-ai
+wh
+wh
+jt
 aR
 "}
 (33,1,1) = {"
@@ -9498,7 +8556,7 @@ Dv
 hu
 Xi
 EI
-jv
+Cv
 EN
 If
 bJ
@@ -9529,7 +8587,7 @@ LH
 LH
 LH
 lz
-qZ
+sZ
 LH
 LH
 sY
@@ -9542,9 +8600,9 @@ QW
 QW
 QW
 ca
-nC
-nC
-ar
+RH
+wh
+SD
 aR
 "}
 (34,1,1) = {"
@@ -9555,7 +8613,7 @@ vS
 sY
 Xi
 Xi
-he
+Xi
 Cv
 EN
 zh
@@ -9586,7 +8644,7 @@ LH
 LH
 LH
 Dl
-Mk
+LH
 LH
 LH
 sY
@@ -9612,7 +8670,7 @@ Dv
 mp
 Xi
 EI
-yf
+KL
 Gx
 qD
 XE
@@ -9700,7 +8758,7 @@ LH
 LH
 LH
 lz
-Mk
+LH
 sZ
 lz
 PK
@@ -9726,7 +8784,7 @@ Dv
 BX
 Gz
 jl
-BH
+jl
 Tm
 xy
 LH
@@ -9757,7 +8815,7 @@ LH
 LH
 LH
 LH
-Mk
+LH
 LH
 sZ
 sY
@@ -9783,7 +8841,7 @@ qp
 Ml
 Ih
 aW
-hb
+aW
 VS
 EN
 Gx
@@ -9814,7 +8872,7 @@ LH
 LH
 LH
 sZ
-jk
+LH
 LH
 Ky
 HV
@@ -9840,7 +8898,7 @@ Mx
 qf
 Xi
 aW
-qd
+aW
 qv
 EN
 Gx
@@ -9871,7 +8929,7 @@ LH
 LH
 LH
 LH
-Mg
+LH
 LH
 Xi
 sY
@@ -9897,7 +8955,7 @@ KV
 sY
 dH
 aW
-hb
+aW
 aW
 Cv
 Xi
@@ -9928,7 +8986,7 @@ LH
 LH
 LH
 sZ
-Qa
+LH
 LH
 Xi
 sY
@@ -9954,8 +9012,8 @@ Dv
 GO
 KL
 aW
-mI
-IB
+aW
+zi
 Xi
 Xi
 sZ
@@ -9984,8 +9042,8 @@ LH
 LH
 LH
 LH
-EH
-jk
+LH
+LH
 lz
 Xi
 sY
@@ -10011,7 +9069,7 @@ vS
 qf
 Xi
 aW
-hb
+aW
 aW
 Xi
 Xi
@@ -10042,7 +9100,7 @@ LH
 LH
 LH
 LH
-jk
+LH
 LH
 Xi
 sY
@@ -10057,7 +9115,7 @@ st
 mm
 ag
 ag
-aD
+Fw
 aR
 "}
 (43,1,1) = {"
@@ -10068,7 +9126,7 @@ ER
 sY
 EX
 aW
-hb
+aW
 aW
 Xi
 Xi
@@ -10125,7 +9183,7 @@ KV
 sY
 EX
 Xi
-YV
+Xi
 Xi
 Xi
 Xi
@@ -10156,7 +9214,7 @@ LH
 TC
 lz
 LH
-Mk
+LH
 LH
 LH
 sY
@@ -10182,7 +9240,7 @@ ER
 qf
 EI
 Xi
-YV
+Xi
 Xi
 Xi
 aW
@@ -10213,7 +9271,7 @@ LH
 LH
 LH
 LH
-Qa
+LH
 LH
 LH
 sY
@@ -10270,7 +9328,7 @@ LH
 LH
 LH
 LH
-Mk
+LH
 LH
 LH
 sY
@@ -10296,7 +9354,7 @@ KV
 sY
 Ky
 Ky
-YV
+Xi
 Ky
 Xi
 aW
@@ -10327,7 +9385,7 @@ LH
 LH
 LH
 LH
-Mk
+LH
 lz
 LH
 sY
@@ -10353,7 +9411,7 @@ Dv
 HV
 Xi
 Xi
-YV
+Xi
 Xi
 Xi
 aW
@@ -10384,7 +9442,7 @@ LH
 LH
 LH
 LH
-Mk
+LH
 KL
 Xi
 NB
@@ -10410,7 +9468,7 @@ KV
 sY
 Xi
 Xi
-YV
+Xi
 Xi
 zi
 aW
@@ -10441,7 +9499,7 @@ LH
 Xi
 Xi
 Xi
-sS
+Xi
 Xi
 xy
 Et
@@ -10467,7 +9525,7 @@ KV
 sY
 Xi
 Xi
-he
+Xi
 Xi
 aW
 aW
@@ -10498,7 +9556,7 @@ ue
 ue
 We
 Xi
-ki
+Cv
 Xi
 EN
 uB
@@ -10524,7 +9582,7 @@ dG
 iM
 Gx
 Xi
-uL
+Ky
 Xi
 aW
 aW
@@ -10555,7 +9613,7 @@ Xi
 Gx
 EN
 EN
-Pi
+VS
 VS
 EN
 NB
@@ -10581,8 +9639,8 @@ ZP
 iM
 EN
 yT
-nq
-jn
+Ky
+Xi
 aW
 zi
 aW
@@ -10597,7 +9655,7 @@ LH
 LH
 LH
 LH
-EH
+LH
 LH
 LH
 LH
@@ -10611,7 +9669,7 @@ Xi
 Xi
 Xi
 Av
-HC
+aW
 VS
 cf
 Xi
@@ -10638,8 +9696,8 @@ ZP
 iM
 EN
 hp
-Gw
-NV
+Xi
+aW
 aW
 aW
 aW
@@ -10668,8 +9726,8 @@ Xi
 Xi
 Xi
 aW
-zW
-tx
+Av
+aW
 aW
 Xi
 sY
@@ -10695,10 +9753,10 @@ ZP
 HQ
 xy
 Xi
-DR
-XQ
-PE
-PE
+aW
+aW
+aW
+aW
 aW
 wd
 aW
@@ -10723,10 +9781,10 @@ LH
 LH
 Ky
 Xi
-BL
-BL
-wa
-sS
+Xi
+Xi
+Xi
+Xi
 Xi
 Xi
 PK
@@ -10752,38 +9810,38 @@ cZ
 HV
 Ky
 aW
-dM
-hd
-vH
 aW
-gP
-Ri
-hd
-hd
-YD
-Gv
-ny
-zG
-nS
-nS
-sv
-nS
-th
-TO
-bP
+aW
+cf
+aW
+zi
+aW
+aW
+aW
+Xi
+KL
+WO
 LH
-hA
-nS
-sv
-sv
-tA
-mr
-mS
-YD
-hw
-YD
-YD
-dM
+LH
+LH
+LH
+LH
+Cv
+EN
+Cv
+LH
+LH
+LH
+LH
+LH
+lE
+LH
+Zu
+Xi
+Xi
+Xi
+Xi
+Xi
 Xi
 Xi
 sY
@@ -10824,8 +9882,8 @@ LH
 cq
 lz
 cq
-mk
-JI
+LH
+Ky
 mG
 Xi
 Xi
@@ -10882,7 +9940,7 @@ XL
 Fp
 Fp
 SS
-Uz
+xW
 Tu
 Do
 Xi
@@ -10939,7 +9997,7 @@ Di
 QR
 uB
 PK
-NH
+sY
 sY
 sY
 sY
@@ -10968,7 +10026,7 @@ YS
 iu
 WX
 WX
-MJ
+Hv
 aN
 aR
 "}
@@ -10996,7 +10054,7 @@ JB
 Cu
 KV
 EC
-CV
+KV
 KV
 KV
 KV

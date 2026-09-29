@@ -1,7 +1,7 @@
 /**
  * # Outpost NPC looks
  *
- * Human-looking basic mobs on outposts (prisoners, loiterers, and later guards) wear an outfit on
+ * Human-looking basic mobs on outposts (prisoners, guards, and ambient NPCs) wear an outfit on
  * a human body. tg's set_dynamic_human_appearance() builds that body on a fixed, bald, pale dummy
  * and caches one appearance per outfit, so everyone in the same outfit has the same face and a
  * male body whatever their gender.
@@ -9,8 +9,16 @@
  * Here each look is a random person: skin tone, hair, facial hair and eyes, on a body that matches
  * the gender. A look is keyed by outfit, gender and a look number from 1 to OUTPOST_NPC_LOOK_COUNT,
  * built once on a throwaway dummy and cached, so a crowd costs at most OUTPOST_NPC_LOOK_COUNT x 2
- * appearances per outfit.
+ * appearances per outfit. Ambient NPCs that hold something also get a look built with a real item
+ * in the dummy's hand (get_outpost_held_look()), bounded so an unusual held item never grows the
+ * cache without limit.
  */
+
+/// Held looks kept before the oldest is dropped
+#define OUTPOST_NPC_HELD_LOOKS_MAX 200
+
+/// Keys of built held looks in GLOB.outpost_npc_looks, oldest first
+GLOBAL_LIST_EMPTY(outpost_npc_held_look_keys)
 
 /// How many different people wear each outfit, per gender
 #define OUTPOST_NPC_LOOK_COUNT 8
@@ -47,6 +55,43 @@ GLOBAL_LIST_EMPTY(outpost_npc_looks)
 	if(!GLOB.outpost_npc_looks[key])
 		GLOB.outpost_npc_looks[key] = look
 	return GLOB.outpost_npc_looks[key]
+
+/**
+ * The appearance of person `look_number` of `gender` wearing `outfit_path`, holding `held_type` (an
+ * /obj/item type) in hand, built the first time it is asked for. A `held_type` that is not an item
+ * returns the plain look, with nothing in hand. Can sleep; see get_outpost_npc_look().
+ */
+/proc/get_outpost_held_look(outfit_path, gender, look_number, held_type)
+	if(!ispath(held_type, /obj/item))
+		return get_outpost_npc_look(outfit_path, gender, look_number)
+	gender = gender == FEMALE ? FEMALE : MALE
+	var/key = "[outpost_npc_look_key(outfit_path, gender, look_number)]|held|[held_type]"
+	var/look = GLOB.outpost_npc_looks[key]
+	if(look)
+		return look
+	var/mob/living/carbon/human/dummy/dummy = new_outpost_npc_dummy(gender)
+	if(outfit_path)
+		dummy.equipOutfit(outfit_path, visuals_only = TRUE)
+	set_outpost_worker_visors(dummy, up = TRUE)
+	var/obj/item/thing = new held_type(null)
+	if(!dummy.put_in_r_hand(thing, visuals_only = TRUE))
+		dummy.put_in_l_hand(thing, visuals_only = TRUE)
+	look = dummy.appearance
+	qdel(thing)
+	qdel(dummy)
+	// Two NPCs can build the same held look at once; the first one built is kept.
+	if(!GLOB.outpost_npc_looks[key])
+		outpost_npc_held_look_cache_add(key, look)
+	return GLOB.outpost_npc_looks[key]
+
+/// Caches `look` under `key`, dropping the oldest held look once there are more than `most`. An NPC already wearing an evicted look keeps it: their overlays hold the built appearance.
+/proc/outpost_npc_held_look_cache_add(key, look, most = OUTPOST_NPC_HELD_LOOKS_MAX)
+	GLOB.outpost_npc_looks[key] = look
+	GLOB.outpost_npc_held_look_keys += key
+	while(length(GLOB.outpost_npc_held_look_keys) > most)
+		var/oldest_key = GLOB.outpost_npc_held_look_keys[1]
+		GLOB.outpost_npc_held_look_keys.Cut(1, 2)
+		GLOB.outpost_npc_looks -= oldest_key
 
 /// A new random person of `gender` (MALE or FEMALE), undressed, to build looks on. The caller deletes it.
 /proc/new_outpost_npc_dummy(gender)
@@ -150,3 +195,4 @@ GLOBAL_LIST_EMPTY(outpost_npc_looks)
 
 #undef OUTPOST_NPC_LOOK_COUNT
 #undef OUTPOST_NPC_FACIAL_HAIR_CHANCE
+#undef OUTPOST_NPC_HELD_LOOKS_MAX

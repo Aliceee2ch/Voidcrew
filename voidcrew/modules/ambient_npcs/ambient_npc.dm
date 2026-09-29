@@ -21,6 +21,9 @@
  * The routine (what they do from moment to moment) is in ambient_activity.dm.
  */
 
+/// What a hauling worker's carried look shows in hand
+#define AMBIENT_CARRY_LOOK /obj/item/delivery/big
+
 /mob/living/basic/ambient_npc/Initialize(mapload)
 	if(random_gender)
 		gender = pick(MALE, FEMALE)
@@ -40,7 +43,6 @@
 	RegisterSignal(src, COMSIG_MOVABLE_TELEPORTING, PROC_REF(refuse_teleport))
 	RegisterSignal(src, COMSIG_LIVING_PRE_WABBAJACKED, PROC_REF(refuse_polymorph))
 	RegisterSignal(src, COMSIG_PRE_MOB_CHANGED_TYPE, PROC_REF(refuse_type_change))
-	RegisterSignal(src, COMSIG_ATOM_DIR_CHANGE, PROC_REF(on_dir_change))
 	RegisterSignal(src, COMSIG_ATOM_WAS_ATTACKED, PROC_REF(on_attacked))
 	AddElement(/datum/element/relay_attackers)
 	AddElement(/datum/element/footstep, footstep_type = FOOTSTEP_MOB_SHOE)
@@ -63,15 +65,36 @@
 // LOOK
 // =========================================================================
 
-/// Dresses them as person `look_number` of their gender in `outfit`. Can sleep.
+/**
+ * Dresses them as person `look_number` of their gender in `outfit`, holding whatever `work_look`
+ * or `held_visual` calls for, the way a player holds an item: a dummy built in the same outfit,
+ * with a real item in hand, cached (outpost_npc_looks.dm). Can sleep.
+ */
 /mob/living/basic/ambient_npc/proc/build_look()
 	if(QDELETED(src))
 		return
+	var/serial = ++look_serial
 	if(length(work_weights))
 		work_looks = get_outpost_worker_looks(outfit, gender, look_number)
-		show_work_look(null)
+	var/look
+	if((work_look == "weld" || work_look == "tool") && work_looks)
+		look = work_looks[work_look]
+	else
+		var/hand = (work_look == "carry") ? AMBIENT_CARRY_LOOK : held_visual
+		if(hand)
+			look = get_outpost_held_look(outfit, gender, look_number, hand)
+		else if(work_looks)
+			look = work_looks["idle"]
+		else
+			look = get_outpost_npc_look(outfit, gender, look_number)
+	// A later build already landed while this one slept; leave its look alone.
+	if(QDELETED(src) || serial != look_serial)
 		return
-	set_outpost_npc_look(src, outfit, gender, look_number)
+	apply_outpost_npc_look(src, look)
+	// Applying a look wipes every overlay, sparks included: put the work loop's back.
+	var/datum/component/outpost_ambient_worker/worker = GetComponent(/datum/component/outpost_ambient_worker)
+	if(worker?.work_overlay)
+		add_overlay(worker.work_overlay)
 
 /// Redresses them in `new_outfit` (a new job, a disguise). Can be called from anywhere; the look is built async.
 /mob/living/basic/ambient_npc/proc/set_outfit(new_outfit)
@@ -79,20 +102,18 @@
 	work_looks = null
 	INVOKE_ASYNC(src, PROC_REF(build_look))
 
-/// Shows them holding what `look` needs ("weld", "tool"), or empty-handed for null. The worker component calls this.
+/// Shows them holding what `look` needs ("weld", "tool", "carry"), or their held item / empty hands for null. The worker component calls this.
 /mob/living/basic/ambient_npc/proc/show_work_look(look)
-	if(QDELETED(src) || !work_looks)
-		return
-	apply_outpost_npc_look(src, work_looks[look || "idle"] || work_looks["idle"])
+	work_look = look
+	INVOKE_ASYNC(src, PROC_REF(build_look))
 
-/// Draws `look` (an item, or an item type) in their hand; null takes it away. It lives in vis_contents, so a look change keeps it.
+/// Shows `look` (an item type, or an item instance) in their hand as part of their look; null shows empty hands. A change that ends up the same item type is not rebuilt.
 /mob/living/basic/ambient_npc/proc/set_held(look)
-	held_visual = bounty_ai_update_held(src, held_visual, look)
-
-/mob/living/basic/ambient_npc/proc/on_dir_change(datum/source, old_dir, new_dir)
-	SIGNAL_HANDLER
-	if(held_visual)
-		bounty_ai_place_held(src, held_visual, new_dir)
+	var/new_held = ambient_held_look_type(look)
+	if(new_held == held_visual)
+		return
+	held_visual = new_held
+	INVOKE_ASYNC(src, PROC_REF(build_look))
 
 /// Fades in where they stand, as someone stepping off the lift
 /mob/living/basic/ambient_npc/proc/fade_in()
@@ -632,3 +653,37 @@
 	if(!allow_water && istype(tile, /turf/open/water))
 		return FALSE
 	return !tile.is_blocked_turf(exclude_mobs = TRUE)
+
+/**
+ * The /obj/item type `look` should show in an NPC's hand, or null for empty hands. `look` is an
+ * item type, an item instance, or a structure type/instance stood in for an item. A drinking glass
+ * shows what's in it; a few other things with no in-hand sprite of their own show a stand-in that
+ * has one; anything else shows its own type, or nothing if it isn't an item at all.
+ */
+/proc/ambient_held_look_type(look)
+	if(isnull(look))
+		return null
+	// istype() on a type path is always FALSE, which is what we want here: only a real glass instance matches.
+	if(isitem(look) && istype(look, /obj/item/reagent_containers/cup/glass/drinkingglass))
+		var/obj/item/reagent_containers/cup/glass/drinkingglass/glass = look
+		if(glass.reagents?.has_reagent(/datum/reagent/consumable/coffee))
+			return /obj/item/reagent_containers/cup/glass/mug
+		return /obj/item/reagent_containers/cup/glass/bottle/beer
+	if(ispath(look, /obj/structure/closet/crate))
+		return /obj/item/delivery/big
+	if(ispath(look, /obj/item/storage/box/papersack))
+		return /obj/item/delivery/small
+	if(ispath(look, /obj/item/storage/bag/tray))
+		return /obj/item/reagent_containers/cup/bucket
+	if(ispath(look, /obj/item/reagent_containers/cup/glass/flask))
+		return /obj/item/reagent_containers/cup/glass/bottle/holywater
+	if(ispath(look, /obj/item/stack/ore) || ispath(look, /obj/item/food/meat/slab) || ispath(look, /obj/item/food/meat/steak))
+		return null
+	if(ispath(look, /obj/item))
+		return look
+	if(isitem(look))
+		var/obj/item/item = look
+		return item.type
+	return null
+
+#undef AMBIENT_CARRY_LOOK

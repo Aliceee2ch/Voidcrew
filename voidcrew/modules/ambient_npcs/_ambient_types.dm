@@ -78,8 +78,12 @@ GLOBAL_LIST_EMPTY(ambient_npcs)
 	var/random_name = TRUE
 	/// "idle", "weld" and "tool" looks, for NPCs that do work (built when `work_weights` is set)
 	var/list/work_looks
-	/// What they hold, drawn in their hand (vis_contents: survives look changes)
-	var/obj/effect/abstract/bounty_held/held_visual
+	/// What they hold, drawn in their hand as part of their look: an /obj/item type, or null
+	var/held_visual
+	/// "weld", "tool" or "carry": the work look shown now (null for none)
+	var/work_look
+	/// Bumped by every look build; an async build applies only if it is still the latest one
+	var/look_serial = 0
 	/// A real item they carry for an activity (a drink), in their contents, never dropped by a hit
 	var/obj/item/held_item
 

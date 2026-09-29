@@ -1,9 +1,9 @@
 /**
  * # Ambient work
  *
- * NPCs that look busy: the ship bay droids (outpost_yard_droids.dm) and the trader outposts'
- * mechanics (voidcrew/modules/trade/outpost_amenities.dm). A worker keeps to the room it was put
- * in and walks about now and then. Every so often it picks something nearby it knows how to work
+ * NPCs that look busy: the ship bay droids (outpost_yard_droids.dm) and ambient outpost staff
+ * (voidcrew/modules/ambient_npcs/). A worker keeps to the room it was put in and walks about now
+ * and then. Every so often it picks something nearby it knows how to work
  * on (a machine, a wall, a pipe, a crate, a bar table, a dirty floor), walks up to it, faces it and
  * works on it for a while with the right sounds and sparks, then moves on.
  *
@@ -86,8 +86,10 @@
 	var/datum/weakref/last_target
 	/// Sparks and the like shown while working
 	var/mutable_appearance/work_overlay
-	/// A box carried between two jobs (the loader)
+	/// A box carried between two jobs (the loader). A droid's carried box overlay; a person shows it through `on_look` instead.
 	var/mutable_appearance/carried
+	/// Whether it is carrying something between two jobs right now
+	var/carrying = FALSE
 
 /datum/component/outpost_ambient_worker/Initialize(list/work_weights, keep_off_doorways = FALSE, datum/callback/on_look)
 	if(!ismovable(parent))
@@ -429,7 +431,7 @@
 		work_dir &= pick(NORTH | SOUTH, EAST | WEST)
 	worker.setDir(work_dir)
 	// The look first: changing it replaces every overlay
-	on_look?.Invoke(kind.look)
+	on_look?.Invoke(kind.look || (carrying ? "carry" : null))
 	lean(work_dir)
 	kind.start(src, target)
 	return TRUE
@@ -453,7 +455,7 @@
 	kind.stop(src)
 	set_work_overlay(null)
 	lean(null)
-	on_look?.Invoke(null)
+	on_look?.Invoke(carrying ? "carry" : null)
 	next_work_at = world.time + rand(OUTPOST_WORK_REST_LOW, OUTPOST_WORK_REST_HIGH)
 
 /// Shows `overlay` on the worker while it works, replacing the last one
@@ -465,12 +467,16 @@
 	if(work_overlay)
 		worker.add_overlay(work_overlay)
 
-/// Picks a box up or puts it down (the loader)
+/// Picks a box up or puts it down (the loader). A droid shows a box overlay; a person shows the "carry" look in hand instead.
 /datum/component/outpost_ambient_worker/proc/set_carried(carrying)
 	var/atom/movable/worker = parent
+	src.carrying = carrying
 	if(carried)
 		worker.cut_overlay(carried)
 		carried = null
+	if(on_look)
+		on_look.Invoke(carrying ? "carry" : null)
+		return
 	if(!carrying)
 		return
 	carried = mutable_appearance('icons/obj/storage/box.dmi', "box")
@@ -742,7 +748,7 @@
 
 /// Picks the box up at one place and sets it down at the next
 /datum/outpost_ambient_work/haul/start(datum/component/outpost_ambient_worker/worker, atom/target)
-	var/carrying = !worker.carried
+	var/carrying = !worker.carrying
 	worker.set_carried(carrying)
 	playsound(worker.parent, carrying ? 'sound/items/handling/cardboard_box/cardboardbox_pickup.ogg' : 'sound/items/handling/cardboard_box/cardboardbox_drop.ogg', 30, TRUE, OUTPOST_WORK_SOUND_RANGE)
 

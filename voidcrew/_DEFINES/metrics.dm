@@ -2,6 +2,11 @@
 // the `round_metric` SQL table; tally_metric() rows carry a count for the minute they cover.
 // The category groups events for querying. Event names are snake_case strings, listed in the
 // header of the metrics file that records them.
+//
+// A category or event string must never equal a record_metric() parameter name ("ship", "zone",
+// "subject"...). BYOND mis-binds a call whose positional string matches one of its named
+// arguments: it throws "positional parameters must precede all named args" or silently drops
+// the positional value. That is why the ship category is "player_ship", not "ship".
 
 /// Ship account changes, cash deposits, starting funds.
 #define METRIC_ECONOMY "economy"
@@ -16,7 +21,7 @@
 /// Encounters with NPC ships: fights, retreats, kills, boardings, theft, siphons, deals.
 #define METRIC_PIRATE "pirate"
 /// Player ship lifecycle and crew.
-#define METRIC_SHIP "ship"
+#define METRIC_SHIP "player_ship"
 /// Hit and kill tallies between players, and against NPCs.
 #define METRIC_COMBAT "combat"
 /// Player deaths and revivals.

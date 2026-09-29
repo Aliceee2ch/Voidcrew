@@ -44,6 +44,8 @@ GLOBAL_LIST_INIT(outpost_checkpoint_excluded, typecacheof(list(
 	/obj/structure/trap,
 	// Made of the spear and head it holds; clear_stock() takes those and it falls apart.
 	/obj/structure/headpike,
+	// Outpost property that works a ship bay's side rooms, never a ship's fitting.
+	/obj/structure/outpost_yard_droid,
 )))
 
 /**

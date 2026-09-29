@@ -357,6 +357,7 @@
 #include "voidcrew_helpers.dm"
 #include "voidcrew_hull_containment.dm"
 #include "voidcrew_hull_survey.dm"
+#include "voidcrew_round_metrics.dm"
 #include "voidcrew_windoor_survey.dm"
 #include "voidcrew_lich.dm"
 #include "voidcrew_launch_access.dm"

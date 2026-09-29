@@ -49,11 +49,6 @@
 			"Deal with them.",
 			"Nobody touches my people."
 		],
-		"walk_away": [
-			"Good choice.",
-			"Come back when you're thirsty.",
-			"Mind the step on your way out."
-		],
 		"stand_down": [
 			"They're gone. Clean this up.",
 			"Somebody get the tables back up.",
@@ -185,9 +180,6 @@
 		],
 		"take": [
 			"I'll take it."
-		],
-		"walk": [
-			"Never mind. We're leaving."
 		]
 	},
 	"room": {

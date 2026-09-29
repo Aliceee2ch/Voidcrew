@@ -17,7 +17,7 @@
 	if(QDELETED(bay))
 		return null
 	for(var/obj/machinery/computer/ship_checkpoint/console as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/ship_checkpoint))
-		if(bay.contains_service_turf(get_turf(console)))
+		if(bay.contains_turf(get_turf(console)))
 			return console
 	return null
 

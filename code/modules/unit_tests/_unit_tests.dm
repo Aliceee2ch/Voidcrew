@@ -340,6 +340,7 @@
 #include "voidcrew_bitrunning.dm"
 #include "voidcrew_blueprint_guns.dm"
 #include "voidcrew_colosseum.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_combat_metrics.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_construction_refunds.dm"
 #include "../../../voidcrew/modules/unit_tests/voidcrew_combat_camera_breaches.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_construction_automation.dm"

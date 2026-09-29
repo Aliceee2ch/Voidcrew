@@ -5,8 +5,8 @@
  * a network pad and an arrival spot beside it. Sold only as this upgrade; the pad has no board.
  *
  * The owner's levers are the arrival fare (Pricing tab), the arrival policy and allow list
- * (Services tab) and docking LOCKDOWN. The room's door always admits visitors: closing it would
- * strand people who arrived by pad outside the only way home.
+ * (Services tab) and docking LOCKDOWN. The room's door stays public and the door tool refuses it
+ * (abuse review F-33): keying it would strand people who arrived by pad outside the only way home.
  */
 
 /// Authored with its entrance on the south edge; placement rotates it.
@@ -31,7 +31,7 @@
 	desc = "A teleporter pad on the outpost network."
 	price = OUTPOST_TELEPORTER_COST
 	template_type = /datum/map_template/outpost_upgrade/teleporter
-	visitors_toggleable = FALSE
+	doors_stay_public = TRUE
 	/// Who may arrive by pad: OUTPOST_NETWORK_ARRIVALS_*
 	var/arrival_policy = OUTPOST_NETWORK_ARRIVALS_OPEN
 	/// Network ids of source pads admitted under the allow list policy
@@ -63,12 +63,6 @@
 		return
 	pad_ref = WEAKREF(pad)
 	pad.link_host(outpost, arrival)
-
-/// The visitors toggle would strand pad arrivals outside the room (abuse review F-33)
-/datum/outpost_upgrade/service/teleporter/set_visitors_allowed(mob/living/user, allowed)
-	if(!allowed)
-		return "Use the arrival policy."
-	return ..()
 
 /datum/outpost_upgrade/service/teleporter/on_outpost_abandoned()
 	// The next owner starts from the defaults. Unowned, the pad takes no arrivals anyway.

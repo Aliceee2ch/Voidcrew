@@ -196,6 +196,21 @@
 	TEST_ASSERT_NOTNULL(lab.sell_pass(visitor, list(visitor), 300), "A second pass sold while the first is fresh")
 	TEST_ASSERT_EQUAL(account.account_balance, 700, "A refused second pass moved money")
 
+	// A pass holder reaches the lab whatever its entrance is keyed to; a visitor with no pass does not
+	var/obj/machinery/door/airlock/outpost/service/entrance
+	for(var/obj/machinery/door/airlock/outpost/service/lab_door as anything in medlab_find_all(lab, /obj/machinery/door/airlock/outpost/service))
+		if(lab_door.door_policy == "public")
+			entrance = lab_door
+	TEST_ASSERT_NOTNULL(entrance, "The lab has no entrance")
+	var/turf/entrance_outside = get_step(entrance, turn(entrance.unres_sides, 180))
+	home.apply_door_access(entrance, "owner")
+	visitor.forceMove(entrance_outside)
+	var/mob/living/carbon/human/stranger = make_market_visitor(entrance_outside, "medlabpassstranger", 0)
+	TEST_ASSERT(entrance.allowed(visitor), "An owner-only lab entrance refused a pass holder")
+	TEST_ASSERT(!entrance.allowed(stranger), "An owner-only lab entrance let in a visitor with no pass")
+	home.apply_door_access(entrance, "public")
+	visitor.forceMove(inside)
+
 	// Expiry
 	var/list/entry = lab.passes[lab.pass_key(visitor)]
 	entry["expiry"] = world.time - 1

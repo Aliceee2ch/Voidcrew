@@ -64,10 +64,6 @@
 	get_stock()?.mark_dirty()
 	return null
 
-/datum/outpost_upgrade/service/shop/set_visitors_allowed(mob/living/user, allowed)
-	. = ..()
-	get_stock()?.mark_dirty()
-
 /datum/outpost_upgrade/service/shop/service_ui_data(mob/user)
 	return list(
 		"kind" = "shop",

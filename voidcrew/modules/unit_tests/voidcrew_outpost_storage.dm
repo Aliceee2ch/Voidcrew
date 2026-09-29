@@ -199,6 +199,20 @@
 	TEST_ASSERT(room.admits_visitor_extra(new_body), "The renter is not let through a closed room")
 	TEST_ASSERT(!room.admits_visitor_extra(thief), "A non-renter is let through a closed room")
 
+	// The renter reaches the paid locker whatever the room's door is keyed to; nobody else does
+	var/datum/weakref/vault_ref = LAZYACCESS(room.doors, 1)
+	var/obj/machinery/door/airlock/outpost/service/vault = vault_ref?.resolve()
+	TEST_ASSERT_NOTNULL(vault, "The storage room has no door")
+	var/turf/vault_outside = get_step(vault, turn(vault.unres_sides, 180))
+	home.apply_door_access(vault, "owner")
+	new_body.forceMove(vault_outside)
+	thief.forceMove(vault_outside)
+	TEST_ASSERT(vault.allowed(new_body), "An owner-only storage door refused the renter")
+	TEST_ASSERT(!vault.allowed(thief), "An owner-only storage door let in someone who rents nothing")
+	home.apply_door_access(vault, "public")
+	new_body.forceMove(stand)
+	thief.forceMove(stand)
+
 	// Deleting the renter's ID changes nothing (the stock closet would go public).
 	qdel(renter_card)
 	first.togglelock(thief)

@@ -147,8 +147,8 @@
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/check_berth_layout(datum/outpost_berth/berth, obj/docking_port/mobile/shuttle, label)
 	var/list/pad_size = outpost_berth_pad_size(shuttle)
 	var/datum/outpost_berth_layout/layout = new(pad_size[1], pad_size[2], 15, 11)
-	TEST_ASSERT_EQUAL(berth.reservation.width, layout.width, "[label]: reservation width does not match the formula")
-	TEST_ASSERT_EQUAL(berth.reservation.height, layout.height, "[label]: reservation height does not match the formula")
+	TEST_ASSERT_EQUAL(berth.get_width(), layout.width, "[label]: berth width does not match the formula")
+	TEST_ASSERT_EQUAL(berth.get_height(), layout.height, "[label]: berth height does not match the formula")
 	TEST_ASSERT_EQUAL(berth.pad_width, pad_size[1], "[label]: pad width")
 	TEST_ASSERT_EQUAL(berth.pad_height, pad_size[2], "[label]: pad height")
 	TEST_ASSERT_EQUAL(get_turf(berth.dock), local(berth, layout.pad_x, layout.pad_y), "[label]: the dock is not on the pad's corner")
@@ -183,18 +183,18 @@
 				if(!istype(sign, /obj/machinery/status_display/outpost_sign/elevator))
 					TEST_FAIL("[label]: a wayfinding sign was left in a standard berth")
 	var/doors = 0
-	for(var/turf/tile as anything in block(berth.reservation.bottom_left_turfs[1], berth.reservation.top_right_turfs[1]))
+	for(var/turf/tile as anything in berth.get_block())
 		// Hosts find a berth's occupants by its area, so no tile may be left as open space.
 		var/area/tile_area = get_area(tile)
 		if(tile_area != hangar_area)
-			TEST_FAIL("[label]: ([tile.x],[tile.y]) in the reservation is [tile_area?.type], not the berth's area")
+			TEST_FAIL("[label]: ([tile.x],[tile.y]) on the berth's ground is [tile_area?.type], not the berth's area")
 		for(var/obj/machinery/door/airlock/outpost/door in tile)
 			doors++
 			TEST_ASSERT_EQUAL(door.outpost, berth.outpost, "[label]: an exit airlock is not linked to the outpost")
 	TEST_ASSERT_EQUAL(doors, 2, "[label]: the exit strip's airlocks are missing")
 	return layout
 
-/// Turf at a berth-local coordinate; (1, 1) is the reservation's bottom-left corner.
+/// Turf at a berth-local coordinate; (1, 1) is the loaded hangar's bottom-left corner.
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/local(datum/outpost_berth/berth, local_x, local_y)
 	var/turf/origin = berth.hangar_bottom_left
 	return locate(origin.x + local_x - 1, origin.y + local_y - 1, origin.z)
@@ -250,7 +250,7 @@
 				break
 			for(var/step_dir in GLOB.cardinals)
 				var/turf/next = get_step(current, step_dir)
-				if(!next || seen[next] || blocked[next] || !berth.reservation.contains_turf(next) || !walkable(next))
+				if(!next || seen[next] || blocked[next] || !berth.contains_turf(next) || !walkable(next))
 					continue
 				seen[next] = TRUE
 				queue += next
@@ -267,8 +267,8 @@
 
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/release_and_check(datum/outpost_berth/berth, label)
 	var/datum/turf_reservation/reservation = berth.reservation
-	var/turf/low = reservation.bottom_left_turfs[1]
-	var/turf/high = reservation.top_right_turfs[1]
+	var/turf/low = berth.get_bottom_left()
+	var/turf/high = berth.get_top_right()
 	var/obj/structure/overmap/host = berth.outpost
 	var/slot = berth.berth_number
 	berth.release()
@@ -295,8 +295,8 @@
 		TEST_ASSERT_EQUAL(berth.berth_number, i, "Concurrent berths took the wrong elevator floors")
 		for(var/j in i + 1 to length(held))
 			var/datum/outpost_berth/other = held[j]
-			for(var/turf/corner as anything in list(other.reservation.bottom_left_turfs[1], other.reservation.top_right_turfs[1]))
-				TEST_ASSERT(!berth.reservation.contains_turf(corner), "Berths [i] and [j] share ground")
+			for(var/turf/corner as anything in list(other.get_bottom_left(), other.get_top_right()))
+				TEST_ASSERT(!berth.contains_turf(corner), "Berths [i] and [j] share ground")
 	for(var/datum/outpost_berth/berth as anything in held)
 		release_and_check(berth, "concurrent berth")
 
@@ -383,3 +383,111 @@
 	qdel(doomed)
 	for(var/datum/turf_reservation/reservation as anything in reservations)
 		TEST_ASSERT(QDELETED(reservation), "Deleting the outpost leaked a berth reservation")
+
+/**
+ * The berth ground procs agree with the reservation that holds the ground today, for a trader
+ * outpost berth, a player outpost berth and a player outpost's ship bay: the corners, the size,
+ * the block, and which tiles are on it. Given-back ground reads as none.
+ */
+/datum/unit_test/voidcrew_outpost_berth_ground
+
+/datum/unit_test/voidcrew_outpost_berth_ground/Run()
+	var/obj/structure/overmap/trader_outpost/market = allocate(/obj/structure/overmap/trader_outpost/general)
+	var/datum/outpost_berth/trader_berth = market.allocate_berth(allocate(/obj/structure/overmap/ship))
+	TEST_ASSERT_NOTNULL(trader_berth, "The trader outpost gave no berth")
+	check_ground(trader_berth, "trader berth")
+	var/turf/trader_corner = trader_berth.get_top_right()
+	TEST_ASSERT_EQUAL(get_trader_outpost_for_turf(trader_corner), market, "The trader berth is not under its outpost's protection")
+	TEST_ASSERT(get_trader_outpost_for_turf(get_step(trader_corner, NORTHEAST)) != market, "Trader protection reached past the berth")
+	TEST_ASSERT(market.contains_site_turf(trader_corner), "The trader berth is not part of its outpost")
+
+	var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
+	home.shell_template = allocate(/datum/map_template/player_outpost/test_fixture)
+	home.founder_ckey = "berthgroundowner"
+	TEST_ASSERT(home.load_level(), "Could not load the berth ground test outpost")
+	var/datum/outpost_berth/home_berth = home.allocate_berth(allocate(/obj/structure/overmap/ship))
+	TEST_ASSERT_NOTNULL(home_berth, "The player outpost gave no berth")
+	check_ground(home_berth, "player outpost berth")
+	var/turf/home_corner = home_berth.get_bottom_left()
+	TEST_ASSERT(home.contains_service_turf(home_corner), "The player outpost berth is not outpost service ground")
+	TEST_ASSERT(home.contains_site_turf(home_corner), "The player outpost berth is not part of its outpost")
+	TEST_ASSERT(!home.contains_service_turf(get_step(home_corner, SOUTHWEST)), "Outpost service ground reached past the berth")
+
+	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
+	var/datum/outpost_berth/ship_bay/bay = LAZYACCESS(home.bay_berths, 1)
+	TEST_ASSERT_NOTNULL(bay, "The player outpost has no ship bay")
+	check_ground(bay, "ship bay")
+	var/turf/bay_corner = bay.get_top_right()
+	TEST_ASSERT(home.contains_site_turf(bay_corner), "The ship bay is not part of its outpost")
+	TEST_ASSERT(checkpoint_yard_noise_at(bay_corner), "The ship bay is not heard as a construction yard")
+	TEST_ASSERT(!checkpoint_yard_noise_at(get_step(bay_corner, NORTHEAST)), "The construction yard reached past the ship bay")
+
+	var/turf/released = trader_berth.get_bottom_left()
+	trader_berth.release(force = TRUE)
+	check_no_ground(trader_berth, released, "released trader berth")
+	released = home_berth.get_bottom_left()
+	home_berth.release(force = TRUE)
+	check_no_ground(home_berth, released, "released player outpost berth")
+	released = bay.get_bottom_left()
+	qdel(home)
+	check_no_ground(bay, released, "ship bay of a deleted outpost")
+
+/// Every ground proc against the reservation it reads: corners, size, block and containment.
+/datum/unit_test/voidcrew_outpost_berth_ground/proc/check_ground(datum/outpost_berth/berth, label)
+	var/datum/turf_reservation/reservation = berth.reservation
+	TEST_ASSERT(!QDELETED(reservation) && length(reservation.bottom_left_turfs) && length(reservation.top_right_turfs), "[label]: holds no reservation")
+	TEST_ASSERT(berth.has_ground(), "[label]: reports no ground")
+	var/turf/low = reservation.bottom_left_turfs[1]
+	var/turf/high = reservation.top_right_turfs[1]
+	TEST_ASSERT_EQUAL(berth.get_bottom_left(), low, "[label]: wrong bottom-left corner")
+	TEST_ASSERT_EQUAL(berth.get_top_right(), high, "[label]: wrong top-right corner")
+	TEST_ASSERT_EQUAL(berth.get_width(), reservation.width, "[label]: wrong width")
+	TEST_ASSERT_EQUAL(berth.get_height(), reservation.height, "[label]: wrong height")
+
+	var/list/turf/ground = berth.get_block()
+	TEST_ASSERT_EQUAL(length(ground), reservation.width * reservation.height, "[label]: the block is the wrong size")
+	TEST_ASSERT_EQUAL(ground[1], low, "[label]: the block does not start at the bottom-left corner")
+	TEST_ASSERT_EQUAL(ground[length(ground)], high, "[label]: the block does not end at the top-right corner")
+	var/list/on_ground = list()
+	for(var/turf/tile as anything in ground)
+		on_ground[tile] = TRUE
+	for(var/turf/tile as anything in reservation.reserved_turfs)
+		if(!on_ground[tile])
+			TEST_FAIL("[label]: reserved turf ([tile.x],[tile.y]) is missing from the block")
+			break
+
+	// Inside: the four corners and the middle. Outside: a step past each edge and corner, and the
+	// same spot on another level.
+	var/list/turf/inside = list(
+		low,
+		high,
+		locate(low.x, high.y, low.z),
+		locate(high.x, low.y, low.z),
+		locate(round((low.x + high.x) / 2), round((low.y + high.y) / 2), low.z),
+	)
+	var/list/turf/outside = list(
+		get_step(low, WEST),
+		get_step(low, SOUTH),
+		get_step(high, EAST),
+		get_step(high, NORTH),
+		get_step(low, SOUTHWEST),
+		get_step(high, NORTHEAST),
+		locate(low.x, low.y, low.z == 1 ? 2 : 1),
+	)
+	for(var/turf/tile as anything in inside)
+		TEST_ASSERT(reservation.contains_turf(tile), "[label]: the reservation does not hold inside tile ([tile.x],[tile.y])")
+		TEST_ASSERT(berth.contains_turf(tile), "[label]: inside tile ([tile.x],[tile.y]) is off the berth's ground")
+	for(var/turf/tile as anything in outside)
+		TEST_ASSERT(!reservation.contains_turf(tile), "[label]: the reservation holds outside tile ([tile.x],[tile.y],[tile.z])")
+		TEST_ASSERT(!berth.contains_turf(tile), "[label]: outside tile ([tile.x],[tile.y],[tile.z]) is on the berth's ground")
+	TEST_ASSERT(!berth.contains_turf(null), "[label]: nullspace is on the berth's ground")
+
+/datum/unit_test/voidcrew_outpost_berth_ground/proc/check_no_ground(datum/outpost_berth/berth, turf/former_corner, label)
+	TEST_ASSERT(QDELETED(berth), "[label]: was not deleted")
+	TEST_ASSERT(!berth.has_ground(), "[label]: still reports ground")
+	TEST_ASSERT_NULL(berth.get_bottom_left(), "[label]: still has a bottom-left corner")
+	TEST_ASSERT_NULL(berth.get_top_right(), "[label]: still has a top-right corner")
+	TEST_ASSERT_EQUAL(berth.get_width(), 0, "[label]: still has a width")
+	TEST_ASSERT_EQUAL(berth.get_height(), 0, "[label]: still has a height")
+	TEST_ASSERT_EQUAL(length(berth.get_block()), 0, "[label]: still has a block")
+	TEST_ASSERT(!berth.contains_turf(former_corner), "[label]: still holds its old corner")

@@ -126,7 +126,7 @@ GLOBAL_LIST_EMPTY(overmap_objects)
 	if(get_interior_footprint()?.contains_turf(location))
 		return TRUE
 	for(var/datum/outpost_berth/berth as anything in berths)
-		if(berth?.reservation?.contains_turf(location))
+		if(berth?.contains_turf(location))
 			return TRUE
 	return FALSE
 

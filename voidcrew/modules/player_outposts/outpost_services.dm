@@ -29,21 +29,14 @@
 		return site && site == other
 	return is_valid_z_level(first_turf, second_turf)
 
-/datum/outpost_berth/proc/contains_service_turf(turf/location)
-	if(!reservation || !location)
-		return FALSE
-	var/turf/origin = reservation.bottom_left_turfs[1]
-	return origin && location.z == origin.z && location.x >= origin.x && location.y >= origin.y \
-		&& location.x < origin.x + reservation.width && location.y < origin.y + reservation.height
-
 /obj/structure/overmap/dynamic/player_outpost/proc/contains_service_turf(turf/location)
 	if(is_turf_buildable(location))
 		return TRUE
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
-		if(bay?.contains_service_turf(location))
+		if(bay?.contains_turf(location))
 			return TRUE
 	for(var/datum/outpost_berth/berth as anything in berths)
-		if(berth?.contains_service_turf(location))
+		if(berth?.contains_turf(location))
 			return TRUE
 	return FALSE
 

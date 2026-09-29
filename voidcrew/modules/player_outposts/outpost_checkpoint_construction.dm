@@ -225,7 +225,7 @@
 		return FALSE
 	port = loaded_port
 	source_reservation = loaded_space
-	if(!loaded || !istype(port) || QDELETED(port) || QDELETED(source_reservation))
+	if(!loaded || !istype(port) || QDELETED(port) || !has_source_ground())
 		error = "The hull could not be loaded. [unspent_note()]"
 		return FALSE
 	RegisterSignal(port, COMSIG_QDELETING, PROC_REF(on_port_deleted))
@@ -261,11 +261,22 @@
 
 /// Rechecked after every pause while the hidden copy is prepared.
 /datum/checkpoint_construction/proc/source_still_loading()
-	return !QDELETED(src) && state == CHECKPOINT_BUILD_PREPARING && !QDELETED(port) && !QDELETED(source_reservation)
+	return !QDELETED(src) && state == CHECKPOINT_BUILD_PREPARING && !QDELETED(port) && has_source_ground()
+
+/// Whether the hidden copy still holds its ground. Today that ground is source_reservation, and
+/// only taking the copy and discarding it touch the reservation itself.
+/datum/checkpoint_construction/proc/has_source_ground()
+	return !QDELETED(source_reservation)
+
+/// Every turf of the hidden copy's ground in block() order; empty once it is given back.
+/datum/checkpoint_construction/proc/get_source_block()
+	if(!has_source_ground() || !length(source_reservation.bottom_left_turfs) || !length(source_reservation.top_right_turfs))
+		return list()
+	return block(source_reservation.bottom_left_turfs[1], source_reservation.top_right_turfs[1])
 
 /// Shared checks before any piece exists.
 /datum/checkpoint_construction/proc/build_denial()
-	if(QDELETED(home) || QDELETED(bay) || !IS_WEAKREF_OF(src, bay.rebuild_owner) || QDELETED(bay.dock) || QDELETED(bay.reservation))
+	if(QDELETED(home) || QDELETED(bay) || !IS_WEAKREF_OF(src, bay.rebuild_owner) || QDELETED(bay.dock) || !bay.has_ground())
 		return "The ship bay is no longer reserved."
 	if(bay.ship || (bay.dock.get_docked() && (!port || bay.dock.get_docked() != port)))
 		return "The ship bay is occupied."
@@ -392,7 +403,7 @@
 /// Pairs every saved tile with its bay tile and queues the visits.
 /datum/checkpoint_construction/proc/plan()
 	error = build_denial()
-	if(error || QDELETED(port) || QDELETED(source_reservation))
+	if(error || QDELETED(port) || !has_source_ground())
 		error ||= "The hull could not be loaded. [unspent_note()]"
 		return FALSE
 	var/obj/docking_port/stationary/dock = bay.dock
@@ -430,7 +441,7 @@
 		if(!source || !port.shuttle_areas[source.loc])
 			continue
 		var/turf/target = bay_turfs[i]
-		if(!target || !bay.contains_service_turf(target))
+		if(!target || !bay.contains_turf(target))
 			error = "This hull does not fit the ship bay. [unspent_note()]"
 			return FALSE
 		hull_indices += i
@@ -591,9 +602,7 @@
 /// Drones launch from the bay's corner drone bays, shared out evenly, each keeping its own.
 /datum/checkpoint_construction/proc/spawn_drones()
 	var/list/obj/structure/checkpoint_drone_bay/cradles = list()
-	var/turf/origin = bay.reservation.bottom_left_turfs[1]
-	var/turf/far_corner = locate(origin.x + bay.reservation.width - 1, origin.y + bay.reservation.height - 1, origin.z)
-	for(var/turf/tile as anything in block(origin, far_corner))
+	for(var/turf/tile as anything in bay.get_block())
 		for(var/obj/structure/checkpoint_drone_bay/cradle in tile)
 			cradles += cradle
 	// Maps without drone bays launch from the bay console instead.
@@ -616,7 +625,7 @@
 		if(cradle && !(cradle in launched))
 			launched += cradle
 			cradle.launch()
-	play_to_checkpoint_yard(bay.reservation, CHECKPOINT_YARD_LAUNCH_SOUND)
+	play_to_checkpoint_yard(bay, CHECKPOINT_YARD_LAUNCH_SOUND)
 
 /// One bounded pass over the drones: travel, finish work, or take the next visit.
 /datum/checkpoint_construction/proc/run_drones()
@@ -765,7 +774,7 @@
 /// Spends the source immediately before the first piece, then moves the frame into the bay.
 /datum/checkpoint_construction/proc/commit()
 	var/denial = build_denial()
-	if(!denial && (QDELETED(port) || QDELETED(source_reservation)))
+	if(!denial && (QDELETED(port) || !has_source_ground()))
 		denial = "The hull could not be loaded. [unspent_note()]"
 	if(denial)
 		abort(denial)
@@ -1198,14 +1207,14 @@
  * reservation goes.
  */
 /datum/checkpoint_construction/proc/clear_off_hull()
-	var/datum/turf_reservation/space = source_reservation
-	if(QDELETED(space) || !length(space.bottom_left_turfs))
+	var/list/turf/copy_ground = get_source_block()
+	if(!length(copy_ground))
 		return
 	var/list/rooms = QDELETED(port) ? null : port.shuttle_areas
 	var/list/hull_tiles = list()
 	for(var/index in hull_indices)
 		hull_tiles[source_turfs[index]] = TRUE
-	for(var/turf/tile as anything in CORNER_BLOCK(space.bottom_left_turfs[1], space.width, space.height))
+	for(var/turf/tile as anything in copy_ground)
 		if(hull_tiles[tile] || rooms?[tile.loc])
 			continue
 		for(var/obj/thing in tile)
@@ -1417,7 +1426,7 @@
 		qdel(markers[marked])
 	markers.Cut()
 	var/site_remains = !QDELETED(bay) && !QDELETED(home)
-	var/datum/checkpoint_drone_flock/flock = site_remains && length(drones) ? new(bay.reservation) : null
+	var/datum/checkpoint_drone_flock/flock = site_remains && length(drones) ? new(bay) : null
 	for(var/obj/effect/checkpoint_build_drone/drone as anything in drones)
 		if(drone?.visit)
 			drone.visit.drone = null

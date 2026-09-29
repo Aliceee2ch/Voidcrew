@@ -184,14 +184,15 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 
 /// Drones released together. When the last one is gone, the bay hears them dock.
 /datum/checkpoint_drone_flock
-	var/datum/turf_reservation/yard
+	/// The ship bay the drones fly home in. Weak: the flock can outlive a bay that is removed.
+	var/datum/weakref/yard_ref
 	var/list/obj/effect/checkpoint_build_drone/drones = list()
 
-/datum/checkpoint_drone_flock/New(datum/turf_reservation/yard)
-	src.yard = yard
+/datum/checkpoint_drone_flock/New(datum/outpost_berth/ship_bay/yard)
+	yard_ref = WEAKREF(yard)
 
 /datum/checkpoint_drone_flock/Destroy()
-	yard = null
+	yard_ref = null
 	drones = null
 	return ..()
 
@@ -199,6 +200,7 @@ GLOBAL_LIST_INIT(checkpoint_drone_tool_sounds, list(
 	drones -= drone
 	if(length(drones))
 		return
-	if(!QDELETED(yard))
+	var/datum/outpost_berth/ship_bay/yard = yard_ref?.resolve()
+	if(yard?.has_ground())
 		play_to_checkpoint_yard(yard, CHECKPOINT_YARD_DOCK_SOUND, 25)
 	qdel(src)

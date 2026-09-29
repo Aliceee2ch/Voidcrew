@@ -434,10 +434,10 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		if(tile.x >= min(rect[1], rect[3]) && tile.x <= max(rect[1], rect[3]) && tile.y >= min(rect[2], rect[4]) && tile.y <= max(rect[2], rect[4]))
 			return TRUE
 	for(var/datum/outpost_berth/berth in berths)
-		if(berth.contains_service_turf(tile))
+		if(berth.contains_turf(tile))
 			return TRUE
 	for(var/datum/outpost_berth/ship_bay/bay in bay_berths)
-		if(bay.contains_service_turf(tile))
+		if(bay.contains_turf(tile))
 			return TRUE
 	return FALSE
 

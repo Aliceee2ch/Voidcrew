@@ -118,7 +118,8 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	var/berth_number = 0
 	/// Ship assigned to this berth (cleared via COMSIG_QDELETING)
 	var/obj/structure/overmap/ship/ship
-	/// The reserved turf block holding the hangar
+	/// The reserved turf block holding the hangar. Only claiming and releasing touch it;
+	/// everything that asks where the berth is uses the ground procs (GROUND below).
 	var/datum/turf_reservation/reservation
 	/// The stationary port the ship lands on
 	var/obj/docking_port/stationary/dock
@@ -180,6 +181,57 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	outpost = null
 	return ..()
 
+// ===== GROUND =====
+// The one rectangle of turfs a berth holds: its hangar, the pad and whatever is docked on it.
+// Every question about where a berth is goes through these procs. Today the ground is the
+// berth's turf reservation.
+
+/// Whether the berth holds ground right now: claimed and not yet given back.
+/datum/outpost_berth/proc/has_ground()
+	return !QDELETED(reservation)
+
+/// Bottom-left turf of the berth's ground, or null when it holds none.
+/datum/outpost_berth/proc/get_bottom_left()
+	if(!has_ground() || !length(reservation.bottom_left_turfs))
+		return null
+	return reservation.bottom_left_turfs[1]
+
+/// Top-right turf of the berth's ground, or null when it holds none.
+/datum/outpost_berth/proc/get_top_right()
+	if(!has_ground() || !length(reservation.top_right_turfs))
+		return null
+	return reservation.top_right_turfs[1]
+
+/// Width of the berth's ground in tiles; 0 when it holds none.
+/datum/outpost_berth/proc/get_width()
+	var/turf/bottom_left = get_bottom_left()
+	var/turf/top_right = get_top_right()
+	return bottom_left && top_right ? top_right.x - bottom_left.x + 1 : 0
+
+/// Height of the berth's ground in tiles; 0 when it holds none.
+/datum/outpost_berth/proc/get_height()
+	var/turf/bottom_left = get_bottom_left()
+	var/turf/top_right = get_top_right()
+	return bottom_left && top_right ? top_right.y - bottom_left.y + 1 : 0
+
+/// Whether `location` lies on the berth's ground. Coordinates only, so a docked hull's tiles count.
+/datum/outpost_berth/proc/contains_turf(turf/location)
+	if(!location)
+		return FALSE
+	var/turf/bottom_left = get_bottom_left()
+	var/turf/top_right = get_top_right()
+	if(!bottom_left || !top_right || location.z != bottom_left.z)
+		return FALSE
+	return location.x >= bottom_left.x && location.x <= top_right.x && location.y >= bottom_left.y && location.y <= top_right.y
+
+/// Every turf of the berth's ground in block() order (rows from the bottom); empty when it holds none.
+/datum/outpost_berth/proc/get_block()
+	var/turf/bottom_left = get_bottom_left()
+	var/turf/top_right = get_top_right()
+	if(!bottom_left || !top_right)
+		return list()
+	return block(bottom_left, top_right)
+
 /**
  * Politely frees the berth: waits (bounded) for the departing shuttle to
  * physically leave the pad before tearing the hangar down, since wiping the
@@ -237,15 +289,11 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
  * template is missing a required piece (bad map).
  */
 /datum/outpost_berth/proc/link_hangar_contents()
-	var/turf/top_right = locate(
-		hangar_bottom_left.x + reservation.width - 1,
-		hangar_bottom_left.y + reservation.height - 1,
-		hangar_bottom_left.z
-	)
-	if(!top_right)
+	var/list/turf/hangar_turfs = get_block()
+	if(!length(hangar_turfs))
 		return FALSE
 	var/turf/dock_turf
-	for(var/turf/hangar_turf as anything in block(hangar_bottom_left, top_right))
+	for(var/turf/hangar_turf as anything in hangar_turfs)
 		for(var/obj/effect/landmark/outpost_berth_dock/dock_mark in hangar_turf)
 			dock_turf = hangar_turf
 			qdel(dock_mark)
@@ -297,21 +345,13 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
  * outpost lobby before the reservation wipe force-deletes them.
  */
 /datum/outpost_berth/proc/eject_occupants()
-	if(!reservation || !outpost)
+	if(!has_ground() || !outpost)
 		return
 	var/list/turf/eject_to = outpost.get_floor_alcove(0)
 	var/turf/fallback = outpost.template_bottom_left
 	if(!length(eject_to) && !fallback)
 		return
-	var/turf/bottom_left = reservation.bottom_left_turfs[1]
-	var/turf/top_right = locate(
-		bottom_left.x + reservation.width - 1,
-		bottom_left.y + reservation.height - 1,
-		bottom_left.z
-	)
-	if(!top_right)
-		return
-	for(var/turf/hangar_turf as anything in block(bottom_left, top_right))
+	for(var/turf/hangar_turf as anything in get_block())
 		for(var/atom/movable/occupant as anything in hangar_turf.contents.Copy())
 			var/eject = FALSE
 			if(ismob(occupant))
@@ -395,7 +435,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 		qdel(claimed)
 		return FALSE
 	reservation = claimed
-	var/turf/bottom_left = claimed.bottom_left_turfs[1]
+	var/turf/bottom_left = get_bottom_left()
 	hangar_bottom_left = bottom_left
 	building = TRUE
 	var/loaded = body.load(bottom_left)

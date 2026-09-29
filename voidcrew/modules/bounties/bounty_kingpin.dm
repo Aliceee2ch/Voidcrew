@@ -470,6 +470,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	options[BOUNTY_KINGPIN_TALK_WORK] = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_talk")
 	if(kingpin_crew?.job_offered_to(get_crew_ship(user)))
 		options[BOUNTY_KINGPIN_TALK_TAKE_JOB] = image(icon = 'icons/hud/radial.dmi', icon_state = "radial_yes")
+	options[BOUNTY_KINGPIN_TALK_WALK] = image(icon = 'voidcrew/icons/hud/radial.dmi', icon_state = "radial_home")
 	var/choice = show_radial_menu(user, src, options, custom_check = CALLBACK(src, PROC_REF(kingpin_talk_check), user), tooltips = TRUE)
 	if(!choice || !kingpin_talk_check(user))
 		return
@@ -480,7 +481,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 /**
  * `user` picks `option` (BOUNTY_KINGPIN_TALK_*): they say their line and he answers. The shootout
- * starts, or his job is offered or taken. Returns TRUE if he listened. Making a job can sleep.
+ * starts, his job is offered or taken, or nothing happens. Returns TRUE if he listened. Making a job
+ * can sleep.
  */
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_talk(mob/living/user, option)
 	if(!kingpin_can_talk() || QDELETED(user))
@@ -495,6 +497,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 			kingpin_offer_work(user)
 		if(BOUNTY_KINGPIN_TALK_TAKE_JOB)
 			kingpin_take_job(user)
+		if(BOUNTY_KINGPIN_TALK_WALK)
+			bounty_say("walk_away", force = TRUE)
 		else
 			return FALSE
 	log_game("BOUNTY: [key_name(user)] told [src] \"[option]\" at [AREACOORD(src)]")
@@ -2944,6 +2948,8 @@ SUBSYSTEM_DEF(bounty_kingpin)
 			context = "work"
 		if(BOUNTY_KINGPIN_TALK_TAKE_JOB)
 			context = "take"
+		if(BOUNTY_KINGPIN_TALK_WALK)
+			context = "walk"
 	var/line = context ? bounty_kingpin_line("hunter", context) : null
 	if(line && user.stat == CONSCIOUS)
 		user.say(line, forced = "bounty kingpin talk")

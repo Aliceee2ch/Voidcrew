@@ -228,6 +228,11 @@
 	TEST_ASSERT(kingpin.kingpin_can_talk(), "A calm kingpin won't talk")
 	TEST_ASSERT_EQUAL(posting.hunt(ship), TRUE, "A crew couldn't hunt the kingpin before it worked for him")
 
+	// Walking away does nothing
+	TEST_ASSERT(kingpin.kingpin_talk(taker, "Walk away."), "The kingpin didn't listen to walk away") // BOUNTY_KINGPIN_TALK_WALK
+	TEST_ASSERT(!crew.job_offered_to(ship), "Walking away got the crew an offer")
+	TEST_ASSERT_EQUAL(crew.crew_state, "calm", "Walking away started something") // BOUNTY_KINGPIN_CALM
+
 	// Nobody takes his job before he offers it
 	TEST_ASSERT_NULL(kingpin.kingpin_take_job(taker), "A crew took his job before he offered it")
 	TEST_ASSERT(!job.active, "His job started before he offered it")

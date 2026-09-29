@@ -217,9 +217,9 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	if(owner_ship)
 		owner_ship.ship_notify("[name]: [message]", title, SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 30)
 
-// ===== COMBAT TARGET API (see /obj/structure/overmap base hooks) =====
+// ===== NOTIFICATIONS (see /obj/structure/overmap base hooks) =====
 
-/// Combat notifications reach everyone on the outpost plus the owner's crew ship
+/// Notices reach everyone on the outpost plus the owner's crew ship
 /obj/structure/overmap/dynamic/player_outpost/ship_notify(message, category = "ALERT", alert_level = SHIP_NOTIFY_NOTICE, sound_file = null, volume = 100)
 	var/formatted
 	switch(alert_level)

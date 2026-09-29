@@ -210,10 +210,10 @@
 			to_chat(user, span_warning("No target selected!"))
 		return FALSE
 
-	// Lasers remain ship-to-ship only; sieging outposts is missile work
+	// Lasers only track ships
 	if(!istype(target_ship, /obj/structure/overmap/ship))
 		if(user)
-			to_chat(user, span_warning("Laser tracking cannot resolve station-scale targets. Use missiles."))
+			to_chat(user, span_warning("Lasers only track ships."))
 		return FALSE
 
 	for(var/datum/weakref/ref in linked_turrets)
@@ -243,10 +243,10 @@
 			to_chat(user, span_warning("No target selected!"))
 		return 0
 
-	// Lasers remain ship-to-ship only; sieging outposts is missile work
+	// Lasers only track ships
 	if(!istype(target_ship, /obj/structure/overmap/ship))
 		if(user)
-			to_chat(user, span_warning("Laser tracking cannot resolve station-scale targets. Use missiles."))
+			to_chat(user, span_warning("Lasers only track ships."))
 		return 0
 
 	// Collect all ready turrets and calculate combined damage

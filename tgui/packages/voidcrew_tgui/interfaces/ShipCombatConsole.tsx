@@ -83,7 +83,7 @@ type NearbyShip = {
   identified: BooleanLike;
   shields: number;
   shields_max: number;
-  /** A real hull percent now, for ships and outposts both. */
+  /** A real hull percent. */
   integrity: number;
   integrity_max: number;
   distance: number;

@@ -462,10 +462,10 @@
 	var/checked = 0
 	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
 		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
-		var/list/maps = outpost_style_maps(upgrade.template_type)
-		TEST_ASSERT(length(maps), "The [upgrade.name] upgrade has no map")
-		for(var/datum/map_template/map_type as anything in maps)
-			checked += check_preview(map_type, "The [upgrade.name] ([initial(map_type.outpost_style)])")
+		TEST_ASSERT(length(outpost_style_maps(upgrade.template_type)), "The [upgrade.name] upgrade has no map")
+		// Its left-hand room's maps too, when it has one
+		for(var/datum/map_template/map_type as anything in upgrade.all_map_types())
+			checked += check_preview(map_type, "The [upgrade.name] ([outpost_map_preview_name(map_type)])")
 	for(var/datum/map_template/player_outpost/shell_type as anything in outpost_selectable_shells())
 		checked += check_preview(shell_type, "The [initial(shell_type.name)] shell")
 	TEST_ASSERT(checked, "No previews were checked")

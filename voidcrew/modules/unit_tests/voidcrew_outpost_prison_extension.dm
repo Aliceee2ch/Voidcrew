@@ -13,9 +13,10 @@
  * define named beside them. Fixtures are in voidcrew_outpost_prison_helpers.dm.
  */
 
-/// A left-hand extension whose load fails, for the wall that must stay shut. No id on the type,
-/// so the shop never lists it.
+/// An extension whose load fails, for the wall that must stay shut. No id on the type, so the shop
+/// never lists it. It is outside both extension families, so it never stands in for a real room.
 /datum/map_template/outpost_upgrade/prison_extension/failing
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension_right_rundown.dmm"
 
 /datum/map_template/outpost_upgrade/prison_extension/failing/load_rotated(turf/bottom_left, rotation = 0)
 	return null
@@ -574,3 +575,55 @@
 	TEST_ASSERT(prison.cell_block[locate(wing_corner.x + 7, wing_corner.y - 1, wing_corner.z)], "The turned extension's yard is not in the cell block")
 	TEST_ASSERT(prison.staff_ground[locate(wing_corner.x + 2, wing_corner.y - 1, wing_corner.z)], "The turned extension's office is not on the staff side")
 	settle_prison_air(home)
+
+/**
+ * The prison wing and both extension rooms come in every style a founder can pick (outpost_styles.dm),
+ * and every style's wing works the same: an outpost builds its own style's rooms, four cells, a clean
+ * and fully lit cell block with no mess drawn on it, and extensions on both walls that open their
+ * seams and bring the wing to ten cells. The other prison tests run on the test claim's own style.
+ */
+/datum/unit_test/voidcrew_outpost_prison_styles
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_extension_kit
+
+/datum/unit_test/voidcrew_outpost_prison_styles/Run()
+	var/list/styles = outpost_founder_styles()
+	TEST_ASSERT(length(styles) >= 2, "Founders have fewer than two styles to pick from")
+	var/list/families = list(
+		/datum/map_template/outpost_upgrade/prison,
+		/datum/map_template/outpost_upgrade/prison_extension/right,
+		/datum/map_template/outpost_upgrade/prison_extension/left,
+	)
+	for(var/style in styles)
+		for(var/family in families)
+			var/datum/map_template/map_type = outpost_style_map(family, style)
+			TEST_ASSERT(map_type && initial(map_type.outpost_style) == style, "[family] has no [style] map")
+		var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("prisonstyle[style]", style)
+		TEST_ASSERT_NOTNULL(home, "The [style] test prison did not load")
+		var/datum/outpost_upgrade/prison/wing_upgrade = home.outpost_upgrades["prison"]
+		TEST_ASSERT_EQUAL(wing_upgrade.get_template()?.type, outpost_style_map(/datum/map_template/outpost_upgrade/prison, style), "The [style] outpost did not build the [style] wing")
+		var/datum/outpost_prison/prison = test_prison(home)
+		TEST_ASSERT_EQUAL(length(prison.cells), 4, "The [style] wing has [length(prison.cells)] cells")
+
+		// Grime is drawn on the prisoners' side, never left there as mess the score would count.
+		for(var/obj/machinery/light/fixture as anything in all_lights(prison))
+			if(fixture.status != LIGHT_OK)
+				fixture.fix()
+		TEST_ASSERT(conditions_draw_lights(prison), "The [style] wing's lights were never drawn")
+		prison.refresh_conditions()
+		TEST_ASSERT_EQUAL(prison.mess_load, 0, "A fresh [style] wing has [prison.mess_load] mess on its cell block")
+		TEST_ASSERT_EQUAL(prison.clean_score, 100, "A fresh [style] wing is [prison.clean_score] clean")
+		TEST_ASSERT_EQUAL(prison.lit_score, 100, "A fresh [style] wing is [prison.lit_score] lit")
+
+		var/mob/living/carbon/human/owner = make_player(get_turf(home.management_console), "prisonstyle[style]")
+		for(var/side in list("left", "right"))
+			var/datum/outpost_upgrade/prison_extension/extension = place_extension(home, side, owner)
+			TEST_ASSERT(istype(extension), "The [style] [side]-hand extension was not placed: [extension]")
+			var/room_family = (side == "left") ? /datum/map_template/outpost_upgrade/prison_extension/left : /datum/map_template/outpost_upgrade/prison_extension/right
+			TEST_ASSERT_EQUAL(extension.get_template(side)?.type, outpost_style_map(room_family, style), "The [style] outpost did not build the [style] [side]-hand extension")
+		check_seam(home, prison, 1, "[style] west")
+		check_seam(home, prison, 17, "[style] east")
+		TEST_ASSERT_EQUAL(length(prison.cells), 10, "The [style] wing has [length(prison.cells)] cells with two extensions")
+		TEST_ASSERT_EQUAL(prison.capacity, 10, "The [style] wing holds [prison.capacity] with two extensions")
+		prison.refresh_conditions()
+		TEST_ASSERT_EQUAL(prison.mess_load, 0, "The [style] extensions brought [prison.mess_load] mess onto the cell block")
+		settle_prison_air(home)

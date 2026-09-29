@@ -49,15 +49,33 @@
 
 // ===== THE UPGRADE =====
 
-/// The right-hand wall's extension: its seam column is x = 1, and its far wall's joint is at (13,1).
+/// The extension's rooms: two sibling families, one per wall, each with a map per outpost style
+/// (outpost_styles.dm). Siblings, because a family is every subtype of its base.
 /datum/map_template/outpost_upgrade/prison_extension
 	name = "Outpost Prison Wing Extension"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension.dmm"
+
+/// The right-hand wall's extension: its seam column is x = 1, and its far wall's joint is at (13,1).
+/datum/map_template/outpost_upgrade/prison_extension/right
+
+/datum/map_template/outpost_upgrade/prison_extension/right/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension_right_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/prison_extension/right/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension_right_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /// The left-hand wall's extension, the right-hand one mirrored: its seam column is x = 13.
 /datum/map_template/outpost_upgrade/prison_extension/left
 	name = "Outpost Prison Wing Extension (left)"
-	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension_left.dmm"
+
+/datum/map_template/outpost_upgrade/prison_extension/left/rundown
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension_left_rundown.dmm"
+	outpost_style = OUTPOST_STYLE_RUNDOWN
+
+/datum/map_template/outpost_upgrade/prison_extension/left/clean
+	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_prison_extension_left_clean.dmm"
+	outpost_style = OUTPOST_STYLE_CLEAN
 
 /datum/outpost_upgrade/prison_extension
 	id = "prison_extension"
@@ -65,7 +83,7 @@
 	desc = "Three more cells, with yard and office space, built onto the prison wing."
 	price = OUTPOST_PRISON_EXTENSION_COST
 	max_owned = OUTPOST_PRISON_MAX_EXTENSIONS
-	template_type = /datum/map_template/outpost_upgrade/prison_extension
+	template_type = /datum/map_template/outpost_upgrade/prison_extension/right
 	left_template_type = /datum/map_template/outpost_upgrade/prison_extension/left
 	area_type = /area/voidcrew/player_outpost/prison_extension
 	// The far wall, away from the wing: loose things on the ground are swept out that way.

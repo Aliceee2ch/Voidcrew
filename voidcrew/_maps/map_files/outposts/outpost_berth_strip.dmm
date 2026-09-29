@@ -1,4 +1,14 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"a" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
 "b" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 4
@@ -21,14 +31,13 @@
 	},
 /turf/open/indestructible/dark,
 /area/template_noop)
-"e" = (
+"d" = (
 /obj/effect/landmark/outpost_elevator_alcove,
-/turf/open/indestructible/light,
-/area/template_noop)
-"f" = (
-/obj/effect/landmark/outpost_elevator_alcove,
-/obj/machinery/outpost_elevator/directional/south,
-/turf/open/indestructible/light,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/obj/machinery/light/cold/directional/west,
+/turf/open/indestructible/dark/smooth_large,
 /area/template_noop)
 "g" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -49,6 +58,16 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/template_noop)
+"i" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
 "j" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
@@ -66,11 +85,23 @@
 /obj/item/kirbyplants/organic/plant21,
 /turf/open/indestructible/dark,
 /area/template_noop)
+"l" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/machinery/outpost_elevator/directional/south,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
 "m" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 8
 	},
 /turf/open/indestructible/dark,
+/area/template_noop)
+"n" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/turf/open/indestructible/dark/smooth_large,
 /area/template_noop)
 "o" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -122,8 +153,32 @@
 	},
 /turf/open/indestructible/dark/textured,
 /area/template_noop)
+"t" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
+"u" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/template_noop)
 "v" = (
 /turf/open/indestructible/glass,
+/area/template_noop)
+"w" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/dark/smooth_large,
 /area/template_noop)
 "x" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -139,6 +194,16 @@
 	dir = 2
 	},
 /turf/open/indestructible/dark,
+/area/template_noop)
+"z" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/dark/smooth_large,
 /area/template_noop)
 "B" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -345,9 +410,9 @@ b
 v
 v
 V
-e
-e
-e
+i
+d
+a
 Z
 "}
 (8,1,1) = {"
@@ -358,9 +423,9 @@ j
 v
 v
 Q
-e
-e
-f
+t
+n
+l
 Z
 "}
 (9,1,1) = {"
@@ -371,9 +436,9 @@ b
 v
 v
 h
-e
-e
-e
+z
+w
+u
 Z
 "}
 (10,1,1) = {"

@@ -63,9 +63,15 @@
 	},
 /turf/open/indestructible,
 /area/voidcrew/trader_outpost)
-"aj" = (
+"ak" = (
 /obj/effect/landmark/outpost_elevator_alcove,
-/turf/open/indestructible/light,
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/turf/open/indestructible/dark/textured,
 /area/voidcrew/trader_outpost)
 "al" = (
 /turf/open/indestructible{
@@ -89,6 +95,14 @@
 /obj/structure/extinguisher_cabinet/directional/south,
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/trader_outpost)
+"an" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/obj/machinery/light/directional/west,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/trader_outpost)
 "ao" = (
 /turf/template_noop,
 /area/template_noop)
@@ -104,6 +118,28 @@
 	base_icon_state = "stairs-r";
 	icon_state = "stairs-r"
 	},
+/area/voidcrew/trader_outpost)
+"ar" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/trader_outpost)
+"as" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/machinery/outpost_elevator/directional/south,
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/trader_outpost)
+"at" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/turf/open/indestructible/dark/textured,
 /area/voidcrew/trader_outpost)
 "au" = (
 /obj/structure/railing/unbreakable,
@@ -122,6 +158,31 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark,
+/area/voidcrew/trader_outpost)
+"aw" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/trader_outpost)
+"ax" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 4
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/trader_outpost)
+"ay" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 4
+	},
+/turf/open/indestructible/dark/textured,
 /area/voidcrew/trader_outpost)
 "az" = (
 /obj/structure/railing/unbreakable{
@@ -176,6 +237,16 @@
 /obj/structure/marker_beacon/yellow,
 /turf/open/floor/engine/hull/reinforced,
 /area/space)
+"aG" = (
+/obj/effect/landmark/outpost_elevator_alcove,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 4
+	},
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/trader_outpost)
 "aH" = (
 /obj/effect/turf_decal/bot,
 /obj/structure/closet/crate,
@@ -1304,11 +1375,6 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/dark/textured,
-/area/voidcrew/trader_outpost)
-"oE" = (
-/obj/effect/landmark/outpost_elevator_alcove,
-/obj/machinery/outpost_elevator/directional/south,
-/turf/open/indestructible/light,
 /area/voidcrew/trader_outpost)
 "oU" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
@@ -4332,9 +4398,9 @@ XZ
 ly
 YH
 lE
-aj
-aj
-aj
+ar
+an
+ak
 dU
 aV
 ao
@@ -4374,9 +4440,9 @@ ly
 ly
 iT
 LQ
-aj
-aj
-oE
+aw
+at
+as
 dU
 aV
 aV
@@ -4416,9 +4482,9 @@ ly
 ly
 lS
 lE
-aj
-aj
-aj
+aG
+ay
+ax
 dU
 aV
 aV

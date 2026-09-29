@@ -723,6 +723,49 @@
 	UNTIL(QDELETED(kingpin) || world.time > deadline)
 	TEST_ASSERT(QDELETED(kingpin), "His unclaimable body didn't fade away")
 
+/// Killed in their seats, he and his goons fall out of them and lie flat. A body taken out of a chair lies flat, and so does him downed on his sofa once he's taken off it.
+/datum/unit_test/voidcrew_bounty_kingpin/seated_bodies
+
+/datum/unit_test/voidcrew_bounty_kingpin/seated_bodies/Run()
+	// A chair at the first goon post (4,0), so his goon sits in it
+	var/obj/structure/chair/chair = allocate(/obj/structure/chair, kingpin_test_spot(4, 0))
+	var/mob/living/basic/bounty_criminal/kingpin/kingpin = kingpin_test_lounge(null, 1)
+	TEST_ASSERT(istype(kingpin.buckled, /obj/structure/chair/sofa), "The kingpin isn't sitting on the sofa")
+	var/list/goons = kingpin.kingpin_crew.goons()
+	var/mob/living/basic/bounty_kingpin_goon/goon = goons[1]
+	TEST_ASSERT_EQUAL(goon.buckled, chair, "The goon didn't sit in the chair at his post")
+
+	// Killed in his chair, a goon falls out of it and lies flat
+	goon.death()
+	TEST_ASSERT_NULL(goon.buckled, "The dead goon is still sitting in his chair")
+	TEST_ASSERT_EQUAL(goon.body_position, LYING_DOWN, "The dead goon isn't lying down")
+	TEST_ASSERT(goon.lying_angle, "The dead goon is lying down but drawn standing up")
+
+	// Sat back in the chair, the body sits up; taken out of it again, it lies flat
+	TEST_ASSERT(chair.buckle_mob(goon, force = TRUE), "The dead goon couldn't be sat back in the chair")
+	TEST_ASSERT_EQUAL(goon.body_position, STANDING_UP, "The chair didn't sit the dead goon up")
+	chair.unbuckle_mob(goon, force = TRUE)
+	TEST_ASSERT_EQUAL(goon.body_position, LYING_DOWN, "The dead goon taken out of the chair isn't lying down")
+	TEST_ASSERT(goon.lying_angle, "The dead goon taken out of the chair is drawn standing up")
+
+	// Killed on his sofa, he falls off it and lies flat
+	kingpin.death()
+	TEST_ASSERT_NULL(kingpin.buckled, "The dead kingpin is still sitting on his sofa")
+	TEST_ASSERT_EQUAL(kingpin.body_position, LYING_DOWN, "The dead kingpin isn't lying down")
+	TEST_ASSERT(kingpin.lying_angle, "The dead kingpin is lying down but drawn standing up")
+
+	// Downed on his sofa he stays in it; taken off it, he lies flat
+	SSbounty_kingpin.kingpin_reset()
+	kingpin_test_clear_lounge()
+	var/mob/living/basic/bounty_criminal/kingpin/downed = kingpin_test_lounge(null, 0)
+	var/obj/structure/chair/sofa = downed.buckled
+	TEST_ASSERT(istype(sofa, /obj/structure/chair/sofa), "The second kingpin isn't sitting on the sofa")
+	downed.body_go_down()
+	TEST_ASSERT_EQUAL(downed.buckled, sofa, "Downed, the kingpin came off his sofa")
+	sofa.unbuckle_mob(downed, force = TRUE)
+	TEST_ASSERT_EQUAL(downed.body_position, LYING_DOWN, "The downed kingpin taken off his sofa isn't lying down")
+	TEST_ASSERT(downed.lying_angle, "The downed kingpin taken off his sofa is drawn standing up")
+
 /// A shootout puts nobody on the board; when his posting goes up it adopts him wherever he is, so a crew that grabbed him early can bring him in; withdrawn while he's held away, it takes him, and he's gone
 /datum/unit_test/voidcrew_bounty_kingpin/grabbed
 

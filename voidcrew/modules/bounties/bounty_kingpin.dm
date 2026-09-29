@@ -276,7 +276,12 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /mob/living/basic/bounty_criminal/kingpin/death(gibbed)
 	. = ..()
 	SSbounty_kingpin.kingpin_died(src)
-	if(!QDELETED(src) && !kingpin_posting())
+	if(QDELETED(src))
+		return
+	// A chair holds a body upright: he slumps off his sofa
+	if(istype(buckled, /obj/structure/chair))
+		buckled.unbuckle_mob(src, force = TRUE)
+	if(!kingpin_posting())
 		kingpin_start_fade()
 
 // His numbers on P2's body
@@ -905,12 +910,20 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		return FALSE
 	return ..()
 
+// Out of a chair while down or dead, they lie flat as the criminals do
+/mob/living/basic/bounty_kingpin_goon/set_lying_down(new_lying_angle)
+	. = ..()
+	bounty_body_lie_flat(src, new_lying_angle)
+
 // A goon's body stays for BOUNTY_GOON_FADE, then fades. Nothing drops.
 /mob/living/basic/bounty_kingpin_goon/death(gibbed)
 	goon_cancel_windup()
 	. = ..()
 	if(QDELETED(src))
 		return
+	// A chair holds a body upright: they slump out of it
+	if(istype(buckled, /obj/structure/chair))
+		buckled.unbuckle_mob(src, force = TRUE)
 	// A body can be dragged about
 	move_resist = MOVE_RESIST_DEFAULT
 	deltimer(goon_fade_timer)

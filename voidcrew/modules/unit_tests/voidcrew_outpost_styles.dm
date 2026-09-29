@@ -12,6 +12,15 @@
 	name = "Test Habitat"
 	mappath = "voidcrew/_maps/map_files/unit_tests/player_outpost_shell_fixture.dmm"
 
+/// The shipyard console standing in a ship bay, or null
+/proc/outpost_bay_shipyard_console(datum/outpost_berth/ship_bay/bay)
+	if(QDELETED(bay))
+		return null
+	for(var/obj/machinery/computer/ship_checkpoint/console as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/ship_checkpoint))
+		if(bay.contains_service_turf(get_turf(console)))
+			return console
+	return null
+
 /// Every style a founder can pick, from the selectable shells
 /proc/outpost_founder_styles()
 	. = list()
@@ -76,7 +85,8 @@
 		TEST_ASSERT_EQUAL(length(home.lobby_alcove_turfs), 9, "The [label]'s elevator nook is not nine tiles")
 		TEST_ASSERT_EQUAL(length(home.lobby_panels), 1, "The [label] has [length(home.lobby_panels)] elevator panels")
 		TEST_ASSERT_NOTNULL(home.ship_bay_silo(), "The [label] has no single ore silo")
-		TEST_ASSERT_NOTNULL(locate(/obj/machinery/computer/ship_checkpoint) in home.outpost_area, "The [label] has no shipyard console")
+		// The shipyard console stands in the ship bay, never in the habitat
+		TEST_ASSERT_NULL(locate(/obj/machinery/computer/ship_checkpoint) in home.outpost_area, "The [label] has a shipyard console")
 		assert_outpost_cargo_bundle(home)
 		TEST_ASSERT_NOTNULL(home.available_resident_pod(), "The [label] has no resident arrival point")
 		TEST_ASSERT_EQUAL(home.treasury.account_balance, 0, "The [label] came with money")
@@ -122,7 +132,7 @@
 					TEST_FAIL("The [style] [prototype.name], turned [rotation]: [problem]")
 			settle_room_air(placed_turfs)
 
-/// Every ship bay style loads into its reservation and links its dock, console, lift and signs.
+/// Every ship bay style loads into its reservation and links its dock, consoles, lift and signs.
 /datum/unit_test/voidcrew_outpost_ship_bay_styles
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
@@ -142,6 +152,13 @@
 		TEST_ASSERT_NOTNULL(bay.panel, "The [style] ship bay has no elevator panel")
 		TEST_ASSERT_EQUAL(length(bay.alcove_turfs), 9, "The [style] ship bay's elevator is not nine tiles")
 		TEST_ASSERT(length(bay.status_signs), "The [style] ship bay has no berth signs")
+		// Ship orders and checkpoints go through the bay's own shipyard console: the habitat has none.
+		var/obj/machinery/computer/ship_checkpoint/shipyard = outpost_bay_shipyard_console(bay)
+		TEST_ASSERT_NOTNULL(shipyard, "The [style] ship bay has no shipyard console")
+		TEST_ASSERT_EQUAL(get_outpost_from_atom(shipyard), home, "The [style] ship bay's shipyard console does not serve its outpost")
+		var/mob/living/carbon/human/clerk = make_player(get_turf(shipyard), "baystyleclerk[style]")
+		var/datum/ship_checkpoint_ui/shipyard_panel = allocate(/datum/ship_checkpoint_ui, home, shipyard, clerk)
+		TEST_ASSERT_EQUAL(shipyard_panel.ui_status(clerk, GLOB.always_state), UI_INTERACTIVE, "The [style] ship bay's shipyard console cannot be used")
 		for(var/turf/tile as anything in bay.dock.return_turfs())
 			for(var/obj/thing in tile)
 				if(thing.density && thing.anchored)

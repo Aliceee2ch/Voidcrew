@@ -1333,9 +1333,14 @@
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
 	},
-/obj/effect/turf_decal/delivery/white,
-/obj/machinery/computer/ship_checkpoint{
-	dir = 2
+/obj/structure/table/glass,
+/obj/item/folder/white{
+	pixel_x = -4;
+	pixel_y = 3
+	},
+/obj/item/pen/blue{
+	pixel_x = 6;
+	pixel_y = 4
 	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/voidcrew/player_outpost)

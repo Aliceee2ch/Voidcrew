@@ -2944,8 +2944,14 @@
 /area/voidcrew/player_outpost)
 "Xq" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/machinery/computer/ship_checkpoint{
-	dir = 2
+/obj/structure/table,
+/obj/item/folder/blue{
+	pixel_x = -4;
+	pixel_y = 3
+	},
+/obj/item/pen{
+	pixel_x = 7;
+	pixel_y = 5
 	},
 /obj/effect/turf_decal/tile/brown/half/contrasted{
 	dir = 1

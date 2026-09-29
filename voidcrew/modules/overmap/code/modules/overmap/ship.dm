@@ -209,8 +209,9 @@
 	var/list/datum/mission/active_missions = list()
 	/// Maximum number of active missions (captain can adjust)
 	var/max_missions = DEFAULT_MAX_ACTIVE_MISSIONS
-	/// World time of the last manual mission refresh (rate-limited)
-	var/last_mission_refresh = 0
+	/// World time of the last manual mission refresh (rate-limited). Starts a whole cooldown back, so a
+	/// ship that never refreshed can, rather than waiting out the first minutes after the server boots.
+	var/last_mission_refresh = -MISSION_REFRESH_COOLDOWN
 
 	var/pending_dock = FALSE
 	var/pending_dock_timer

@@ -148,3 +148,6 @@
 #define BOUNTY_BOARD_OFFERED "offered"
 #define BOUNTY_BOARD_OPEN "open"
 #define BOUNTY_BOARD_RELISTING "relisting"
+
+/// How long a mission board holds back its static data for pictures it asked for, before sending without them
+#define BOUNTY_BOARD_MUGSHOT_WAIT (5 SECONDS)

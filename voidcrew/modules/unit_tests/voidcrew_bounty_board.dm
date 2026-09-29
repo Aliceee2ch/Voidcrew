@@ -244,6 +244,25 @@
 	offer.board_on_mugshot_ready(offer.record)
 	TEST_ASSERT(offer.static_data_serial > serial_before, "The boards weren't told the picture is ready")
 
+/// A board waits for the pictures it asked for before resending its static data, so a first look updates once; a picture that never comes is waited on 5 s (BOUNTY_BOARD_MUGSHOT_WAIT)
+/datum/unit_test/voidcrew_bounty_board/mugshots_pending
+
+/datum/unit_test/voidcrew_bounty_board/mugshots_pending/Run()
+	var/obj/structure/overmap/ship/ship = board_test_ship()
+	var/obj/machinery/computer/mission_board/console = allocate(/obj/machinery/computer/mission_board)
+	var/datum/criminal_bounty/posting = board_test_posting(3)
+	posting.record.mugshot = null
+	TEST_ASSERT(console.board_mugshots_pending(ship), "The board didn't wait for a picture it just asked for")
+	TEST_ASSERT(posting.record.identity_mugshot_queued || posting.record.mugshot, "The board didn't ask for the picture")
+	posting.record.mugshot = "picture"
+	TEST_ASSERT(!console.board_mugshots_pending(ship), "The board still waits with every picture made")
+	posting.record.mugshot = null
+	// A build that failed: asked 5 s (BOUNTY_BOARD_MUGSHOT_WAIT) ago and still nothing
+	console.board_mugshots_asked[posting.record.id] = world.time - 5 SECONDS
+	TEST_ASSERT(!console.board_mugshots_pending(ship), "The board waits forever for a picture that failed")
+	// A ship that never refreshed its missions may refresh at once, whenever the server booted
+	TEST_ASSERT(world.time - ship.last_mission_refresh >= 5 MINUTES, "A ship's first mission refresh waits on the server's uptime") // MISSION_REFRESH_COOLDOWN
+
 /// 45 minutes, held while a ship hunts it, for up to 30 minutes a hunt (12.1)
 /datum/unit_test/voidcrew_bounty_board/expiry
 

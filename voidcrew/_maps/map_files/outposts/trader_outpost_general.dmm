@@ -2390,7 +2390,7 @@
 /turf/open/indestructible/grass,
 /area/voidcrew/trader_outpost)
 "xf" = (
-/obj/structure/beebox,
+/obj/structure/beebox/premade,
 /turf/open/misc/dirt/station,
 /area/voidcrew/trader_outpost)
 "xh" = (

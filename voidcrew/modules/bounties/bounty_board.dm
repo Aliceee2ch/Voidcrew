@@ -461,6 +461,8 @@ SUBSYSTEM_DEF(criminal_bounties)
 /obj/machinery/computer/mission_board
 	/// What the Wanted section's static data (the mugshots) was last built from: board_static_signature() for this console's ship
 	var/board_static_sent
+	/// Record id -> world.time this console first asked for its mugshot (board_mugshots_pending())
+	var/list/board_mugshots_asked = list()
 	/// Between two warrants printed here
 	COOLDOWN_DECLARE(board_warrant_cooldown)
 
@@ -516,10 +518,36 @@ SUBSYSTEM_DEF(criminal_bounties)
 		wanted += list(posting.board_ui_entry(ship, linked_pad))
 	data["wanted"] = wanted
 	var/signature = board_static_signature(ship)
-	if(board_static_sent != signature)
+	// Held while pictures are still being made, so a first look sends the pictures once, not once each
+	if(board_static_sent != signature && !board_mugshots_pending(ship))
 		board_static_sent = signature
 		addtimer(CALLBACK(src, TYPE_PROC_REF(/datum, update_static_data_for_all_viewers)), 1, TIMER_UNIQUE | TIMER_DELETE_ME)
 	return data
+
+/**
+ * Whether a mugshot `ship`'s board lists is still being made: one this console asked for less than
+ * BOUNTY_BOARD_MUGSHOT_WAIT ago that isn't built yet. Asks for any it hasn't asked for. A build that
+ * fails is only waited on that long, and the board then sends without it.
+ */
+/obj/machinery/computer/mission_board/proc/board_mugshots_pending(obj/structure/overmap/ship/ship)
+	. = FALSE
+	var/list/listed = list()
+	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties)
+		if(!posting.is_open() || !posting.board_visible_to(ship) || !posting.record)
+			continue
+		var/datum/bounty_record/record = posting.record
+		listed[record.id] = TRUE
+		if(record.mugshot)
+			continue
+		if(!board_mugshots_asked[record.id])
+			board_mugshots_asked[record.id] = world.time
+			bounty_queue_mugshot(record)
+		if(world.time - board_mugshots_asked[record.id] < BOUNTY_BOARD_MUGSHOT_WAIT)
+			. = TRUE
+	// Forget postings that left the board
+	for(var/id in board_mugshots_asked)
+		if(!listed[id])
+			board_mugshots_asked -= id
 
 /**
  * The Wanted section's actions from the board's ui_act(): hunt_wanted, abandon_wanted,

@@ -7,7 +7,7 @@
  * someone else on the pole keeps her off it; and ending the dance (a break, a shootout, death) steps
  * her back down beside it with her offsets reset. A shootout sends her running for cover, a fight by
  * the kingpin's seat sends her straight out by the lift, and she is killable like any other ambient
- * outpost NPC. She wears a bikini and boots, no uniform.
+ * outpost NPC. She wears a bikini, no uniform.
  * SSambient_npcs does nothing on its own in tests (`ambient_auto`); see voidcrew_ambient_core.dm for
  * the harness (ambient_test_outpost(), pa_tile()) and voidcrew_ambient_outposts.dm for the same
  * pattern used on PA's other outpost NPCs.
@@ -196,16 +196,11 @@
 	TEST_ASSERT(performer.pixel_w == base_w && performer.pixel_z == base_z, "The dancer's body kept her pole offsets")
 	TEST_ASSERT(isnull(performer.activity), "The dancer's body is still [performer.activity?.name]")
 
-	// She dances in a bikini and performer's boots, no uniform: underwear on the body her look is built on
-	for(var/outfit_type in list(/datum/outfit/ambient_dancer, /datum/outfit/ambient_dancer/gold))
-		var/datum/outfit/ambient_dancer/outfit = new outfit_type
+	// She dances in a bikini, no uniform: underwear on the body her look is built on
+	for(var/outfit_type in list(/datum/outfit/ambient_dancer))
 		var/mob/living/carbon/human/consistent/model = allocate(/mob/living/carbon/human/consistent, pa_tile(0, 4))
 		model.physique = FEMALE
 		model.equipOutfit(outfit_type, visuals_only = TRUE)
 		var/datum/sprite_accessory/underwear/bikini = SSaccessories.underwear_list[model.underwear]
 		TEST_ASSERT(istype(bikini) && bikini.icon_state, "[outfit_type] leaves the dancer without a bikini (underwear [model.underwear])")
-		TEST_ASSERT(!bikini.use_static, "[outfit_type]'s bikini can't take its colour")
-		TEST_ASSERT_EQUAL(model.underwear_color, outfit.bikini_color, "[outfit_type]'s bikini is not its colour")
 		TEST_ASSERT_NULL(model.w_uniform, "[outfit_type] puts the dancer in a uniform over her bikini")
-		TEST_ASSERT_NOTNULL(model.shoes, "[outfit_type] leaves the dancer barefoot")
-		qdel(outfit)

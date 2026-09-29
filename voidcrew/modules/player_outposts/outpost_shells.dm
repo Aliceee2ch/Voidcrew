@@ -26,10 +26,8 @@
  *   unanchored portable generator with fuel, the area requires power, so when
  *   the SMES buffer drains the owner keeps the generator fed or goes dark
  *
- * The bare-claim shell deliberately breaks all of these: it ships nothing but a
- * pad, the arrival landmark and a crate of console boards. Everything the
- * linker doesn't find is simply absent until the owner builds it (rebuilt
- * consoles relink themselves; see outpost_management.dm / outpost_construction.dm).
+ * Ships only ever reach an outpost through the hangar elevator (outpost_level_layout.dm), so
+ * every shell carries one.
  */
 
 /area/voidcrew/player_outpost
@@ -82,12 +80,6 @@
 	selectable = TRUE
 	catalog_order = 2
 
-/// Hidden: the founding catalog does not offer it. Its rooms load in the default style.
-/datum/map_template/player_outpost/nothing
-	name = "Bare Claim"
-	catalog_desc = "No prefab at all: an empty sector, a survey pad, and a crate holding the registry console boards. Bring your own everything."
-	mappath = "voidcrew/_maps/map_files/outposts/player_outpost_shell_nothing.dmm"
-
 /// The shell templates a founder may pick, in catalog order
 /proc/outpost_selectable_shells()
 	var/static/list/shells
@@ -123,19 +115,3 @@
 	if(!preview || !fexists("[OUTPOST_PREVIEW_DIR][preview].png"))
 		return null
 	return "[preview].png"
-
-/// The bare claim's entire inheritance: the outpost console boards.
-/// Everything else (frames, materials, the silo, air) is the owner's problem.
-/obj/structure/closet/crate/player_outpost_start
-	name = "colonial registry claim crate"
-	desc = "The colonial registry's idea of a starter kit: the circuit boards for an outpost's management and construction consoles, and a packing slip wishing you luck."
-
-/obj/structure/closet/crate/player_outpost_start/PopulateContents()
-	. = ..()
-	new /obj/item/circuitboard/computer/player_outpost_management(src)
-	new /obj/item/circuitboard/computer/player_outpost_construction(src)
-	new /obj/item/paper/fluff/player_outpost_claim(src)
-
-/obj/item/paper/fluff/player_outpost_claim
-	name = "packing slip"
-	default_raw_text = "CONTENTS: outpost management console board (1), outpost construction console board (1). The Colonial Registry congratulates you on your new claim and reminds you that unimproved sectors carry no warranty, atmosphere, or floor. Good luck."

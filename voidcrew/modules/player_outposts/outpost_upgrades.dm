@@ -413,8 +413,8 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 
 /**
  * Ground no upgrade may cover on level `z`, as list(x0, y0, x1, y1) corners in any order:
- * every docking port's footprint (the reserve berths, docked hulls) and the reserve berths'
- * original layout, since they move to fit each visitor and move back.
+ * every docking port's footprint (the cargo dock pad, docked hulls). Berths and the ship bay
+ * are zones outside the build region.
  */
 /obj/structure/overmap/dynamic/player_outpost/proc/upgrade_protected_rects(z)
 	var/list/rects = list()
@@ -424,9 +424,6 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	for(var/obj/docking_port/mobile/port in SSshuttle.mobile_docking_ports)
 		if(port.z == z)
 			rects += list(port.return_coords())
-	for(var/obj/docking_port/stationary/dock in list(reserve_dock, reserve_dock_secondary))
-		if(dock.reserve_home_z == z)
-			rects += list(list(dock.reserve_home_x, dock.reserve_home_y, dock.reserve_home_x + RESERVE_DOCK_MAX_SIZE_LONG - 1, dock.reserve_home_y + RESERVE_DOCK_MAX_SIZE_SHORT - 1))
 	return rects
 
 /// Outpost ground kept free whatever stands on it: docking, berths, the elevator, arrivals, other upgrades.

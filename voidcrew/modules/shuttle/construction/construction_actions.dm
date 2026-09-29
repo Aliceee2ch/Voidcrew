@@ -16,8 +16,7 @@
 	var/obj/machinery/computer/camera_advanced/base_construction/ship/ship_console = base_console
 
 	if(!ship_console.can_build_at(build_target))
-		var/denial = ship_console.get_expansion_denial(build_target)
-		to_chat(owner, span_warning(denial || "You can only build within the shuttle or on valid adjacent tiles!"))
+		to_chat(owner, span_warning("You can only build within the shuttle or on valid adjacent tiles!"))
 		return FALSE
 
 	// Check for blast doors - don't allow construction/deconstruction on tiles with blast doors
@@ -460,9 +459,6 @@
 	// Check for placed/wrenched atmospherics pipes first
 	var/obj/machinery/atmospherics/atmos_pipe = locate() in target_turf
 	if(atmos_pipe)
-		if(HAS_TRAIT(atmos_pipe, TRAIT_OUTPOST_PROPERTY))
-			remote_eye.balloon_alert(owner, "outpost property!")
-			return
 		// Need unwrench upgrade to remove placed pipes
 		if(!(rpd.upgrade_flags & RPD_UPGRADE_UNWRENCH))
 			remote_eye.balloon_alert(owner, "need unwrench upgrade!")

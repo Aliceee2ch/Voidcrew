@@ -406,7 +406,7 @@ $line: rgba(158, 36, 52, 0.36);
 
 .Outpost__room {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 124px 112px;
+  grid-template-columns: minmax(0, 1fr) 124px;
   align-items: center;
   column-gap: 10px;
   min-height: 38px;

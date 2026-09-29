@@ -328,9 +328,16 @@
 	TEST_ASSERT_NULL(visitor.get_idcard(TRUE), "The buyer still has an ID after taking it off")
 	TEST_ASSERT_EQUAL(stock.sell(iron, 1, 7, visitor, register), "No bank account on your ID.", "A buyer with no ID paid")
 	visitor.equip_to_slot_or_del(card, ITEM_SLOT_ID)
-	shop.visitors_allowed = FALSE
-	TEST_ASSERT_EQUAL(stock.sell(iron, 1, 7, visitor, register), "The shop is closed to visitors.", "A room closed to visitors sold to one")
-	shop.visitors_allowed = TRUE
+	// The door decides who reaches the register: a visitor at the counter gets past any door setting (a stale price proves it, and moves nothing)
+	var/list/shop_doors = list()
+	for(var/datum/weakref/shop_door_ref as anything in shop.doors)
+		var/obj/machinery/door/shop_door = shop_door_ref.resolve()
+		if(shop_door)
+			shop_doors[shop_door] = outpost_door_access_of(shop_door)
+			home.apply_door_access(shop_door, "owner")
+	TEST_ASSERT_EQUAL(stock.sell(iron, 1, 6, visitor, register), "Price changed to 7 cr.", "A shop with keyed doors turned a visitor away at the counter")
+	for(var/obj/machinery/door/shop_door as anything in shop_doors)
+		home.apply_door_access(shop_door, shop_doors[shop_door])
 	shop.is_open = FALSE
 	TEST_ASSERT_EQUAL(stock.sell(iron, 1, 7, visitor, register), "Closed.", "A closed shop sold")
 	shop.is_open = TRUE

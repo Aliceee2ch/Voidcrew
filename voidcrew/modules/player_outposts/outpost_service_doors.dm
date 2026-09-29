@@ -1,10 +1,11 @@
 /**
  * # Outpost service doors
  *
- * The airlocks of outpost service rooms (outpost_service_rooms.dm). Outpost members (the owner,
- * residents and the owner's crews) always pass. Visitors pass a public door while its room admits
- * visitors, and never a staff door. Every door opens from its unrestricted side, which the room map
- * points inside, so nobody is ever locked in.
+ * The airlocks of outpost service rooms (outpost_service_rooms.dm). They are keyed like any outpost
+ * door (outpost_door_access.dm): the room starts its entrance public and its staff doors staff, and
+ * the owner or a steward can change either. Every door opens from its free side, the room's inside,
+ * so nobody is ever locked in. A visitor who paid for what is inside (a locker, a lab pass) always
+ * gets through the room's entrance.
  *
  * Every route that opens an airlock is checked: bumps, clicks, telekinesis and bots all come
  * through allowed(); thrown items, janitor keys, prying tools, emags and Knock each get their own
@@ -20,7 +21,7 @@
 	opens_with_door_remote = FALSE
 	// Never set: a door button with a matching id opens, bolts and shocks it. adopt_doors() clears map edits.
 	id_tag = null
-	/// OUTPOST_DOOR_PUBLIC or OUTPOST_DOOR_STAFF
+	/// OUTPOST_DOOR_PUBLIC or OUTPOST_DOOR_STAFF: the setting the room gives the door when it is built
 	var/door_policy = OUTPOST_DOOR_PUBLIC
 
 /obj/machinery/door/airlock/outpost/service/medical
@@ -83,26 +84,18 @@
 	desc = "A wooden door marked for staff."
 	icon = 'icons/obj/doors/airlocks/station/wood.dmi'
 
-/// Whether this door opens for `user`
+/// Whether this door opens for `user`: its setting, from where they stand (outpost_door_access.dm)
 /obj/machinery/door/airlock/outpost/service/proc/admits(mob/user)
-	if(!user)
+	if(user && isAdminGhostAI(user))
+		return TRUE
+	return !outpost_access_refuses(user)
+
+/// Whether `user` paid for what is inside this door's room (admits_visitor_extra()). Never through a staff door.
+/obj/machinery/door/airlock/outpost/service/proc/admits_paying_visitor(mob/user)
+	if(!user || door_policy != OUTPOST_DOOR_PUBLIC)
 		return FALSE
-	if(isAdminGhostAI(user))
-		return TRUE
-	// Exits always open
-	if(unrestricted_side(user))
-		return TRUE
-	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost_from_atom(src)
-	if(!home)
-		return door_policy == OUTPOST_DOOR_PUBLIC
-	if(home.is_outpost_member(user))
-		return TRUE
-	if(door_policy == OUTPOST_DOOR_STAFF)
-		return FALSE
-	var/datum/outpost_upgrade/service/room = home.upgrade_at_turf(get_turf(src))
-	if(!istype(room))
-		return TRUE
-	return room.visitors_allowed || room.admits_visitor_extra(user)
+	var/datum/outpost_upgrade/service/room = service_room()
+	return !!room?.admits_visitor_extra(user)
 
 /// The room this door belongs to, if it stands in one
 /obj/machinery/door/airlock/outpost/service/proc/service_room()
@@ -112,7 +105,10 @@
 
 // Never ..(): that would add emergency access, the resident override and req_access
 /obj/machinery/door/airlock/outpost/service/allowed(mob/M)
-	return admits(M)
+	if(admits(M))
+		return TRUE
+	tell_outpost_access_refusal(M)
+	return FALSE
 
 // A thrown item opens a door by the door's own access check, never allowed(). Judge its thrower.
 /obj/machinery/door/airlock/outpost/service/Bumped(atom/movable/AM)
@@ -152,12 +148,3 @@
 
 /obj/machinery/door/airlock/outpost/service/singularity_pull(atom/singularity, current_size)
 	return
-
-/obj/machinery/door/airlock/outpost/service/examine(mob/user)
-	. = ..()
-	if(door_policy == OUTPOST_DOOR_STAFF)
-		. += span_notice("Staff only.")
-		return
-	var/datum/outpost_upgrade/service/room = service_room()
-	if(room && !room.visitors_allowed)
-		. += span_notice("Members only.")

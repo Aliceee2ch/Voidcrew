@@ -79,6 +79,10 @@
 	var/list/entry = pass_entry(patient)
 	return entry ? max(0, round((entry["expiry"] - world.time) / (1 SECONDS))) : 0
 
+// A pass holder always reaches the lab they paid for, whatever its entrance is keyed to
+/datum/outpost_upgrade/service/medical_lab/admits_visitor_extra(mob/user)
+	return !!pass_entry(user)
+
 /// Uses the lab free: an ownerless outpost, or a member
 /datum/outpost_upgrade/service/medical_lab/proc/is_exempt(mob/patient)
 	if(QDELETED(outpost))

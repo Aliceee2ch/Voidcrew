@@ -496,14 +496,12 @@
 	if(closed)
 		return closed
 	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost()
-	var/datum/outpost_upgrade/service/shop/shop = get_shop()
 	if(!isliving(buyer) || buyer.stat == DEAD)
 		return "No customer."
 	if(QDELETED(register) || !register.Adjacent(buyer))
 		return "Step up to the register."
+	// The door decides who reaches the register (outpost_door_access.dm)
 	var/member = home.is_outpost_member(buyer)
-	if(!shop.visitors_allowed && !member)
-		return "The shop is closed to visitors."
 	if(!member && (get_crew_ship(buyer) in home.banned_ships))
 		return "Your crew is banned here."
 	if(QDELETED(listing) || listings_by_id[listing.id] != listing)
@@ -896,11 +894,7 @@
  */
 /obj/machinery/outpost_shop_stock/proc/buyer_ui_data(mob/user)
 	var/obj/structure/overmap/dynamic/player_outpost/home = get_outpost()
-	var/datum/outpost_upgrade/service/shop/shop = get_shop()
 	var/closed = closed_reason()
-	var/member = !!home?.is_outpost_member(user)
-	if(!closed && !shop.visitors_allowed && !member)
-		closed = "Closed to visitors."
 	var/taker = !!home?.can_take_shop_stock(user)
 	var/mob/living/viewer = isliving(user) ? user : null
 	var/datum/bank_account/account = viewer?.get_idcard(TRUE)?.registered_account

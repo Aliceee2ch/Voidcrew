@@ -109,8 +109,6 @@ type TeleporterDetail = {
 type ServiceRoom = {
   id: string;
   name: string;
-  visitors_allowed?: BooleanLike;
-  can_toggle_visitors?: BooleanLike;
   detail?: { kind?: string; [key: string]: unknown } | null;
 };
 type UpgradeEntry = {
@@ -947,10 +945,6 @@ function serviceRooms(data: OutpostData): ServiceRoom[] {
   return (data.services || []).filter((room) => !!room?.id);
 }
 
-const ACCESS: Choice[] = [
-  { id: 'public', name: 'Public' },
-  { id: 'members', name: 'Members' },
-];
 const SHOP_STATES: Choice[] = [
   { id: 'open', name: 'Open' },
   { id: 'closed', name: 'Closed' },
@@ -1062,13 +1056,6 @@ function RoomRow({
     params: Record<string, unknown> = {},
   ) => act('service_act', { ...params, id: room?.id, service_action });
   const kind = room?.detail?.kind;
-  // The teleporter is always public; its arrival rules are the lever.
-  const showAccess =
-    state === 'installed' &&
-    !!room &&
-    room.visitors_allowed !== undefined &&
-    room.visitors_allowed !== null &&
-    kind !== 'teleporter';
   const shop = kind === 'shop' ? (room?.detail as ShopDetail) : null;
   return (
     <>
@@ -1077,22 +1064,6 @@ function RoomRow({
         onClick={() => onSelect(entry.id)}
       >
         <span className="Outpost__name">{entry.name}</span>
-        <div className="Outpost__slot">
-          {showAccess && room ? (
-            <Segmented
-              inline
-              choices={ACCESS}
-              value={room.visitors_allowed ? 'public' : 'members'}
-              disabled={!room.can_toggle_visitors}
-              onPick={(access) =>
-                act('set_room_visitors', {
-                  id: room.id,
-                  allowed: access === 'public' ? 1 : 0,
-                })
-              }
-            />
-          ) : null}
-        </div>
         <div className="Outpost__slot Outpost__slot--end">
           {state === 'available' ? (
             <span className="Outpost__price">
@@ -2603,10 +2574,7 @@ function visibleTabs(data: OutpostData): Tab[] {
   }
   if (
     serviceRooms(data).some(
-      (room) =>
-        !!room.can_toggle_visitors ||
-        !!room.detail?.can_toggle ||
-        !!room.detail?.can_edit,
+      (room) => !!room.detail?.can_toggle || !!room.detail?.can_edit,
     )
   ) {
     tabs.push(TABS.rooms);

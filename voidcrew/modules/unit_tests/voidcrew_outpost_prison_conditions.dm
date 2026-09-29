@@ -24,8 +24,14 @@
 		if(!source?.needs_update)
 			continue
 		source.update_corners()
-		if(!QDELETED(source))
-			source.needs_update = LIGHTING_NO_UPDATE
+		if(QDELETED(source))
+			continue
+		// Out of the subsystem's queues as well, as its fire() does. A drawn source left queued is
+		// never dequeued by Destroy(), which only dequeues sources that still need an update, and
+		// the subsystem then stalls on the deleted entry for the rest of the round.
+		source.needs_update = LIGHTING_NO_UPDATE
+		SSlighting.sources_queue -= source
+		SSlighting.current_sources -= source
 	return !prison.lighting_pending()
 
 /// Clean for a mess load, as the curve gives it: free to 2 units per 100 floor tiles, 0 at 14 (PRISON_MESS_FREE, PRISON_MESS_SQUALID)

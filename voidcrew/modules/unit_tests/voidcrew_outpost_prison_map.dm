@@ -178,6 +178,11 @@
 	reservations += reserved
 	var/turf/origin = reserved.bottom_left_turfs[1]
 	var/turf/bottom_left = locate(origin.x + 1, origin.y + 1, origin.z)
+	// A released reservation keeps its landmarks (/turf/proc/empty() skips them), so joints an earlier
+	// test loaded raw here, such as the extension map's canvas, would be counted as this wing's.
+	for(var/turf/tile as anything in block(origin.x, origin.y, origin.z, origin.x + wing.width + 1, origin.y + wing.height + 1, origin.z))
+		for(var/obj/effect/landmark/outpost_upgrade_snap/stale in tile)
+			qdel(stale)
 	TEST_ASSERT_NOTNULL(wing.load_rotated(bottom_left, 0), "[label] did not load")
 
 	var/snap_count = 0

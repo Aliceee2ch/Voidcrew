@@ -2,8 +2,9 @@
  * World population: tests for outpost_dancer.dm in voidcrew/modules/ambient_npcs/.
  *
  * The dancer settles at a festivus pole (the Undertow's "strip pole"), her dance keeps her on or
- * beside it, a shootout call sends her running and screaming off it, and she is killable like any
- * other ambient outpost NPC. SSambient_npcs does nothing on its own in tests (`ambient_auto`); see
+ * beside it and leaves her no higher than she started, a shootout call sends her running off it
+ * for cover, a fight by the kingpin's seat sends her straight out by the lift, and she is killable
+ * like any other ambient outpost NPC. SSambient_npcs does nothing on its own in tests (`ambient_auto`); see
  * voidcrew_ambient_core.dm for the harness (ambient_test_outpost(), pa_tile()) and
  * voidcrew_ambient_outposts.dm for the same pattern used on PA's other outpost NPCs.
  */
@@ -29,6 +30,12 @@
 		dance.next_move = world.time
 		dancer.activity_step(1)
 		TEST_ASSERT(get_dist(dancer, pole) <= 1, "A dance step moved the dancer away from the pole")
+	// Hops and spins end where they started: she never drifts up off the floor
+	var/matrix/rest = matrix(dancer.transform)
+	for(var/step in 1 to 40)
+		dance.dance_step(pole)
+	var/matrix/after = matrix(dancer.transform)
+	TEST_ASSERT(after.c == rest.c && after.f == rest.f, "The dance left the dancer [after.f - rest.f] pixels higher than she started")
 	dancer.end_activity()
 
 	// No pole in reach: she does not pretend to dance
@@ -37,7 +44,7 @@
 	var/mob/living/basic/ambient_npc/outpost/dancer/stray = pa_npc(/mob/living/basic/ambient_npc/outpost/dancer, pa_tile(4, 4), empty_place)
 	TEST_ASSERT(!stray.start_activity(new /datum/ambient_activity/dance_pole(stray)), "The dancer found a pole that is not there")
 
-/// The kingpin's shootout sends her running, screaming, off the pole; she comes back once it is calm
+/// The kingpin's shootout sends her off the pole for cover and she comes back once it is calm; a fight by his seat sends her out by the lift
 /datum/unit_test/voidcrew_ambient_outpost_dancer_shootout
 
 /datum/unit_test/voidcrew_ambient_outpost_dancer_shootout/Run()
@@ -63,18 +70,22 @@
 	dancer.shootout_over()
 	TEST_ASSERT(!istype(dancer.activity, /datum/ambient_activity/take_cover), "The dancer stayed in cover once the shootout was over")
 
-	// Violence right by the kingpin's seat scares her the same way, even without a shootout
+	// A fight right by the kingpin's seat, no shootout: she runs straight out by the lift, without ducking first
 	allocate(/obj/effect/landmark/bounty_kingpin/seat, pa_tile(0, 0))
 	var/mob/living/carbon/human/consistent/brawler = allocate(/mob/living/carbon/human/consistent, pa_tile(2, 1))
 	var/mob/living/basic/ambient_npc/outpost/dancer/second = pa_npc(/mob/living/basic/ambient_npc/outpost/dancer, pa_tile(1, 1), place)
 	second.react_violence(brawler)
-	TEST_ASSERT(istype(second.activity, /datum/ambient_activity/take_cover), "Violence by the kingpin's seat did not send the dancer running for cover")
+	var/datum/ambient_activity/leave/running = second.activity
+	TEST_ASSERT(istype(running), "A fight by the kingpin's seat did not send the dancer running")
+	TEST_ASSERT(!second.crouching, "The dancer ducked instead of running from a fight by the kingpin")
+	TEST_ASSERT_EQUAL(running.spot, pa_tile(4, 4), "The dancer is not running for the lift")
 
-	// Violence well clear of the kingpin: she ducks and leaves like any other patron (base react_violence)
+	// A fight well clear of the kingpin: she ducks and leaves like any other patron (base react_violence)
 	var/mob/living/basic/ambient_npc/outpost/dancer/third = pa_npc(/mob/living/basic/ambient_npc/outpost/dancer, pa_tile(4, 4), place)
 	var/mob/living/carbon/human/consistent/other_brawler = allocate(/mob/living/carbon/human/consistent, pa_tile(4, 4))
 	third.react_violence(other_brawler)
 	TEST_ASSERT(istype(third.activity, /datum/ambient_activity/leave), "A fight away from the kingpin did not send the dancer off like the other patrons")
+	TEST_ASSERT(third.crouching, "A fight away from the kingpin did not make the dancer duck like the other patrons")
 
 /// The dancer is killable like any other ambient outpost NPC, and drops a little cash once
 /datum/unit_test/voidcrew_ambient_outpost_dancer_death

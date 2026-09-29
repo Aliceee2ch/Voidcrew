@@ -8,8 +8,8 @@
 		],
 		"talk": [
 			"Enjoying the show?",
-			"Tips go in the jar, not my hand.",
-			"Careful, I bite when I dance."
+			"Look, don't touch.",
+			"I'm working, hon."
 		],
 		"attacked": [
 			"Hey! Watch it!",
@@ -22,7 +22,7 @@
 		"dance": [
 			"Come on, don't be shy.",
 			"Watch this.",
-			"Tips go in the jar!",
+			"Don't just stand there.",
 			"You're not so bad yourself."
 		]
 	}

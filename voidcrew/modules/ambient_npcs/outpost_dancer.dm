@@ -8,10 +8,12 @@
  * the outpost is frozen.
  *
  * She dances in a loop at the pole (turns, a spin now and then, small hops and sways, a word to the
- * crowd), and now and then takes a short break at the bar or a nearby seat before going back. If the
- * kingpin's crew starts shooting, or a fight breaks out near him, she screams and runs, to the given
- * refuge or out by the lift, and only comes back once it is calm. Any other fight at the outpost, she
- * ducks and leaves like the other patrons (the base reaction, inherited).
+ * crowd), and now and then takes a short break at the bar or a nearby seat before going back. She
+ * stands beside the pole, never on a kingpin goon's post (they walk back to them). If the kingpin's
+ * crew starts shooting she screams and runs for the lounge's refuge, and comes back once it is calm
+ * (take_cover, shootout_over()). If a fight breaks out right by his seat she screams and runs out by
+ * the lift (leave); a replacement comes off the lift later. Any other fight at the outpost, she ducks
+ * and leaves like the other patrons (the base reaction, inherited).
  *
  * Her lines are in strings/outpost_dancer.json, section "dancer".
  */
@@ -71,30 +73,34 @@
 /mob/living/basic/ambient_npc/outpost/dancer/proc/find_pole()
 	return ambient_outpost_find(get_outpost(), /obj/structure/festivus/anchored)
 
-/// Fights near the kingpin scare her into running; anything else, she ducks and leaves like the others (base react_violence)
+/// A fight right by the kingpin: she screams and runs out by the lift, no ducking. Anything else, she ducks and leaves like the others (base react_violence).
 /mob/living/basic/ambient_npc/outpost/dancer/react_violence(mob/living/offender)
-	if(ambient_in_kingpin_lounge(offender, DANCER_KINGPIN_ALARM_RADIUS) || ambient_in_kingpin_lounge(src, DANCER_KINGPIN_ALARM_RADIUS))
-		if(stat != CONSCIOUS || fading || !reaction_ready("violence"))
-			return
-		flee_kingpin_trouble(null)
+	if(!ambient_in_kingpin_lounge(offender, DANCER_KINGPIN_ALARM_RADIUS))
+		return ..()
+	// Already running, or keeping her head down in a shootout: she stays where she is
+	if(stat != CONSCIOUS || fading || istype(activity, /datum/ambient_activity/leave) || istype(activity, /datum/ambient_activity/take_cover) || !reaction_ready("violence"))
 		return
-	return ..()
+	if(start_activity(new /datum/ambient_activity/leave(src)))
+		scream()
 
 /// The kingpin's crew is shooting: she screams and runs for cover, and comes back once it is calm (shootout_over(), inherited)
 /mob/living/basic/ambient_npc/outpost/dancer/react_shootout(turf/refuge)
-	if(stat != CONSCIOUS || fading || istype(activity, /datum/ambient_activity/leave))
+	if(stat != CONSCIOUS || fading || istype(activity, /datum/ambient_activity/leave) || istype(activity, /datum/ambient_activity/take_cover))
 		return
-	flee_kingpin_trouble(refuge)
+	if(start_activity(new /datum/ambient_activity/take_cover(src, refuge)))
+		scream()
 
-/// A scream, and off to `refuge` (or out by the lift when there is none) until it is calm
-/mob/living/basic/ambient_npc/outpost/dancer/proc/flee_kingpin_trouble(turf/refuge)
-	if(istype(activity, /datum/ambient_activity/take_cover))
-		return
-	var/turf/target = refuge || place?.exit_turf(src)
-	if(!target)
-		return
-	emote("scream", intentional = TRUE)
-	start_activity(new /datum/ambient_activity/take_cover(src, target))
+/// A woman's scream. Never sleeps.
+/mob/living/basic/ambient_npc/outpost/dancer/proc/scream()
+	var/static/list/screams = list(
+		'sound/mobs/humanoids/human/scream/femalescream_1.ogg',
+		'sound/mobs/humanoids/human/scream/femalescream_2.ogg',
+		'sound/mobs/humanoids/human/scream/femalescream_3.ogg',
+		'sound/mobs/humanoids/human/scream/femalescream_4.ogg',
+		'sound/mobs/humanoids/human/scream/femalescream_5.ogg',
+	)
+	manual_emote("screams!")
+	playsound(src, pick(screams), 50, TRUE)
 
 // =========================================================================
 // THE DANCE
@@ -106,7 +112,8 @@
  */
 /datum/ambient_activity/dance_pole
 	name = "dancing"
-	accepts_company = TRUE
+	// On the job: nobody pulls her off the pole for a chat
+	accepts_company = FALSE
 	duration_low = 3 MINUTES
 	duration_high = 6 MINUTES
 	/// The pole she is dancing round
@@ -121,7 +128,7 @@
 	var/obj/structure/festivus/anchored/pole = dancer.find_pole()
 	if(!pole)
 		return FALSE
-	var/turf/spot = ambient_use_spot(dancer, pole, failed_spots)
+	var/turf/spot = ambient_use_spot(dancer, pole, spots_to_avoid())
 	if(!spot)
 		return FALSE
 	pole_ref = WEAKREF(pole)
@@ -132,6 +139,15 @@
 /datum/ambient_activity/dance_pole/Destroy()
 	pole_ref = null
 	return ..()
+
+/// Spots given up on, and the kingpin's goons' posts: they walk back to them, and she would be in the way
+/datum/ambient_activity/dance_pole/proc/spots_to_avoid()
+	var/list/avoid = failed_spots ? failed_spots.Copy() : list()
+	for(var/obj/effect/landmark/bounty_kingpin/goon/post in GLOB.bounty_kingpin_marks)
+		var/turf/post_turf = get_turf(post)
+		if(post_turf)
+			avoid[post_turf] = TRUE
+	return avoid
 
 /// The pole, if it is still there
 /datum/ambient_activity/dance_pole/proc/pole()
@@ -164,17 +180,18 @@
 			// A spin now and then
 			doer.SpinAnimation(speed = rand(6, 9), loops = 1)
 		if(3, 4)
-			// A small hop
+			// A small hop. The resting transform is kept first: animate() sets the var to each step's end at once, so reading it after would leave her floating higher with every hop.
+			var/matrix/rest = matrix(doer.transform)
 			var/matrix/up = matrix(doer.transform)
 			up.Translate(0, 3)
 			animate(doer, transform = up, time = 0.3 SECONDS, easing = SINE_EASING)
-			animate(transform = matrix(doer.transform), time = 0.3 SECONDS)
-		if(5, 6, 7)
+			animate(transform = rest, time = 0.3 SECONDS)
+		if(5, 6, 7, 8, 9)
 			// A turn round the pole
 			doer.setDir(turn(get_dir(doer, pole) || doer.dir, pick(-90, 90, 180)))
 		else
-			// A sway
-			doer.manual_emote(pick("sways to the beat.", "gives a little twirl.", "runs a hand up the pole."))
+			// Now and then, something the crowd would notice
+			doer.manual_emote(pick("sways to the beat.", "gives a little twirl.", "leans back against the pole."))
 
 /// Any spin or hop still running is cleared, however the dance ended
 /datum/ambient_activity/dance_pole/finish()

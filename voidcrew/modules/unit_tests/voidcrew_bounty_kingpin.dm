@@ -777,11 +777,11 @@
 // ===== THE MAP =====
 
 /**
- * The black market's lounge: the seat on the corp sofa, the 3-tile wood coffee table in front of it,
- * six goon posts and the refuge. SSbounty_kingpin seats him and his crew there on no posting, as it
- * does at the start of the round: the lounge's tables can be shot to pieces while he's in (and are
- * outpost property again after), the barkeep is the bar's own, the loiterer goes to the refuge, never
- * the hangar lift (M3, M4, M5), and his posting is at that outpost.
+ * The black market's lounge: the seat on the corp sofa, no table of his own in front of it (he lost
+ * his coffee table, and no lounge table stands at any of his six goon posts either), six goon posts
+ * and the refuge. SSbounty_kingpin seats him and his crew there on no posting, as it does at the start
+ * of the round: the barkeep is the bar's own, the loiterer goes to the refuge, never the hangar lift
+ * (M3, M4, M5), and his posting is at that outpost.
  */
 /datum/unit_test/voidcrew_bounty_kingpin/map
 
@@ -796,13 +796,10 @@
 	TEST_ASSERT_EQUAL(seat_turf.y - bottom_left.y + 1, 22, "The seat isn't at y 22 on the map")
 	var/obj/structure/chair/sofa/corp/sofa = locate() in seat_turf
 	TEST_ASSERT(sofa && sofa.dir == WEST, "The seat isn't on the corp sofa facing west")
-	var/list/coffee_table = list()
 	for(var/dy in -1 to 1)
 		var/turf/table_turf = locate(seat_turf.x - 1, seat_turf.y + dy, seat_turf.z)
-		var/obj/structure/table/wood/table = locate() in table_turf
-		TEST_ASSERT(table && table.type == /obj/structure/table/wood && table.can_flip, "No wood coffee table at ([table_turf.x - bottom_left.x + 1],[table_turf.y - bottom_left.y + 1])")
-		coffee_table += table
-		TEST_ASSERT(table.resistance_flags & INDESTRUCTIBLE, "The coffee table isn't outpost property before he sits down")
+		var/obj/structure/table/table = locate() in table_turf
+		TEST_ASSERT_NULL(table, "A table still stands at ([table_turf.x - bottom_left.x + 1],[table_turf.y - bottom_left.y + 1]) in front of him")
 	var/turf/refuge = bounty_kingpin_find_refuge(seat_turf)
 	TEST_ASSERT_NOTNULL(refuge, "The lounge has no refuge mark")
 	TEST_ASSERT(!(refuge in outpost.lobby_alcove_turfs), "The refuge is on the hangar lift")
@@ -836,11 +833,9 @@
 	TEST_ASSERT_EQUAL(length(crew.goons()), 6, "The kingpin doesn't have six goons")
 	TEST_ASSERT_EQUAL(length(crew.crew_posts), 6, "The crew doesn't know its six posts")
 	TEST_ASSERT_EQUAL(crew.crew_outpost(), outpost, "The crew doesn't know the outpost its lounge is in")
-	TEST_ASSERT_EQUAL(length(crew.crew_coffee_table), 3, "The crew didn't find the coffee table")
-	// The coffee table: no other table the crew minds stands at a goon's post
-	TEST_ASSERT_EQUAL(length(crew.crew_tables), 3, "The crew minds [length(crew.crew_tables)] lounge tables, not three")
-	for(var/obj/structure/table/table as anything in coffee_table)
-		TEST_ASSERT(!(table.resistance_flags & INDESTRUCTIBLE), "A lounge table can't be shot to pieces while he's in")
+	// He has no coffee table any more, and no lounge table stands at any of his goon posts either
+	TEST_ASSERT_EQUAL(length(crew.crew_coffee_table), 0, "The crew found a coffee table that isn't there")
+	TEST_ASSERT_EQUAL(length(crew.crew_tables), 0, "The crew minds [length(crew.crew_tables)] lounge tables, not none")
 	TEST_ASSERT_EQUAL(crew.crew_refuge, refuge, "The crew doesn't use the refuge")
 	TEST_ASSERT_EQUAL(crew.exit_turf(crew.crew_loiterer_ref?.resolve()), refuge, "The loiterer's way out isn't the refuge")
 	var/mob/living/basic/outpost_trader/barkeep = crew.crew_barkeep_ref?.resolve()
@@ -870,9 +865,6 @@
 	TEST_ASSERT(!HAS_TRAIT(loiterer, TRAIT_AI_PAUSED), "The loiterer never came back")
 	TEST_ASSERT_EQUAL(get_turf(loiterer), loiterer_home, "A loiterer carried off to another level wasn't put back home")
 	TEST_ASSERT(!crew.crew_barkeep_ducked || QDELETED(crew), "The barkeep stayed down")
-	for(var/obj/structure/table/table as anything in coffee_table)
-		TEST_ASSERT(!table.is_flipped, "The coffee table stayed over after he was gone")
-		TEST_ASSERT(table.resistance_flags & INDESTRUCTIBLE, "The coffee table isn't outpost property again after he was gone")
 	TEST_ASSERT(SSbounty_kingpin.kingpin_gone, "Deleted, he isn't gone for the round")
 	qdel(hunter)
 	qdel(outpost)

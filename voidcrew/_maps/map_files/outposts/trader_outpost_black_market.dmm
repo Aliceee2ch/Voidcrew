@@ -696,7 +696,6 @@
 	pixel_w = 7;
 	pixel_z = 10
 	},
-/obj/structure/table/wood,
 /turf/open/floor/carpet/neon/simple/red/nodots,
 /area/voidcrew/trader_outpost)
 "cs" = (
@@ -987,7 +986,6 @@
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/trader_outpost)
 "gE" = (
-/obj/structure/table/wood,
 /turf/open/floor/carpet/neon/simple/red/nodots,
 /area/voidcrew/trader_outpost)
 "gK" = (
@@ -3204,11 +3202,6 @@
 /turf/open/indestructible/dark,
 /area/voidcrew/trader_outpost)
 "Qf" = (
-/obj/item/rag{
-	pixel_w = 10;
-	pixel_z = -1
-	},
-/obj/structure/table/wood,
 /turf/open/floor/carpet/neon/simple/red/nodots,
 /area/voidcrew/trader_outpost)
 "Ql" = (

@@ -16,8 +16,6 @@
 #define OUTPOST_NETWORK_CANCEL_COOLDOWN (15 SECONDS)
 /// No trips this long after a fight
 #define OUTPOST_NETWORK_COMBAT_LOCK (60 SECONDS)
-/// Non-members may not travel to an outpost this long after it was attacked
-#define OUTPOST_NETWORK_RAID_LOCK (10 MINUTES)
 /// Arrival policies of a player outpost's pad
 #define OUTPOST_NETWORK_ARRIVALS_OPEN "open"
 #define OUTPOST_NETWORK_ARRIVALS_MEMBERS "members"

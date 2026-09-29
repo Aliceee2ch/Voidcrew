@@ -1,8 +1,7 @@
 /**
  * Outpost marketplace foundation hardening: the charge compares effective prices, service rooms
  * survive a singularity, a room cannot be sealed at placement and reports a blocked or airless
- * exit, room dressing stays bolted, service doors keep no id, the shield generator refuses a
- * service room, and a shop sale breaks summon marks.
+ * exit, room dressing stays bolted, service doors keep no id, and a shop sale breaks summon marks.
  *
  * Voidcrew defines are not visible from test files, so prices and ids appear as literals.
  */
@@ -149,17 +148,6 @@
 	grille.resistance_flags |= INDESTRUCTIBLE
 	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "An indestructible grille across the door was not reported")
 	qdel(grille)
-
-	// F-07: a shield generator inside the room never holds the shield role
-	var/obj/machinery/outpost_shield_generator/walled = allocate(__IMPLIED_TYPE__, inside)
-	var/obj/machinery/outpost_shield_generator/open_air = allocate(__IMPLIED_TYPE__, outside)
-	for(var/obj/machinery/outpost_shield_generator/generator as anything in list(walled, open_air))
-		generator.outpost = home
-		generator.set_machine_stat(NONE)
-	TEST_ASSERT(!walled.is_operational_unit(), "A shield generator in a service room is operational")
-	if(home.is_turf_buildable(outside))
-		TEST_ASSERT(open_air.is_operational_unit(), "A shield generator outside the room is not operational")
-	TEST_ASSERT(home.get_shield_generator() != walled, "The outpost's shield runs from a service room")
 
 	settle_room_air(room_turfs)
 

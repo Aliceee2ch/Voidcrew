@@ -177,7 +177,6 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 	home.display_name = outpost_name
 	home.shell_template = new shell_type
 	home.founded_zone = SSovermap.get_zone_band_for_turf(destination)
-	home.raidable = home.founded_zone != ZONE_GREEN
 	home.resident_mode = "closed"
 	if(!home.load_level())
 		qdel(home)

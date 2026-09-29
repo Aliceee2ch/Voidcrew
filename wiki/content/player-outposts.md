@@ -21,7 +21,7 @@ Your crew's ship must be stationary on an empty overmap tile, away from planets,
 The style you pick is for good. Every room you buy later, and the ship bay, is built to match it. Both homes work the same way and come with the same things: a bank terminal, cargo console, empty ore silo, resident cryopod, management and construction consoles, and a hangar elevator. A charged SMES and portable generator provide starting power. Keep the generator fuelled or build another power supply.
 
 !!! warning "Where you plant it is permanent"
-    Zone rules lock in at founding. An outpost founded in the patrolled inner ring is protected from ship weapons. One founded in contested or lawless space is raidable. You cannot move it later.
+    You cannot move an outpost later. Ship weapons never fire on outposts, wherever they are.
 
 ## Managing and building
 
@@ -39,7 +39,7 @@ The **bank machine** handles the outpost's money. Deposit from your ID account o
 
 Order supplies through the ordinary **cargo console**, or buy sheets through a **Galactic Materials Market** you build locally. Both charge the outpost bank and send a physical freight ferry, which lands on the outpost's **cargo dock**. The cargo dock is a free upgrade: buy it and place it from the **Upgrades** tab of the management console. Until it is placed, the cargo console cannot order. No player ship needs to stay docked for deliveries.
 
-Load eligible goods onto the ferry and dispatch it to export them. Payment goes to the outpost bank. Everyone must leave the ferry before it can depart. Failed deliveries refund undelivered purchases. The ferry will not land on anyone or anything left on the landing pad; clear the pad and order again.
+Load eligible goods onto the ferry and dispatch it to export them. Payment goes to the outpost bank. Everyone must leave the ferry before it can depart. Failed deliveries refund undelivered purchases. Keep off the landing pad when the alarm sounds: the ferry lands on whatever is there and crushes it.
 
 ## Upgrades
 
@@ -62,7 +62,7 @@ Service rooms sell things to visiting crews. Members use them free: the owner, r
 
 | Room | Cost | What it sells | Default price | Highest price |
 |---|---|---|---|---|
-| Cloning Bay | 3,000 cr | A clone in one of four vats | 600 cr | 5,000 cr |
+| Cloning Bay | 3,000 cr | A clone in one of eight vats | 600 cr | 5,000 cr |
 | Medical Lab | 2,000 cr | A 30 minute lab pass | 300 cr | 2,000 cr |
 | Shop | 2,000 cr | Whatever the staff stock | set per item | 1,000,000 cr |
 | Safe Storage | 1,000 cr | One of thirteen lockers for the round | 200 cr | 5,000 cr |
@@ -74,8 +74,8 @@ Set prices on the **Pricing** tab of the management console. The **Services** ta
 
 Three roles from the **Residents** tab share the work:
 
-- **Stewards** manage the outpost, open and close rooms, choose which lab procedures are offered and evict ships from the ship bay.
-- **Treasurers** withdraw from the bank, set prices and evict clones.
+- **Stewards** manage the outpost, open and close rooms and evict ships from the ship bay.
+- **Treasurers** withdraw from the bank and set prices.
 - **Pricers** set prices and nothing else.
 
 The owner, stewards, treasurers and pricers stock the shop and take items out of it free. Other residents pay at the register like anyone else.
@@ -86,11 +86,11 @@ Imprint yourself at a vat while you are alive. Each player can hold one clone pe
 
 While the outpost has an owner, a visitor cannot wake there during a lockdown, for 10 minutes after the outpost is attacked, or while their crew is banned. The clone is kept, so they can wake once the block lifts.
 
-The owner or a treasurer can erase a paid clone and refund exactly what was paid. They cannot while its owner is dead and could still wake in it, until 10 minutes after it was ready. A payer whose account is gone gets nothing back.
+Clones step out naked, so the bay has a wardrobe that hands out clothes free.
 
 ### Medical lab
 
-A lab pass lasts **30 minutes** and covers the auto-surgeon, the sleepers and the cryo cells. You can renew it once it has less than 5 minutes left. The terminal only sells a pass when the lab can actually treat the patient, either with a procedure it offers or because they are hurt. A visitor can pay for other people's passes; members cannot buy passes for visitors. A pass keeps the procedures that were on offer when it was bought.
+A lab pass lasts **30 minutes** and covers the auto-surgeon, the sleepers and the cryo cells. You can renew it once it has less than 5 minutes left. The terminal only sells a pass when the lab can actually treat the patient, either with a procedure or because they are hurt. A visitor can pay for other people's passes; members cannot buy passes for visitors.
 
 ### Safe storage
 
@@ -157,31 +157,6 @@ The **Docking** tab also sells a permanent **ship bay** for 10,000 credits, 100 
 ## Advertising
 
 A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships, adds its memo and coordinates to [mission boards](missions.md), and marks it on helm charts. A refused purchase says why in chat.
-
-## Raiding and siege
-
-An outpost founded outside patrolled space is a legitimate military target and shows up on other crews' combat consoles as one. The rules are narrow: only outposts founded outside green space can be locked at all, and a missile launcher will only fire on one while the **attacking ship** is itself sitting in the contested band or the lawless deep. Nobody shoots at anything from inside patrolled space.
-
-Siege damage lands as missiles, and there is no ship-to-ship shield to soak them. What you can build instead is an **outpost shield generator**.
-
-## Shield generators
-
-The generator is a machine you research (through the shuttle shield systems node), build into a frame, and wrench down **inside the claim's survey bounds**. While it is anchored, powered and holding charge, incoming missiles detonate at the edge of your survey bounds instead of hitting your buildings.
-
-The numbers matter:
-
-- A generator starts with a **1000-point** charge pool. Better capacitors add 50% per tier.
-- A missile drains charge equal to its damage: 200 for a light missile, 400 for a standard, 600 for a heavy. So a base pool eats roughly two standard missiles before it collapses.
-- It recharges at 5 points per second off outpost power, faster with better micro-lasers, and takes about three and a half minutes to refill from empty.
-- **Recharging pauses for ten seconds after every hit.** Sustained bombardment outruns regeneration; shields do not heal under fire.
-- It draws 10 kW while charging and 1 kW while holding a full field, so your power supply has to be real.
-
-Building a second generator does **not** double your shield. Only the first working unit holds the field; the rest sit cold on standby and take over (empty) if it dies or loses power. Stacking generators buys redundancy, not capacity. Both sides get told what happened on every absorbed hit, including the charge you have left.
-
-!!! danger "When the shield collapses, everything lands"
-    Once the charge pool hits zero, missiles strike your buildings directly. A depleted shield with an attacker still on station is the point at which you either drive them off or lose the station.
-
-Nothing stops boarders. The shield is anti-ordnance only; a crew that docks at your hangar walks in the same as anybody else, which is what the docking policy and ban list are for.
 
 ## Ownership and abandonment
 

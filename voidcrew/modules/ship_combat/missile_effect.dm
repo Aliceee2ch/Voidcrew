@@ -32,7 +32,7 @@
 
 	/// The target turf we're flying toward
 	var/turf/target_turf
-	/// The overmap target: a ship or a raidable player outpost (for signals/effect scoping)
+	/// The overmap target (for signals/effect scoping)
 	var/obj/structure/overmap/target_ship
 	/// The ship that fired us
 	var/obj/structure/overmap/ship/source_ship
@@ -139,9 +139,6 @@
 	// Check if we've hit the target turf
 	// Shield walls will physically intercept via Bump() if shields are active
 	var/turf/current = get_turf(src)
-	// Player-outpost shields intercept at the envelope's edge (see outpost_shield.dm)
-	if(try_outpost_shield_intercept(current))
-		return
 	if(current == target_turf)
 		impact()
 
@@ -193,11 +190,6 @@
 /// Shield walls physically intercept missiles via Bump() before this is called
 /obj/effect/ship_missile/proc/impact()
 	if(exploded)
-		return
-
-	// Last-chance outpost shield check for missiles that never crossed the
-	// envelope in Moved() (e.g. spawned inside it), see outpost_shield.dm
-	if(try_outpost_shield_intercept(get_turf(src)))
 		return
 
 	var/turf/impact_loc = get_turf(src)
@@ -334,10 +326,6 @@
 
 /obj/effect/ship_missile/chemical/impact()
 	if(exploded)
-		return
-
-	// Outpost shields block chemical payloads too (see outpost_shield.dm)
-	if(try_outpost_shield_intercept(get_turf(src)))
 		return
 
 	var/turf/impact_loc = get_turf(src)

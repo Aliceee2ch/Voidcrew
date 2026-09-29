@@ -216,8 +216,7 @@ GLOBAL_LIST_EMPTY(overmap_objects)
 	return ..()
 
 // ===== COMBAT TARGET API =====
-// Ship weapons historically targeted only ships; these hooks let other overmap
-// objects (raidable player outposts) opt in. See voidcrew/modules/ship_combat.
+// Hooks ship weapons use on their target. See voidcrew/modules/ship_combat.
 
 /// Notification hook used by combat/docking systems. Ships notify their crew,
 /// player outposts their occupants and owner. No-op by default.

@@ -261,16 +261,6 @@
 	TEST_ASSERT_NULL(pad_b.arrival_denial(owner_b, pad_a), "Lockdown refused a member")
 	home_b.dock_mode = "open"
 
-	// The raid lock closes arrivals to non-members, but neutral visitors may still leave (F-34)
-	home_b.note_network_siege(null)
-	TEST_ASSERT(home_b.outpost_raid_locked(), "A hostile impact did not start the raid lock")
-	TEST_ASSERT_EQUAL(pad_b.arrival_denial(visitor, pad_a), "Under attack", "A visitor arrived during a raid")
-	visitor.forceMove(get_turf(pad_b))
-	var/raid_departure = pad_b.departure_denial(visitor)
-	TEST_ASSERT_NULL(raid_departure, "A neutral visitor could not leave a raided outpost: [raid_departure]")
-	visitor.forceMove(get_turf(pad_a))
-	home_b.last_siege_time = null
-
 	// The room door stays open to visitors; the arrival policy is the owner's lever (F-33)
 	TEST_ASSERT_EQUAL(room_b.set_visitors_allowed(owner_b, FALSE), "Use the arrival policy.", "The teleporter room could be closed to visitors")
 	TEST_ASSERT(room_b.visitors_allowed, "The teleporter room was closed to visitors")

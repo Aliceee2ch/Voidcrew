@@ -14,8 +14,7 @@
  * * The destination decides who arrives and what it costs. The fare is paid at departure from
  *   the traveller's ID account into the destination's treasury. Nobody pays to leave.
  * * Trader pads reach player pads only, never each other.
- * * A 2 minute cooldown per traveller, a 60 s lock after any damaging player hit, and a 10 min
- *   raid lock after a hostile missile or assault pod reaches a player outpost.
+ * * A 2 minute cooldown per traveller and a 60 s lock after any damaging player hit.
  *
  * The pad needs no power: an owner who cut it could strand every visitor who arrived by it.
  */
@@ -38,48 +37,6 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/until = world.time + OUTPOST_NETWORK_COMBAT_LOCK
 	victim.mind.outpost_network_combat_until = until
 	offender.mind.outpost_network_combat_until = until
-
-/obj/structure/overmap/dynamic/player_outpost
-	/// world.time a hostile missile or assault pod last reached this outpost's shield envelope, or null
-	var/last_siege_time
-	/// REF(ship team) -> world.time that team last attacked this outpost. Lazy.
-	var/list/raid_teams
-
-/**
- * A hostile missile or assault pod reached the outpost (outpost_shield.dm). Pad arrivals close to
- * non-members for OUTPOST_NETWORK_RAID_LOCK, and the attacking crew may not leave by this pad.
- * Neutral visitors may still leave. The owner's own crews never trip it, so an owner cannot shell
- * their own outpost to hold visitors.
- */
-/obj/structure/overmap/dynamic/player_outpost/proc/note_network_siege(obj/structure/overmap/ship/source_ship)
-	if(source_ship && is_owner_crew_ship(source_ship))
-		return
-	last_siege_time = world.time
-	for(var/team_ref in raid_teams)
-		if(world.time >= raid_teams[team_ref] + OUTPOST_NETWORK_RAID_LOCK)
-			raid_teams -= team_ref
-	if(source_ship?.ship_team)
-		LAZYSET(raid_teams, REF(source_ship.ship_team), world.time)
-
-/// Whether this outpost was attacked within the raid lock. Also read by the outpost cloning vats.
-/obj/structure/overmap/dynamic/player_outpost/proc/outpost_raid_locked()
-	return !isnull(last_siege_time) && world.time < last_siege_time + OUTPOST_NETWORK_RAID_LOCK
-
-/// Seconds left on the raid lock, 0 when none
-/obj/structure/overmap/dynamic/player_outpost/proc/outpost_raid_lock_left()
-	if(!outpost_raid_locked())
-		return 0
-	return round((last_siege_time + OUTPOST_NETWORK_RAID_LOCK - world.time) / (1 SECONDS))
-
-/// Whether `mind` crews a ship that attacked this outpost within the raid lock
-/obj/structure/overmap/dynamic/player_outpost/proc/is_raiding_mind(datum/mind/mind)
-	if(!mind || !LAZYLEN(raid_teams))
-		return FALSE
-	for(var/datum/team/voidcrew/team as anything in mind.ship_teams)
-		var/stamp = raid_teams[REF(team)]
-		if(stamp && world.time < stamp + OUTPOST_NETWORK_RAID_LOCK)
-			return TRUE
-	return FALSE
 
 /// Whether `user` crews any ship this outpost has banned
 /obj/structure/overmap/dynamic/player_outpost/proc/crews_banned_ship(mob/user)
@@ -298,9 +255,6 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 		return "Recharging ([round((ready_at - world.time) / (1 SECONDS))] s)."
 	if(traveller.mind && world.time < traveller.mind.outpost_network_combat_until)
 		return "You were just in a fight."
-	var/obj/structure/overmap/dynamic/player_outpost/home = player_host()
-	if(home && !home.is_outpost_member(traveller) && home.is_raiding_mind(traveller.mind))
-		return "Your crew attacked this outpost."
 	var/mob/living/current = charging_ref?.resolve()
 	if(current && current != traveller)
 		return "Pad in use."
@@ -371,8 +325,6 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 /obj/machinery/outpost_network_pad/proc/policy_denial(obj/structure/overmap/dynamic/player_outpost/home, mob/living/traveller, obj/machinery/outpost_network_pad/source)
 	if(home.dock_mode == OUTPOST_DOCK_MODE_LOCKDOWN)
 		return "Lockdown"
-	if(home.outpost_raid_locked())
-		return "Under attack"
 	var/datum/outpost_upgrade/service/teleporter/room = home.service_upgrade("teleporter")
 	switch(room?.arrival_policy)
 		if(OUTPOST_NETWORK_ARRIVALS_OPEN)

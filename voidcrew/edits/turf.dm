@@ -55,6 +55,28 @@
 	lighting_corner_NW?.self_destruct_if_idle()
 
 /**
+ * The rest of what a raw turf swap (`new turf_type(old_turf)`) must undo by hand. The swap runs no
+ * Destroy(), so the old turf's components and its detach-on-destroy elements stay bound to the
+ * coordinate and pass to the replacement: a wet floor keeps ticking over null air, and a glass
+ * floor's transparency signals are still registered when the next glass floor attaches its own.
+ */
+/turf/proc/scrub_datum_state_for_raw_swap()
+	if(HAS_TRAIT(src, TURF_Z_TRANSPARENT_TRAIT))
+		RemoveElement(/datum/element/turf_z_transparency)
+	var/list/component_table = _datum_components
+	if(!component_table)
+		return
+	var/list/doomed = list()
+	for(var/component_key in component_table)
+		var/entry = component_table[component_key]
+		if(islist(entry))
+			doomed |= entry
+		else if(entry)
+			doomed |= entry
+	for(var/datum/component/component as anything in doomed)
+		qdel(component, FALSE)
+
+/**
  * The one thing a RAW turf swap (`new turf_type(existing_turf)`) must do before it drops
  * the old turf on the floor, and the cheapest possible version of it.
  *
@@ -112,6 +134,7 @@
  */
 /turf/proc/return_to_uninitialized_space()
 	scrub_lighting_for_teardown()
+	scrub_datum_state_for_raw_swap()
 	if(isopenturf(src))
 		var/turf/open/open_self = src
 		if(open_self.excited)

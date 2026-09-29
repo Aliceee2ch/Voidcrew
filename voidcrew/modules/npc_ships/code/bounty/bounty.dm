@@ -1,9 +1,10 @@
 /**
  * Bounty - Global competitive bounty for pirate ships
  *
- * Bounties are created for each active pirate ship and can be claimed
- * by multiple player ships simultaneously. First ship to turn in the
- * captain's key wins the bounty reward.
+ * SSbounty puts bounties on a share of the pirate ships at a time, and they
+ * can be claimed by multiple player ships simultaneously. First ship to turn
+ * in the captain's key wins the bounty reward. One nobody is hunting comes
+ * down once expires_at passes (expire()).
  *
  * Bounties fail when:
  * - The captain's key is destroyed (gibbed, spaced, etc.)
@@ -52,6 +53,9 @@
 
 	/// Whether this is a heavy-threat bounty (determines loot quality)
 	var/is_heavy_bounty = FALSE
+
+	/// world.time it comes down if nobody is hunting it (set by SSbounty; 0 = never)
+	var/expires_at = 0
 
 /datum/pirate_bounty/New(obj/structure/overmap/ship/npc/target_ship, obj/item/ship_key/captain_key)
 	. = ..()
@@ -474,6 +478,17 @@
 
 	// Remove from global tracker
 	SSbounty?.remove_bounty(src)
+
+/**
+ * Nobody took it up in time: it comes down quietly, and its ship carries no
+ * new bounty for PIRATE_BOUNTY_REST, so the next one goes up somewhere else.
+ */
+/datum/pirate_bounty/proc/expire()
+	var/obj/structure/overmap/ship/npc/ship = get_target_ship()
+	fail("The bounty was withdrawn.")
+	if(ship && SSbounty)
+		SSbounty.pirate_bounty_rest[WEAKREF(ship)] = world.time + PIRATE_BOUNTY_REST
+	qdel(src)
 
 // ========== SIGNAL HANDLERS ==========
 

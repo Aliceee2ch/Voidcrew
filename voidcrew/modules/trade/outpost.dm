@@ -422,6 +422,7 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 /obj/structure/overmap/trader_outpost/register_aggression(mob/living/offender)
 	if(!istype(offender) || !offender.mind)
 		return
+	if(bounty_kingpin_excuses_aggression(src, offender)) return // BOUNTY P9 (kingpin): no property strikes for hunters in his shootout; PvP still counts
 	if(is_marked_aggressor(offender.mind))
 		return
 

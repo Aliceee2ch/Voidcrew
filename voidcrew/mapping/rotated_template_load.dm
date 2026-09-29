@@ -174,6 +174,21 @@
 	return locate(bottom_left.x + offset_x, bottom_left.y + offset_y, bottom_left.z)
 
 /**
+ * The same as rotated_template_turf() without a turf: where the tile at zero-based (column, row)
+ * of a `width` x `height` template lands for a clockwise rotation, as list(dx, dy) from the rotated
+ * footprint's bottom-left. Run backwards from a known tile, it finds the bottom-left.
+ */
+/proc/rotated_template_offset(column, row, rotation, width, height)
+	switch(rotation)
+		if(90)
+			return list(row, width - 1 - column)
+		if(180)
+			return list(width - 1 - column, height - 1 - row)
+		if(270)
+			return list(height - 1 - row, column)
+	return list(column, row)
+
+/**
  * Turns an atom a rotated template load just created, before it initializes, as if it had been
  * mapped that way. Same geometry as shuttleRotate(); smoothing is left to initialization.
  */

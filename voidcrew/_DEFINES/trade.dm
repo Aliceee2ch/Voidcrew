@@ -131,6 +131,10 @@
 /// the load-time sweep and a subtype's own Initialize can both add it.
 #define TRAIT_OUTPOST_PROPERTY "outpost_property"
 
+/// A creature that was there when a trader outpost loaded (see outpost_residents.dm).
+/// Outpost turrets leave it alone.
+#define TRAIT_OUTPOST_RESIDENT "outpost_resident"
+
 // Trader hologram speech line categories
 #define TRADER_LINE_GREETING "greeting"
 #define TRADER_LINE_SALE "sale"

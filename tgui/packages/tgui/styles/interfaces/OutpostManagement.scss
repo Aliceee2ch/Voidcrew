@@ -447,6 +447,19 @@ $line: rgba(158, 36, 52, 0.36);
 
 // ===== Placement map =====
 
+.Outpost__heading {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba($amber, 0.19);
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: $amber;
+}
 .Outpost__placement { flex-direction: row; align-items: flex-start; gap: 12px; }
 .Outpost__map {
   position: relative;

@@ -3745,6 +3745,7 @@
 	},
 /obj/effect/decal/cleanable/dirt,
 /obj/machinery/light/directional/west,
+/obj/structure/bounty_wanted_board/directional/south,
 /turf/open/indestructible/dark,
 /area/voidcrew/trader_outpost)
 "ZV" = (

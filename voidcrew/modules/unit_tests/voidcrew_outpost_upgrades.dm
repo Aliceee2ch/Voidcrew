@@ -173,7 +173,7 @@
 	for(var/key in list("id", "name", "desc", "price", "width", "height", "preview"))
 		TEST_ASSERT(key in dock_entry, "The catalog entry has no [key] for the Upgrades tab")
 	TEST_ASSERT_EQUAL(dock_entry["price"], 10000, "The catalog price is wrong")
-	var/datum/map_template/dock_template = prototype.get_template(home.outpost_style)
+	var/datum/map_template/dock_template = prototype.get_template(style = home.outpost_style)
 	TEST_ASSERT_EQUAL(dock_entry["width"], dock_template.width, "The cargo dock's catalog width is not its map's")
 	TEST_ASSERT_EQUAL(dock_entry["height"], dock_template.height, "The cargo dock's catalog height is not its map's")
 	TEST_ASSERT_EQUAL(prototype.entrance_side, SOUTH, "The cargo dock's entrance edge is wrong")
@@ -492,7 +492,29 @@
 		TEST_FAIL("[label] preview was rendered from a different version of [map_path] than the one on disk, so players 			see a room that no longer exists. Run tools/outpost_upgrade_previews/generate_outpost_upgrade_previews.py and commit 			the new PNG and .preview.json with the map change.")
 	return 1
 
-// ===== LOOSE ITEMS AND THE SURVEY WINDOW =====
+// ===== ADMIN DELETES, LOOSE ITEMS AND THE SURVEY WINDOW =====
+
+/**
+ * An admin deleting the running prison can start it again, and deleting an upgrade takes it off
+ * the outpost's list, so the shop does not call it installed forever.
+ */
+/datum/unit_test/voidcrew_outpost_upgrade_admin_deletes
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_upgrade_admin_deletes/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = prison_test_claim("upgradedeleteowner")
+	TEST_ASSERT_NOTNULL(home, "The upgrade deletion test prison did not load")
+	var/datum/outpost_upgrade/prison/blueprint = home.outpost_upgrades["prison"]
+	qdel(blueprint.prison)
+	TEST_ASSERT_NULL(blueprint.prison, "The upgrade kept a deleted prison")
+	blueprint.on_installed(null)
+	TEST_ASSERT(!QDELETED(blueprint.prison), "The prison could not be started again after an admin deleted it")
+	STOP_PROCESSING(SSprocessing, blueprint.prison)
+	var/datum/outpost_prison/restarted = blueprint.prison
+	qdel(blueprint)
+	TEST_ASSERT_NULL(home.outpost_upgrades["prison"], "A deleted upgrade stayed on the outpost's list")
+	TEST_ASSERT(QDELETED(restarted), "Deleting the upgrade left its prison running")
+	settle_prison_air(home)
 
 /// Loose things on a footprint are moved out of the way before the room is built over them.
 /datum/unit_test/voidcrew_outpost_upgrade_sweep

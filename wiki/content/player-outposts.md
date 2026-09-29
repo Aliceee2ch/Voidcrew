@@ -29,7 +29,7 @@ Use the **outpost management console** to rename the outpost, set a public memo,
 
 A **Registry uplink** implant adds an **Outpost Management** action that works from anywhere, including other ships and sectors. Splice sells it for **2,800 credits**; it uses **2 neural load**. Choose any outpost you own or have management permission for. The implant grants no additional permissions, and removal or chrome failure disconnects remote access. Without it, use the physical console.
 
-You can delegate management (steward), bank withdrawals (treasurer), service prices (pricer) and construction (builder) separately, from the **Residents** tab. Your founding ship's crew automatically become residents with construction permission. Other residents need construction permission granted separately. When the console refuses something, it says why in chat.
+You can delegate management (steward), bank withdrawals (treasurer), service prices (pricer) and construction (builder) separately, from the **People** tab. Your founding ship's crew automatically become residents with construction permission. Other residents need construction permission granted separately. When the console refuses something, it says why in chat.
 
 The **construction console** controls a building drone supplied by your local ore silo. Link the console to the silo with a multitool and deposit materials before building. You can also expand the habitat with ordinary tools.
 
@@ -37,13 +37,13 @@ The **construction console** controls a building drone supplied by your local or
 
 The **bank machine** handles the outpost's money. Deposit from your ID account or physical currency; owners and treasury delegates can withdraw. The bank starts empty and keeps its balance through ownership changes or loss of the founding ship.
 
-Order supplies through the ordinary **cargo console**, or buy sheets through a **Galactic Materials Market** you build locally. Both charge the outpost bank and send a physical freight ferry, which lands on the outpost's **cargo dock**. The cargo dock is a free upgrade: buy it and place it from the **Upgrades** tab of the management console. Until it is placed, the cargo console cannot order. No player ship needs to stay docked for deliveries.
+Order supplies through the ordinary **cargo console**, or buy sheets through a **Galactic Materials Market** you build locally. Both charge the outpost bank and send a physical freight ferry, which lands on the outpost's **cargo dock**. The cargo dock is a free upgrade: buy it and place it from the **Rooms** tab of the management console. Until it is placed, the cargo console cannot order. No player ship needs to stay docked for deliveries.
 
 Load eligible goods onto the ferry and dispatch it to export them. Payment goes to the outpost bank. Everyone must leave the ferry before it can depart. Failed deliveries refund undelivered purchases. Keep off the landing pad when the alarm sounds: the ferry lands on whatever is there and crushes it.
 
 ## Upgrades
 
-The **Upgrades** tab of the management console sells prefabricated rooms: the free **cargo dock** and the service rooms your outpost can sell to visiting crews, such as the cloning bay, medical lab, shop, storage and teleporter. Each room comes in your outpost's style: a run-down outpost gets run-down rooms, a clean one gets clean rooms. The layout differs between styles, but the room does the same job either way. Buying one needs management and treasury permission and is paid from the outpost bank. Until the room is placed, **Cancel purchase** refunds the full price.
+The **Rooms** tab of the management console sells prefabricated rooms: the free **cargo dock**, a **prison wing** where the outpost is paid to hold prisoners, **cell block extensions** for the wing (see [Prison Wing](prison-wing.md)), and the service rooms your outpost can sell to visiting crews, such as the cloning bay, medical lab, shop, storage and teleporter. The cargo dock and the service rooms come in your outpost's style: a run-down outpost gets run-down rooms, a clean one gets clean rooms. The layout differs between styles, but the room does the same job either way. Buying one needs management and treasury permission and is paid from the outpost bank. Until the room is placed, **Cancel purchase** refunds the full price.
 
 Press **Place** to open the placement map, a plan of the ground around the outpost:
 
@@ -52,6 +52,7 @@ Press **Place** to open the placement map, a plan of the ground around the outpo
 - Grey is floor, light grey is wall, blue is window, amber is door and brown is something in the way. Dark red ground can never be built on: docking berths, the hangar elevator, the arrival point, other rooms and ground outside the claim.
 - The room follows the cursor, green where it fits and red where it does not, with the blocked tiles marked. Click to bring up **Build** and **Rotate**. A greyed-out Build says why in its tooltip.
 - Lattice and loose items do not block a room. They are cleared out of its way when it is built. People do: nobody can be standing on the spot when you build.
+- A cell block extension only joins a free side wall of the prison wing. The map outlines each free spot, already turned the right way, and yellow squares show where the wall opens into the wing.
 - **Rescan** surveys the ground again, for example after you clear something away.
 
 Placement is permanent. A built room cannot be moved or refunded.
@@ -68,11 +69,11 @@ Service rooms sell things to visiting crews. Members use them free: the owner, r
 | Safe Storage | 1,000 cr | One of thirteen lockers for the round | 200 cr | 5,000 cr |
 | Teleporter | 6,000 cr | Arrival by network pad | 200 cr | 2,000 cr |
 
-Set prices on the **Pricing** tab of the management console. The **Services** tab opens or closes each room to visitors and holds its settings. The teleporter has no visitor switch; its arrival policy does that job.
+Set prices on the **Pricing** tab of the management console. The **Rooms** tab opens or closes each built room to visitors and holds its settings. The teleporter has no visitor switch; its arrival policy does that job.
 
 ### Who runs the market
 
-Three roles from the **Residents** tab share the work:
+Three roles from the **People** tab share the work:
 
 - **Stewards** manage the outpost, open and close rooms and evict ships from the ship bay.
 - **Treasurers** withdraw from the bank and set prices.
@@ -84,7 +85,7 @@ The owner, stewards, treasurers and pricers stock the shop and take items out of
 
 Imprint yourself at a vat while you are alive. Each player can hold one clone per outpost, and a clone is used once: waking in it spends it. When the clone is grown you get a **Clone Ready** alert, and after you die you pick where to wake with the **Wake in a Clone** button on your ghost.
 
-While the outpost has an owner, a visitor cannot wake there during a lockdown, for 10 minutes after the outpost is attacked, or while their crew is banned. The clone is kept, so they can wake once the block lifts.
+While the outpost has an owner, a visitor cannot wake there during a lockdown or while their crew is banned. The clone is kept, so they can wake once the block lifts.
 
 Clones step out naked, so the bay has a wardrobe that hands out clothes free.
 
@@ -109,7 +110,6 @@ Network pads send one person at a time from outpost to outpost. The network cove
 - **The destination sets the fare.** It is taken from your ID account when the pad fires, never for leaving. Members of the destination and anyone arriving at a trading outpost travel free. A cancelled trip costs nothing.
 - **Charge time:** stand on the pad for 5 seconds, or 10 across zones. Stepping off, taking damage or passing out cancels the trip.
 - **Cooldowns:** 2 minutes between trips, and no trips for 60 seconds after you hurt, or are hurt by, another player.
-- **Raids:** for 10 minutes after a missile or assault pod hits an outpost, only its members can arrive, and the attacking crew cannot leave by its pad.
 - **What stays behind:** other people, carried or pulled; animals; freight pods; contract goods and ship keys.
 
 The owner chooses who may arrive: **Open**, **Members**, **Allow list** (chosen outposts' pads) or **Closed**. Lockdown admits members only. With docking set to **By request**, an open pad admits members and approved crews only.
@@ -140,7 +140,7 @@ Keep the relay and outpost server powered. After a power outage, restore power a
 
 ## Residents and visitors
 
-Use Outpost Management to add residents (the **Residents** tab) and invite players back (the **Arrivals** tab, by account name). There is no outpost resident limit. Admission can be **open**, **password**, **approved-only**, or **closed**. The Arrivals tab warns when no resident cryopod is free.
+Use the **People** tab of Outpost Management to add residents and to invite players back by account name. There is no outpost resident limit. Admission can be **open**, **password**, **approved-only**, or **closed**. The People tab warns when no resident cryopod is free.
 
 Eligible players choose the outpost in the join menu and arrive through an available resident cryopod with an assistant loadout. Normal respawn rules and cryo cooldowns still apply. Returning residents keep their remembered access unless it is revoked; changing the password clears remembered password access.
 
@@ -152,11 +152,13 @@ Ship docking has separate controls:
 
 Banning a ship overrides docking clearance. Use the hangar elevator to travel between the habitat and occupied visitor berths.
 
-The **Docking** tab also sells a permanent **ship bay** for 10,000 credits, 100 iron and 50 glass from the outpost silo; it needs a working hangar elevator. Ships reach it through the **Ship Bay** option at the helm, and people by elevator. When a ship in the bay asks to use the outpost silo, the request appears on its bay row. An evicted ship has three minutes to undock, and gets its docking fee back if it paid in the last 30 minutes.
+The **Ships** tab also sells a permanent **ship bay** for 10,000 credits, 100 iron and 50 glass from the outpost silo; it needs a working hangar elevator. Ships reach it through the **Ship Bay** option at the helm, and people by elevator. When a ship in the bay asks to use the outpost silo, the request appears on its bay row. An evicted ship has three minutes to undock, and gets its docking fee back if it paid in the last 30 minutes.
+
+A hull defense turret bolted to the outpost answers only to its owner, stewards, treasurers, residents and builders. Visitors cannot switch it off, change its targeting, unbolt it or scrap it. The same goes for turrets built on the outpost and for turret control panels. A cleanbot can pass a prison wing's staff doors, so one built in the office can clean the yard.
 
 ## Advertising
 
-A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships, adds its memo and coordinates to [mission boards](missions.md), and marks it on helm charts. A refused purchase says why in chat.
+A **broadcast** costs **2,500 credits from the outpost bank** and lasts 20 minutes, with a 10-minute purchase cooldown. Buy it through Outpost Management with treasury permission. It announces the outpost to crewed ships and marks it on helm charts. A refused purchase says why in chat.
 
 ## Ownership and abandonment
 

@@ -695,6 +695,8 @@ GLOBAL_LIST_EMPTY(player_outposts)
 		return
 	priority_announce("The outpost [name] has been abandoned by its owner. Salvage rights unclaimed.", "Colonial Registry")
 	message_admins("[key_name_admin(user)] abandoned player outpost '[name]'")
+	// Intake closes and the prisoners are transferred out (outpost_prison_economy.dm).
+	running_prison()?.on_outpost_abandoned()
 	stewards.Cut()
 	treasurers.Cut()
 	resident_mode = "closed"

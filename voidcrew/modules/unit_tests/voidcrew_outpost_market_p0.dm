@@ -69,6 +69,7 @@
 	TEST_ASSERT_NOTNULL(home, "The room test outpost did not load")
 	var/datum/outpost_upgrade/service/p0_exit_test/blueprint = allocate(__IMPLIED_TYPE__, home)
 	blueprint.id = "p0_exit_test"
+	blueprint.key = blueprint.id
 	home.outpost_upgrades[blueprint.id] = blueprint
 	var/datum/map_template/template = blueprint.get_template()
 	TEST_ASSERT_NOTNULL(template, "The exit test room map did not load")

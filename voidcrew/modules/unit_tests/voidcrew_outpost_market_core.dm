@@ -65,6 +65,7 @@
 /datum/unit_test/voidcrew_outpost_management/proc/market_test_probe(obj/structure/overmap/dynamic/player_outpost/home, probe_id)
 	var/datum/outpost_upgrade/service/unit_test/probe = new(home)
 	probe.id = probe_id
+	probe.key = probe.id
 	probe.installed = TRUE
 	home.outpost_upgrades[probe_id] = probe
 	return probe
@@ -404,6 +405,7 @@
 	// A load that builds nothing gives the ground back.
 	var/datum/outpost_upgrade/service/unit_test/failing/broken = new(home)
 	broken.id = "service_room_test_broken"
+	broken.key = broken.id
 	var/turf/broken_corner = service_room_test_corner(home, broken, 0)
 	TEST_ASSERT_NOTNULL(broken_corner, "No test spot for the failing room")
 	var/list/broken_footprint = broken.footprint_at(broken_corner, 0)
@@ -421,6 +423,7 @@
 	for(var/rotation in list(0, 90, 180, 270))
 		var/datum/outpost_upgrade/service/unit_test/room = new(home)
 		room.id = "service_room_test_[rotation]"
+		room.key = room.id
 		var/mapping_log_count = length(GLOB.unit_test_mapping_logs)
 		var/result = place_test_service_room(home, room, list(rotation), owner)
 		TEST_ASSERT_EQUAL(result, room, "The test room was not placed at [rotation] degrees: [result]")

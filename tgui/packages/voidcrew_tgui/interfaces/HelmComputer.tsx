@@ -2291,6 +2291,10 @@ const Chart = () => {
   const onScreen = (tileX: number, tileY: number) =>
     Math.abs(tileX - cameraTileX) <= zoomSpan / 2 + 4 &&
     Math.abs(tileY - cameraTileY) <= zoomSpan / 2 + 4;
+  const shownContacts = waypoints.filter((contact) =>
+    onScreen(contact.x, contact.y),
+  );
+  const rows = labelRows(shownContacts, selected);
   const course = autopilot?.engaged ? (autopilot.path ?? []) : [];
   // Uncontrolled drift extrapolation is misleading while autopilot owns steering.
   const showDrift = !!drift && !autopilot?.engaged;
@@ -2515,9 +2519,7 @@ const Chart = () => {
                   />
                 ))}
 
-              {waypoints
-                .filter((contact) => onScreen(contact.x, contact.y))
-                .map((contact) => {
+              {shownContacts.map((contact) => {
                   const key = contactKey(contact);
                   return (
                     <ContactMark
@@ -2526,6 +2528,7 @@ const Chart = () => {
                       cx={toX(contact.x)}
                       cy={toY(contact.y)}
                       scale={markScale}
+                      labelRow={rows.get(key) ?? 0}
                       inRange={!!contact.live}
                       selected={selected === key}
                       onSelect={() => select(key)}
@@ -3009,26 +3012,81 @@ const DestinationMark = ({ cx, cy, scale }: { cx: number; cy: number; scale: num
   </g>
 );
 
+/**
+ * Whether a contact's name is written on the chart. Nebulas and storms spread
+ * across whole banks of tiles, so labelling every one buries the chart in
+ * repeated names. They read as a field from the glyphs alone; the name comes
+ * back on click, and the drawer always has it.
+ */
+const contactLabelled = (contact: Contact, selected: boolean) =>
+  selected || (contact.kind !== 'nebula' && contact.kind !== 'hazard');
+
+/** Kinds that are the place itself; marks pinned on a place (bounties, missions, rumours) list under its name */
+const PLACE_KINDS: ContactKind[] = [
+  'planet',
+  'ruin',
+  'outpost',
+  'ship',
+  'distress',
+];
+
+/**
+ * Which line under its tile each labelled contact's name goes on, by contact
+ * key. Names sharing a tile (a planet and the bounty pinned on it) stack
+ * downward instead of printing over each other; the place keeps the top line.
+ */
+const labelRows = (contacts: Contact[], selectedKey: string | null) => {
+  const perTile = new Map<string, number>();
+  const rows = new Map<string, number>();
+  const placesFirst = [...contacts].sort(
+    (a, b) =>
+      Number(!PLACE_KINDS.includes(a.kind)) -
+      Number(!PLACE_KINDS.includes(b.kind)),
+  );
+  for (const contact of placesFirst) {
+    const key = contactKey(contact);
+    if (!contactLabelled(contact, selectedKey === key)) {
+      continue;
+    }
+    const tile = `${contact.x},${contact.y}`;
+    const row = perTile.get(tile) ?? 0;
+    perTile.set(tile, row + 1);
+    rows.set(key, row);
+  }
+  return rows;
+};
+
+/** Screen units between two stacked names under one tile */
+const LABEL_LINE = 11;
+
 const ContactMark = (props: {
   contact: Contact;
   cx: number;
   cy: number;
   scale: number;
+  /** Which line under the tile its name goes on (labelRows()) */
+  labelRow: number;
   inRange: boolean;
   selected: boolean;
   onSelect: () => void;
   onHover: (entered: boolean) => void;
   onMenu: (event: React.MouseEvent) => void;
 }) => {
-  const { contact, cx, cy, scale, inRange, selected, onSelect, onHover, onMenu } =
-    props;
+  const {
+    contact,
+    cx,
+    cy,
+    scale,
+    labelRow,
+    inRange,
+    selected,
+    onSelect,
+    onHover,
+    onMenu,
+  } = props;
   const unknown = contact.kind === 'ship' && !contact.identified;
   const colour = contactColour(contact);
-  // Nebulas and storms spread across whole banks of tiles, so labelling every
-  // one buries the chart in repeated names. They read as a field from the
-  // glyphs alone; the name comes back on click, and the drawer always has it.
-  const labelled =
-    selected || (contact.kind !== 'nebula' && contact.kind !== 'hazard');
+  const labelled = contactLabelled(contact, selected);
 
   return (
     <g
@@ -3094,7 +3152,7 @@ const ContactMark = (props: {
           // screen at every zoom. One SVG unit is only ~1.3 screen pixels here,
           // which is why the old 5.2 rendered at about six pixels.
           <text
-            y={15}
+            y={15 + labelRow * LABEL_LINE}
             textAnchor="middle"
             fill={colour}
             fontSize={10}

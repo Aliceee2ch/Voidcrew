@@ -81,6 +81,7 @@
 	if(!blueprint.id)
 		return "The [blueprint.name] blueprint has no id."
 	blueprint.outpost = home
+	blueprint.key = blueprint.id
 	home.outpost_upgrades[blueprint.id] = blueprint
 	var/error = "No side of the shell to try."
 	for(var/rotation in rotations)

@@ -78,6 +78,7 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		"freight_error" = selected.freight?.last_error, "research_connection" = selected.research_connection_summary(),
 		"ship_bays" = ship_bay_data(selected),
 		"checkpoints" = checkpoint_admin_data(selected),
+		"prison" = prison_admin_data(selected),
 	)
 	market_admin_data(selected, data["selected"])
 	return data
@@ -198,6 +199,9 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		return
 	if(action in list("playtest_visitor", "service_admin"))
 		manage_market(home, user, action, params)
+		return
+	if(action in GLOB.outpost_admin_prison_actions)
+		manage_prison(home, user, action, params)
 		return
 	switch(action)
 		if("jump", "jump_overmap")
@@ -333,7 +337,8 @@ ADMIN_VERB(outpost_manipulator, R_ADMIN, "Outpost Manipulator", "Create and mana
 		if(ship.docked == home)
 			return "Undock visiting ships and cancel their approaches first."
 	for(var/mob/living/occupant as anything in GLOB.mob_living_list)
-		if(!occupant.mind)
+		// Prisoners and the prison's other mobs are deleted with the outpost.
+		if(!occupant.mind || is_outpost_prison_mob(occupant))
 			continue
 		if(get_outpost_from_atom(occupant) == home)
 			return "Move living occupants out of the outpost first."

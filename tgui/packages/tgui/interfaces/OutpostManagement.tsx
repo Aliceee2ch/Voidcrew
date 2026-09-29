@@ -121,6 +121,20 @@ type UpgradeEntry = {
   width: number;
   height: number;
   preview: string | null;
+  /** Joins another room's wall at a joint instead of being placed freely */
+  snap?: BooleanLike;
+};
+/** A joint a snap upgrade may join, as the server judged it */
+type UpgradeSnap = {
+  /** The footprint's bottom-left, in world tiles */
+  x: number;
+  y: number;
+  rotation: number;
+  side: string;
+  /** Why it can't be built there now, or null */
+  reason: string | null;
+  blocked: [number, number][];
+  openings: [number, number][];
 };
 type UpgradeStatus = {
   id: string;
@@ -187,6 +201,8 @@ export type OutpostData = {
   upgrades: UpgradeStatus[];
   upgrade_surveying: BooleanLike;
   upgrade_survey?: UpgradeSurvey | null;
+  /** Joints the placing snap upgrade may join, while its placement map is open */
+  upgrade_snaps?: UpgradeSnap[] | null;
 };
 type Act = (action: string, params?: Record<string, unknown>) => unknown;
 type Props = { data: OutpostData; act: Act };
@@ -1387,6 +1403,56 @@ function checkFootprint(
   return { origin, width, height, blocked, reason };
 }
 
+/** Tiles from the server's [x, y] pairs. */
+function pairTiles(pairs: [number, number][] | undefined): Tile[] {
+  return (pairs || []).map(([x, y]) => ({ x, y }));
+}
+
+/** A joint's offer as a footprint. The server has already judged it. */
+function snapFootprint(snap: UpgradeSnap, upgrade: UpgradeEntry): Footprint {
+  const turned = snap.rotation === 90 || snap.rotation === 270;
+  return {
+    origin: { x: snap.x, y: snap.y },
+    width: turned ? upgrade.height : upgrade.width,
+    height: turned ? upgrade.width : upgrade.height,
+    blocked: pairTiles(snap.blocked),
+    reason: snap.reason,
+  };
+}
+
+/** Tiles from a tile to a footprint's rectangle, 0 inside it. */
+function footprintDistance(footprint: Footprint, tile: Tile) {
+  const right = footprint.origin.x + footprint.width - 1;
+  const top = footprint.origin.y + footprint.height - 1;
+  const dx = Math.max(footprint.origin.x - tile.x, 0, tile.x - right);
+  const dy = Math.max(footprint.origin.y - tile.y, 0, tile.y - top);
+  return Math.max(dx, dy);
+}
+
+/** Hovering this many tiles from a joint's room still picks it. */
+const SNAP_REACH = 12;
+
+/** The joint whose room is under the tile, else the nearest within SNAP_REACH. */
+function pickSnap(
+  snaps: UpgradeSnap[],
+  upgrade: UpgradeEntry,
+  tile: Tile | null,
+): UpgradeSnap | null {
+  if (!tile) {
+    return null;
+  }
+  let best: UpgradeSnap | null = null;
+  let bestDistance = SNAP_REACH + 1;
+  for (const snap of snaps) {
+    const distance = footprintDistance(snapFootprint(snap, upgrade), tile);
+    if (distance < bestDistance) {
+      best = snap;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
 /** The footprint of the room centred on a tile, at the given rotation. */
 function ghostFootprint(
   survey: UpgradeSurvey | null,
@@ -1540,13 +1606,13 @@ const RANGE_COLOR = '#e03c3c';
 const RANGE_LINE = 2;
 
 /** x1, y1, x2, y2 in world tiles: one straight run of tile edges. */
-type Segment = [number, number, number, number];
+export type Segment = [number, number, number, number];
 
 /**
  * Every tile edge between an in-range tile and an out-of-range tile or the survey
  * edge, with runs along one line merged. Built once per survey.
  */
-function rangeOutline(survey: UpgradeSurvey): Segment[] {
+export function rangeOutline(survey: UpgradeSurvey): Segment[] {
   const { x, y, width, height, near } = survey;
   const inside = (column: number, row: number) =>
     column >= 0 &&
@@ -1664,7 +1730,76 @@ type MapScene = {
   upgrade: UpgradeEntry;
   rotation: number;
   menu: MapMenu | null;
+  /** A snap upgrade's joints; null for a room placed freely */
+  snaps: UpgradeSnap[] | null;
 };
+
+/** Where a wall opens once a snap room joins it. */
+const OPENING_COLOR = '#e8c15a';
+
+/**
+ * One room's footprint: green or red, blocked tiles tinted. The ghost under the cursor also shows
+ * the preview, turned (and for a left-hand joint mirrored) as it would be built.
+ */
+function drawFootprint(
+  context: CanvasRenderingContext2D,
+  camera: Camera,
+  footprint: Footprint,
+  upgrade: UpgradeEntry,
+  ghost: {
+    image: HTMLImageElement | null;
+    rotation: number;
+    mirrored: boolean;
+  } | null,
+) {
+  const { zoom } = camera;
+  const { x: left, y: top } = toCanvas(camera, {
+    x: footprint.origin.x,
+    y: footprint.origin.y + footprint.height,
+  });
+  const pixelWidth = footprint.width * zoom;
+  const pixelHeight = footprint.height * zoom;
+  if (ghost?.image) {
+    context.save();
+    // The preview is much finer than the map, so smooth it as it shrinks.
+    context.imageSmoothingEnabled = true;
+    context.globalAlpha = 0.75;
+    context.translate(left + pixelWidth / 2, top + pixelHeight / 2);
+    // Canvas y points down, so a positive angle turns clockwise like the game's rotation.
+    context.rotate((ghost.rotation * Math.PI) / 180);
+    if (ghost.mirrored) {
+      context.scale(-1, 1);
+    }
+    context.drawImage(
+      ghost.image,
+      (-upgrade.width * zoom) / 2,
+      (-upgrade.height * zoom) / 2,
+      upgrade.width * zoom,
+      upgrade.height * zoom,
+    );
+    context.restore();
+  }
+  const valid = !footprint.reason;
+  const strong = !!ghost;
+  context.fillStyle = valid
+    ? `rgba(90, 200, 110, ${strong ? 0.22 : 0.1})`
+    : `rgba(220, 60, 60, ${strong ? 0.22 : 0.1})`;
+  context.fillRect(left, top, pixelWidth, pixelHeight);
+  context.fillStyle = 'rgba(230, 50, 50, 0.55)';
+  for (const tile of footprint.blocked) {
+    const spot = toCanvas(camera, { x: tile.x, y: tile.y + 1 });
+    context.fillRect(spot.x, spot.y, zoom, zoom);
+  }
+  const line = zoom < 8 || !strong ? 1 : 2;
+  context.strokeStyle = valid ? '#6fd08a' : '#e05555';
+  context.lineWidth = line;
+  context.strokeRect(
+    left + line / 2,
+    top + line / 2,
+    pixelWidth - line,
+    pixelHeight - line,
+  );
+}
 
 function drawMap(
   canvas: HTMLCanvasElement,
@@ -1678,7 +1813,8 @@ function drawMap(
   }
   context.fillStyle = '#000';
   context.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
-  const { survey, bitmap, outline, image, upgrade, rotation, menu } = scene;
+  const { survey, bitmap, outline, image, upgrade, rotation, menu, snaps } =
+    scene;
   if (!survey || !bitmap || !camera) {
     return;
   }
@@ -1695,58 +1831,43 @@ function drawMap(
     survey.width * zoom,
     survey.height * zoom,
   );
+  const target = menu ? menu.tile : hover;
+  if (snaps) {
+    // Every joint's room is outlined; the one picked shows the preview.
+    const active = pickSnap(snaps, upgrade, target);
+    for (const snap of snaps) {
+      drawFootprint(
+        context,
+        camera,
+        snapFootprint(snap, upgrade),
+        upgrade,
+        snap === active
+          ? { image, rotation: snap.rotation, mirrored: snap.side === 'left' }
+          : null,
+      );
+      context.fillStyle = OPENING_COLOR;
+      for (const tile of pairTiles(snap.openings)) {
+        const spot = toCanvas(camera, { x: tile.x, y: tile.y + 1 });
+        context.fillRect(
+          spot.x + zoom / 4,
+          spot.y + zoom / 4,
+          zoom / 2,
+          zoom / 2,
+        );
+      }
+    }
+    return;
+  }
   drawOutline(context, camera, outline);
-  const footprint = ghostFootprint(
-    survey,
-    menu ? menu.tile : hover,
-    upgrade,
-    rotation,
-  );
+  const footprint = ghostFootprint(survey, target, upgrade, rotation);
   if (!footprint) {
     return;
   }
-  const { x: left, y: top } = toCanvas(camera, {
-    x: footprint.origin.x,
-    y: footprint.origin.y + footprint.height,
+  drawFootprint(context, camera, footprint, upgrade, {
+    image,
+    rotation,
+    mirrored: false,
   });
-  const pixelWidth = footprint.width * zoom;
-  const pixelHeight = footprint.height * zoom;
-  if (image) {
-    context.save();
-    // The preview is much finer than the map, so smooth it as it shrinks.
-    context.imageSmoothingEnabled = true;
-    context.globalAlpha = 0.75;
-    context.translate(left + pixelWidth / 2, top + pixelHeight / 2);
-    // Canvas y points down, so a positive angle turns clockwise like the game's rotation.
-    context.rotate((rotation * Math.PI) / 180);
-    context.drawImage(
-      image,
-      (-upgrade.width * zoom) / 2,
-      (-upgrade.height * zoom) / 2,
-      upgrade.width * zoom,
-      upgrade.height * zoom,
-    );
-    context.restore();
-  }
-  const valid = !footprint.reason;
-  context.fillStyle = valid
-    ? 'rgba(90, 200, 110, 0.22)'
-    : 'rgba(220, 60, 60, 0.22)';
-  context.fillRect(left, top, pixelWidth, pixelHeight);
-  context.fillStyle = 'rgba(230, 50, 50, 0.55)';
-  for (const tile of footprint.blocked) {
-    const spot = toCanvas(camera, { x: tile.x, y: tile.y + 1 });
-    context.fillRect(spot.x, spot.y, zoom, zoom);
-  }
-  const line = zoom < 8 ? 1 : 2;
-  context.strokeStyle = valid ? '#6fd08a' : '#e05555';
-  context.lineWidth = line;
-  context.strokeRect(
-    left + line / 2,
-    top + line / 2,
-    pixelWidth - line,
-    pixelHeight - line,
-  );
 }
 
 type PlacementProps = Props & {
@@ -1756,7 +1877,11 @@ type PlacementProps = Props & {
 
 function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
   const survey = data.upgrade_survey || null;
-  const surveying = !!data.upgrade_surveying || !survey;
+  // No survey and none coming: the map was refused (the reason went to chat), so Rescan stays on
+  const scanning = !!data.upgrade_surveying;
+  const surveying = scanning || !survey;
+  // A snap upgrade goes only on the joints the server offers, each at its own rotation.
+  const snaps = upgrade.snap ? data.upgrade_snaps || [] : null;
   const [rotation, setRotation] = useState(0);
   const [camera, setCamera] = useState<Camera | null>(null);
   const [hover, setHover] = useState<Tile | null>(null);
@@ -1794,12 +1919,14 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
     [survey?.x, survey?.y, survey?.width, survey?.height, survey?.near],
   );
 
-  const footprint = ghostFootprint(
-    survey,
-    menu ? menu.tile : hover,
-    upgrade,
-    rotation,
-  );
+  const target = menu ? menu.tile : hover;
+  const activeSnap = snaps ? pickSnap(snaps, upgrade, target) : null;
+  const footprint = snaps
+    ? activeSnap
+      ? snapFootprint(activeSnap, upgrade)
+      : null
+    : ghostFootprint(survey, target, upgrade, rotation);
+  const buildRotation = activeSnap ? activeSnap.rotation : rotation;
   const menuSpot = menu && camera ? toCanvas(camera, menu.point) : null;
 
   /** At most one draw per animation frame, however many inputs asked for one. */
@@ -1909,13 +2036,23 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
       upgrade,
       rotation,
       menu,
+      snaps,
     };
     handlersRef.current = { wheel: onWheel, key: onKey };
   });
 
   useLayoutEffect(() => {
     requestFrame();
-  }, [bitmap, outline, image, rotation, menu, upgrade.width, upgrade.height]);
+  }, [
+    bitmap,
+    outline,
+    image,
+    rotation,
+    menu,
+    snaps,
+    upgrade.width,
+    upgrade.height,
+  ]);
 
   // A new survey keeps the current view where it can, else opens on the outpost.
   useLayoutEffect(() => {
@@ -1966,11 +2103,6 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
       for (const code of Object.keys(PAN_KEYS)) releaseHotKey(Number(code));
     };
   }, []);
-
-  const rotate = () => {
-    setRotation((rotation + 90) % 360);
-    setMenu(null);
-  };
 
   return (
     <>
@@ -2068,7 +2200,11 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
           }}
         />
         {surveying ? (
-          <div className="Outpost__map-status">Surveying</div>
+          <div className="Outpost__map-status">
+            {scanning ? 'Surveying' : 'No survey'}
+          </div>
+        ) : snaps && snaps.length === 0 ? (
+          <div className="Outpost__map-status">No free wall</div>
         ) : null}
         {menu && footprint && menuSpot ? (
           <div
@@ -2088,27 +2224,47 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
                   id: upgrade.id,
                   x: footprint.origin.x,
                   y: footprint.origin.y,
-                  rotation,
+                  rotation: buildRotation,
                 });
                 setMenu(null);
               }}
             >
               Build
             </Button.Confirm>
-            <Button icon="rotate-right" onClick={rotate}>
-              Rotate
-            </Button>
+            {snaps ? null : (
+              <Button
+                icon="rotate-right"
+                onClick={() => {
+                  setRotation((rotation + 90) % 360);
+                  setMenu(null);
+                }}
+              >
+                Rotate
+              </Button>
+            )}
           </div>
         ) : null}
       </div>
       <div className="Outpost__map-side">
-        <div className="Outpost__map-actions Outpost__map-actions--first">
-          <Button icon="rotate-right" onClick={rotate}>
-            Rotate
-          </Button>
+        <div className="Outpost__heading">
+          <Icon name="map-location-dot" />
+          {upgrade.name}
+        </div>
+        <div className="Outpost__map-actions">
+          {snaps ? null : (
+            <Button
+              icon="rotate-right"
+              onClick={() => {
+                setRotation((rotation + 90) % 360);
+                setMenu(null);
+              }}
+            >
+              Rotate
+            </Button>
+          )}
           <Button
             icon="arrows-rotate"
-            disabled={surveying}
+            disabled={scanning}
             onClick={() => act('refresh_upgrade_map', { id: upgrade.id })}
           >
             Rescan
@@ -2123,8 +2279,6 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
     </>
   );
 }
-
-// ===== Pricing =====
 
 function PriceEditor({
   row,

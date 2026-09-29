@@ -101,3 +101,7 @@
 #define OUTPOST_UPGRADE_MAX_GAP 8
 /// How long a placement-map survey is reused before it is taken again
 #define OUTPOST_UPGRADE_SURVEY_LIFETIME (30 SECONDS)
+
+// ===== OUTPOST PRISON =====
+// The prison wing's defines are in outpost_prison_economy.dm, outpost_prison_needs.dm,
+// outpost_prison_conditions.dm, outpost_prison_trouble.dm and outpost_prison_experiments.dm.

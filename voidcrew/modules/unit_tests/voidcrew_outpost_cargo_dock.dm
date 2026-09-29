@@ -172,7 +172,7 @@
 	TEST_ASSERT_NOTNULL(dock_entry, "The cargo dock is missing from the upgrade catalog")
 	TEST_ASSERT_EQUAL(dock_entry["price"], 0, "The cargo dock is not free")
 	var/datum/outpost_upgrade/dock_prototype = GLOB.outpost_upgrade_catalog["cargo_dock"]
-	var/datum/map_template/dock_template = dock_prototype.get_template(home.outpost_style)
+	var/datum/map_template/dock_template = dock_prototype.get_template(style = home.outpost_style)
 	TEST_ASSERT_EQUAL(dock_entry["width"], dock_template.width, "The cargo dock's catalog width is not its map's")
 	TEST_ASSERT_EQUAL(dock_entry["height"], dock_template.height, "The cargo dock's catalog height is not its map's")
 	TEST_ASSERT_EQUAL(dock_prototype.entrance_side, SOUTH, "The cargo dock's entrance edge is wrong")

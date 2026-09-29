@@ -18,14 +18,29 @@
 	for(var/datum/map_template/player_outpost/shell_type as anything in outpost_selectable_shells())
 		. |= initial(shell_type.outpost_style)
 
+/// Catalog ids of the upgrades drawn once per style and placed freely: not the prison wing, whose
+/// one map serves every style, nor its extensions, which only join its walls
+/proc/outpost_styled_upgrade_ids()
+	. = list()
+	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
+		var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
+		if(upgrade.snap_group)
+			continue
+		for(var/datum/map_template/map_type as anything in outpost_style_maps(upgrade.template_type))
+			if(initial(map_type.outpost_style))
+				. += upgrade_id
+				break
+
 /// Each style a founder can pick has a map for every upgrade and the ship bay; an unknown style falls back.
 /datum/unit_test/voidcrew_outpost_style_resolution
 
 /datum/unit_test/voidcrew_outpost_style_resolution/Run()
 	var/list/styles = outpost_founder_styles()
 	TEST_ASSERT(length(styles) >= 2, "Founders have fewer than two styles to pick from")
+	var/list/styled = outpost_styled_upgrade_ids()
+	TEST_ASSERT(length(styled), "No upgrade is drawn per style")
 	for(var/style in styles)
-		for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
+		for(var/upgrade_id in styled)
 			var/datum/outpost_upgrade/upgrade = GLOB.outpost_upgrade_catalog[upgrade_id]
 			var/datum/map_template/room_map = outpost_style_map(upgrade.template_type, style)
 			TEST_ASSERT(room_map && initial(room_map.outpost_style) == style, "The [upgrade.name] has no [style] map")
@@ -81,9 +96,7 @@
 	parent_type = /datum/unit_test/voidcrew_outpost_management
 
 /datum/unit_test/voidcrew_outpost_room_styles/Run()
-	var/list/upgrade_ids = list()
-	for(var/upgrade_id in GLOB.outpost_upgrade_catalog)
-		upgrade_ids += upgrade_id
+	var/list/upgrade_ids = outpost_styled_upgrade_ids()
 	var/rooms = length(upgrade_ids)
 	TEST_ASSERT(rooms, "The upgrade catalog is empty")
 	var/static/list/rotations = list(0, 90, 180, 270)

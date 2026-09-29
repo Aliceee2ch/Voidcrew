@@ -47,7 +47,10 @@
 	AddElement(/datum/element/atmos_sensitive, mapload)
 
 /obj/machinery/atmospherics/components/unary/vent_scrubber/Destroy()
-	disconnect_from_area()
+	// VOIDCREW EDIT CHANGE - original: disconnect_from_area(). A deleted hull's turfs change area before their
+	// contents are deleted (jumpToNullSpace), so get_area() no longer matches and the scrubber stayed in its old
+	// area's air_scrubbers: a hard delete for every scrubber on every despawned ship.
+	disconnect_from_area(assigned_area)
 	adjacent_turfs.Cut()
 	return ..()
 

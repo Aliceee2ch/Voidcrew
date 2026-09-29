@@ -2390,7 +2390,7 @@
 /turf/open/indestructible/grass,
 /area/voidcrew/trader_outpost)
 "xf" = (
-/obj/structure/beebox,
+/obj/structure/beebox/premade,
 /turf/open/misc/dirt/station,
 /area/voidcrew/trader_outpost)
 "xh" = (
@@ -2930,6 +2930,22 @@
 	},
 /obj/effect/turf_decal/tile/neutral/anticorner/contrasted,
 /obj/structure/table,
+/turf/open/indestructible,
+/area/voidcrew/trader_outpost)
+"BW" = (
+/obj/effect/turf_decal/siding/wideplating_new{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/neutral/half/contrasted{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/neutral/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/neutral/line{
+	dir = 8
+	},
+/obj/structure/bounty_wanted_board/directional/north,
 /turf/open/indestructible,
 /area/voidcrew/trader_outpost)
 "BX" = (
@@ -8514,7 +8530,7 @@ ul
 ak
 ak
 ak
-wf
+BW
 Wo
 ab
 ak

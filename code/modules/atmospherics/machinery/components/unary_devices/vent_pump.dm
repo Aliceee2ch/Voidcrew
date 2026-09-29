@@ -132,7 +132,10 @@
 	return ..()
 
 /obj/machinery/atmospherics/components/unary/vent_pump/Destroy()
-	disconnect_from_area()
+	// VOIDCREW EDIT CHANGE - original: disconnect_from_area(). A deleted hull's turfs change area before their
+	// contents are deleted (jumpToNullSpace), so get_area() no longer matches and the vent stayed in its old area's
+	// air_vents: a hard delete for every vent on every despawned ship.
+	disconnect_from_area(assigned_area)
 	QDEL_NULL(sound_loop)
 
 	var/area/vent_area = get_area(src)

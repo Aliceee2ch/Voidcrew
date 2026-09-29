@@ -31,7 +31,7 @@
  *   unclaimed (run out, withdrawn), it leaves him in the lounge, alive, uncuffed and in business,
  *   when he is alive within his goons' leash of the sofa; otherwise he is removed as any criminal is,
  *   and gone.
- * - Talking: a radial on him from across the table. "We're here for you" only shows once his posting
+ * - Talking: a radial on him. "We're here for you" only shows once his posting
  *   is up, open and lists him for that crew's ship; it gets his confront line and starts the
  *   shootout. Any attack on him or a goon starts it too. A warrant shown to him, or a reach for his
  *   wrists, only gets the confront line.
@@ -335,7 +335,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		// Hurt while his crew is at ease, by anything at all: they find out who
 		kingpin_crew?.member_hurt(src)
 
-// An open hand from across the table (or beside him) starts the talk
+// An open hand in reach of him starts the talk
 /mob/living/basic/bounty_criminal/kingpin/attack_hand(mob/living/carbon/human/user, list/modifiers)
 	if(istype(user) && !user.combat_mode && !LAZYACCESS(modifiers, RIGHT_CLICK) && !is_restrained() && kingpin_can_talk())
 		INVOKE_ASYNC(src, PROC_REF(kingpin_open_talk), user)

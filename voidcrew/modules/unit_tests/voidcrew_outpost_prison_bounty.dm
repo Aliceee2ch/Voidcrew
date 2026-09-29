@@ -938,9 +938,11 @@
 	TEST_ASSERT_EQUAL(get_dist(juggernaut, warden), 1, "The juggernaut ended [get_dist(juggernaut, warden)] tiles from the warden, not beside him")
 	TEST_ASSERT(prison.in_cell_block(juggernaut), "The charge took the juggernaut out of the cell block")
 
-	// Not again at once (PRISON_BOSS_CHARGE_COOLDOWN).
+	// Not again at once (PRISON_BOSS_CHARGE_COOLDOWN). Ending the knockdown only starts a second-long
+	// get-up, and the charge never picks someone on the floor, so stand him up now.
 	warden.SetKnockdown(0)
 	warden.fully_heal()
+	warden.get_up(instant = TRUE)
 	juggernaut.forceMove(start)
 	prison.refresh_reach()
 	TEST_ASSERT(!move.try_start(), "The juggernaut charged again inside the cooldown")

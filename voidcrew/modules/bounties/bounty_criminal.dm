@@ -658,6 +658,23 @@
 	carrier.unbuckle_mob(src, force = TRUE)
 	visible_message(span_warning("[src] squirms off [carrier]'s shoulders."))
 
+/**
+ * Turns `body` flat when it lies down out of a chair or off someone's shoulders (set_lying_down()).
+ * tg turns only carbons there (/mob/living/carbon/on_lying_down()); any other mob gets its angle from
+ * on_floored_start(), which is skipped while a chair holds it up. Without this, a criminal or a goon
+ * unbuckled while down or dead lies down but still looks like it is standing.
+ */
+/proc/bounty_body_lie_flat(mob/living/body, new_lying_angle)
+	if(!body.rotate_on_lying || body.body_position != LYING_DOWN || body.lying_angle)
+		return
+	if(body.buckled && body.buckled.buckle_lying == 0)
+		return
+	body.set_lying_angle(new_lying_angle || pick(LYING_ANGLE_EAST, LYING_ANGLE_WEST))
+
+/mob/living/basic/bounty_criminal/set_lying_down(new_lying_angle)
+	. = ..()
+	bounty_body_lie_flat(src, new_lying_angle)
+
 // A criminal lying on the floor can be carried like a person, as long as it can be dragged
 /mob/living/carbon/human/can_be_firemanned(mob/living/carbon/target)
 	if(istype(target, /mob/living/basic/bounty_criminal))

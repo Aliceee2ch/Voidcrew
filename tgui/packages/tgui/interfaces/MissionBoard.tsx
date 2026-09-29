@@ -171,14 +171,40 @@ type ListItem = {
   node: ReactNode;
 };
 
-/** A card's fixed place in the shuffled list (FNV-1a of its key), so the order doesn't jump between updates */
-const shufflePlace = (key: string) => {
+/** A fixed hash of a card's key (FNV-1a, then mixed: refs that differ in one digit land far apart) */
+const shuffleHash = (key: string) => {
   let hash = 2166136261;
   for (let i = 0; i < key.length; i++) {
     hash ^= key.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
   return hash >>> 0;
+};
+
+/** Spreads every kind of card evenly down the list, each at its own fixed point in its share, so no kind bunches up */
+const shuffleKinds = (items: ListItem[]) => {
+  const kinds: Record<string, ListItem[]> = {};
+  for (const item of items) {
+    const kind = item.key.slice(0, item.key.indexOf('-'));
+    if (!kinds[kind]) {
+      kinds[kind] = [];
+    }
+    kinds[kind].push(item);
+  }
+  const placed: { item: ListItem; place: number }[] = [];
+  for (const group of Object.values(kinds)) {
+    group.sort((a, b) => shuffleHash(a.key) - shuffleHash(b.key));
+    group.forEach((item, i) => {
+      const jitter = shuffleHash(`${item.key}~`) / 2 ** 32;
+      placed.push({ item, place: (i + jitter) / group.length });
+    });
+  }
+  return placed.sort((a, b) => a.place - b.place).map((entry) => entry.item);
 };
 
 const MissionBoardContent = () => {
@@ -209,7 +235,7 @@ const MissionBoardContent = () => {
     entry.mugshot_id ? wanted_mugshots[entry.mugshot_id] : undefined;
 
   // Everything on offer in one list, every kind mixed together
-  const offered: ListItem[] = [
+  const offered: ListItem[] = shuffleKinds([
     ...available_missions.map((mission) => ({
       key: `mission-${mission.ref}`,
       node: <MissionCard mission={mission} isActive={false} />,
@@ -255,7 +281,7 @@ const MissionBoardContent = () => {
           />
         ),
       })),
-  ].sort((a, b) => shufflePlace(a.key) - shufflePlace(b.key));
+  ]);
 
   // Everything taken on
   const taken: ListItem[] = [

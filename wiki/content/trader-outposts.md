@@ -128,7 +128,7 @@ Attacking outpost property (or attacking another visitor inside the outpost) ear
 - Every ship your crew belongs to is put under a **trade embargo** for 15 minutes.
 - The outpost's turrets go lethal on you and anyone else aboard your embargoed ship.
 
-The **loiterers** hanging around each concourse, an off-duty pirate at the Undertow, a mechanic at Halcyon, a dockhand at Quartermain. Are the one exception. They are squatters rather than staff, they cannot be hurt anyway, and swinging at one does not count against you.
+The **loiterers** hanging around each concourse, an off-duty pirate at the Undertow, a mechanic at Halcyon, a dockhand at Quartermain, are the one exception. They potter about their own corner of the outpost, wrenching and welding whatever's nearby. They are squatters rather than staff, they cannot be hurt anyway, and swinging at one does not count against you.
 
 !!! danger "The embargo covers your whole crew"
     One person losing their temper bars everybody on the ship, including people who were still shopping. Embargoed crew are shot on sight, not merely refused service.

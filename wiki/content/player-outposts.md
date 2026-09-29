@@ -23,6 +23,8 @@ The style you pick is for good. Every room you buy later, and the ship bay, is b
 !!! warning "Where you plant it is permanent"
     You cannot move an outpost later. Ship weapons never fire on outposts, wherever they are.
 
+An outpost fits on one level, with the habitat you build in the middle. A dark border marks where the build area stops; the ship bay, four docking berths and the freight ferry's pad sit around it, out of reach and out of range of anything you build. The only way in or out for a ship is the **hangar elevator**: there is no open landing pad, and a hull with nowhere clear to dock is turned away.
+
 ## Managing and building
 
 Use the **outpost management console** to rename the outpost, set a public memo, manage docking and residents, grant permissions, or transfer ownership.
@@ -32,6 +34,8 @@ A **Registry uplink** implant adds an **Outpost Management** action that works f
 You can delegate management (steward), bank withdrawals (treasurer), service prices (pricer) and construction (builder) separately, from the **People** tab. Your founding ship's crew automatically become residents with construction permission. Other residents need construction permission granted separately. When the console refuses something, it says why in chat.
 
 The **construction console** controls a building drone supplied by your local ore silo. Link the console to the silo with a multitool and deposit materials before building. You can also expand the habitat with ordinary tools.
+
+The construction console's **Door Access** tool sets who a door opens for: pick the tool, then click a door in the camera view for a choice of **Public**, **Members**, **Staff** or **Owner**, and which side always opens from within. A newly built door starts Public; the service rooms' own staff doors start Staff. Setting a door never locks you out of it from inside.
 
 ## Money and deliveries
 
@@ -69,7 +73,7 @@ Service rooms sell things to visiting crews. Members use them free: the owner, r
 | Safe Storage | 1,000 cr | One of thirteen lockers for the round | 200 cr | 5,000 cr |
 | Teleporter | 6,000 cr | Arrival by network pad | 200 cr | 2,000 cr |
 
-Set prices on the **Pricing** tab of the management console. The **Rooms** tab opens or closes each built room to visitors and holds its settings. The teleporter has no visitor switch; its arrival policy does that job.
+Set prices on the **Pricing** tab of the management console. Who may use a service room is set door by door, with the construction console's Door Access tool. The teleporter has no door to set; its own arrival policy controls who may arrive.
 
 ### Who runs the market
 
@@ -150,11 +154,18 @@ Ship docking has separate controls:
 - **By request:** approve requests in Outpost Management. A ship still waiting in your sector begins docking when cleared. It needs new clearance after leaving.
 - **Lockdown:** only the owner's crew ships may enter. Existing visitors can leave.
 
-Banning a ship overrides docking clearance. Use the hangar elevator to travel between the habitat and occupied visitor berths.
-
-The **Ships** tab also sells a permanent **ship bay** for 10,000 credits, 100 iron and 50 glass from the outpost silo; it needs a working hangar elevator. Ships reach it through the **Ship Bay** option at the helm, and people by elevator. When a ship in the bay asks to use the outpost silo, the request appears on its bay row. An evicted ship has three minutes to undock, and gets its docking fee back if it paid in the last 30 minutes.
+Banning a ship overrides docking clearance. The outpost has four **standard berths**, each sized to fit the ship docking into it; if none is free, an arriving ship is told parking is unavailable. Use the hangar elevator to travel between the habitat and occupied visitor berths.
 
 A hull defense turret bolted to the outpost answers only to its owner, stewards, treasurers, residents and builders. Visitors cannot switch it off, change its targeting, unbolt it or scrap it. The same goes for turrets built on the outpost and for turret control panels. A cleanbot can pass a prison wing's staff doors, so one built in the office can clean the yard.
+
+## Ship Bay
+
+The **Ships** tab sells a permanent **ship bay** for 10,000 credits, 100 iron and 50 glass from the outpost silo; it needs a working hangar elevator. Ships reach it through the **Ship Bay** option at the helm, and people by elevator. When a ship in the bay asks to use the outpost silo, the request appears on its bay row. An evicted ship has three minutes to undock, and gets its docking fee back if it paid in the last 30 minutes.
+
+The bay's own **shipyard console**, found only in the bay itself, has two tabs:
+
+- **Shop** orders a new ship, built at the bay by your delivery drones and stocked with its usual starting supplies, paid from the outpost bank or your own account.
+- **Checkpoints** saves a captain's docked ship: **10,000 credits** the first time, **5,000 credits** to update it later. If that ship is ever lost or its hull abandoned, the same captain can pay to have it rebuilt from the saved checkpoint. The delivery drones do the rebuilding in one visible pass, then the ship launches into the bay.
 
 ## Advertising
 

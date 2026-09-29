@@ -156,9 +156,9 @@ GLOBAL_LIST_INIT(outpost_guard_placeholders, list("{boss}", "{count}", "{cause}"
 	real_name = hired.full_name()
 	name = real_name
 
-/// On the wing and on duty: arrived, not down, not dismissed
+/// On the wing and on duty: arrived, not down, not dismissed, and not paid by the kingpin to stand back (outpost_prison_boss_moves.dm)
 /mob/living/basic/outpost_prison_guard/proc/on_duty()
-	return !QDELETED(src) && phase == OUTPOST_GUARD_PRESENT && stat == CONSCIOUS
+	return !QDELETED(src) && phase == OUTPOST_GUARD_PRESENT && stat == CONSCIOUS && !boss_bribed()
 
 /// Whether their AI is running, which it is only while someone is on the level to see them (see outpost_prison_ai_running())
 /mob/living/basic/outpost_prison_guard/proc/ai_running()

@@ -8,7 +8,7 @@
  * notice before a bounty arrival, taking a record out of the pool before its prisoner is built, a
  * prisoner rebuilt from a record, their pay and danger by tier, closing their record on every way
  * out, Kessler's refusal, the roster badge and examine line, meek prisoners at hatches and doors,
- * and the admin block's forced admission.
+ * the admin block's forced admission, and the bosses' riot moves (outpost_prison_boss_moves.dm).
  *
  * Fork defines are included after the tests, so a test uses the literal value with a comment
  * naming the define: the bounty enums too (tiers 1-3, archetypes, record statuses). Every test
@@ -829,4 +829,625 @@
 	TEST_ASSERT_NULL(prison.bounty_extra_speech(unknown, 100), "A prisoner with no captor on record called out a crew")
 	team.ship = null
 	crewman.mind.ship_teams = null
+	settle_prison_air(home)
+
+// ===== THE BOSSES' RIOT MOVES =====
+
+/**
+ * The bounty bosses' riot moves (outpost_prison_boss_moves.dm): one each for the five mini-boss kits
+ * and the kingpin. Every move is only for a boss rioting or breaking out, past the riot's wind-up,
+ * with the crew home; it goes only for staff, never another prisoner; its telegraph (marks on the
+ * floor, holding still) comes before its effect; and its limit holds (the cooldown, or once a riot).
+ * A prisoner who isn't a boss has none.
+ *
+ * The bosses are awake as if someone were on the level (the trouble tests' awake_for_test), and the
+ * tests call try_start() and finish_windup() themselves rather than wait for the prison's tick.
+ * Staff are plain crewmen. The stock wing: the yard is rows 7 to 11, mess tables at (4-6,9) and
+ * (12-14,9), cell 1 at (2-4,13-15) with its bunk at (2,15) and its door at (3,12), and the staff
+ * door at (9,6) with the office below it.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_bounty_kit
+	abstract_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/// A Most Wanted bounty boss with `kit` (BOUNTY_KIT_*), or the kingpin with archetype "kingpin", awake, booked in, standing still at `spot`, whole and fed
+/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit/proc/boss_prisoner(datum/outpost_prison/prison, turf/spot, kit, archetype = "boss", name) // BOUNTY_ARCHETYPE_BOSS
+	var/datum/bounty_record/record = make_record(3, archetype, name) // BOUNTY_TIER_MOST_WANTED
+	record.kit = kit
+	var/mob/living/basic/outpost_prisoner/prisoner = new /mob/living/basic/outpost_prisoner/awake_for_test(spot, record)
+	prison.admit(prisoner)
+	prisoner.sentence_left = 3600
+	prisoner.set_hunger(100)
+	prisoner.set_uniform_grime(0)
+	set_health_percent(prisoner, 100)
+	ADD_TRAIT(prisoner, TRAIT_IMMOBILIZED, TRAIT_SOURCE_UNIT_TESTS)
+	return prisoner
+
+/// A riot of everyone able, past its wind-up, with the crew home
+/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit/proc/boss_riot(datum/outpost_prison/prison)
+	prison.crew_home_override = TRUE
+	prison.riot_detour_chance = 0
+	prison.set_subdued(0)
+	if(!prison.start_riot("test", everyone = TRUE))
+		return FALSE
+	prison.riot_windup_left = 0
+	return TRUE
+
+/// Whether a charge's run is over
+/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit/proc/charge_over(datum/prison_boss_move/charge/move)
+	return !move.charge_serial
+
+/// Whether a locker shove is over
+/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit/proc/shove_over(datum/prison_boss_move/barricade/move)
+	return !move.shove_serial
+
+/// Whether a floor mark from a move's telegraph shows on `spot`
+/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit/proc/marked(turf/spot)
+	return !isnull(locate(/obj/effect/temp_visual/bounty_boss_mark) in spot)
+
+// ----- Juggernaut -----
+
+/**
+ * The shoulder charge: only in a riot, past its wind-up, with the crew home; a marked line up to 4
+ * tiles (PRISON_BOSS_CHARGE_RANGE), inside the cell block, while he holds still; then the run knocks
+ * down the first member of staff on it. Someone else in the way and he pulls up short; anything solid
+ * and he reels, breaking nothing. Never at a prisoner, and not again inside the cooldown.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_charge
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/datum/unit_test/voidcrew_outpost_prison_boss_charge/Run()
+	clean_pool()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("bosschargeowner")
+	TEST_ASSERT_NOTNULL(home, "The shoulder charge test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/turf/start = prison_spot(home, 3, 11)
+	var/mob/living/basic/outpost_prisoner/juggernaut = boss_prisoner(prison, start, "juggernaut", name = "Vasily Orlov") // BOUNTY_KIT_JUGGERNAUT
+	var/datum/prison_boss_move/charge/move = juggernaut.boss_move_datum()
+	TEST_ASSERT(istype(move), "A juggernaut in prison has no shoulder charge ([move?.type])")
+	var/mob/living/carbon/human/consistent/warden = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 6, 11))
+	prison.refresh_reach()
+	prison.crew_home_override = TRUE
+
+	// Only in a riot, with the crew home, past the riot's wind-up.
+	TEST_ASSERT(!move.try_start(), "A juggernaut charged with no riot on")
+	TEST_ASSERT(boss_riot(prison), "The riot did not start")
+	prison.crew_home_override = FALSE
+	TEST_ASSERT(!move.try_start(), "A juggernaut charged with nobody home")
+	prison.crew_home_override = TRUE
+	prison.riot_windup_left = 3
+	TEST_ASSERT(!move.try_start(), "A juggernaut charged during the riot's wind-up")
+	prison.riot_windup_left = 0
+
+	// The telegraph first: the line on the floor, holding still, nobody hurt yet.
+	TEST_ASSERT(move.try_start(), "A rioting juggernaut with staff three tiles off did not charge")
+	TEST_ASSERT(length(move.path) >= 3 && length(move.path) <= 4, "The charge line is [length(move.path)] tiles, not 3 or 4") // PRISON_BOSS_CHARGE_RANGE
+	TEST_ASSERT(get_turf(warden) in move.path, "The charge line misses the warden")
+	for(var/turf/spot as anything in move.path)
+		TEST_ASSERT(prison.in_cell_block(spot), "The charge line runs out of the cell block at [spot.x],[spot.y]")
+		TEST_ASSERT(marked(spot), "The charge line is not marked at [spot.x],[spot.y]")
+	TEST_ASSERT(juggernaut.boss_move_busy() && isnull(juggernaut.trouble_target()), "The juggernaut did not hold still while winding up")
+	TEST_ASSERT_EQUAL(warden.getBruteLoss(), 0, "The charge hurt the warden before its wind-up was over")
+	TEST_ASSERT(!warden.IsKnockdown(), "The charge knocked the warden down before its wind-up was over")
+
+	// The run: the warden is slammed and knocked down, and the juggernaut stops beside him.
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The charge never ran")
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit, charge_over), move), 3 SECONDS), "The charge never ended")
+	TEST_ASSERT(warden.IsKnockdown(), "The charge did not knock the warden down")
+	TEST_ASSERT(warden.getBruteLoss() > 0, "The charge did the warden no harm")
+	TEST_ASSERT_EQUAL(get_dist(juggernaut, warden), 1, "The juggernaut ended [get_dist(juggernaut, warden)] tiles from the warden, not beside him")
+	TEST_ASSERT(prison.in_cell_block(juggernaut), "The charge took the juggernaut out of the cell block")
+
+	// Not again at once (PRISON_BOSS_CHARGE_COOLDOWN).
+	warden.SetKnockdown(0)
+	warden.fully_heal()
+	juggernaut.forceMove(start)
+	prison.refresh_reach()
+	TEST_ASSERT(!move.try_start(), "The juggernaut charged again inside the cooldown")
+	move.ready_at = 0
+
+	// Breaking out, the same. Someone else stepping into the line: he pulls up short and they are left alone.
+	prison.begin_breakout()
+	TEST_ASSERT_EQUAL(juggernaut.trouble, "breakout", "The juggernaut is [juggernaut.trouble] in the breakout") // PRISONER_TROUBLE_BREAKOUT
+	TEST_ASSERT(move.try_start(), "The juggernaut did not charge in the breakout once the cooldown was over")
+	var/mob/living/basic/outpost_prisoner/bystander = kept_prisoner(prison, prison_spot(home, 4, 11))
+	var/bystander_health = bystander.health
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The charge did not start with someone in the way")
+	TEST_ASSERT(charge_over(move), "The charge ran on through a prisoner")
+	TEST_ASSERT_EQUAL(juggernaut.loc, start, "The juggernaut went through a prisoner in the way")
+	TEST_ASSERT_EQUAL(bystander.health, bystander_health, "The charge hurt a prisoner in the way")
+	TEST_ASSERT(!bystander.IsKnockdown() && !bystander.is_down(), "The charge knocked down a prisoner in the way")
+	TEST_ASSERT(!warden.IsKnockdown(), "The charge reached the warden through a prisoner")
+
+	// Never at a prisoner: with only a prisoner in sight, no charge.
+	move.ready_at = 0
+	warden.forceMove(run_loc_floor_bottom_left)
+	bystander.forceMove(prison_spot(home, 6, 11))
+	prison.refresh_reach()
+	TEST_ASSERT(!move.try_start(), "A juggernaut charged at a prisoner")
+
+	// Something solid in the line: he slams into it and reels, and it comes to no harm.
+	prison.forget(bystander)
+	qdel(bystander)
+	warden.forceMove(prison_spot(home, 6, 11))
+	prison.refresh_reach()
+	TEST_ASSERT(move.try_start(), "The juggernaut did not charge the warden again")
+	var/obj/structure/closet/locker = allocate(/obj/structure/closet, prison_spot(home, 5, 11))
+	var/locker_integrity = locker.get_integrity()
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The charge did not start")
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit, charge_over), move), 3 SECONDS), "The charge into a locker never ended")
+	TEST_ASSERT_EQUAL(juggernaut.loc, prison_spot(home, 4, 11), "The juggernaut did not stop at the locker")
+	TEST_ASSERT(juggernaut.boss_move_busy() && juggernaut.IsImmobilized(), "The juggernaut did not reel from the locker")
+	TEST_ASSERT(!QDELETED(locker) && locker.loc == prison_spot(home, 5, 11) && locker.get_integrity() == locker_integrity, "The charge broke or moved the locker")
+	TEST_ASSERT(!warden.IsKnockdown() && !warden.getBruteLoss(), "The charge reached the warden through a locker")
+	prison.admin_calm()
+	settle_prison_air(home)
+
+// ----- Pyromaniac -----
+
+/**
+ * A bunk alight: only in a riot, only a bunk with staff standing where it would burn; the match and
+ * the marked tiles first; then the bunk's tile and the tiles right beside it burn for a while,
+ * setting staff alight but never a prisoner; water puts it out; not again inside the cooldown.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_fire
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/datum/unit_test/voidcrew_outpost_prison_boss_fire/Run()
+	clean_pool()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("bossfireowner")
+	TEST_ASSERT_NOTNULL(home, "The burning bunk test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/datum/outpost_prison_cell/cell_one = prison.cells[1]
+	var/obj/machinery/door/airlock/cell_door = cell_one.door()
+	TEST_ASSERT_NOTNULL(cell_door, "Cell 1 has no door")
+	cell_door.autoclose = FALSE
+	cell_door.open(BYPASS_DOOR_CHECKS)
+	var/obj/structure/bed/bunk = locate() in prison_spot(home, 2, 15)
+	TEST_ASSERT_NOTNULL(bunk, "Cell 1's bunk is not where the map puts it")
+	var/mob/living/basic/outpost_prisoner/pyromaniac = boss_prisoner(prison, prison_spot(home, 3, 13), "pyromaniac", name = "Dana Kettle") // BOUNTY_KIT_PYROMANIAC
+	var/datum/prison_boss_move/bed_fire/move = pyromaniac.boss_move_datum()
+	TEST_ASSERT(istype(move), "A pyromaniac in prison has no fire ([move?.type])")
+	var/mob/living/carbon/human/consistent/warden = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 3, 15))
+	prison.refresh_reach()
+	prison.crew_home_override = TRUE
+	TEST_ASSERT(!move.try_start(), "A pyromaniac lit a bunk with no riot on")
+	TEST_ASSERT(boss_riot(prison), "The riot did not start")
+
+	// Staff nowhere near a bunk: nothing to light.
+	warden.forceMove(prison_spot(home, 9, 9))
+	prison.refresh_reach()
+	TEST_ASSERT(!move.try_start(), "A pyromaniac lit a bunk with no staff near it")
+	warden.forceMove(prison_spot(home, 3, 15))
+	prison.refresh_reach()
+
+	// The telegraph: the bunk and the tiles beside it marked, nobody burning yet.
+	TEST_ASSERT(move.try_start(), "A rioting pyromaniac did not light a bunk with staff beside it")
+	TEST_ASSERT(length(move.patch) >= 2, "The fire patch is [length(move.patch)] tiles")
+	for(var/turf/spot as anything in move.patch)
+		TEST_ASSERT(get_dist(spot, bunk) <= 1, "The fire patch reaches [spot.x],[spot.y], past the tiles beside the bunk")
+		TEST_ASSERT(marked(spot), "The fire patch is not marked at [spot.x],[spot.y]")
+	TEST_ASSERT(get_turf(warden) in move.patch, "The fire patch misses the warden beside the bunk")
+	TEST_ASSERT_EQUAL(warden.getFireLoss(), 0, "The warden burned before the match was thrown")
+	TEST_ASSERT(!warden.has_status_effect(/datum/status_effect/bounty_boss_burning), "The warden was alight before the match was thrown")
+
+	// A prisoner in the patch too: it goes up, the warden burns, the prisoner doesn't.
+	var/mob/living/basic/outpost_prisoner/cellmate = kept_prisoner(prison, prison_spot(home, 2, 14))
+	var/cellmate_health = cellmate.health
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The bunk did not go up")
+	var/obj/effect/bounty_boss_fire_pool/prison_bed/fire = move.fire_ref?.resolve()
+	TEST_ASSERT(istype(fire), "No fire burns on the bunk")
+	for(var/turf/spot as anything in fire.turfs)
+		TEST_ASSERT(get_dist(spot, bunk) <= 1, "The fire burns at [spot.x],[spot.y], past the tiles beside the bunk")
+		TEST_ASSERT(prison.in_cell_block(spot), "The fire burns outside the cell block")
+	TEST_ASSERT(warden.getFireLoss() > 0, "The burning bunk did not burn the warden beside it")
+	TEST_ASSERT(warden.has_status_effect(/datum/status_effect/bounty_boss_burning), "The burning bunk did not set the warden alight")
+	TEST_ASSERT(!cellmate.has_status_effect(/datum/status_effect/bounty_boss_burning), "The burning bunk set a prisoner alight")
+	TEST_ASSERT_EQUAL(cellmate.health, cellmate_health, "The burning bunk hurt a prisoner")
+
+	// Not again inside the cooldown (PRISON_BOSS_FIRE_COOLDOWN).
+	TEST_ASSERT(!move.try_start(), "The pyromaniac lit another bunk inside the cooldown")
+
+	// Water puts it out.
+	var/datum/reagents/water = new(30)
+	water.add_reagent(/datum/reagent/water, 30)
+	water.expose(prison_spot(home, 2, 14), TOUCH)
+	qdel(water)
+	TEST_ASSERT(QDELETED(fire), "Water on the burning bunk did not put it out")
+	prison.admin_calm()
+	settle_prison_air(home)
+
+// ----- Demolitionist -----
+
+/**
+ * A rigged charge: only on the way out he is already breaking (never a fixture or anything else),
+ * packed first with the fuse beeping, then the bang takes 60% (PRISON_BOSS_RIG_SHARE) of the door's
+ * full integrity, and knocks down staff beside it but no prisoner. Once a riot; a new riot gives it
+ * back. With the crew gone by the bang, the door takes nothing.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_rig
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/datum/unit_test/voidcrew_outpost_prison_boss_rig/Run()
+	clean_pool()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("bossrigowner")
+	TEST_ASSERT_NOTNULL(home, "The rigged charge test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/turf/doorway = prison_spot(home, 9, 6)
+	var/obj/machinery/door/airlock/security/prison_staff/staff_door = locate() in doorway
+	TEST_ASSERT_NOTNULL(staff_door, "The staff door is not where the map puts it")
+	var/mob/living/basic/outpost_prisoner/demolitionist = boss_prisoner(prison, prison_spot(home, 9, 7), "demolitionist", name = "Rory Blake") // BOUNTY_KIT_DEMOLITIONIST
+	var/datum/prison_boss_move/rigged_charge/move = demolitionist.boss_move_datum()
+	TEST_ASSERT(istype(move), "A demolitionist in prison has no rigged charge ([move?.type])")
+	var/mob/living/carbon/human/consistent/warden = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 9, 5))
+	prison.refresh_reach()
+	TEST_ASSERT(boss_riot(prison), "The riot did not start")
+	var/mob/living/basic/outpost_prisoner/bystander = kept_prisoner(prison, prison_spot(home, 8, 7))
+
+	// Not on a door the riot hasn't been at, and never on anything but a way out.
+	demolitionist.riot_target_ref = WEAKREF(staff_door)
+	TEST_ASSERT(!move.try_start(), "A demolitionist rigged a door nobody had hit yet")
+	var/obj/structure/table/table = locate() in prison_spot(home, 6, 9)
+	demolitionist.riot_target_ref = WEAKREF(table)
+	TEST_ASSERT(!move.try_start(), "A demolitionist rigged a table")
+	demolitionist.riot_target_ref = WEAKREF(staff_door)
+	TEST_ASSERT(demolitionist.confront(staff_door), "The demolitionist could not hit the staff door")
+
+	// The telegraph and the fuse first: the door untouched and nobody down.
+	var/door_before = staff_door.get_integrity()
+	TEST_ASSERT(move.try_start(), "A demolitionist breaking the staff door did not rig it")
+	TEST_ASSERT(marked(doorway), "The rigged door is not marked")
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The charge was never packed")
+	var/obj/effect/bounty_boss_explosive/prison_rig/rig = locate() in doorway
+	TEST_ASSERT_NOTNULL(rig, "No charge beeps on the staff door")
+	TEST_ASSERT_EQUAL(staff_door.get_integrity(), door_before, "The door took damage before the charge went off")
+	TEST_ASSERT(!warden.IsKnockdown(), "The warden was knocked down before the charge went off")
+
+	// The bang: 60% of the door's full integrity (PRISON_BOSS_RIG_SHARE; 240 of the glass door's 400), staff beside it down, the prisoner beside it not.
+	var/bystander_health = bystander.health
+	var/door_after = door_before - staff_door.max_integrity * 60 / 100
+	rig.detonate()
+	TEST_ASSERT(!QDELETED(staff_door), "The charge blew the staff door away in one go")
+	TEST_ASSERT_EQUAL(staff_door.get_integrity(), door_after, "The charge left the staff door at [staff_door.get_integrity()], not [door_after]")
+	TEST_ASSERT(warden.IsKnockdown(), "The charge did not knock down the warden beside the door")
+	TEST_ASSERT(!bystander.IsKnockdown() && !bystander.is_down(), "The charge knocked down a prisoner beside the door")
+	TEST_ASSERT_EQUAL(bystander.health, bystander_health, "The charge hurt a prisoner beside the door")
+	TEST_ASSERT(!demolitionist.is_down(), "The charge knocked down the demolitionist")
+
+	// Once a riot: not again, even past the cooldown.
+	move.ready_at = 0
+	TEST_ASSERT(!move.try_start(), "The demolitionist rigged a second charge in one riot")
+
+	// A new riot gives it back. With nobody home by the bang, the door takes nothing.
+	warden.SetKnockdown(0)
+	prison.admin_calm()
+	TEST_ASSERT(boss_riot(prison), "The second riot did not start")
+	demolitionist.riot_target_ref = WEAKREF(staff_door)
+	TEST_ASSERT(demolitionist.confront(staff_door), "The demolitionist could not hit the staff door in the second riot")
+	move.ready_at = 0
+	TEST_ASSERT(move.try_start(), "A new riot did not give the demolitionist his charge back")
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The second charge was never packed")
+	rig = locate() in doorway
+	TEST_ASSERT_NOTNULL(rig, "No second charge beeps on the staff door")
+	door_before = staff_door.get_integrity()
+	prison.crew_home_override = FALSE
+	rig.detonate()
+	TEST_ASSERT_EQUAL(staff_door.get_integrity(), door_before, "The charge damaged the door with nobody home")
+	prison.crew_home_override = TRUE
+	prison.admin_calm()
+	settle_prison_air(home)
+
+// ----- Ghost -----
+
+/**
+ * Slipping the cuffs: only cuffed, in a riot, a little while after the cuffs went on, with staff in
+ * sight; working at them first; a knockdown or a drag stops it; then the same cuffs lie on the floor
+ * and half of all blows miss the shimmer, until a hit lands. Once a riot.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_slip
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/datum/unit_test/voidcrew_outpost_prison_boss_slip/Run()
+	clean_pool()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("bossslipowner")
+	TEST_ASSERT_NOTNULL(home, "The slipped cuffs test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/mob/living/basic/outpost_prisoner/ghost = boss_prisoner(prison, prison_spot(home, 8, 9), "ghost", name = "Mira Voss") // BOUNTY_KIT_GHOST
+	var/datum/prison_boss_move/slip_cuffs/move = ghost.boss_move_datum()
+	TEST_ASSERT(istype(move), "A ghost in prison has no way out of cuffs ([move?.type])")
+	var/mob/living/carbon/human/consistent/warden = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 10, 9))
+	prison.refresh_reach()
+	TEST_ASSERT(boss_riot(prison), "The riot did not start")
+
+	// Uncuffed there is nothing to slip; just cuffed, not yet.
+	TEST_ASSERT(!move.try_start(), "An uncuffed ghost slipped out of cuffs")
+	var/obj/item/restraints/handcuffs/cuffs = allocate(/obj/item/restraints/handcuffs)
+	TEST_ASSERT(ghost.apply_cuffs(cuffs), "The ghost could not be cuffed")
+	move.observe(ghost)
+	TEST_ASSERT(!move.try_start(), "The ghost started on the cuffs the moment they went on")
+	move.cuffed_at = world.time - 10 SECONDS
+
+	// Only with staff in sight.
+	warden.forceMove(run_loc_floor_bottom_left)
+	TEST_ASSERT(!move.try_start(), "The ghost worked at the cuffs with no staff about")
+	warden.forceMove(prison_spot(home, 10, 9))
+	prison.refresh_reach()
+
+	// Working at them first; a knockdown stops it, the cuffs still on.
+	TEST_ASSERT(move.try_start(), "A cuffed rioting ghost did not work at the cuffs")
+	TEST_ASSERT_EQUAL(ghost.cuffs, cuffs, "The cuffs came off before the ghost finished working at them")
+	ghost.Knockdown(2 SECONDS)
+	TEST_ASSERT(!move.watch_windup(move.pending_serial), "Knocking the ghost down did not stop the work on the cuffs")
+	TEST_ASSERT(!move.pending_serial, "The work on the cuffs went on after a knockdown")
+	TEST_ASSERT_EQUAL(ghost.cuffs, cuffs, "A knocked-down ghost got out of the cuffs")
+	ghost.SetKnockdown(0)
+
+	// Being dragged stops it too.
+	move.ready_at = 0
+	TEST_ASSERT(move.try_start(), "The ghost did not try the cuffs again")
+	warden.forceMove(prison_spot(home, 9, 9))
+	warden.start_pulling(ghost)
+	TEST_ASSERT(ghost.pulledby == warden, "The warden could not drag the cuffed ghost")
+	TEST_ASSERT(!move.watch_windup(move.pending_serial), "Dragging the ghost did not stop the work on the cuffs")
+	TEST_ASSERT_EQUAL(ghost.cuffs, cuffs, "A dragged ghost got out of the cuffs")
+	warden.stop_pulling()
+	warden.forceMove(prison_spot(home, 10, 9))
+
+	// Out: the same cuffs on the floor, none lost or doubled, and a shimmer.
+	move.ready_at = 0
+	TEST_ASSERT(move.try_start(), "The ghost did not try the cuffs a third time")
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The ghost never got out of the cuffs")
+	TEST_ASSERT_NULL(ghost.cuffs, "The ghost is still cuffed")
+	TEST_ASSERT(!QDELETED(cuffs) && cuffs.loc == ghost.loc, "The cuffs are not on the floor at the ghost's feet ([cuffs?.loc])")
+	var/cuffs_there = 0
+	for(var/obj/item/restraints/handcuffs/pair in ghost.loc)
+		cuffs_there++
+	TEST_ASSERT_EQUAL(cuffs_there, 1, "[cuffs_there] pairs of cuffs lie at the ghost's feet, not 1")
+	TEST_ASSERT(ghost.has_status_effect(/datum/status_effect/prison_boss_shimmer), "The ghost did not shimmer after slipping the cuffs")
+	var/missed = 0
+	for(var/i in 1 to 60)
+		if(ghost.check_block(warden, 10, "the test blow", MELEE_ATTACK) & SUCCESSFUL_BLOCK)
+			missed++
+	TEST_ASSERT(missed > 10 && missed < 50, "[missed] of 60 blows missed the shimmer, not about half") // PRISON_BOSS_SHIMMER_MISS
+	ghost.apply_damage(5, BRUTE)
+	TEST_ASSERT(!ghost.has_status_effect(/datum/status_effect/prison_boss_shimmer), "A hit that landed did not break the shimmer")
+
+	// Once a riot.
+	TEST_ASSERT(ghost.apply_cuffs(cuffs), "The ghost could not be cuffed again")
+	move.observe(ghost)
+	move.cuffed_at = world.time - 10 SECONDS
+	move.ready_at = 0
+	TEST_ASSERT(!move.try_start(), "The ghost slipped the cuffs twice in one riot")
+	ghost.remove_cuffs()
+	prison.admin_calm()
+	settle_prison_air(home)
+
+// ----- Heavy -----
+
+/**
+ * A barricade: only in a riot and with staff about; the table beside him marked first, then flipped
+ * over toward the staff, where it stood, unbroken. Not again inside the cooldown. With no table, a
+ * locker beside him is shoved into the doorway staff are coming through, and stops there.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_barricade
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/datum/unit_test/voidcrew_outpost_prison_boss_barricade/Run()
+	clean_pool()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("bossbarricadeowner")
+	TEST_ASSERT_NOTNULL(home, "The barricade test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/turf/table_spot = prison_spot(home, 6, 9)
+	var/obj/structure/table/table = locate() in table_spot
+	TEST_ASSERT(table && table.can_flip, "The mess table is not where the map puts it, or can't be flipped")
+	var/table_integrity = table.get_integrity()
+	var/mob/living/basic/outpost_prisoner/heavy = boss_prisoner(prison, prison_spot(home, 7, 9), "heavy", name = "Bruno Hask") // BOUNTY_KIT_HEAVY
+	var/datum/prison_boss_move/barricade/move = heavy.boss_move_datum()
+	TEST_ASSERT(istype(move), "A heavy in prison has no barricade ([move?.type])")
+	var/mob/living/carbon/human/consistent/warden = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 10, 9))
+	prison.refresh_reach()
+	prison.crew_home_override = TRUE
+	TEST_ASSERT(!move.try_start(), "A heavy built a barricade with no riot on")
+	TEST_ASSERT(boss_riot(prison), "The riot did not start")
+	warden.forceMove(run_loc_floor_bottom_left)
+	TEST_ASSERT(!move.try_start(), "A heavy built a barricade with no staff about")
+	warden.forceMove(prison_spot(home, 10, 9))
+
+	// The telegraph: the table marked, still standing.
+	TEST_ASSERT(move.try_start(), "A rioting heavy beside a table did not go for it")
+	TEST_ASSERT(marked(table_spot), "The table is not marked")
+	TEST_ASSERT(!table.is_flipped, "The table went over before the wind-up was done")
+
+	// Over it goes, toward the warden, where it stood and unbroken.
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The heavy did not flip the table")
+	TEST_ASSERT(table.is_flipped, "The table is not flipped")
+	TEST_ASSERT_EQUAL(table.dir, EAST, "The table went over toward [dir2text(table.dir)], not toward the warden")
+	TEST_ASSERT(!QDELETED(table) && table.loc == table_spot && table.get_integrity() == table_integrity, "Flipping the table moved or broke it")
+	TEST_ASSERT(!move.try_start(), "The heavy built another barricade inside the cooldown")
+
+	// No table beside him: a locker into the doorway of the staff door the warden is coming through.
+	heavy.forceMove(prison_spot(home, 8, 8))
+	var/obj/structure/closet/locker = allocate(/obj/structure/closet, prison_spot(home, 8, 7))
+	warden.forceMove(prison_spot(home, 9, 5))
+	prison.refresh_reach()
+	move.ready_at = 0
+	TEST_ASSERT(move.try_start(), "A rioting heavy beside a locker did not shove it at the doorway")
+	TEST_ASSERT_EQUAL(move.shove_to, prison_spot(home, 9, 7), "The locker is headed for the wrong tile")
+	TEST_ASSERT(marked(prison_spot(home, 9, 7)), "The doorway is not marked")
+	TEST_ASSERT_EQUAL(locker.loc, prison_spot(home, 8, 7), "The locker moved before the wind-up was done")
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The heavy did not shove the locker")
+	TEST_ASSERT(wait_until(CALLBACK(src, TYPE_PROC_REF(/datum/unit_test/voidcrew_outpost_prison_boss_moves_kit, shove_over), move), 3 SECONDS), "The shove never ended")
+	TEST_ASSERT_EQUAL(locker.loc, prison_spot(home, 9, 7), "The locker did not end up in the doorway")
+	TEST_ASSERT(!QDELETED(locker) && !locker.anchored && prison.in_cell_block(locker), "The shove broke the locker or took it out of the cell block")
+	prison.admin_calm()
+	settle_prison_air(home)
+
+// ----- Kingpin -----
+
+/**
+ * The kingpin's word: joining a riot with the crew home and free to, prisoners on the fence (up to
+ * 15 over their line, PRISON_BOSS_WORD_BONUS) join too; not while he's cuffed or the crew is away,
+ * and not for another Most Wanted. The payoff: never a player; the look first, the guard still on
+ * duty; then the guard stands back, out of the fight and no target for rioters; once a riot; back to
+ * work when the time is up.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_kingpin
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/datum/unit_test/voidcrew_outpost_prison_boss_kingpin/Run()
+	clean_pool()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("bosskingpinowner")
+	TEST_ASSERT_NOTNULL(home, "The kingpin test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.crew_home_override = TRUE
+	var/mob/living/basic/outpost_prisoner/kingpin = boss_prisoner(prison, prison_spot(home, 4, 11), null, "kingpin", "Aurelio Stann") // BOUNTY_ARCHETYPE_KINGPIN
+	var/mob/living/basic/outpost_prisoner/rioter = trouble_prisoner(prison, prison_spot(home, 6, 8), "chatty")
+	var/mob/living/basic/outpost_prisoner/fence = trouble_prisoner(prison, prison_spot(home, 8, 8), "chatty")
+	var/mob/living/basic/outpost_prisoner/content = trouble_prisoner(prison, prison_spot(home, 10, 8), "chatty")
+	prison.refresh_reach()
+
+	// The word: the fence-sitter at 55 joins (chatty line 50, PRISON_RIOT_JOIN_CHATTY, + 15); 80 doesn't.
+	set_word_moods(kingpin, rioter, fence, content)
+	TEST_ASSERT(prison.start_riot("test"), "The riot did not start")
+	TEST_ASSERT(kingpin.is_rioting(), "The kingpin at mood 10 did not join the riot")
+	TEST_ASSERT_EQUAL(fence.trouble, "riot", "A prisoner on the fence did not join when the kingpin gave the word") // PRISONER_TROUBLE_RIOT
+	TEST_ASSERT_NULL(content.trouble, "A content prisoner joined when the kingpin gave the word")
+	TEST_ASSERT(logged(prison, "gave the word"), "The warden's log does not say the kingpin gave the word")
+
+	// Cuffed, he gives no word, and the fence-sitter stays out.
+	prison.admin_calm()
+	prison.set_subdued(0)
+	var/obj/item/restraints/handcuffs/cuffs = allocate(/obj/item/restraints/handcuffs)
+	TEST_ASSERT(kingpin.apply_cuffs(cuffs), "The kingpin could not be cuffed")
+	set_word_moods(kingpin, rioter, fence, content)
+	TEST_ASSERT(prison.start_riot("test"), "The riot with the kingpin cuffed did not start")
+	TEST_ASSERT_NULL(fence.trouble, "A prisoner on the fence joined with the kingpin cuffed")
+	kingpin.remove_cuffs()
+
+	// With the crew away, no word either.
+	prison.admin_calm()
+	prison.set_subdued(0)
+	prison.crew_home_override = FALSE
+	set_word_moods(kingpin, rioter, fence, content)
+	TEST_ASSERT(prison.start_riot("test"), "The riot with nobody home did not start")
+	TEST_ASSERT_NULL(fence.trouble, "A prisoner on the fence joined on the kingpin's word with nobody home")
+	prison.crew_home_override = TRUE
+
+	// Another Most Wanted gives no word.
+	prison.admin_calm()
+	prison.set_subdued(0)
+	var/mob/living/basic/outpost_prisoner/juggernaut = boss_prisoner(prison, prison_spot(home, 12, 11), "juggernaut", name = "Vasily Orlov") // BOUNTY_KIT_JUGGERNAUT
+	var/datum/outpost_prison_cell/kingpin_cell = kingpin.cell
+	kingpin.forceMove(kingpin_cell.arrival_turf())
+	capture_bolt(prison, kingpin_cell)
+	prison.refresh_reach()
+	TEST_ASSERT(kingpin.is_confined(), "The kingpin is not shut in his cell")
+	set_word_moods(kingpin, rioter, fence, content)
+	juggernaut.set_mood(10)
+	TEST_ASSERT(prison.start_riot("test"), "The riot with a mini-boss did not start")
+	TEST_ASSERT(juggernaut.is_rioting(), "The juggernaut at mood 10 did not join the riot")
+	TEST_ASSERT_NULL(fence.trouble, "A prisoner on the fence joined on a mini-boss's word")
+	prison.admin_calm()
+	prison.set_subdued(0)
+	capture_bolt(prison, kingpin_cell, FALSE)
+	kingpin.forceMove(prison_spot(home, 4, 11))
+	prison.forget(juggernaut)
+	qdel(juggernaut)
+	prison.refresh_reach()
+
+	// The payoff, in a riot the kingpin is in: never a player.
+	set_word_moods(kingpin, rioter, fence, content)
+	TEST_ASSERT(prison.start_riot("test"), "The riot for the payoff did not start")
+	prison.riot_windup_left = 0
+	var/datum/prison_boss_move/bribe/move = kingpin.boss_move_datum()
+	TEST_ASSERT(istype(move), "The kingpin in prison has no payoff ([move?.type])")
+	var/mob/living/carbon/human/consistent/warden = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 7, 11))
+	prison.refresh_reach()
+	TEST_ASSERT(!move.try_start(), "The kingpin tried to pay off a player")
+	warden.forceMove(run_loc_floor_bottom_left)
+
+	// The look first, the guard still on duty; then they stand back.
+	var/mob/living/basic/outpost_prison_guard/guard = guard_test_spawn(prison, prison_spot(home, 8, 11))
+	TEST_ASSERT(guard?.on_duty(), "The test guard is not on duty")
+	TEST_ASSERT(move.try_start(), "The kingpin did not try to pay off a guard in sight")
+	TEST_ASSERT(guard.on_duty() && is_outpost_prison_staff(guard), "The guard stood back before the kingpin's look was over")
+	TEST_ASSERT(move.finish_windup(move.pending_serial), "The payoff never happened")
+	TEST_ASSERT(!guard.on_duty(), "The paid-off guard is still on duty")
+	TEST_ASSERT(!is_outpost_prison_staff(guard), "Rioters still count the paid-off guard as staff")
+	TEST_ASSERT_NULL(guard.response, "The paid-off guard is still answering the riot")
+	TEST_ASSERT(istype(guard.activity, /datum/outpost_guard_activity/prison_bribed), "The paid-off guard is not standing back ([guard.activity?.type])")
+	var/away_for = guard.prison_bribed_until - world.time
+	TEST_ASSERT(away_for > 0 && away_for <= 30 SECONDS, "The guard stands back for [away_for / 10] s, not up to 30") // PRISON_BOSS_BRIBE_TIME
+	rioter.riot_target_ref = null
+	TEST_ASSERT(rioter.staff_in_reach() != guard, "A rioter went for the paid-off guard")
+
+	// Once a riot.
+	var/mob/living/basic/outpost_prison_guard/second_guard = guard_test_spawn(prison, prison_spot(home, 6, 11))
+	move.ready_at = 0
+	TEST_ASSERT(!move.try_start(), "The kingpin paid off a second guard in one riot")
+	TEST_ASSERT(second_guard.on_duty(), "The second guard went off duty")
+
+	// Back to work when the time is up.
+	guard.prison_bribed_until = world.time - 1
+	prison.boss_moves_tick(1)
+	TEST_ASSERT(guard.on_duty(), "The paid-off guard never went back on duty")
+	TEST_ASSERT(!istype(guard.activity, /datum/outpost_guard_activity/prison_bribed), "The guard went back on duty still standing back")
+	TEST_ASSERT(!length(prison.boss_bribed_guards), "The prison still counts a guard back at work as paid off")
+	prison.admin_calm()
+	settle_prison_air(home)
+
+/// The moods for the word: the kingpin and one other riot on their own (10 and 30), one sits on the fence (55), one is content (80)
+/datum/unit_test/voidcrew_outpost_prison_boss_kingpin/proc/set_word_moods(mob/living/basic/outpost_prisoner/kingpin, mob/living/basic/outpost_prisoner/rioter, mob/living/basic/outpost_prisoner/fence, mob/living/basic/outpost_prisoner/content)
+	kingpin.set_mood(10)
+	rioter.set_mood(30)
+	fence.set_mood(55)
+	content.set_mood(80)
+
+// ----- Nobody else -----
+
+/**
+ * Only the five kits and the kingpin have a move: an ordinary prisoner, meek and normal bounty
+ * prisoners and a Most Wanted record with no kit have none, and a riot's tick does nothing through
+ * them to staff or the wing.
+ */
+/datum/unit_test/voidcrew_outpost_prison_boss_none
+	parent_type = /datum/unit_test/voidcrew_outpost_prison_boss_moves_kit
+
+/datum/unit_test/voidcrew_outpost_prison_boss_none/Run()
+	clean_pool()
+	// Each kit has its move; nothing else does.
+	var/list/kit_moves = list(
+		"juggernaut" = /datum/prison_boss_move/charge,
+		"pyromaniac" = /datum/prison_boss_move/bed_fire,
+		"demolitionist" = /datum/prison_boss_move/rigged_charge,
+		"ghost" = /datum/prison_boss_move/slip_cuffs,
+		"heavy" = /datum/prison_boss_move/barricade,
+	) // BOUNTY_KIT_*
+	for(var/kit in kit_moves)
+		var/datum/bounty_record/record = make_record(3, "boss")
+		record.kit = kit
+		TEST_ASSERT_EQUAL(bounty_boss_move_type(record), kit_moves[kit], "A [kit] has the move [bounty_boss_move_type(record)]")
+	TEST_ASSERT_EQUAL(bounty_boss_move_type(make_record(3, "kingpin")), /datum/prison_boss_move/bribe, "The kingpin has no payoff")
+	TEST_ASSERT_NULL(bounty_boss_move_type(null), "A prisoner with no record has a riot move")
+
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("bossnoneowner")
+	TEST_ASSERT_NOTNULL(home, "The no-move test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/list/nobodies = list(
+		kept_prisoner(prison, prison_spot(home, 5, 11)),
+		bounty_prisoner(prison, prison_spot(home, 7, 11), make_record(1, "meek")),
+		bounty_prisoner(prison, prison_spot(home, 9, 11), make_record(2, "normal")),
+		bounty_prisoner(prison, prison_spot(home, 11, 11), make_record(3, "boss")),
+	)
+	var/mob/living/carbon/human/consistent/warden = allocate(/mob/living/carbon/human/consistent, prison_spot(home, 8, 8))
+	prison.refresh_reach()
+	TEST_ASSERT(boss_riot(prison), "The riot did not start")
+	for(var/mob/living/basic/outpost_prisoner/prisoner as anything in nobodies)
+		TEST_ASSERT_NULL(prisoner.boss_move_datum(), "[prisoner] ([prisoner.bounty_record?.archetype || "ordinary"]) has a riot move")
+		TEST_ASSERT(!prisoner.boss_move_busy(), "[prisoner] holds still for a riot move they don't have")
+	prison.boss_moves_tick(1)
+	for(var/turf/spot as anything in prison.wing_turfs())
+		TEST_ASSERT(!marked(spot), "Something was marked at [spot.x],[spot.y] with no boss in the riot")
+	TEST_ASSERT(!warden.IsKnockdown() && !warden.getBruteLoss() && !warden.getFireLoss(), "The warden was hurt by a riot move with no boss in the riot")
+	prison.admin_calm()
 	settle_prison_air(home)

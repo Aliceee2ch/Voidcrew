@@ -733,6 +733,8 @@
 	if(!everyone && subdued_left > 0 && !ignore_quiet)
 		return FALSE
 	var/list/joining = (alone && forced) ? list(forced) : riot_candidates(everyone, forced)
+	// A kingpin joining gives the word, and prisoners on the fence join too (outpost_prison_boss_moves.dm)
+	joining = boss_kingpin_word(joining, everyone || alone)
 	if(!length(joining))
 		return FALSE
 	for(var/datum/outpost_prison_fight/brawl as anything in fights.Copy())

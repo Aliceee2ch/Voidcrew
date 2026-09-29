@@ -135,7 +135,6 @@
 	TEST_ASSERT_EQUAL(visitor_account.account_balance, 400, "The visitor was not charged 600 cr")
 	TEST_ASSERT_EQUAL(treasury.account_balance, start_treasury + 600, "The treasury was not credited 600 cr")
 	TEST_ASSERT_EQUAL(first.paid_amount, 600, "The vat did not record the payment")
-	TEST_ASSERT_EQUAL(first.payer_account_ref?.resolve(), visitor_account, "The vat did not record the paying account")
 	var/list/last_line = home.service_ledger[length(home.service_ledger)]
 	TEST_ASSERT_EQUAL(last_line["service"], "clone_imprint", "The ledger line has the wrong service")
 	TEST_ASSERT_EQUAL(last_line["amount"], 600, "The ledger line has the wrong amount")
@@ -307,127 +306,43 @@
 	var/mob/living/carbon/human/next = make_market_visitor(floors[1], "clonewakenext", 1000)
 	TEST_ASSERT_NULL(visitor_vat.paid_imprint(next, home, 600), "A used-up vat refused a new imprint")
 
-// ===== EVICTION =====
+// ===== EXPIRY AND BLOCKED HOLDERS =====
 
-/// R4: the owner or a treasurer evicts a paid imprint with an exact refund (F-21)
-/datum/unit_test/voidcrew_outpost_cloning_bay/eviction
+/// F-21: an expired paid imprint leaves nothing behind; B-10: a blocked resident's ghost is not a member
+/datum/unit_test/voidcrew_outpost_cloning_bay/expiry
 
-/datum/unit_test/voidcrew_outpost_cloning_bay/eviction/Run()
-	var/obj/structure/overmap/dynamic/player_outpost/home = market_test_claim("cloneevictowner")
+/datum/unit_test/voidcrew_outpost_cloning_bay/expiry/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = market_test_claim("cloneexpiryowner")
 	TEST_ASSERT_NOTNULL(home, "The cloning test outpost did not load")
 	var/list/floors = bay_test_floors(home, 3)
 	TEST_ASSERT_EQUAL(length(floors), 3, "Not enough free floor on the test outpost")
 	var/obj/machinery/cloning_vat/outpost/vat = make_test_vat(floors[1])
-	var/obj/machinery/cloning_vat/outpost/member_vat = make_test_vat(floors[2])
-	var/datum/bank_account/treasury = home.treasury
-	var/mob/living/carbon/human/owner = make_market_visitor(floors[3], "cloneevictowner", 0)
-	var/mob/living/carbon/human/visitor = make_market_visitor(floors[1], "cloneevictvisitor", 1000)
-	var/datum/bank_account/visitor_account = visitor.get_idcard(TRUE).registered_account
+	var/obj/machinery/cloning_vat/outpost/held_vat = make_test_vat(floors[2])
+	make_market_visitor(floors[3], "cloneexpiryowner", 0)
+	var/mob/living/carbon/human/visitor = make_market_visitor(floors[1], "cloneexpiryvisitor", 2000)
+	home.treasury.account_balance = 1000
 
-	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "The vat is empty.", "An empty vat could be evicted")
 	TEST_ASSERT_NULL(vat.paid_imprint(visitor, home, 600), "The visitor could not imprint")
-	TEST_ASSERT_EQUAL(vat.eviction_denial(visitor), "Not authorised.", "A visitor could evict")
-	treasury.account_balance = 100
-	TEST_ASSERT_EQUAL(vat.evict(owner), "Treasury can't cover the 600 cr refund.", "A short treasury evicted")
-	TEST_ASSERT_EQUAL(visitor_account.account_balance, 400, "A refused eviction refunded")
-	TEST_ASSERT_NOTNULL(vat.imprint_mind_ref, "A refused eviction wiped the imprint")
-	treasury.account_balance = 1000
-
-	// The management console's Services action refunds exactly, once
-	var/datum/outpost_upgrade/service/cloning_bay/room = new(home)
-	room.vat_refs = list(WEAKREF(vat), WEAKREF(member_vat))
-	var/list/detail = room.service_ui_data(owner)
-	TEST_ASSERT_EQUAL(detail["kind"], "cloning", "The Services detail has the wrong kind")
-	TEST_ASSERT(detail["can_evict"], "The owner cannot evict")
-	var/list/vat_rows = detail["vats"]
-	var/list/vat_row = vat_rows[1]
-	for(var/key in list("ref", "state", "holder", "evict_denial"))
-		TEST_ASSERT(key in vat_row, "A Services vat row has no [key]")
-	TEST_ASSERT_EQUAL(vat.paid_amount, 600, "The vat recorded the wrong payment")
-	TEST_ASSERT_NULL(vat_row["evict_denial"], "The Services row refuses a valid eviction")
-	TEST_ASSERT(room.service_ui_act(owner, "evict", list("ref" = REF(vat))), "The evict action was not handled")
-	TEST_ASSERT_NULL(vat.imprint_mind_ref, "Eviction left the imprint")
-	TEST_ASSERT_EQUAL(visitor_account.account_balance, 1000, "Eviction did not refund exactly 600 cr")
-	TEST_ASSERT_EQUAL(treasury.account_balance, 400, "Eviction did not take exactly 600 cr from the treasury")
-	TEST_ASSERT(room.service_ui_act(owner, "evict", list("ref" = REF(vat))), "A second evict action was not handled")
-	TEST_ASSERT_EQUAL(visitor_account.account_balance, 1000, "A second eviction refunded again")
-	TEST_ASSERT(room.service_ui_act(owner, "evict", list("ref" = 1)), "A numeric ref was not handled")
-	room.outpost = null
-	qdel(room)
-
-	// F-21: an expired paid imprint leaves nothing to refund
-	TEST_ASSERT_NULL(vat.paid_imprint(visitor, home, 600), "The visitor could not imprint again")
 	vat.expire_imprint()
 	TEST_ASSERT_EQUAL(vat.paid_amount, 0, "Expiry kept the payment")
-	TEST_ASSERT_NULL(vat.payer_account_ref, "Expiry kept the payer")
 	TEST_ASSERT_NULL(vat.imprint_ckey, "Expiry kept the imprint ckey")
-	// B-16 (R10): a free imprint (a member's) can be evicted by management, with no refund
-	var/mob/living/carbon/human/resident = make_market_visitor(floors[2], "cloneevictresident", 0)
-	home.residents += resident.mind
-	TEST_ASSERT_NULL(member_vat.paid_imprint(resident, home, 0), "A resident could not imprint free")
-	var/treasury_before = treasury.account_balance
-	TEST_ASSERT_EQUAL(member_vat.eviction_denial(visitor), "Not authorised.", "A visitor could evict a free imprint")
-	TEST_ASSERT_NULL(member_vat.eviction_denial(owner), "A free imprint could not be evicted: [member_vat.eviction_denial(owner)]")
-	TEST_ASSERT_NULL(member_vat.evict(owner), "A free imprint could not be evicted")
-	TEST_ASSERT_NULL(member_vat.imprint_mind_ref, "Evicting a free imprint left it")
-	TEST_ASSERT_EQUAL(treasury.account_balance, treasury_before, "A free imprint's eviction moved money")
+	TEST_ASSERT_NULL(vat.imprint_mind_ref, "Expiry kept the imprint")
 
-	// B-05 (R10): a payer whose account is gone gets no refund, and the imprint is still evicted
-	var/mob/living/carbon/human/lost = make_market_visitor(floors[1], "cloneevictlost", 1000)
-	TEST_ASSERT_NULL(vat.paid_imprint(lost, home, 600), "The second visitor could not imprint")
-	var/obj/item/card/id/lost_card = lost.get_idcard(TRUE)
-	qdel(lost_card.registered_account)
-	treasury_before = treasury.account_balance
-	TEST_ASSERT_NULL(vat.eviction_denial(owner), "An imprint whose payer account is gone could not be evicted")
-	TEST_ASSERT_NULL(vat.evict(owner), "An imprint whose payer account is gone could not be evicted")
-	TEST_ASSERT_NULL(vat.imprint_mind_ref, "The eviction left the imprint")
-	TEST_ASSERT_EQUAL(treasury.account_balance, treasury_before, "An eviction with no account to refund moved money")
-
-/// The dead holder is always "online" here: test mobs have no client
-/obj/machinery/cloning_vat/outpost/online_holder_test
-
-/obj/machinery/cloning_vat/outpost/online_holder_test/dead_holder_online(datum/mind/mind)
-	return TRUE
-
-/// B-16 (R10): a dead holder who stays online may be evicted 10 minutes after the ready prompt; B-10: a blocked ghost is not a member
-/datum/unit_test/voidcrew_outpost_cloning_bay/eviction_dead_holder
-
-/datum/unit_test/voidcrew_outpost_cloning_bay/eviction_dead_holder/Run()
-	var/obj/structure/overmap/dynamic/player_outpost/home = market_test_claim("clonedeadowner")
-	TEST_ASSERT_NOTNULL(home, "The cloning test outpost did not load")
-	var/list/floors = bay_test_floors(home, 3)
-	TEST_ASSERT_EQUAL(length(floors), 3, "Not enough free floor on the test outpost")
-	var/obj/machinery/cloning_vat/outpost/vat = make_test_vat(floors[1], /obj/machinery/cloning_vat/outpost/online_holder_test)
-	var/mob/living/carbon/human/owner = make_market_visitor(floors[3], "clonedeadowner", 0)
-	var/mob/living/carbon/human/visitor = make_market_visitor(floors[1], "clonedeadvisitor", 1000)
 	var/datum/mind/visitor_mind = visitor.mind
-	home.treasury.account_balance = 1000
-	TEST_ASSERT_NULL(vat.paid_imprint(visitor, home, 600), "The visitor could not imprint")
-	grow(vat)
+	TEST_ASSERT_NULL(held_vat.paid_imprint(visitor, home, 600), "The visitor could not imprint again")
+	grow(held_vat)
 	var/mob/dead/observer/ghost = kill_to_ghost(visitor, FALSE)
-	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "Its owner may still wake in it.", "A dead holder who was never told the clone is ready was evicted")
-	vat.ready_notified_at = world.time - 1 MINUTES
-	TEST_ASSERT_EQUAL(vat.eviction_denial(owner), "Its owner may still wake in it.", "A dead holder was evicted a minute after the ready prompt")
-	vat.ready_notified_at = world.time - 11 MINUTES
-	TEST_ASSERT_NULL(vat.eviction_denial(owner), "A dead holder who let the clone sit 10 minutes could not be evicted")
-
-	// B-10: a blocked resident's mindless ghost is not a member, so a lockdown refuses the wake
 	home.residents += visitor_mind
-	TEST_ASSERT(vat.holder_is_member(home, ghost, visitor_mind), "A resident's ghost is not a member")
-	home.blocked_residents += "clonedeadvisitor"
-	TEST_ASSERT(!vat.holder_is_member(home, ghost, visitor_mind), "A blocked resident's ghost counts as a member")
+	TEST_ASSERT(held_vat.holder_is_member(home, ghost, visitor_mind), "A resident's ghost is not a member")
+	home.blocked_residents += "cloneexpiryvisitor"
+	TEST_ASSERT(!held_vat.holder_is_member(home, ghost, visitor_mind), "A blocked resident's ghost counts as a member")
 	home.dock_mode = "lockdown"
-	TEST_ASSERT_EQUAL(vat.claim_denial(ghost, visitor_mind), "[home.name] is in lockdown.", "A blocked resident's ghost woke during a lockdown")
+	TEST_ASSERT_EQUAL(held_vat.claim_denial(ghost, visitor_mind), "[home.name] is in lockdown.", "A blocked resident's ghost woke during a lockdown")
 	home.dock_mode = "open"
-
-	var/datum/bank_account/visitor_account = visitor.get_idcard(TRUE)?.registered_account
-	var/before = visitor_account?.account_balance
-	TEST_ASSERT_NULL(vat.evict(owner), "The dead holder's imprint could not be evicted")
-	TEST_ASSERT_EQUAL(visitor_account?.account_balance, before + 600, "The dead holder was not refunded")
 
 // ===== THE ROOM =====
 
-/// Placement at every rotation: 4 vats where the map puts them, one fanned door, the outpost's own area
+/// Placement at every rotation: 8 vats where the map puts them, one fanned door, the outpost's own area
 /datum/unit_test/voidcrew_outpost_cloning_bay/placement
 
 /datum/unit_test/voidcrew_outpost_cloning_bay/placement/Run()
@@ -455,7 +370,7 @@
 		if(length(GLOB.unit_test_mapping_logs) > mapping_log_count)
 			TEST_FAIL("Placing the cloning bay at [rotation] degrees logged mapping errors: [jointext(GLOB.unit_test_mapping_logs.Copy(mapping_log_count + 1), "; ")]")
 		var/turf/bottom_left = locate(room.footprint_bounds[1], room.footprint_bounds[2], room.footprint_bounds[5])
-		TEST_ASSERT_EQUAL(length(room.room_vats()), 4, "The cloning bay did not find 4 vats at [rotation] degrees")
+		TEST_ASSERT_EQUAL(length(room.room_vats()), 8, "The cloning bay did not find 8 vats at [rotation] degrees")
 		for(var/problem in room.contract_problems())
 			TEST_FAIL("The cloning bay at [rotation] degrees: [problem]")
 		for(var/obj/machinery/cloning_vat/outpost/vat as anything in room.room_vats())

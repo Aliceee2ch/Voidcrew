@@ -1,15 +1,14 @@
 /**
  * # Cloning bay
  *
- * An outpost service room with four outpost cloning vats. A visitor pays the outpost's imprint
+ * An outpost service room with eight outpost cloning vats and a free wardrobe for the naked clones
+ * that step out of them. A visitor pays the outpost's imprint
  * price (OUTPOST_PRICE_CLONE_IMPRINT) from the ID they present, and gets one life: waking in the
  * clone uses the imprint up. Members (outpost_market.dm) imprint free. Rules on top of a ship vat:
  * * an imprinted vat refuses every new imprint, the holder's own included;
  * * one imprint per player per outpost;
- * * while the outpost is owned, a visitor cannot wake here during a LOCKDOWN or a raid, or while
- *   their crew is banned. The imprint is kept;
- * * the owner or a treasurer may evict a paid imprint that nobody is about to use, refunding
- *   exactly what was paid.
+ * * while the outpost is owned, a visitor cannot wake here during a LOCKDOWN, or while their crew
+ *   is banned. The imprint is kept.
  *
  * The vat finds its outpost by where it stands. Off an outpost it is a free, regrowing vat.
  * Deleting the outpost deletes the vats and their imprints; nothing is refunded.
@@ -29,7 +28,7 @@
 /datum/outpost_upgrade/service/cloning_bay
 	id = "cloning_bay"
 	name = "Cloning Bay"
-	desc = "Four cloning vats."
+	desc = "Eight cloning vats and a wardrobe."
 	price = OUTPOST_CLONING_BAY_COST
 	template_type = /datum/map_template/outpost_upgrade/cloning_bay
 	/// The room's vats, found at install
@@ -55,34 +54,12 @@
 		if(!QDELETED(vat))
 			. += vat
 
-/datum/outpost_upgrade/service/cloning_bay/service_ui_data(mob/user)
-	var/list/rows = list()
-	for(var/obj/machinery/cloning_vat/outpost/vat as anything in room_vats())
-		rows += list(list(
-			"ref" = REF(vat),
-			"state" = vat.bay_state(),
-			"holder" = vat.imprint_mind_ref ? vat.imprint_name : null,
-			"evict_denial" = vat.imprint_mind_ref ? vat.eviction_denial(user) : null,
-		))
-	return list(
-		"kind" = "cloning",
-		"can_evict" = outpost.is_current_treasury_user(user) || outpost.is_current_management_user(user),
-		"vats" = rows,
-	)
+// ===== THE WARDROBE =====
 
-/datum/outpost_upgrade/service/cloning_bay/service_ui_act(mob/user, action, list/params)
-	if(action != "evict")
-		return FALSE
-	// UI params are decoded JSON
-	if(!istext(params["ref"]))
-		return TRUE
-	var/obj/machinery/cloning_vat/outpost/vat = locate(params["ref"]) in room_vats()
-	if(!vat)
-		return TRUE
-	var/refusal = vat.evict(user)
-	if(refusal)
-		to_chat(user, span_warning(refusal))
-	return TRUE
+/// Clones wake with nothing on. This one gives its clothes away.
+/obj/machinery/vending/clothing/outpost
+	all_products_free = TRUE
+	tiltable = FALSE
 
 // ===== THE VAT =====
 
@@ -92,11 +69,8 @@
 	circuit = null
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 	overwrite_allowed = FALSE
-	/// What the holder paid for the imprint, refunded on eviction. 0 when it was free.
+	/// What the holder paid for the imprint, for the logs. 0 when it was free.
 	var/paid_amount = 0
-	/// The account that paid it
-	var/datum/weakref/payer_account_ref
-	var/payer_name
 	/// The player who imprinted, for the one-imprint-per-outpost rule and the logs
 	var/imprint_ckey
 
@@ -104,10 +78,6 @@
 	. = ..()
 	AddElement(/datum/element/outpost_property)
 	flags_1 |= PREVENT_CONTENTS_EXPLOSION_1
-
-/obj/machinery/cloning_vat/outpost/Destroy()
-	payer_account_ref = null
-	return ..()
 
 // A bag-of-holding rift deletes objects whatever their resistance flags
 /obj/machinery/cloning_vat/outpost/singularity_act()
@@ -131,18 +101,8 @@
 	var/owed = home.service_price_for(user, home.get_price(OUTPOST_PRICE_CLONE_IMPRINT))
 	. += span_notice("Imprint: [owed > 0 ? "[owed] cr" : "free"].")
 
-/// The vat's state for the management console
-/obj/machinery/cloning_vat/outpost/proc/bay_state()
-	if(!is_operational || !anchored)
-		return "offline"
-	if(!imprint_mind_ref)
-		return "empty"
-	return body_ready ? "ready" : "growing"
-
 /obj/machinery/cloning_vat/outpost/wipe_imprint()
 	paid_amount = 0
-	payer_account_ref = null
-	payer_name = null
 	imprint_ckey = null
 	return ..()
 
@@ -228,8 +188,6 @@
 			return refusal
 	do_imprint(user)
 	paid_amount = owed
-	payer_account_ref = account ? WEAKREF(account) : null
-	payer_name = user.real_name
 	imprint_ckey = user.ckey
 	log_game("PLAYER OUTPOST: [key_name(user)] imprinted [src] at '[home.name]' for [owed] cr[account ? " from [account.account_holder]" : ""]")
 	return null
@@ -262,7 +220,7 @@
 
 /**
  * Waking here is an arrival. While the outpost has an owner, a visitor may not arrive during a
- * LOCKDOWN or a raid, or while their crew is banned. An ownerless outpost lets everyone wake:
+ * LOCKDOWN, or while their crew is banned. An ownerless outpost lets everyone wake:
  * there is nobody to protect, and refusing would strand paid lives.
  */
 /obj/machinery/cloning_vat/outpost/claim_denial(mob/dead/observer/user, datum/mind/mind)
@@ -276,8 +234,6 @@
 		return "Your crew is banned from [home.name]."
 	if(home.dock_mode == OUTPOST_DOCK_MODE_LOCKDOWN)
 		return "[home.name] is in lockdown."
-	if(home.clone_wake_raid_locked())
-		return "[home.name] is under attack."
 	return null
 
 /obj/machinery/cloning_vat/outpost/claim_warning(mob/dead/observer/user)
@@ -287,72 +243,3 @@
 		return null
 	var/exit = room.exit_denial()
 	return exit ? "[home.name] cloning bay: [exit]." : null
-
-// ===== EVICTION =====
-
-/**
- * Why `user` cannot evict this vat's imprint, or null. Treasury users evict paid imprints for a
- * full refund. A free imprint (a member's) refunds nothing, so management may evict it too. The
- * refund goes back to the paying account; when that account is gone (its ship was deleted) the
- * imprint is still evicted and nothing is paid.
- */
-/obj/machinery/cloning_vat/outpost/proc/eviction_denial(mob/living/user)
-	var/obj/structure/overmap/dynamic/player_outpost/home = host_outpost()
-	if(!home)
-		return "Not on an outpost."
-	var/free = paid_amount <= 0
-	if(!home.is_current_treasury_user(user) && !(free && home.is_current_management_user(user)))
-		return "Not authorised."
-	if(!imprint_mind_ref)
-		return "The vat is empty."
-	var/datum/mind/mind = imprint_mind_ref.resolve()
-	// A dead holder who is online may be about to wake, until they have let the ready clone sit
-	// for the grace. A banned holder may still be evicted.
-	if(mind && (!mind.current || mind.current.stat == DEAD) && !holder_banned(home, mind))
-		var/waited_out = ready_notified_at && world.time >= ready_notified_at + OUTPOST_CLONE_DEAD_EVICT_GRACE
-		if(!waited_out && dead_holder_online(mind))
-			return "Its owner may still wake in it."
-	if(free)
-		return null
-	var/datum/bank_account/account = payer_account_ref?.resolve()
-	if(!QDELETED(account) && !home.treasury?.has_money(paid_amount))
-		return "Treasury can't cover the [paid_amount] cr refund."
-	return null
-
-/// Whether the dead holder is connected: as a ghost, or still in their corpse
-/obj/machinery/cloning_vat/outpost/proc/dead_holder_online(datum/mind/mind)
-	return !!(holder_ghost(mind) || mind.current?.client)
-
-/// Erases the imprint and refunds exactly what was paid, if anything and to anyone. Null on success, else a refusal.
-/obj/machinery/cloning_vat/outpost/proc/evict(mob/living/user)
-	var/denial = eviction_denial(user)
-	if(denial)
-		return denial
-	var/obj/structure/overmap/dynamic/player_outpost/home = host_outpost()
-	var/datum/bank_account/account = payer_account_ref?.resolve()
-	var/refund = paid_amount
-	var/refund_note
-	if(refund <= 0)
-		refund = 0
-		refund_note = "free imprint, nothing refunded"
-	else if(QDELETED(account))
-		refund = 0
-		refund_note = "payer account closed, nothing refunded"
-	else
-		if(!home.refund_payment(account, refund, OUTPOST_PRICE_CLONE_IMPRINT, "Cloning imprint"))
-			return "Treasury can't cover the [refund] cr refund."
-		refund_note = "refunding [refund] cr to [account.account_holder]"
-	var/datum/mind/mind = imprint_mind_ref?.resolve()
-	log_game("PLAYER OUTPOST: [key_name(user)] evicted [imprint_name]'s imprint ([imprint_ckey]) from [src] at '[home.name]', [refund_note]")
-	var/mob/holder = mind?.current?.client ? mind.current : (mind && holder_ghost(mind))
-	if(holder)
-		to_chat(holder, span_warning("Your clone at [home.name] was erased.[refund ? " [refund] cr refunded to [account.account_holder]." : ""]"))
-	wipe_imprint()
-	visible_message(span_notice("[src] drains as its stored pattern is erased."))
-	return null
-
-// ===== RAID LOCK =====
-
-/// Whether a raid on this outpost bars visitors from waking in its vats (the network's raid lock, outpost_raid_locked())
-/obj/structure/overmap/dynamic/player_outpost/proc/clone_wake_raid_locked()
-	return outpost_raid_locked()

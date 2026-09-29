@@ -6,9 +6,8 @@
  *
  * Members (the owner, residents and the owner's crews) use it free. Visitors buy a 30 minute pass at
  * the terminal inside the door, keyed to their ckey. The pass gates every machine, never the door:
- * walking in behind someone, or being dragged in, buys nothing. A pass keeps the procedure menu that
- * was enabled when it was bought, so switching procedures off never voids a paid pass. An ownerless
- * outpost's lab is free for everyone.
+ * walking in behind someone, or being dragged in, buys nothing. An ownerless outpost's lab is free
+ * for everyone.
  */
 
 /datum/map_template/outpost_upgrade/medical_lab
@@ -28,14 +27,11 @@
 	desc = "An auto-surgeon, two sleepers and two cryo cells."
 	price = OUTPOST_MEDICAL_LAB_COST
 	template_type = /datum/map_template/outpost_upgrade/medical_lab
-	/// Pass key (ckey) -> list("expiry" = world.time, "menu" = procedure ids enabled when it was bought)
+	/// Pass key (ckey) -> list("expiry" = world.time)
 	var/list/passes = list()
-	/// Procedure id -> TRUE for each procedure management switched off
-	var/list/disabled_procedures = list()
 
 /datum/outpost_upgrade/service/medical_lab/Destroy()
 	passes = null
-	disabled_procedures = null
 	return ..()
 
 /**
@@ -56,9 +52,6 @@
 				canister.set_anchored(TRUE)
 				continue
 			canister.connect(port)
-
-/datum/outpost_upgrade/service/medical_lab/on_outpost_abandoned()
-	disabled_procedures.Cut()
 
 // ===== PASSES =====
 
@@ -98,25 +91,6 @@
 		return FALSE
 	return is_exempt(patient) || !!pass_entry(patient)
 
-/// Procedure ids enabled here now, in catalog order
-/datum/outpost_upgrade/service/medical_lab/proc/enabled_menu()
-	var/list/menu = list()
-	for(var/procedure_id in GLOB.outpost_autosurgeon_procedures)
-		if(!disabled_procedures[procedure_id])
-			menu += procedure_id
-	return menu
-
-/// Whether this patient may order a procedure: enabled now, or enabled when their pass was bought
-/datum/outpost_upgrade/service/medical_lab/proc/procedure_enabled_for(mob/patient, procedure_id)
-	if(!istext(procedure_id) || !GLOB.outpost_autosurgeon_procedures[procedure_id])
-		return FALSE
-	if(!disabled_procedures[procedure_id])
-		return TRUE
-	if(is_exempt(patient))
-		return FALSE
-	var/list/entry = pass_entry(patient)
-	return entry && (procedure_id in entry["menu"])
-
 /datum/outpost_upgrade/service/medical_lab/proc/active_pass_count()
 	var/count = 0
 	for(var/key in passes)
@@ -133,7 +107,7 @@
 	var/list/treatable = list()
 	if(!iscarbon(patient))
 		return treatable
-	for(var/procedure_id in enabled_menu())
+	for(var/procedure_id in GLOB.outpost_autosurgeon_procedures)
 		var/datum/autosurgeon_procedure/procedure = GLOB.outpost_autosurgeon_procedures[procedure_id]
 		if(!procedure.unavailable_reason(patient))
 			treatable += procedure.name
@@ -154,12 +128,12 @@
 		return "The lab has nothing to treat [patient] for."
 	return null
 
-/// Issues or renews a pass for a patient, with the menu enabled now
+/// Issues or renews a pass for a patient
 /datum/outpost_upgrade/service/medical_lab/proc/grant_pass(mob/living/patient)
 	var/key = pass_key(patient)
 	if(!key)
 		return FALSE
-	passes[key] = list("expiry" = world.time + OUTPOST_MEDLAB_PASS_TIME, "menu" = enabled_menu())
+	passes[key] = list("expiry" = world.time + OUTPOST_MEDLAB_PASS_TIME)
 	return TRUE
 
 /**
@@ -197,43 +171,7 @@
 		log_game("PLAYER OUTPOST: [key_name(payer)] bought a medical lab pass for [key_name(patient)] at '[outpost.name]' for [fee] cr")
 	return null
 
-// ===== MANAGEMENT =====
-
-/// Management switches a procedure on or off. Null when done, else a refusal.
-/datum/outpost_upgrade/service/medical_lab/proc/toggle_procedure(mob/living/user, procedure_id)
-	if(QDELETED(outpost) || !outpost.is_current_management_user(user))
-		return "Not authorised."
-	if(!istext(procedure_id) || !GLOB.outpost_autosurgeon_procedures[procedure_id])
-		return "Unknown procedure."
-	if(disabled_procedures[procedure_id])
-		disabled_procedures -= procedure_id
-	else
-		disabled_procedures[procedure_id] = TRUE
-	log_game("PLAYER OUTPOST: [key_name(user)] turned the [procedure_id] procedure [disabled_procedures[procedure_id] ? "off" : "on"] in the medical lab at '[outpost.name]'")
-	return null
-
-/datum/outpost_upgrade/service/medical_lab/service_ui_data(mob/user)
-	var/list/procedures = list()
-	for(var/procedure_id in GLOB.outpost_autosurgeon_procedures)
-		var/datum/autosurgeon_procedure/procedure = GLOB.outpost_autosurgeon_procedures[procedure_id]
-		procedures += list(list(
-			"id" = procedure_id,
-			"name" = procedure.name,
-			"enabled" = !disabled_procedures[procedure_id],
-		))
-	return list(
-		"kind" = "medical",
-		"can_edit" = outpost.is_current_management_user(user),
-		"procedures" = procedures,
-	)
-
-/datum/outpost_upgrade/service/medical_lab/service_ui_act(mob/user, action, list/params)
-	if(action != "toggle_procedure")
-		return FALSE
-	var/refusal = toggle_procedure(user, params["procedure"])
-	if(refusal && user)
-		to_chat(user, span_warning(refusal))
-	return TRUE
+// ===== ADMIN =====
 
 /datum/outpost_upgrade/service/medical_lab/admin_ui_data()
 	return list(

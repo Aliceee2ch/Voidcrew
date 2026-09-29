@@ -145,6 +145,13 @@
 	if(length(room_vats()) != OUTPOST_CLONING_BAY_VATS)
 		. += "[length(room_vats())] vats, not [OUTPOST_CLONING_BAY_VATS]"
 	. += visitor_reach_problems(room_vats())
+	var/list/wardrobes = list()
+	for(var/turf/tile as anything in room_turfs())
+		for(var/obj/machinery/vending/clothing/outpost/wardrobe in tile)
+			wardrobes += wardrobe
+	if(!length(wardrobes))
+		. += "no wardrobe"
+	. += visitor_reach_problems(wardrobes)
 
 /datum/outpost_upgrade/service/storage/contract_problems()
 	. = ..()
@@ -242,9 +249,8 @@
 		return
 	var/obj/machinery/outpost_shop_stock/stock = get_stock()
 	var/obj/machinery/computer/outpost_shop_register/register = register_ref?.resolve()
-	var/mob/living/basic/outpost_shop_bot/bot = get_bot()
-	if(!stock || !register || !bot)
-		. += "missing its [!stock ? "stock cabinet" : (!register ? "register" : "shop bot")]"
+	if(!stock || !register)
+		. += "missing its [!stock ? "stock cabinet" : "register"]"
 		return
 	var/list/routes = exit_routes()
 	var/turf/start = length(routes) ? routes[1][1] : null
@@ -258,8 +264,6 @@
 			. += "a customer can stand beside the stock cabinet, at [near.x],[near.y]"
 	if(!outpost_room_can_reach(stock, staff))
 		. += "staff cannot reach the stock cabinet"
-	if(customer[get_turf(bot)])
-		. += "customers can walk up to the shop bot"
 	var/served = FALSE
 	for(var/direction in GLOB.cardinals)
 		var/turf/front = get_step(register, direction)
@@ -267,13 +271,6 @@
 			served = TRUE
 	if(!served)
 		. += "no customer can step up to the register"
-	var/seen = FALSE
-	for(var/turf/near in range(OUTPOST_SHOP_COUNTER_RANGE, bot))
-		if(customer[near] && can_see(near, bot, OUTPOST_SHOP_COUNTER_RANGE))
-			seen = TRUE
-			break
-	if(!seen)
-		. += "no customer can see the shop bot from the counter"
 	for(var/turf/tile as anything in customer)
 		for(var/direction in GLOB.cardinals)
 			var/turf/counter = get_step(tile, direction)

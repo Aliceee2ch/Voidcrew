@@ -609,13 +609,6 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 		return "No power."
 	return null
 
-/// Whether the patient may order this procedure here
-/obj/machinery/outpost_autosurgeon/proc/procedure_enabled_for(mob/living/patient, procedure_id)
-	var/datum/outpost_upgrade/service/medical_lab/lab = outpost_medical_lab_at(src)
-	if(!lab)
-		return istext(procedure_id) && !!GLOB.outpost_autosurgeon_procedures[procedure_id]
-	return lab.procedure_enabled_for(patient, procedure_id)
-
 /// Starts a procedure ordered by `acting`. Returns null when started, else a refusal. Never sleeps.
 /obj/machinery/outpost_autosurgeon/proc/start_procedure(mob/living/acting, procedure_id)
 	// UI params are decoded JSON: a number would index the catalog by position
@@ -628,8 +621,6 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 	if(denial)
 		return denial
 	var/mob/living/carbon/patient = occupant
-	if(!procedure_enabled_for(patient, procedure_id))
-		return "Not offered here."
 	denial = procedure.unavailable_reason(patient)
 	if(denial)
 		return denial
@@ -741,8 +732,6 @@ GLOBAL_LIST_INIT(outpost_autosurgeon_procedures, init_outpost_autosurgeon_proced
 			"maxHealth" = patient.maxHealth,
 		)
 		for(var/procedure_id in GLOB.outpost_autosurgeon_procedures)
-			if(!procedure_enabled_for(patient, procedure_id))
-				continue
 			var/datum/autosurgeon_procedure/procedure = GLOB.outpost_autosurgeon_procedures[procedure_id]
 			var/reason = procedure.unavailable_reason(patient)
 			offers += list(list(

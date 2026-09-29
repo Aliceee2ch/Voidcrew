@@ -2,8 +2,6 @@
 
 #define OUTPOST_CLONING_BAY_COST 3000
 /// Vats in the room; each holds one paid imprint
-#define OUTPOST_CLONING_BAY_VATS 4
+#define OUTPOST_CLONING_BAY_VATS 8
 #define OUTPOST_CLONE_IMPRINT_DEFAULT 600
 #define OUTPOST_CLONE_IMPRINT_MAX 5000
-/// A dead holder who stays online but has not woken this long after the ready prompt may be evicted
-#define OUTPOST_CLONE_DEAD_EVICT_GRACE (10 MINUTES)

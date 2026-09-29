@@ -35,6 +35,14 @@
 			return found
 	return null
 
+/// A free floor tile beside `thing` for a test body, preferring the side it opens onto (away from its port)
+/datum/unit_test/voidcrew_outpost_management/proc/medlab_open_beside(atom/thing)
+	for(var/direction in list(REVERSE_DIR(thing.dir)) + GLOB.cardinals)
+		var/turf/open/spot = get_step(thing, direction)
+		if(istype(spot) && !spot.is_blocked_turf(exclude_mobs = TRUE))
+			return spot
+	return get_turf(thing)
+
 /// Every `type` in the lab's footprint
 /datum/unit_test/voidcrew_outpost_management/proc/medlab_find_all(datum/outpost_upgrade/service/medical_lab/lab, type)
 	var/list/found = list()
@@ -129,7 +137,7 @@
 
 		// A sleeping, chilled member in a cell takes up cryoxadone
 		var/obj/machinery/cryo_cell/outpost_lab/cell = cells[1]
-		var/mob/living/carbon/human/patient = make_market_visitor(get_step(cell, SOUTH) || get_turf(cell), "medlabroom[rotation]", 0)
+		var/mob/living/carbon/human/patient = make_market_visitor(medlab_open_beside(cell), "medlabroom[rotation]", 0)
 		patient.adjustBruteLoss(40)
 		patient.SetSleeping(60 SECONDS)
 		patient.bodytemperature = T0C - 60
@@ -212,11 +220,8 @@
 	TEST_ASSERT(lab.has_lab_access(broke), "An ownerless lab charged a visitor")
 	home.founder_ckey = "medlabpassowner"
 
-	// The management detail matches the P7 contract
-	var/list/detail = lab.service_ui_data(owner)
-	TEST_ASSERT_EQUAL(detail["kind"], "medical", "Wrong detail kind")
-	TEST_ASSERT_EQUAL(length(detail["procedures"]), 7, "Wrong procedure rows")
-	TEST_ASSERT(!isnull(detail["can_edit"]), "No can_edit flag")
+	// Every procedure is always on offer: the console has no lab settings
+	TEST_ASSERT_NULL(lab.service_ui_data(owner), "The lab still has settings on the console")
 
 // ===== AUTO-SURGEON =====
 
@@ -231,8 +236,8 @@
 	TEST_ASSERT_NOTNULL(slab, "The lab has no slab")
 	TEST_ASSERT(slab.is_operational, "The test slab has no power")
 	TEST_ASSERT(!(slab.datum_flags & DF_ISPROCESSING), "An idle slab is processing")
-	var/turf/beside = get_step(slab, SOUTH)
-	var/mob/living/carbon/human/owner = make_player(beside, "medlabslabowner")
+	var/turf/beside = medlab_open_beside(slab)
+	make_player(beside, "medlabslabowner")
 	var/mob/living/carbon/human/patient = make_market_visitor(beside, "medlabslabpatient", 0)
 	var/mob/living/carbon/human/bystander = make_market_visitor(beside, "medlabslabbystander", 0)
 	// All on one limb: a tend cycle, like tg's, heals one damaged limb, so spread damage heals less than the formula
@@ -379,22 +384,7 @@
 	// No procedure ever leaves a tg surgery open
 	TEST_ASSERT(!LAZYLEN(patient.surgeries), "The slab left a surgery open")
 
-	// Disabled procedures: gone for new passes, kept by earlier passes (F-30)
-	var/mob/living/carbon/human/late = make_market_visitor(beside, "medlabslablate", 0)
-	late.adjustBruteLoss(20)
-	TEST_ASSERT_NULL(lab.toggle_procedure(owner, "tend"), "The owner could not switch tend off")
-	TEST_ASSERT_NOTNULL(lab.toggle_procedure(bystander, "tend"), "A visitor switched a procedure")
-	TEST_ASSERT(lab.procedure_enabled_for(patient, "tend"), "An earlier pass lost tend")
-	lab.grant_pass(late)
-	TEST_ASSERT(!lab.procedure_enabled_for(late, "tend"), "A new pass got a switched-off procedure")
 	slab.unbuckle_mob(patient)
-	medlab_lie_down(slab, late)
-	TEST_ASSERT_NOTNULL(slab.start_procedure(late, "tend"), "A switched-off procedure started")
-	var/list/late_data = slab.ui_data(late)
-	for(var/list/offer as anything in late_data["offers"])
-		TEST_ASSERT_NOTEQUAL(offer["id"], "tend", "A switched-off procedure was offered")
-	TEST_ASSERT_NULL(lab.toggle_procedure(owner, "tend"), "The owner could not switch tend back on")
-	slab.unbuckle_mob(late)
 
 /// Every procedure only heals: no stage lowers health, removes a part or leaves a surgery open
 /datum/unit_test/voidcrew_outpost_medical_lab_harmless
@@ -469,7 +459,7 @@
 
 	// Lab cryo: no pass, no stay
 	var/obj/machinery/cryo_cell/outpost_lab/cell = medlab_find(lab, /obj/machinery/cryo_cell/outpost_lab)
-	var/mob/living/carbon/human/unpaid = make_market_visitor(get_step(cell, SOUTH) || get_turf(cell), "medlabkitunpaid", 0)
+	var/mob/living/carbon/human/unpaid = make_market_visitor(medlab_open_beside(cell), "medlabkitunpaid", 0)
 	unpaid.adjustBruteLoss(10)
 	cell.close_machine(unpaid)
 	TEST_ASSERT(cell.state_open && !cell.occupant, "A patient without a pass stayed in the cryo cell")
@@ -477,7 +467,7 @@
 	cell.ui_act("autoeject", list(), cell_ui, GLOB.default_state)
 	TEST_ASSERT(cell.autoeject, "Autoeject was switched off")
 	// Self entry
-	patient.forceMove(get_step(cell, SOUTH) || get_turf(cell))
+	patient.forceMove(medlab_open_beside(cell))
 	cell.self_enter(patient)
 	TEST_ASSERT_EQUAL(cell.occupant, patient, "A conscious patient could not climb into the cell")
 	// F-28: visitors cannot switch it off or open it on the patient

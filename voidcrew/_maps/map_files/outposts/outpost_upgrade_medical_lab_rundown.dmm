@@ -1,51 +1,14 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "aa" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor6";
-	color = "#5A3B28";
-	alpha = 90
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 4
 	},
-/obj/structure/fluff/shower_drain,
+/obj/structure/chair/office{
+	dir = 1
+	},
 /turf/open/indestructible/freezer,
 /area/template_noop)
 "ab" = (
-/obj/effect/turf_decal/tile/red/fourcorners{
-	alpha = 75
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"ac" = (
-/obj/effect/turf_decal/tile/red/half/contrasted{
-	dir = 4
-	},
-/obj/structure/curtain/bounty/start_closed,
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"ad" = (
-/turf/closed/indestructible/rusty,
-/area/template_noop)
-"ae" = (
-/obj/structure/curtain/bounty,
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"af" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged4";
-	alpha = 130
-	},
-/obj/machinery/atmospherics/pipe/smart,
-/turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"ag" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"ah" = (
 /obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 4
 	},
@@ -64,15 +27,60 @@
 	},
 /turf/open/indestructible/grimy,
 /area/template_noop)
+"ac" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/machinery/cryo_cell/outpost_lab{
+	dir = 1
+	},
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"ad" = (
+/turf/closed/indestructible/rusty,
+/area/template_noop)
+"ae" = (
+/obj/machinery/cryo_cell/outpost_lab{
+	dir = 1
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"af" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged5";
+	alpha = 110
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ag" = (
+/obj/structure/chair/comfy/beige{
+	dir = 4
+	},
+/turf/open/indestructible/wood,
+/area/template_noop)
+"ah" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/obj/item/trash/candy{
+	pixel_x = -5;
+	pixel_y = -6
+	},
+/turf/open/indestructible/wood,
+/area/template_noop)
 "ai" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged3";
+	alpha = 140
 	},
 /turf/open/indestructible/grimy,
 /area/template_noop)
 "aj" = (
-/obj/machinery/atmospherics/pipe/smart,
-/turf/open/indestructible/plating,
+/obj/effect/turf_decal/siding/thinplating_new/dark{
+	dir = 2
+	},
+/turf/open/indestructible/freezer,
 /area/template_noop)
 "ak" = (
 /obj/structure/filingcabinet,
@@ -82,9 +90,9 @@
 /turf/open/indestructible/grimy,
 /area/template_noop)
 "al" = (
-/obj/machinery/atmospherics/pipe/smart,
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/plating,
+/turf/open/indestructible/grimy{
+	color = "#C6B9A6"
+	},
 /area/template_noop)
 "am" = (
 /turf/closed/indestructible/reinforced/rusty,
@@ -100,12 +108,48 @@
 /turf/open/indestructible/freezer,
 /area/template_noop)
 "ao" = (
-/obj/machinery/cryo_cell/outpost_lab{
-	dir = 1
-	},
-/turf/open/indestructible/plating,
+/obj/structure/sign/warning/cold_temp/directional/north,
+/turf/open/indestructible/grimy,
 /area/template_noop)
 "ap" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor6";
+	color = "#5A3B28";
+	alpha = 90
+	},
+/obj/structure/fluff/shower_drain,
+/turf/open/indestructible/freezer,
+/area/template_noop)
+"aq" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"ar" = (
+/obj/effect/turf_decal/bot,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor2";
+	color = "#2A2622";
+	alpha = 140
+	},
+/obj/machinery/atmospherics/components/unary/portables_connector{
+	dir = 2
+	},
+/obj/machinery/portable_atmospherics/canister/outpost_lab_drain,
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"as" = (
+/obj/effect/turf_decal/tile/red/half/contrasted{
+	dir = 4
+	},
+/obj/machinery/sleeper/outpost/medical_lab{
+	dir = 8
+	},
+/obj/machinery/light/small/directional/east,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"at" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
 	icon_state = "floor2";
@@ -119,108 +163,163 @@
 	},
 /turf/open/indestructible/freezer,
 /area/template_noop)
-"aq" = (
-/obj/effect/turf_decal/siding/thinplating_new/dark{
-	dir = 4
-	},
-/obj/structure/chair/office{
-	dir = 1
-	},
-/turf/open/indestructible/freezer,
-/area/template_noop)
-"ar" = (
-/obj/machinery/atmospherics/pipe/smart,
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"as" = (
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"at" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/obj/effect/decal/cleanable/dirt,
-/obj/structure/railing{
-	dir = 8
-	},
-/turf/open/indestructible/dark/textured,
-/area/template_noop)
 "au" = (
-/obj/effect/turf_decal/tile/red/half/contrasted{
-	dir = 4
-	},
-/obj/machinery/sleeper/outpost/medical_lab{
+/obj/machinery/atmospherics/pipe/smart/manifold/general/hidden{
 	dir = 8
 	},
-/obj/machinery/light/small/directional/east,
-/turf/open/indestructible/grimy,
+/turf/closed/indestructible/rusty,
 /area/template_noop)
 "av" = (
-/obj/machinery/atmospherics/pipe/smart,
-/obj/structure/sign/warning/cold_temp/directional/north,
+/obj/effect/turf_decal/bot,
+/obj/machinery/atmospherics/components/unary/portables_connector{
+	dir = 2
+	},
+/obj/machinery/portable_atmospherics/canister/anesthetic_mix/outpost_lab,
 /turf/open/indestructible/plating,
 /area/template_noop)
 "aw" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/decal/cleanable/cobweb,
 /obj/machinery/atmospherics/components/unary/thermomachine/freezer/on/outpost_lab{
-	dir = 4
+	dir = 2
 	},
 /turf/open/indestructible/plating/rusty,
 /area/template_noop)
 "ax" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/sign/poster/contraband/interdyne_gene_clinics/directional/east,
-/turf/open/indestructible/grimy,
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "wood-broken3";
+	alpha = 170
+	},
+/obj/effect/turf_decal/siding/wood{
+	dir = 4
+	},
+/turf/open/indestructible/wood,
 /area/template_noop)
 "ay" = (
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"az" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/machinery/atmospherics/pipe/smart/simple/general/visible{
+	dir = 5
+	},
+/turf/open/indestructible/plating/rusty,
+/area/template_noop)
+"aA" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged2";
+	alpha = 120
+	},
+/obj/machinery/atmospherics/pipe/smart/manifold4w/general/visible,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aB" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/sign/poster/official/cleanliness/directional/west,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aC" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 2
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/freezer,
 /area/template_noop)
-"az" = (
-/obj/effect/turf_decal/tile/red/half/contrasted{
-	dir = 4
-	},
-/obj/effect/decal/cleanable/cobweb/cobweb2,
-/obj/structure/table,
-/obj/item/reagent_containers/cup/glass/drinkingglass{
-	pixel_x = -6;
-	pixel_y = 8
-	},
-/obj/item/folder/white{
-	pixel_x = 4;
-	pixel_y = 1
+"aD" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/item/cigbutt{
+	pixel_x = -7;
+	pixel_y = 3
 	},
 /turf/open/indestructible/grimy,
 /area/template_noop)
-"aA" = (
-/obj/effect/turf_decal/bot,
-/obj/machinery/atmospherics/components/unary/portables_connector{
+"aE" = (
+/obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 4
 	},
-/obj/machinery/portable_atmospherics/canister/outpost_lab_drain,
-/turf/open/indestructible/plating,
+/obj/machinery/sleeper/outpost/medical_lab{
+	dir = 8
+	},
+/turf/open/indestructible/grimy,
 /area/template_noop)
-"aB" = (
+"aF" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged1";
+	alpha = 150
+	},
+/turf/open/indestructible/grimy{
+	color = "#C6B9A6"
+	},
+/area/template_noop)
+"aG" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy{
 	color = "#B8AE9E"
 	},
 /area/template_noop)
-"aC" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
+"aH" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged4";
+	alpha = 130
 	},
-/obj/structure/railing{
-	dir = 8
+/obj/machinery/atmospherics/pipe/smart/simple/general/visible{
+	dir = 10
 	},
-/turf/open/indestructible/dark/textured,
+/turf/open/indestructible/plating/rusty,
 /area/template_noop)
-"aD" = (
+"aI" = (
+/obj/machinery/atmospherics/components/trinary/filter/atmos/co2/outpost_lab{
+	dir = 8
+	},
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aJ" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/sign/poster/official/wtf_is_co2/directional/north,
+/obj/machinery/light/small/directional/east,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aK" = (
+/obj/item/cigbutt{
+	pixel_x = 4;
+	pixel_y = -5
+	},
+/turf/open/indestructible/carpet/red,
+/area/template_noop)
+"aL" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aM" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor3";
+	color = "#4A3A30";
+	alpha = 70
+	},
+/obj/machinery/outpost_autosurgeon,
+/obj/machinery/light/cold/no_nightlight/directional/north,
+/turf/open/indestructible/freezer,
+/area/template_noop)
+"aN" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/sign/poster/contraband/interdyne_gene_clinics/directional/east,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aO" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"aP" = (
 /obj/structure/table,
 /obj/item/paper{
 	name = "cryo log";
@@ -236,158 +335,76 @@
 	pixel_x = 7;
 	pixel_y = 2
 	},
+/obj/machinery/light/small/directional/north,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"aE" = (
-/obj/effect/turf_decal/siding/thinplating_new/dark{
-	dir = 6
-	},
-/turf/open/indestructible/freezer,
-/area/template_noop)
-"aF" = (
-/obj/effect/turf_decal/tile/red/fourcorners{
-	alpha = 75
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"aG" = (
-/obj/effect/turf_decal/tile/red/fourcorners{
-	alpha = 75
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged5";
-	alpha = 110
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"aH" = (
-/obj/machinery/atmospherics/pipe/smart,
-/turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"aI" = (
-/obj/machinery/atmospherics/components/trinary/filter/atmos/co2/outpost_lab,
-/turf/open/indestructible/plating,
-/area/template_noop)
-"aJ" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/obj/structure/railing{
-	dir = 8
-	},
-/obj/structure/sign/poster/official/wtf_is_co2/directional/north,
-/turf/open/indestructible/dark/textured,
-/area/template_noop)
-"aK" = (
-/turf/open/indestructible/grimy{
-	color = "#C6B9A6"
-	},
-/area/template_noop)
-"aL" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged3";
-	alpha = 140
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"aM" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor3";
-	color = "#4A3A30";
-	alpha = 70
-	},
-/obj/machinery/outpost_autosurgeon,
-/obj/machinery/light/cold/no_nightlight/directional/north,
-/turf/open/indestructible/freezer,
-/area/template_noop)
-"aN" = (
-/obj/structure/chair/comfy/beige{
-	dir = 4
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"aO" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/structure/closet/crate/bin,
-/turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"aP" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/machinery/light/small/directional/west,
-/turf/open/indestructible/plating,
 /area/template_noop)
 "aQ" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
+/obj/effect/turf_decal/siding/wood{
+	dir = 5
 	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/grimy,
+/obj/item/cigbutt{
+	pixel_x = -6;
+	pixel_y = -8
+	},
+/turf/open/indestructible/wood,
 /area/template_noop)
 "aR" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/obj/structure/sign/poster/official/cleanliness/directional/west,
-/turf/open/indestructible/grimy,
+/turf/open/indestructible/carpet/red,
 /area/template_noop)
 "aS" = (
-/obj/effect/turf_decal/bot,
-/obj/machinery/atmospherics/components/unary/portables_connector{
-	dir = 4
+/obj/machinery/atmospherics/pipe/smart/manifold/general/hidden{
+	dir = 1
 	},
-/obj/machinery/portable_atmospherics/canister/anesthetic_mix/outpost_lab,
-/turf/open/indestructible/plating/rusty,
+/turf/closed/indestructible/rusty,
 /area/template_noop)
 "aT" = (
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/grimy,
+/obj/machinery/door/airlock/outpost/service/staff/maintenance{
+	name = "plant room"
+	},
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/plating,
 /area/template_noop)
 "aU" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor2";
-	color = "#2A2622";
-	alpha = 140
+/obj/machinery/atmospherics/pipe/smart/simple/general/hidden{
+	dir = 9
 	},
-/obj/machinery/atmospherics/pipe/smart,
-/turf/open/indestructible/plating/rusty,
+/turf/closed/indestructible/rusty,
 /area/template_noop)
 "aV" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/sign/eyechart/directional/north,
-/obj/structure/chair/office/light{
+/obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 4
 	},
+/obj/effect/decal/cleanable/cobweb/cobweb2,
+/obj/structure/table,
+/obj/item/reagent_containers/cup/glass/drinkingglass{
+	pixel_x = -6;
+	pixel_y = 8
+	},
+/obj/item/folder/white{
+	pixel_x = 4;
+	pixel_y = 1
+	},
+/obj/structure/sign/eyechart/directional/north,
 /turf/open/indestructible/grimy,
 /area/template_noop)
 "aW" = (
-/obj/effect/turf_decal/tile/red/fourcorners{
-	alpha = 75
-	},
 /obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged1";
-	alpha = 150
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor4";
+	color = "#2A2622";
+	alpha = 110
 	},
 /turf/open/indestructible/grimy,
 /area/template_noop)
 "aX" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/item/cigbutt{
-	pixel_x = -7;
-	pixel_y = 3
-	},
-/turf/open/indestructible/grimy,
+/turf/open/indestructible/plating,
 /area/template_noop)
 "aY" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
-	dir = 2
+	dir = 6
 	},
 /turf/open/indestructible/freezer,
 /area/template_noop)
@@ -401,50 +418,15 @@
 /turf/open/indestructible/freezer,
 /area/template_noop)
 "mf" = (
-/obj/effect/turf_decal/siding/wood{
-	dir = 1
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged4";
+	alpha = 110
 	},
-/obj/item/trash/candy{
-	pixel_x = -5;
-	pixel_y = -6
-	},
-/turf/open/indestructible/wood,
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/grimy,
 /area/template_noop)
 "op" = (
-/obj/machinery/digital_clock/directional/south,
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"pu" = (
-/obj/item/cigbutt{
-	pixel_x = 4;
-	pixel_y = -5
-	},
-/turf/open/indestructible/carpet/red,
-/area/template_noop)
-"tT" = (
-/obj/effect/turf_decal/siding/wood{
-	dir = 5
-	},
-/obj/item/cigbutt{
-	pixel_x = -6;
-	pixel_y = -8
-	},
-/turf/open/indestructible/wood,
-/area/template_noop)
-"vd" = (
-/obj/structure/chair/sofa/bench/right{
-	dir = 1
-	},
-/obj/machinery/light/warm/dim/directional/south,
-/turf/open/indestructible/wood,
-/area/template_noop)
-"vA" = (
-/obj/structure/chair/office/light{
-	dir = 2
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"Dv" = (
 /obj/effect/decal/cleanable/crayon{
 	icon_state = "med";
 	paint_colour = "#B3372E";
@@ -454,17 +436,49 @@
 	},
 /turf/closed/indestructible/reinforced/rusty,
 /area/template_noop)
-"ES" = (
-/obj/machinery/door/airlock/outpost/service/maintenance{
-	name = "clinic"
+"pu" = (
+/obj/item/kirbyplants{
+	icon_state = "plant-10"
 	},
-/obj/structure/fans/tiny,
-/obj/effect/mapping_helpers/airlock/unres{
+/obj/machinery/light/small/directional/east,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"tT" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/item/kirbyplants{
+	dead = 1;
+	icon_state = "plant-25"
+	},
+/turf/open/indestructible/wood,
+/area/template_noop)
+"vd" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/closet/crate/bin,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"vA" = (
+/obj/structure/chair/sofa/bench/left{
 	dir = 1
 	},
-/turf/open/indestructible/plating,
+/obj/structure/noticeboard/directional/south,
+/obj/item/paper{
+	name = "notice";
+	default_raw_text = "<b>PAYMENT BEFORE TREATMENT</b><br>No credit. No exceptions."
+	},
+/obj/item/paper{
+	name = "note";
+	default_raw_text = "The slab is not a bed. Stop sleeping on the slab."
+	},
+/turf/open/indestructible/wood,
 /area/template_noop)
 "EV" = (
+/obj/machinery/computer/outpost_medlab_terminal{
+	dir = 1
+	},
+/obj/machinery/digital_clock/directional/south,
+/turf/open/indestructible/grimy,
+/area/template_noop)
+"Ln" = (
 /obj/structure/chair/comfy/brown{
 	dir = 1
 	},
@@ -475,12 +489,7 @@
 	},
 /turf/open/indestructible/wood,
 /area/template_noop)
-"Ln" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/item/kirbyplants/random/dead,
-/turf/open/indestructible/wood,
-/area/template_noop)
-"Lw" = (
+"Mv" = (
 /obj/structure/table,
 /obj/item/paper_bin{
 	pixel_x = -4;
@@ -496,18 +505,39 @@
 	},
 /turf/open/indestructible/grimy,
 /area/template_noop)
-"Mv" = (
-/obj/machinery/computer/outpost_medlab_terminal{
+"MQ" = (
+/obj/structure/chair/sofa/bench/right{
 	dir = 1
+	},
+/obj/machinery/light/warm/dim/directional/south,
+/turf/open/indestructible/wood,
+/area/template_noop)
+"Nu" = (
+/obj/structure/table,
+/obj/structure/sign/poster/contraband/smoke/directional/south,
+/obj/item/flashlight/lamp{
+	pixel_x = -7;
+	pixel_y = 10
+	},
+/obj/item/paper{
+	name = "consent form";
+	default_raw_text = "I agree to treatment by the auto-surgeon. The clinic is not responsible for lost teeth, lost time or lost property.<br><br>Signed: ______________";
+	pixel_x = 5;
+	pixel_y = 2
+	},
+/obj/item/pen{
+	pixel_x = 8;
+	pixel_y = -2
 	},
 /turf/open/indestructible/grimy,
 /area/template_noop)
-"MQ" = (
-/obj/item/kirbyplants/random,
-/obj/machinery/light/small/directional/east,
+"Vp" = (
+/obj/structure/chair/office/light{
+	dir = 2
+	},
 /turf/open/indestructible/grimy,
 /area/template_noop)
-"Nu" = (
+"WR" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 4
 	},
@@ -530,42 +560,15 @@
 	},
 /turf/open/indestructible/wood,
 /area/template_noop)
-"Vp" = (
-/turf/open/indestructible/carpet/red,
-/area/template_noop)
-"WR" = (
-/obj/structure/chair/sofa/bench/left{
+"Xl" = (
+/obj/machinery/door/airlock/outpost/service/maintenance{
+	name = "clinic"
+	},
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
 	dir = 1
 	},
-/obj/structure/noticeboard/directional/south,
-/obj/item/paper{
-	name = "notice";
-	default_raw_text = "<b>PAYMENT BEFORE TREATMENT</b><br>No credit. No exceptions."
-	},
-/obj/item/paper{
-	name = "note";
-	default_raw_text = "The slab is not a bed. Stop sleeping on the slab."
-	},
-/turf/open/indestructible/wood,
-/area/template_noop)
-"Xl" = (
-/obj/structure/table,
-/obj/structure/sign/poster/contraband/smoke/directional/south,
-/obj/item/flashlight/lamp{
-	pixel_x = -7;
-	pixel_y = 10
-	},
-/obj/item/paper{
-	name = "consent form";
-	default_raw_text = "I agree to treatment by the auto-surgeon. The clinic is not responsible for lost teeth, lost time or lost property.<br><br>Signed: ______________";
-	pixel_x = 5;
-	pixel_y = 2
-	},
-/obj/item/pen{
-	pixel_x = 8;
-	pixel_y = -2
-	},
-/turf/open/indestructible/grimy,
+/turf/open/indestructible/plating,
 /area/template_noop)
 
 (1,1,1) = {"
@@ -583,121 +586,121 @@ am
 (2,1,1) = {"
 am
 aw
-aA
-aS
-aP
-aO
-aR
-mf
-Ln
+az
+aT
+aX
+aB
+ah
+ag
+tT
 am
 "}
 (3,1,1) = {"
 am
 av
-aI
-aU
-al
-ao
-aQ
-Vp
-WR
+aA
+au
+ae
+aL
+aR
+aR
+vA
 am
 "}
 (4,1,1) = {"
-ad
+am
 ar
-aH
-aj
-aH
-aD
-ag
-pu
-vd
+aI
+aS
+ac
+aO
+aR
+aK
+MQ
 am
 "}
 (5,1,1) = {"
-am
+ad
 aJ
-at
-aC
-af
-ao
-aQ
-Vp
-EV
+aH
+aU
+aP
+ay
+aR
+aR
+Ln
 am
 "}
 (6,1,1) = {"
 am
-an
-ap
-aY
-ai
-aF
-aK
-tT
-Nu
-Dv
+ad
+ad
+ad
+ad
+ao
+aQ
+ax
+WR
+am
 "}
 (7,1,1) = {"
 am
-aM
-aa
+an
+at
+aj
+al
+aD
 ay
-ab
-aG
-ab
-aT
-aT
-ES
+aq
+vd
+op
 "}
 (8,1,1) = {"
 am
-aZ
+aM
+ap
+aC
+af
+aF
+af
+mf
 aq
-aE
-aB
-aW
-as
-as
-Mv
-am
+Xl
 "}
 (9,1,1) = {"
 am
-ak
-as
-aX
-aL
-as
-aK
-as
-op
+aZ
+aa
+aY
+ay
+aG
+ay
+ay
+EV
 am
 "}
 (10,1,1) = {"
 ad
-aV
-aT
-ae
-aL
-aN
-as
-vA
-Xl
+ak
+aq
+ay
+ai
+aW
+al
+Vp
+Nu
 am
 "}
 (11,1,1) = {"
 am
-az
-au
-ac
-au
-ah
-ax
-MQ
-Lw
+aV
+as
+aE
+ab
+aN
+ay
+pu
+Mv
 am
 "}
 (12,1,1) = {"

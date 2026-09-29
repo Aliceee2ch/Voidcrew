@@ -1,40 +1,53 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "aa" = (
-/obj/machinery/sleeper/outpost/medical_lab{
-	dir = 8
-	},
-/obj/machinery/light/cold/directional/east,
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 4
-	},
 /turf/open/indestructible/white/small,
 /area/template_noop)
 "ab" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 10
+/obj/machinery/light/cold/directional/west,
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 8
 	},
-/turf/open/indestructible/white/smooth_large,
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 2
+	},
+/turf/open/indestructible/white/small,
 /area/template_noop)
 "ac" = (
 /obj/effect/turf_decal/tile/blue/opposingcorners,
-/turf/open/indestructible/white,
-/area/template_noop)
-"ad" = (
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"ae" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/effect/turf_decal/trimline/blue/filled/warning{
-	dir = 1
-	},
 /obj/effect/turf_decal/siding/wideplating_new/light{
 	dir = 8
 	},
 /turf/open/indestructible/white,
 /area/template_noop)
+"ad" = (
+/obj/machinery/door/airlock/outpost/service/staff{
+	name = "Cryo Plant"
+	},
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"ae" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 6
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
 "af" = (
-/obj/effect/spawner/structure/window/reinforced/shuttle/indestructible,
-/turf/open/indestructible/plating,
+/obj/structure/table/reinforced,
+/obj/item/folder/white{
+	pixel_x = -3;
+	pixel_y = 5
+	},
+/obj/item/pen{
+	pixel_x = 6;
+	pixel_y = 1
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 9
+	},
+/turf/open/indestructible/white/smooth_large,
 /area/template_noop)
 "ag" = (
 /obj/machinery/light/cold/directional/north,
@@ -45,115 +58,11 @@
 /area/template_noop)
 "ah" = (
 /obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 4
+	dir = 8
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/template_noop)
 "ai" = (
-/obj/item/kirbyplants/organic/plant21,
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 4
-	},
-/obj/effect/turf_decal/siding/thinplating_new/light{
-	dir = 2
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aj" = (
-/obj/item/kirbyplants/organic/plant10,
-/obj/effect/turf_decal/tile/blue/anticorner/contrasted{
-	dir = 4
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"ak" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/effect/turf_decal/siding/wideplating_new/light{
-	dir = 4
-	},
-/obj/structure/sign/poster/official/help_others/directional/east,
-/turf/open/indestructible/white,
-/area/template_noop)
-"al" = (
-/obj/machinery/atmospherics/pipe/smart,
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"am" = (
-/obj/machinery/atmospherics/components/unary/portables_connector{
-	dir = 4
-	},
-/obj/machinery/portable_atmospherics/canister/anesthetic_mix/outpost_lab,
-/obj/effect/turf_decal/bot,
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"an" = (
-/obj/structure/chair/sofa/bench/tram{
-	dir = 1
-	},
-/obj/machinery/light/cold/directional/south,
-/turf/open/indestructible/carpet/royalblue,
-/area/template_noop)
-"ao" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/item/kirbyplants/organic/plant22,
-/obj/effect/turf_decal/siding/wideplating_new/light{
-	dir = 10
-	},
-/turf/open/indestructible/white,
-/area/template_noop)
-"ap" = (
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aq" = (
-/obj/machinery/outpost_autosurgeon,
-/obj/effect/turf_decal/box/white{
-	color = "#52B4E9"
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/template_noop)
-"ar" = (
-/obj/structure/table/reinforced,
-/obj/item/clipboard{
-	pixel_x = -2;
-	pixel_y = 4
-	},
-/obj/item/pen/blue{
-	pixel_x = 5;
-	pixel_y = 2
-	},
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"as" = (
-/obj/structure/chair/sofa/bench/tram/right{
-	dir = 4
-	},
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 8
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"at" = (
-/obj/machinery/atmospherics/components/unary/portables_connector{
-	dir = 4
-	},
-/obj/machinery/portable_atmospherics/canister/outpost_lab_drain,
-/obj/effect/turf_decal/bot,
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"au" = (
-/obj/machinery/cryo_cell/outpost_lab{
-	dir = 1
-	},
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"av" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/effect/turf_decal/trimline/blue/filled/warning{
-	dir = 1
-	},
-/turf/open/indestructible/white,
-/area/template_noop)
-"aw" = (
 /obj/effect/turf_decal/trimline/blue/filled/line{
 	dir = 2
 	},
@@ -165,24 +74,313 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/template_noop)
-"ax" = (
-/obj/structure/chair/sofa/bench/tram/left{
-	dir = 1
-	},
-/turf/open/indestructible/carpet/royalblue,
-/area/template_noop)
-"ay" = (
-/obj/machinery/atmospherics/components/trinary/filter/atmos/co2/outpost_lab,
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"az" = (
-/obj/machinery/atmospherics/components/unary/thermomachine/freezer/on/outpost_lab{
+"aj" = (
+/obj/item/kirbyplants/organic/plant10,
+/obj/effect/turf_decal/tile/blue/anticorner/contrasted{
 	dir = 4
 	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"ak" = (
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"al" = (
+/obj/machinery/atmospherics/components/unary/portables_connector{
+	dir = 2
+	},
+/obj/machinery/portable_atmospherics/canister/outpost_lab_drain,
 /obj/effect/turf_decal/bot,
 /turf/open/indestructible/dark/small,
 /area/template_noop)
+"am" = (
+/obj/machinery/sleeper/outpost/medical_lab{
+	dir = 8
+	},
+/obj/machinery/light/cold/directional/east,
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 4
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"an" = (
+/obj/effect/turf_decal/tile/blue/opposingcorners,
+/obj/item/kirbyplants/organic/plant22,
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 10
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"ao" = (
+/obj/structure/table/reinforced/titaniumglass,
+/obj/item/newspaper{
+	pixel_x = -4;
+	pixel_y = 4
+	},
+/obj/item/reagent_containers/cup/glass/sillycup{
+	pixel_x = 7;
+	pixel_y = 6
+	},
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"ap" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"aq" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/obj/structure/sign/warning/no_smoking/circle/directional/west,
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"ar" = (
+/obj/structure/chair/sofa/bench/tram/right{
+	dir = 4
+	},
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 8
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"as" = (
+/obj/effect/turf_decal/tile/blue/anticorner/contrasted{
+	dir = 1
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"at" = (
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
+	dir = 5
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"au" = (
+/obj/item/kirbyplants/organic/plant21,
+/obj/structure/sign/warning/cold_temp/directional/north,
+/obj/effect/turf_decal/tile/blue/anticorner/contrasted{
+	dir = 4
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"av" = (
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 2
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aw" = (
+/obj/effect/turf_decal/trimline/blue/filled/warning{
+	dir = 1
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 2
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"ax" = (
+/obj/effect/turf_decal/tile/blue/opposingcorners,
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 4
+	},
+/obj/structure/sign/poster/official/help_others/directional/east,
+/turf/open/indestructible/white,
+/area/template_noop)
+"ay" = (
+/obj/machinery/atmospherics/pipe/smart/manifold4w/cyan/visible,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"az" = (
+/obj/machinery/atmospherics/components/unary/portables_connector{
+	dir = 2
+	},
+/obj/machinery/portable_atmospherics/canister/anesthetic_mix/outpost_lab,
+/obj/effect/turf_decal/bot,
+/obj/structure/sign/warning/no_smoking/directional/west,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
 "aA" = (
+/obj/structure/chair/office/light{
+	dir = 4
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aB" = (
+/obj/machinery/cryo_cell/outpost_lab{
+	dir = 1
+	},
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 1
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aC" = (
+/obj/effect/turf_decal/tile/blue/opposingcorners,
+/obj/structure/sign/departments/medbay/alt/directional/north,
+/turf/open/indestructible/white,
+/area/template_noop)
+"aD" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle/indestructible,
+/turf/open/indestructible/plating,
+/area/template_noop)
+"aE" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 10
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"aF" = (
+/obj/structure/table/reinforced,
+/obj/item/clipboard{
+	pixel_x = -3;
+	pixel_y = 4
+	},
+/obj/item/pen{
+	pixel_x = 6;
+	pixel_y = 6
+	},
+/obj/machinery/light/small/directional/north,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aG" = (
+/obj/item/kirbyplants/organic/plant21,
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 4
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 2
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aH" = (
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
+	dir = 10
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aI" = (
+/obj/structure/chair/sofa/bench/tram/left{
+	dir = 4
+	},
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 8
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aJ" = (
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/hidden{
+	dir = 9
+	},
+/turf/closed/indestructible/reinforced/titanium/nodiagonal,
+/area/template_noop)
+"aK" = (
+/obj/effect/turf_decal/tile/blue/opposingcorners,
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
+"aL" = (
+/obj/structure/chair/sofa/bench/tram{
+	dir = 4
+	},
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 8
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aM" = (
+/obj/structure/table/reinforced,
+/obj/item/clipboard{
+	pixel_x = 2;
+	pixel_y = 4
+	},
+/obj/item/pen/blue{
+	pixel_x = -6;
+	pixel_y = 2
+	},
+/obj/structure/sign/clock/directional/north,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 5
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"aN" = (
+/obj/structure/noticeboard/directional/north,
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 1
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aO" = (
+/obj/effect/turf_decal/tile/blue/half/contrasted{
+	dir = 4
+	},
+/obj/effect/turf_decal/siding/thinplating_new/light{
+	dir = 2
+	},
+/turf/open/indestructible/white/small,
+/area/template_noop)
+"aP" = (
+/obj/machinery/computer/outpost_autosurgeon{
+	dir = 2
+	},
+/obj/machinery/light/cold/directional/north,
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"aQ" = (
+/turf/closed/indestructible/reinforced/titanium/nodiagonal,
+/area/template_noop)
+"aR" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"aS" = (
+/obj/machinery/atmospherics/pipe/smart/manifold4w/cyan/hidden,
+/turf/closed/indestructible/reinforced/titanium/nodiagonal,
+/area/template_noop)
+"aT" = (
+/obj/machinery/atmospherics/components/unary/thermomachine/freezer/on/outpost_lab{
+	dir = 2
+	},
+/obj/effect/turf_decal/bot,
+/obj/structure/sign/warning/cold_temp/directional/north,
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aU" = (
+/obj/machinery/outpost_autosurgeon,
+/obj/effect/turf_decal/box/white{
+	color = "#52B4E9"
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/template_noop)
+"aV" = (
+/obj/machinery/atmospherics/components/trinary/filter/atmos/co2/outpost_lab{
+	dir = 8
+	},
+/turf/open/indestructible/dark/small,
+/area/template_noop)
+"aW" = (
+/obj/effect/turf_decal/tile/blue/opposingcorners,
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 8
+	},
+/obj/structure/sign/poster/official/moth_epi/directional/west,
+/turf/open/indestructible/white,
+/area/template_noop)
+"aX" = (
 /obj/structure/table/reinforced,
 /obj/item/flashlight/lamp{
 	pixel_x = -4;
@@ -201,180 +399,6 @@
 	},
 /turf/open/indestructible/white/small,
 /area/template_noop)
-"aB" = (
-/obj/machinery/door/airlock/outpost/service/staff{
-	name = "Cryo Plant"
-	},
-/obj/effect/mapping_helpers/airlock/unres{
-	dir = 1
-	},
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"aC" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/effect/turf_decal/siding/wideplating_new/light{
-	dir = 8
-	},
-/obj/structure/sign/poster/official/moth_epi/directional/west,
-/turf/open/indestructible/white,
-/area/template_noop)
-"aD" = (
-/obj/structure/table/reinforced,
-/obj/item/clipboard{
-	pixel_x = 2;
-	pixel_y = 4
-	},
-/obj/item/pen/blue{
-	pixel_x = -6;
-	pixel_y = 2
-	},
-/obj/structure/sign/clock/directional/north,
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 5
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/template_noop)
-"aE" = (
-/obj/effect/turf_decal/siding/thinplating_new/light{
-	dir = 2
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aF" = (
-/obj/machinery/light/small/directional/north,
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"aG" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/structure/sign/departments/medbay/alt/directional/north,
-/turf/open/indestructible/white,
-/area/template_noop)
-"aH" = (
-/turf/open/indestructible/light,
-/area/template_noop)
-"aI" = (
-/obj/structure/curtain,
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aJ" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/template_noop)
-"aK" = (
-/turf/open/indestructible/carpet/royalblue,
-/area/template_noop)
-"aL" = (
-/obj/structure/chair/office/light{
-	dir = 4
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aM" = (
-/obj/machinery/computer/outpost_autosurgeon{
-	dir = 2
-	},
-/obj/machinery/light/cold/directional/north,
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 1
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/template_noop)
-"aN" = (
-/obj/structure/noticeboard/directional/north,
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 1
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aO" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 6
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/template_noop)
-"aP" = (
-/obj/structure/table/reinforced,
-/obj/item/folder/white{
-	pixel_x = -3;
-	pixel_y = 5
-	},
-/obj/item/pen{
-	pixel_x = 6;
-	pixel_y = 1
-	},
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 9
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/template_noop)
-"aQ" = (
-/turf/closed/indestructible/reinforced/titanium/nodiagonal,
-/area/template_noop)
-"aR" = (
-/obj/structure/chair/sofa/bench/tram{
-	dir = 4
-	},
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 8
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aS" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 8
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/template_noop)
-"aT" = (
-/obj/machinery/atmospherics/pipe/smart,
-/obj/structure/sign/warning/cold_temp/directional/north,
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"aU" = (
-/obj/structure/chair/sofa/bench/tram/left{
-	dir = 4
-	},
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 8
-	},
-/turf/open/indestructible/white/small,
-/area/template_noop)
-"aV" = (
-/obj/structure/table/reinforced,
-/obj/item/clipboard{
-	pixel_x = -3;
-	pixel_y = 4
-	},
-/obj/item/pen{
-	pixel_x = 6;
-	pixel_y = 6
-	},
-/turf/open/indestructible/dark/small,
-/area/template_noop)
-"aW" = (
-/obj/structure/table/reinforced/titaniumglass,
-/obj/item/newspaper{
-	pixel_x = -4;
-	pixel_y = 4
-	},
-/obj/item/reagent_containers/cup/glass/sillycup{
-	pixel_x = 7;
-	pixel_y = 6
-	},
-/turf/open/indestructible/carpet/royalblue,
-/area/template_noop)
-"aX" = (
-/obj/structure/sign/warning/no_smoking/directional/west,
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/turf/open/indestructible/dark/small,
-/area/template_noop)
 "aY" = (
 /obj/item/kirbyplants/organic/plant10,
 /obj/effect/turf_decal/tile/blue/anticorner/contrasted{
@@ -384,18 +408,17 @@
 /area/template_noop)
 "aZ" = (
 /obj/effect/turf_decal/tile/blue/opposingcorners,
+/turf/open/indestructible/white,
+/area/template_noop)
+"td" = (
+/obj/effect/turf_decal/tile/blue/opposingcorners,
+/obj/item/kirbyplants/organic/plant22,
 /obj/effect/turf_decal/siding/wideplating_new/light{
-	dir = 4
+	dir = 6
 	},
 /turf/open/indestructible/white,
 /area/template_noop)
 "uk" = (
-/obj/structure/chair/sofa/bench/tram/right{
-	dir = 1
-	},
-/turf/open/indestructible/carpet/royalblue,
-/area/template_noop)
-"xm" = (
 /obj/structure/flora/bush/ferny/style_random,
 /obj/structure/railing/unbreakable{
 	dir = 1
@@ -404,7 +427,24 @@
 	icon_state = "grass3"
 	},
 /area/template_noop)
+"xm" = (
+/obj/effect/turf_decal/tile/blue/opposingcorners,
+/obj/effect/turf_decal/siding/wideplating_new/light{
+	dir = 2
+	},
+/obj/machinery/computer/outpost_medlab_terminal{
+	dir = 4
+	},
+/turf/open/indestructible/white,
+/area/template_noop)
 "AB" = (
+/obj/structure/flora/bush/ferny/style_random,
+/obj/structure/railing/unbreakable{
+	dir = 1
+	},
+/turf/open/indestructible/grass,
+/area/template_noop)
+"Cv" = (
 /obj/effect/turf_decal/tile/blue/opposingcorners,
 /obj/effect/turf_decal/siding/wideplating_new/light{
 	dir = 2
@@ -424,31 +464,14 @@
 	},
 /turf/open/indestructible/white,
 /area/template_noop)
-"Cv" = (
-/obj/structure/chair/sofa/bench/tram/left{
+"DH" = (
+/obj/structure/chair/sofa/bench/tram{
 	dir = 1
 	},
-/obj/structure/sign/poster/official/safety_report/directional/south,
+/obj/machinery/light/cold/directional/south,
 /turf/open/indestructible/carpet/royalblue,
 /area/template_noop)
-"DH" = (
-/obj/structure/flora/bush/ferny/style_random,
-/obj/structure/railing/unbreakable{
-	dir = 1
-	},
-/turf/open/indestructible/grass,
-/area/template_noop)
-"Lb" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/effect/turf_decal/siding/wideplating_new/light{
-	dir = 2
-	},
-/obj/machinery/computer/outpost_medlab_terminal{
-	dir = 4
-	},
-/turf/open/indestructible/white,
-/area/template_noop)
-"Nj" = (
+"IK" = (
 /obj/machinery/door/airlock/outpost/service/medical,
 /obj/structure/fans/tiny,
 /obj/effect/mapping_helpers/airlock/unres{
@@ -457,20 +480,31 @@
 /obj/effect/turf_decal/tile/blue/fourcorners,
 /turf/open/indestructible/white/smooth_large,
 /area/template_noop)
-"Wx" = (
+"Lb" = (
 /obj/structure/chair/sofa/bench/tram/right{
 	dir = 1
 	},
 /obj/structure/sign/poster/official/cleanliness/directional/south,
 /turf/open/indestructible/carpet/royalblue,
 /area/template_noop)
-"XQ" = (
-/obj/effect/turf_decal/tile/blue/opposingcorners,
-/obj/item/kirbyplants/organic/plant22,
-/obj/effect/turf_decal/siding/wideplating_new/light{
-	dir = 6
+"Nj" = (
+/obj/structure/chair/sofa/bench/tram/right{
+	dir = 1
 	},
-/turf/open/indestructible/white,
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"Wx" = (
+/obj/structure/chair/sofa/bench/tram/left{
+	dir = 1
+	},
+/turf/open/indestructible/carpet/royalblue,
+/area/template_noop)
+"XQ" = (
+/obj/structure/chair/sofa/bench/tram/left{
+	dir = 1
+	},
+/obj/structure/sign/poster/official/safety_report/directional/south,
+/turf/open/indestructible/carpet/royalblue,
 /area/template_noop)
 
 (1,1,1) = {"
@@ -489,156 +523,156 @@ aQ
 aQ
 az
 at
-am
-aX
-aB
-ae
-aC
-ao
+ad
+as
+ab
+ac
+aW
+an
 aQ
 "}
 (3,1,1) = {"
 aQ
 aT
 ay
-al
-al
-au
-av
-aK
-ax
+aS
+aB
+aw
+aZ
+ak
+Wx
 aQ
 "}
 (4,1,1) = {"
 aQ
 al
-al
-al
-al
-ar
-av
-aW
-an
+aV
+aS
+aB
+aw
+aZ
+ao
+DH
 aQ
 "}
 (5,1,1) = {"
 aQ
 aF
-aV
-ad
-al
+aH
+aJ
 au
-av
-aK
-Wx
+aO
+aZ
+ak
+Lb
 aQ
 "}
 (6,1,1) = {"
 aQ
-af
-af
-af
-af
 aQ
-aG
-ac
-DH
-af
+aQ
+aQ
+aD
+aQ
+aC
+aZ
+AB
+aD
 "}
 (7,1,1) = {"
 aQ
-aP
-aH
-aS
-aS
-ab
-ac
-ac
-Lb
+af
+aq
+ah
+ah
+aE
+aZ
+aZ
+xm
 aQ
 "}
 (8,1,1) = {"
 aQ
-aM
-aq
-aJ
-aJ
-aw
-aJ
-aJ
-aJ
-Nj
+aP
+aU
+aR
+aR
+ai
+aR
+aR
+aR
+IK
 "}
 (9,1,1) = {"
 aQ
-aD
-aH
-ah
-ah
-aO
-ac
-ac
-AB
+aM
+ap
+ap
+ap
+ae
+aZ
+aZ
+Cv
 aQ
 "}
 (10,1,1) = {"
 aQ
-af
-af
-af
-af
+aD
+aD
+aD
+aD
 aQ
-aG
-ac
-xm
-af
+aC
+aZ
+uk
+aD
 "}
 (11,1,1) = {"
 aQ
 aY
-aU
-aR
-as
-aE
-ac
-aK
-Cv
+aI
+aL
+ar
+av
+aZ
+ak
+XQ
 aQ
 "}
 (12,1,1) = {"
 aQ
 aN
-ap
-ap
-ap
-aE
-ac
-aW
-an
+aa
+aa
+aa
+av
+aZ
+ao
+DH
 aQ
 "}
 (13,1,1) = {"
 aQ
 ag
-aI
-aL
-aI
-aE
-ac
-aK
-uk
+aa
+aA
+aa
+av
+aZ
+ak
+Nj
 aQ
 "}
 (14,1,1) = {"
 aQ
 aj
-aa
-aA
-aa
-ai
-aZ
-ak
-XQ
+am
+aX
+am
+aG
+aK
+ax
+td
 aQ
 "}
 (15,1,1) = {"

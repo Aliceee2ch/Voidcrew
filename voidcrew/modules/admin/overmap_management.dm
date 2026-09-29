@@ -540,7 +540,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 			locations[player] = "Concourse"
 			continue
 		for(var/datum/outpost_berth/berth as anything in berths)
-			if(!QDELETED(berth) && berth.reservation?.contains_turf(location))
+			if(!QDELETED(berth) && berth.contains_turf(location))
 				locations[player] = "Hangar [berth.berth_number]"
 				break
 	return locations

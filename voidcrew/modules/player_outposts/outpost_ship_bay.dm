@@ -200,10 +200,10 @@
 	var/release_timer
 
 /datum/outpost_berth/ship_bay/proc/is_available()
-	return !QDELETED(src) && !QDELETED(reservation) && !QDELETED(dock) && !ship && !rebuild_owner && !release_pending && !dock.get_docked()
+	return !QDELETED(src) && has_ground() && !QDELETED(dock) && !ship && !rebuild_owner && !release_pending && !dock.get_docked()
 
 /datum/outpost_berth/ship_bay/proc/status_text()
-	if(!reservation)
+	if(!has_ground())
 		return "Preparing"
 	if(rebuild_owner)
 		var/datum/checkpoint_construction/job = rebuild_owner.resolve()
@@ -220,7 +220,7 @@
 	outpost?.refresh_elevator_uis()
 
 /datum/outpost_berth/ship_bay/proc/assign_ship(obj/structure/overmap/ship/visitor, datum/owner)
-	if(QDELETED(src) || QDELETED(reservation) || QDELETED(dock))
+	if(QDELETED(src) || !has_ground() || QDELETED(dock))
 		return FALSE
 	if(owner)
 		if(!IS_WEAKREF_OF(owner, rebuild_owner) || ship || dock?.get_docked())
@@ -302,9 +302,7 @@
 /// a lot of atmos time) evening that out, drawing its pressure down for good. Every hangar
 /// tile not under a ship goes back to the hangar's own air instead, already settled.
 /datum/outpost_berth/ship_bay/proc/refresh_hangar_air()
-	if(QDELETED(reservation))
-		return
-	for(var/turf/open/tile in CORNER_BLOCK(reservation.bottom_left_turfs[1], reservation.width, reservation.height))
+	for(var/turf/open/tile in get_block())
 		if(!tile.air || tile.blocks_air || istype(tile.loc, /area/shuttle))
 			continue
 		tile.air.copy_from(tile.create_gas_mixture())
@@ -342,7 +340,7 @@
 /datum/outpost_berth/ship_bay/link_hangar_contents()
 	if(!..())
 		return FALSE
-	for(var/turf/location as anything in reservation.reserved_turfs)
+	for(var/turf/location as anything in get_block())
 		console = locate(/obj/machinery/computer/camera_advanced/base_construction/ship/bay) in location
 		if(console)
 			break
@@ -491,7 +489,7 @@
 	return current_ship?.ship_team && ..()
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/can_operate()
-	return !QDELETED(berth) && berth.ship == current_ship && berth.contains_service_turf(get_turf(src)) && berth.is_ship_present() && ..()
+	return !QDELETED(berth) && berth.ship == current_ship && berth.contains_turf(get_turf(src)) && berth.is_ship_present() && ..()
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/can_link_silo(obj/machinery/ore_silo/silo)
 	if(QDELETED(silo) || !can_operate())

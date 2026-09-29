@@ -534,15 +534,8 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 			&& T.y >= bottom_left.y && T.y < bottom_left.y + outpost.outpost_template.height)
 			return outpost
 		for(var/datum/outpost_berth/berth as anything in outpost.berths)
-			var/turf/hangar_bottom_left = berth?.hangar_bottom_left
-			var/datum/turf_reservation/reservation = berth?.reservation
-			if(!hangar_bottom_left || !reservation || hangar_bottom_left.z != T.z)
-				continue
-			if(T.x < hangar_bottom_left.x || T.x >= hangar_bottom_left.x + reservation.width)
-				continue
-			if(T.y < hangar_bottom_left.y || T.y >= hangar_bottom_left.y + reservation.height)
-				continue
-			return outpost
+			if(berth?.contains_turf(T))
+				return outpost
 	return null
 
 // ===== ZONE VARIANTS =====

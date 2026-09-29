@@ -11,19 +11,20 @@
 		return FALSE
 	for(var/obj/structure/overmap/dynamic/player_outpost/outpost as anything in GLOB.player_outposts)
 		for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
-			if(!QDELETED(bay?.reservation) && bay.reservation.contains_turf(tile))
+			if(bay?.contains_turf(tile))
 				return TRUE
 	return FALSE
 
-/proc/checkpoint_yard_listeners(datum/turf_reservation/yard)
+/// Everyone with a client standing in the bay `yard`.
+/proc/checkpoint_yard_listeners(datum/outpost_berth/ship_bay/yard)
 	. = list()
-	if(QDELETED(yard))
+	if(!yard?.has_ground())
 		return
 	for(var/mob/listener as anything in GLOB.player_list)
 		if(listener.client && yard.contains_turf(get_turf(listener)))
 			. += listener
 
-/proc/play_to_checkpoint_yard(datum/turf_reservation/yard, sound_file, volume = CHECKPOINT_YARD_ONESHOT_VOLUME)
+/proc/play_to_checkpoint_yard(datum/outpost_berth/ship_bay/yard, sound_file, volume = CHECKPOINT_YARD_ONESHOT_VOLUME)
 	for(var/mob/listener as anything in checkpoint_yard_listeners(yard))
 		listener.playsound_local(null, sound_file, volume)
 

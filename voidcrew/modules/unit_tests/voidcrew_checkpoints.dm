@@ -93,7 +93,7 @@
 
 /// Every turf of the permanent bay interior.
 /datum/unit_test/voidcrew_checkpoints/proc/bay_turfs(datum/outpost_berth/ship_bay/bay)
-	return CORNER_BLOCK(bay.reservation.bottom_left_turfs[1], bay.reservation.width, bay.reservation.height)
+	return bay.get_block()
 
 /datum/unit_test/voidcrew_checkpoints/proc/count_bay_ship_tiles(datum/outpost_berth/ship_bay/bay)
 	. = 0
@@ -532,7 +532,7 @@
 	rebuilt.state = "flying"
 	home.on_ship_undock_complete(rebuilt)
 	TEST_ASSERT_EQUAL(home.bay_berths[1], rebuilt_bay, "Recovered ship departure replaced the permanent bay")
-	TEST_ASSERT(!QDELETED(rebuilt_bay.reservation) && rebuilt_bay.is_available(), "Recovered ship departure unloaded or retained its bay reservation")
+	TEST_ASSERT(rebuilt_bay.has_ground() && rebuilt_bay.is_available(), "Recovered ship departure unloaded or retained its bay reservation")
 	TEST_ASSERT_EQUAL(home.get_floor_alcove(rebuilt_bay.berth_number), rebuilt_bay.alcove_turfs, "Recovered ship departure removed elevator access")
 	// The staged hull must leave exactly the floor it was built on.
 	var/stranded = 0
@@ -676,7 +676,7 @@
 	TEST_ASSERT(count_bay_ship_tiles(bay) > 0 && count_bay_ship_tiles(bay) < length(job.hull_indices), "The drone build was not partial part way through")
 	// Let the real controller finish and hand over on its own.
 	var/total_visits = job.visit_total
-	var/list/copy_turfs = job.source_reservation?.reserved_turfs.Copy()
+	var/list/copy_turfs = job.get_source_block()
 	deadline = world.time + 5 MINUTES
 	// Placing pieces must not keep the pressurised hangar's air awake.
 	var/list/peaks = list()
@@ -689,7 +689,7 @@
 		var/stage = job.stage_name()
 		var/list/counts = list("bay deck ([stage])" = 0, "bay ship ([stage])" = 0)
 		for(var/turf/open/active as anything in SSair.active_turfs)
-			if(bay.reservation.contains_turf(active))
+			if(bay.contains_turf(active))
 				counts[(get_area(active) in job.port?.shuttle_areas) ? "bay ship ([stage])" : "bay deck ([stage])"]++
 		for(var/key in counts)
 			peaks[key] = max(peaks[key], counts[key])

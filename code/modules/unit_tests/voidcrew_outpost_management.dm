@@ -74,7 +74,7 @@
 	facility.reservation = SSmapping.request_turf_block_reservation(3, 3, 1)
 	TEST_ASSERT_NOTNULL(facility.reservation, "No room for the hangar berth fixture.")
 	home.berths = list(facility)
-	var/turf/berth_corner = facility.reservation.bottom_left_turfs[1]
+	var/turf/berth_corner = facility.get_bottom_left()
 	var/turf/berth_turf = locate(berth_corner.x + 1, berth_corner.y + 1, berth_corner.z)
 	berth_turf = berth_turf.ChangeTurf(/turf/open/floor/iron)
 	var/mob/living/carbon/human/resident = make_player(berth_turf, "managementresident")

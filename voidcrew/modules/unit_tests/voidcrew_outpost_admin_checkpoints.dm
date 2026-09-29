@@ -51,7 +51,7 @@
 	panel.selected = home
 	var/datum/outpost_berth/ship_bay/bay = home.bay_berths[1]
 	var/list/bay_rooms = list()
-	for(var/turf/tile as anything in CORNER_BLOCK(bay.reservation.bottom_left_turfs[1], bay.reservation.width, bay.reservation.height))
+	for(var/turf/tile as anything in bay.get_block())
 		bay_rooms[tile] = tile.loc
 
 	var/obj/structure/overmap/ship/original = SSshuttle.create_ship(/datum/map_template/shuttle/voidcrew/box)

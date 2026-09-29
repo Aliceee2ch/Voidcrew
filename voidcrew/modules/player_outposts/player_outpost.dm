@@ -75,7 +75,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 
 /obj/structure/overmap/dynamic/player_outpost/contains_site_turf(turf/location)
 	for(var/datum/outpost_berth/ship_bay/bay as anything in bay_berths)
-		if(bay?.contains_service_turf(location))
+		if(bay?.contains_turf(location))
 			return TRUE
 	return ..()
 

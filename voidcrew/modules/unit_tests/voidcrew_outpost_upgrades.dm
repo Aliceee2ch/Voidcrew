@@ -280,9 +280,9 @@
 	TEST_ASSERT(!home.is_upgrade_turf_clear(mob_spot), "A living mob did not block an upgrade")
 	TEST_ASSERT(home.is_upgrade_turf_clear(mob_spot, ignore_mobs = TRUE), "The survey's mob exemption did not apply")
 
-	var/obj/docking_port/stationary/pad = home.reserve_dock
-	TEST_ASSERT_NOTNULL(pad, "The test outpost has no reserve berth")
-	TEST_ASSERT(!home.is_upgrade_turf_clear(locate(pad.x + 5, pad.y + 5, pad.z)), "Reserve berth ground accepted an upgrade")
+	var/datum/outpost_zone/berth_ground = home.berth_zone(1)
+	TEST_ASSERT_NOTNULL(berth_ground, "The test outpost has no berth zone")
+	TEST_ASSERT(!home.is_upgrade_turf_clear(locate(berth_ground.low_x + 5, berth_ground.low_y + 5, berth_ground.z_value)), "Berth ground accepted an upgrade")
 	TEST_ASSERT(!home.is_upgrade_turf_clear(home.arrival_turf), "The arrival point accepted an upgrade")
 	if(length(home.lobby_alcove_turfs))
 		TEST_ASSERT(!home.is_upgrade_turf_clear(home.lobby_alcove_turfs[1]), "The elevator alcove accepted an upgrade")

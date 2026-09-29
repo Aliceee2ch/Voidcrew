@@ -1,8 +1,9 @@
 /**
  * # Staged ship construction
  *
- * The ship is loaded once, through the ordinary template loader, into a hidden reservation
- * this job owns. Its pieces then move into the permanent bay one tile visit at a time,
+ * The ship is loaded once, through the ordinary template loader, into the outpost's shipyard
+ * zone (outpost_level_layout.dm), where nobody can reach it and which this job holds while it
+ * runs. Its pieces then move into the permanent bay one tile visit at a time,
  * through the same per-atom shuttle move hooks a docking uses, so the finished hull is what
  * a normal landing would have left behind and departs the same way.
  *
@@ -48,8 +49,10 @@
 	var/datum/map_template/shuttle/voidcrew/template
 	/// The loaded copy. Its port joins the bay before the first piece does.
 	var/obj/docking_port/mobile/voidcrew/port
-	/// Holds every piece that has not been placed yet.
-	var/datum/turf_reservation/source_reservation
+	/// The outpost's shipyard zone: holds every piece that has not been placed yet.
+	var/datum/outpost_zone/source_zone
+	/// TRUE while the template is being written into the shipyard; nothing may wipe it then.
+	var/copy_loading = FALSE
 	/// Paired by index, exactly as initiate_docking() pairs a move.
 	var/list/turf/source_turfs
 	var/list/turf/bay_turfs
@@ -158,7 +161,9 @@
 	snapshot = null
 	port = null
 	vessel = null
-	source_reservation = null
+	// A load still writing into the shipyard lets it go itself when it returns (load_source()).
+	if(!copy_loading)
+		source_zone = null
 	source_turfs = null
 	bay_turfs = null
 	stage_visits = null
@@ -213,19 +218,13 @@
 		error ||= "The hull could not be loaded. [unspent_note()]"
 		return FALSE
 	SSair.can_fire = FALSE
-	var/loaded = load_copy(load_owner)
-	var/obj/docking_port/mobile/voidcrew/loaded_port = SSshuttle.preview_shuttle
-	var/datum/turf_reservation/loaded_space = SSshuttle.preview_reservation
-	// Take the preview out of the shared loader so the next purchase cannot unload it.
-	SSshuttle.preview_shuttle = null
-	SSshuttle.preview_template = null
-	SSshuttle.preview_reservation = null
+	var/obj/docking_port/mobile/voidcrew/loaded_port = load_copy(load_owner)
 	if(QDELETED(src) || state != CHECKPOINT_BUILD_PREPARING)
-		discard_copy(loaded_port, loaded_space)
+		// Stopped while the copy loaded: nothing could clear the shipyard under the loader.
+		discard_copy(loaded_port)
 		return FALSE
 	port = loaded_port
-	source_reservation = loaded_space
-	if(!loaded || !istype(port) || QDELETED(port) || !has_source_ground())
+	if(!istype(port) || QDELETED(port) || !has_source_ground())
 		error = "The hull could not be loaded. [unspent_note()]"
 		return FALSE
 	RegisterSignal(port, COMSIG_QDELETING, PROC_REF(on_port_deleted))
@@ -263,16 +262,15 @@
 /datum/checkpoint_construction/proc/source_still_loading()
 	return !QDELETED(src) && state == CHECKPOINT_BUILD_PREPARING && !QDELETED(port) && has_source_ground()
 
-/// Whether the hidden copy still holds its ground. Today that ground is source_reservation, and
-/// only taking the copy and discarding it touch the reservation itself.
+/// Whether the hidden copy still holds its ground: the shipyard zone, claimed and not given back.
 /datum/checkpoint_construction/proc/has_source_ground()
-	return !QDELETED(source_reservation)
+	return !isnull(source_zone) && source_zone.is_held_by(src)
 
 /// Every turf of the hidden copy's ground in block() order; empty once it is given back.
 /datum/checkpoint_construction/proc/get_source_block()
-	if(!has_source_ground() || !length(source_reservation.bottom_left_turfs) || !length(source_reservation.top_right_turfs))
+	if(!has_source_ground())
 		return list()
-	return block(source_reservation.bottom_left_turfs[1], source_reservation.top_right_turfs[1])
+	return source_zone.get_block()
 
 /// Shared checks before any piece exists.
 /datum/checkpoint_construction/proc/build_denial()
@@ -305,9 +303,34 @@
 /datum/checkpoint_construction/proc/create_template()
 	return new /datum/map_template/shuttle/voidcrew/commissioned/checkpoint(snapshot)
 
-/// Loads the template into SSshuttle's preview while this job owns the loader.
+/// Loads the template into the shipyard while this job owns the loader. Returns the copy's port.
 /datum/checkpoint_construction/proc/load_copy(datum/shuttle_template_load/load_owner)
-	return SSshuttle.load_template(template, load_owner)
+	return load_hidden_copy(load_owner)
+
+/**
+ * Loads the template a tile in from the shipyard zone's corner, the way SSshuttle.load_template()
+ * loads a preview but without reserving turfs: the zone is the outpost's own. Must run while this
+ * job owns SSshuttle's template load. Returns the unregistered port, or null.
+ */
+/datum/checkpoint_construction/proc/load_hidden_copy(datum/shuttle_template_load/load_owner)
+	var/datum/outpost_zone/yard = home?.level_zone(OUTPOST_ZONE_YARD)
+	if(!yard || !template?.width || !template?.height)
+		return null
+	if(template.width > yard.get_width() - 2 || template.height > yard.get_height() - 2)
+		log_mapping("OUTPOST SHIPYARD: [template.name] ([template.width]x[template.height]) does not fit the [yard.get_width()]x[yard.get_height()] shipyard at [home].")
+		return null
+	// The last build's copy may still be being wiped away.
+	if(yard.state == OUTPOST_ZONE_WIPING)
+		var/deadline = world.time + 30 SECONDS
+		UNTIL(yard.state != OUTPOST_ZONE_WIPING || world.time > deadline)
+	if(QDELETED(src) || state != CHECKPOINT_BUILD_PREPARING || !yard.claim(src))
+		return null
+	source_zone = yard
+	copy_loading = TRUE
+	var/obj/docking_port/mobile/loaded_port = load_shuttle_template_at(template, locate(yard.low_x + 1, yard.low_y + 1, yard.z_value))
+	copy_loading = FALSE
+	yard.occupy()
+	return loaded_port
 
 /// Runs once on the loaded, frozen copy, before anyone could reach any of it.
 /datum/checkpoint_construction/proc/prepare_copy()
@@ -1193,18 +1216,22 @@
 				qdel(room)
 	else
 		clear_source_tiles()
-	var/datum/turf_reservation/released = source_reservation
-	source_reservation = null
-	if(released)
-		clear_reservation_landmarks(released)
-		// Large reservations yield while releasing; never inside a processing tick.
-		INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(qdel), released)
+	release_source_zone()
+
+/// Gives the shipyard back once the hidden copy is done with; the zone's wipe clears what is left.
+/datum/checkpoint_construction/proc/release_source_zone()
+	var/datum/outpost_zone/yard = source_zone
+	// A load in progress is still writing into the shipyard; load_source() lets it go on return.
+	if(!yard || copy_loading)
+		return
+	source_zone = null
+	if(yard.is_held_by(src))
+		yard.release()
 
 /**
  * Objects mapped around the hull but outside its rooms are what a landing leaves behind. A
  * saved checkpoint has none; a ship map can (signs on the outer face of a wall). Nobody can
- * reach them here, so shipyard orders delete them rather than fling them into space when the
- * reservation goes.
+ * reach them here, so shipyard orders delete them rather than leave them to the shipyard's wipe.
  */
 /datum/checkpoint_construction/proc/clear_off_hull()
 	var/list/turf/copy_ground = get_source_block()
@@ -1221,29 +1248,47 @@
 			if(thing != port && !istype(thing, /obj/docking_port))
 				qdel(thing)
 
-/// Used when the job is deleted during its own load, before it took the copy.
-/datum/checkpoint_construction/proc/discard_copy(obj/docking_port/mobile/voidcrew/loaded_port, datum/turf_reservation/loaded_space)
+/// Used when the job is stopped during its own load, before it took the copy.
+/datum/checkpoint_construction/proc/discard_copy(obj/docking_port/mobile/voidcrew/loaded_port)
 	if(!QDELETED(loaded_port))
 		var/list/rooms = loaded_port.shuttle_areas?.Copy()
 		loaded_port.jumpToNullSpace()
 		for(var/area/room as anything in rooms)
 			if(!QDELETED(room) && !room.has_contained_turfs())
 				qdel(room)
-	if(loaded_space)
-		clear_reservation_landmarks(loaded_space)
-		INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(qdel), loaded_space)
+	release_source_zone()
 
-/// Releasing a reservation empties its turfs but keeps landmarks, so the hidden copy's job
-/// spawns would be left standing wherever that space is handed out next.
-/proc/clear_reservation_landmarks(datum/turf_reservation/space)
-	if(QDELETED(space))
-		return
-	for(var/turf/tile as anything in space.reserved_turfs)
-		for(var/obj/effect/landmark/mark in tile)
-			qdel(mark)
+/**
+ * Loads a shuttle template with its bottom-left corner on `bottom_left`: what
+ * SSshuttle.load_template_impl() does for a preview, on ground the caller already holds instead
+ * of a new turf reservation. Run it while holding SSshuttle's template load. Returns the
+ * template's one mobile port, registered only when `register` is set, or null; the loaded turfs
+ * are then the caller's to clear.
+ */
+/proc/load_shuttle_template_at(datum/map_template/shuttle/loading_template, turf/bottom_left, register = FALSE)
+	if(!bottom_left || !loading_template)
+		return null
+	// No try/catch round the load: it would swallow a partial stamp and leave a dead map.
+	loading_template.load(bottom_left, centered = FALSE, register = register)
+	var/obj/docking_port/mobile/found_port
+	for(var/turf/tile as anything in loading_template.get_affected_turfs(bottom_left, centered = FALSE))
+		for(var/obj/docking_port/port in tile)
+			if(istype(port, /obj/docking_port/mobile))
+				if(found_port)
+					log_mapping("Shuttle template [loading_template.mappath] has multiple mobile docking ports.")
+					qdel(port, force = TRUE)
+				else
+					found_port = port
+			else if(istype(port, /obj/docking_port/stationary))
+				log_mapping("Shuttle template [loading_template.mappath] has a stationary docking port.")
+	if(!found_port)
+		log_mapping("Shuttle template [loading_template.mappath] loaded without a mobile docking port.")
+		return null
+	loading_template.post_load(found_port)
+	return found_port
 
 /// Hands the hidden source tiles back from the ship's rooms once the port has left them.
-/// Releasing the reservation then empties and resets them over later ticks.
+/// Releasing the shipyard then empties and resets them over later ticks.
 /datum/checkpoint_construction/proc/clear_source_tiles()
 	if(!source_turfs)
 		return

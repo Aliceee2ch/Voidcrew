@@ -105,3 +105,36 @@
 // ===== OUTPOST PRISON =====
 // The prison wing's defines are in outpost_prison_economy.dm, outpost_prison_needs.dm,
 // outpost_prison_conditions.dm, outpost_prison_trouble.dm and outpost_prison_experiments.dm.
+
+// ===== ONE LEVEL PER OUTPOST (see outpost_level_layout.dm) =====
+/// Cordon rows round the edge of an outpost's level
+#define OUTPOST_LEVEL_EDGE 2
+/// Cordon between neighbouring zones, and between the zones and the build region
+#define OUTPOST_LEVEL_GUTTER 3
+/// Hangar berth zones on an outpost's level. Each fits the largest ship-sized berth.
+#define OUTPOST_LEVEL_BERTHS 4
+#define OUTPOST_BERTH_ZONE_WIDTH 66
+#define OUTPOST_BERTH_ZONE_HEIGHT 59
+/// The ship bay zone: both bay maps are exactly this size
+#define OUTPOST_BAY_ZONE_WIDTH 63
+#define OUTPOST_BAY_ZONE_HEIGHT 55
+/// The hidden shipyard where a checkpoint rebuild or a ship order loads its hull copy.
+/// Hull templates reach 56 tiles on either axis; a tile of margin all round.
+#define OUTPOST_YARD_ZONE_SIZE 58
+/// Where the incoming cargo ferry waits: the 7x12 ferry with room round it
+#define OUTPOST_PEN_ZONE_WIDTH 15
+#define OUTPOST_PEN_ZONE_HEIGHT 20
+
+/// Zone kinds; a berth zone's key is the kind plus its berth number ("berth1")
+#define OUTPOST_ZONE_BERTH "berth"
+#define OUTPOST_ZONE_BAY "bay"
+#define OUTPOST_ZONE_YARD "yard"
+#define OUTPOST_ZONE_PEN "pen"
+/// Layout key of the build region (not a zone)
+#define OUTPOST_LEVEL_BUILD_REGION "build"
+
+/// Zone states
+#define OUTPOST_ZONE_VACANT "vacant"
+#define OUTPOST_ZONE_BUILDING "building"
+#define OUTPOST_ZONE_IN_USE "in use"
+#define OUTPOST_ZONE_WIPING "wiping"

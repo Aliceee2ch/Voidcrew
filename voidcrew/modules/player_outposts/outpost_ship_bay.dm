@@ -26,7 +26,7 @@
 /obj/structure/overmap/dynamic/player_outpost
 	var/ship_bay_installed = FALSE
 	var/ship_bay_installing = FALSE
-	/// A permanent interior, with an exclusive reservation for its current ship or rebuild.
+	/// A permanent interior in the level's bay zone, exclusively reserved for its current ship or rebuild.
 	var/list/datum/outpost_berth/ship_bay/bay_berths = list()
 	/// Never reuse an elevator destination while an old ride could still be pending.
 	var/next_bay_floor_id = OUTPOST_MAX_BERTHS + 2
@@ -130,7 +130,11 @@
 	log_game("[key_name(user)] installed a permanent ship bay at [src].")
 	return null
 
-/// Only installation creates the interior; docking never replaces its map or fixtures.
+/**
+ * Only installation creates the interior; docking never replaces its map or fixtures. The bay
+ * loads into the level's bay zone (outpost_level_layout.dm), which it keeps until the bay is
+ * removed or the outpost is deleted.
+ */
 /obj/structure/overmap/dynamic/player_outpost/proc/create_ship_bay()
 	if(length(bay_berths) && bay_berths[1])
 		return null
@@ -138,26 +142,40 @@
 	bay.bay_number = 1
 	bay_berths = list(bay)
 	var/datum/map_template/outpost_hangar/ship_bay/template = outpost_ship_bay_template(outpost_style)
-	if(!template)
+	var/datum/outpost_zone/bay_zone = level_zone(OUTPOST_ZONE_BAY)
+	if(!template || !bay_zone || template.width > bay_zone.get_width() || template.height > bay_zone.get_height())
 		qdel(bay)
 		return null
-	var/datum/turf_reservation/reserved = SSmapping.request_turf_block_reservation(template.width, template.height, 1, requester = "permanent ship bay at '[name]'")
-	if(!reserved)
+	// A bay removed a moment ago may still be wiping its zone.
+	if(bay_zone.state == OUTPOST_ZONE_WIPING)
+		var/deadline = world.time + 30 SECONDS
+		UNTIL(bay_zone.state != OUTPOST_ZONE_WIPING || world.time > deadline)
+		if(QDELETED(src) || QDELETED(bay))
+			if(!QDELETED(bay))
+				qdel(bay)
+			return null
+	if(!bay_zone.claim(bay))
 		qdel(bay)
 		return null
-	// Keep the reservation local until a yielding map load has finished.
-	var/turf/origin = reserved.bottom_left_turfs[1]
+	bay.zone = bay_zone
+	var/turf/origin = bay_zone.get_bottom_left()
+	bay.hangar_bottom_left = origin
+	bay.hangar_width = template.width
+	bay.hangar_height = template.height
+	bay.building = TRUE
 	var/loaded_bay = template.load(origin)
+	bay.building = FALSE
 	if(!loaded_bay || QDELETED(src) || QDELETED(bay))
-		qdel(reserved)
-		if(!QDELETED(bay))
+		if(QDELETED(bay))
+			// Destroy() left the zone to us while the loader was writing into it.
+			bay_zone.release()
+		else
 			qdel(bay)
 		return null
-	bay.reservation = reserved
-	bay.hangar_bottom_left = origin
 	if(!bay.link_hangar_contents())
 		qdel(bay)
 		return null
+	bay_zone.occupy()
 	return bay
 
 /obj/structure/overmap/dynamic/player_outpost/proc/available_ship_bay()
@@ -261,7 +279,7 @@
 	update_status()
 	return TRUE
 
-/// Departure releases the visitor, never the outpost's permanent turf reservation.
+/// Departure releases the visitor, never the outpost's permanent bay zone.
 /datum/outpost_berth/ship_bay/release(force = FALSE)
 	if(QDELETED(src))
 		return
@@ -466,7 +484,7 @@
 	internal_painter = new(src)
 	internal_painter.ship_console = src
 
-/// A fresh reservation must not mint RCD charge on each docking visit.
+/// A new visit must not mint RCD charge on each docking.
 /obj/machinery/computer/camera_advanced/base_construction/ship/bay/restock_materials()
 	return
 

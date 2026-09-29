@@ -356,9 +356,9 @@
 	var/z = bounds[5]
 	// A 41 x 21 stretch of the claim beside the wing, with a door on every other tile: 200 doors.
 	var/low_x = bounds[3] + 4
-	if(low_x + 40 > world.maxx)
+	if(low_x + 40 > home.build_bounds[3])
 		low_x = bounds[1] - 45
-	var/low_y = min(bounds[2], world.maxy - 21)
+	var/low_y = min(bounds[2], home.build_bounds[4] - 21)
 	var/turf/low_corner = locate(low_x, low_y, z)
 	var/turf/high_corner = locate(low_x + 40, low_y + 20, z)
 	TEST_ASSERT(low_corner && high_corner, "No room on the claim for the door grid")

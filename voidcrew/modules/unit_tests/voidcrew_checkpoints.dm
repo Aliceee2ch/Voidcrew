@@ -645,13 +645,14 @@
 	var/datum/checkpoint_visit/placed = job.completed_visits[1]
 	var/mob/living/carbon/human/bystander = make_player(job.bay_turfs[placed.index], "registrybystander")
 	var/obj/docking_port/mobile/voidcrew/partial_port = job.port
-	var/datum/turf_reservation/hidden_copy = job.source_reservation
+	var/datum/outpost_zone/hidden_copy = job.source_zone
+	TEST_ASSERT(hidden_copy?.is_held_by(job), "The hidden copy is not held in the outpost's shipyard")
 	var/held = job.held_balance
 	TEST_ASSERT(held > 0, "Commitment did not hold the original's account balance")
 	qdel(bay)
 	TEST_ASSERT(QDELETED(job), "Reconstruction outlived its bay")
 	TEST_ASSERT(QDELETED(partial_port) && !(partial_port in SSshuttle.mobile_docking_ports), "The partial hull left a registered port behind")
-	TEST_ASSERT(QDELETED(hidden_copy), "The hidden copy outlived its job")
+	TEST_ASSERT(hidden_copy.state == "wiping" || hidden_copy.state == "vacant", "The hidden copy's shipyard outlived its job ([hidden_copy.state])")
 	TEST_ASSERT(!length(home.checkpoints), "Losing the bay restored a consumed checkpoint")
 	TEST_ASSERT(!original.retired_by_checkpoint && !original.checkpoint_rebuilding, "The original stayed replaced after its replacement was destroyed")
 	TEST_ASSERT_EQUAL(original.ship_account.account_balance, held, "The original's balance was not returned")
@@ -697,6 +698,7 @@
 			stage_samples[key]++
 	TEST_ASSERT(QDELETED(job), "The drones did not finish [total_visits] visits within five minutes")
 	// Releasing the hidden copy's space must not leave its job spawns behind for the next user.
+	TEST_ASSERT(outpost_zone_wait_vacant(home.level_zone("yard")), "The shipyard was never cleared after the build")
 	for(var/turf/tile as anything in copy_turfs)
 		var/obj/effect/landmark/stray = locate() in tile
 		if(stray)

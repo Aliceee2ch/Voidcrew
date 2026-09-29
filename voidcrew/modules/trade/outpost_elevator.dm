@@ -109,7 +109,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/outpost_elevator, 32)
 			"occupied" = length(outpost.lobby_alcove_turfs) > 0,
 			"your_ship" = FALSE,
 		))
-		for(var/i in 1 to OUTPOST_MAX_BERTHS)
+		for(var/i in 1 to outpost.berth_capacity())
 			// berths stays null on hosts that haven't berthed a ship yet
 			var/datum/outpost_berth/slot = LAZYACCESS(outpost.berths, i)
 			var/is_yours = FALSE

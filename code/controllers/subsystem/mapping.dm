@@ -755,6 +755,7 @@ ADMIN_VERB(load_away_mission, R_FUN, "Load Away Mission", "Load a specific away 
 		return null
 	UNTIL((!z_reservation || reservation_ready["[z_reservation]"]) && !clearing_reserved_turfs)
 	var/datum/turf_reservation/reserve = new reservation_type
+	reserve.requester = requester // VOIDCREW EDIT ADDITION: which feature holds the block (voidcrew/mapping/_mapping.dm)
 	if(!isnull(turf_type_override))
 		reserve.turf_type = turf_type_override
 	if(!z_reservation)

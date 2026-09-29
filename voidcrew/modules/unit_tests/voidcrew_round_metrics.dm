@@ -1,5 +1,6 @@
 /// Round metrics queue rows in memory with the table's columns, fold tallies into one row per key,
 /// and drop the oldest rows past the cap. No database is involved: the test world has none.
+/// Categories are written as strings: unit tests are included before voidcrew/_DEFINES/metrics.dm.
 /datum/unit_test/voidcrew_round_metrics
 	var/was_accepting
 	var/was_max_pending
@@ -15,10 +16,10 @@
 	SSmetrics.pending = list()
 	SSmetrics.tallies = list()
 
-	record_metric(METRIC_TRADE, "test_purchase", ckey = "tester", other_ckey = "seller", zone = "red", subject = /obj/item/gun, credits = -500, vouchers = -2, quantity = 1, details = list("shop" = "Test Shop"))
+	record_metric("trade", "test_purchase", ckey = "tester", other_ckey = "seller", zone = "red", subject = /obj/item/gun, credits = -500, vouchers = -2, quantity = 1, details = list("shop" = "Test Shop"))
 	TEST_ASSERT_EQUAL(length(SSmetrics.pending), 1, "record_metric should queue exactly one row")
 	var/list/row = SSmetrics.pending[1]
-	TEST_ASSERT_EQUAL(row["category"], METRIC_TRADE, "category column")
+	TEST_ASSERT_EQUAL(row["category"], "trade", "category column")
 	TEST_ASSERT_EQUAL(row["event"], "test_purchase", "event column")
 	TEST_ASSERT_EQUAL(row["ckey"], "tester", "ckey column")
 	TEST_ASSERT_EQUAL(row["other_ckey"], "seller", "other_ckey column")
@@ -30,8 +31,8 @@
 	TEST_ASSERT_NULL(row["ship_id"], "no ship was given")
 
 	for(var/i in 1 to 3)
-		tally_metric(METRIC_COMBAT, "test_hit", ckey = "a", other_ckey = "b", zone = "yellow", subject = "laser", points = 10)
-	tally_metric(METRIC_COMBAT, "test_hit", ckey = "a", other_ckey = "c", zone = "yellow", subject = "laser", points = 10)
+		tally_metric("combat", "test_hit", ckey = "a", other_ckey = "b", zone = "yellow", subject = "laser", points = 10)
+	tally_metric("combat", "test_hit", ckey = "a", other_ckey = "c", zone = "yellow", subject = "laser", points = 10)
 	TEST_ASSERT_EQUAL(length(SSmetrics.tallies), 2, "tallies with different players are kept apart")
 	SSmetrics.fold_tallies()
 	TEST_ASSERT_EQUAL(length(SSmetrics.tallies), 0, "folding clears the running totals")
@@ -44,7 +45,7 @@
 	SSmetrics.max_pending = 3
 	var/dropped_before = SSmetrics.rows_dropped
 	for(var/i in 1 to 5)
-		record_metric(METRIC_ECONOMY, "test_cap", quantity = i)
+		record_metric("economy", "test_cap", quantity = i)
 	TEST_ASSERT_EQUAL(length(SSmetrics.pending), 3, "the queue holds at most max_pending rows")
 	TEST_ASSERT_EQUAL(SSmetrics.rows_dropped - dropped_before, 2, "overflow counts as dropped")
 	var/list/oldest_kept = SSmetrics.pending[1]
@@ -52,7 +53,7 @@
 
 	SSmetrics.accepting = FALSE
 	SSmetrics.pending = list()
-	record_metric(METRIC_ECONOMY, "test_off")
+	record_metric("economy", "test_off")
 	TEST_ASSERT_EQUAL(length(SSmetrics.pending), 0, "nothing is queued while metrics are off")
 
 /datum/unit_test/voidcrew_round_metrics/Destroy()

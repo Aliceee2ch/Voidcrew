@@ -81,166 +81,273 @@
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
 "ak" = (
-/obj/effect/overlay{
-	name = "rain";
-	icon = 'icons/effects/weather_effects.dmi';
-	icon_state = "rain_high";
-	anchored = 1;
-	mouse_opacity = 0
-	},
-/turf/closed/indestructible{
-	name = "sea";
-	desc = "Grey water out to the horizon, beaten flat by the rain.";
-	icon = 'icons/turf/beach.dmi';
-	icon_state = "deepwater"
-	},
+/obj/effect/spawner/structure/window/reinforced,
+/turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
 "al" = (
-/obj/effect/spawner/structure/window/reinforced/shuttle/indestructible,
-/obj/effect/overlay{
-	name = "rain";
-	icon = 'icons/effects/weather_effects.dmi';
-	icon_state = "rain_low";
-	anchored = 1;
-	mouse_opacity = 0
-	},
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"am" = (
-/obj/effect/spawner/structure/window/reinforced/shuttle/indestructible,
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"an" = (
 /obj/effect/turf_decal/bot_white,
 /obj/machinery/atmospherics/components/unary/portables_connector/visible{
 	dir = 8
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"ao" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 1
+"am" = (
+/obj/effect/turf_decal/siding/white{
+	dir = 4
 	},
 /turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"an" = (
+/obj/effect/turf_decal/siding/white{
+	dir = 8
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ao" = (
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
+	dir = 1
+	},
+/obj/item/kirbyplants/fern,
+/turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
 "ap" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 2
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
+	dir = 1
 	},
-/turf/open/indestructible/dark/smooth_large,
+/obj/machinery/vending/boozeomat{
+	tiltable = 0
+	},
+/obj/machinery/light/cold/dim/directional/north{
+	bulb_colour = "#a9c8ff"
+	},
+/turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
 "aq" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/filled/line{
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
 	dir = 1
 	},
-/turf/open/indestructible/dark/smooth_large,
+/obj/structure/outpost_yard_droid/bartender{
+	dir = 2
+	},
+/turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
 "ar" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 4
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
+	dir = 1
 	},
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 2
+/obj/structure/outpost_yard_droid/cleaner{
+	dir = 2;
+	desc = "A floor-cleaning droid with a mop arm."
 	},
-/turf/open/indestructible/dark/smooth_large,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
 "as" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 4
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
+	dir = 1
 	},
-/turf/open/indestructible/dark/smooth_large,
+/obj/structure/table/reinforced/titaniumglass,
+/obj/item/reagent_containers/cup/glass/bottle/whiskey{
+	pixel_x = -6;
+	pixel_y = 8
+	},
+/obj/item/reagent_containers/cup/glass/bottle/vodka{
+	pixel_x = 6;
+	pixel_y = 8
+	},
+/obj/machinery/digital_clock/directional/north,
+/turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
 "at" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/filled/line{
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
 	dir = 1
 	},
-/turf/open/indestructible/dark/smooth_large,
+/obj/structure/table/reinforced/titaniumglass,
+/obj/item/reagent_containers/cup/glass/drinkingglass{
+	pixel_x = -6;
+	pixel_y = 6
+	},
+/obj/item/reagent_containers/cup/glass/drinkingglass{
+	pixel_x = 5;
+	pixel_y = 6
+	},
+/turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
 "au" = (
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 8
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
+	dir = 1
 	},
-/obj/effect/turf_decal/trimline/blue/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/dark/smooth_large,
+/turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
 "av" = (
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
+	dir = 1
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aw" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ax" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ay" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"az" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aA" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aB" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aC" = (
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aD" = (
 /obj/effect/turf_decal/trimline/blue/filled/line{
 	dir = 8
 	},
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aw" = (
+"aE" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
-/obj/machinery/light/cold/directional/south,
-/turf/open/indestructible/white/smooth_large,
+/obj/machinery/digital_clock/directional/north,
+/turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"ax" = (
+"aF" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
-/obj/structure/sign/departments/restroom/directional/north,
-/turf/open/indestructible/white/smooth_large,
+/obj/machinery/light/cold/directional/north,
+/turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"ay" = (
+"aG" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"az" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
 	},
 /obj/machinery/status_display/outpost_berth/directional/north,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"aA" = (
+"aH" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
+	dir = 2
 	},
-/obj/machinery/status_display/outpost_berth/directional/north,
+/obj/machinery/status_display/outpost_sign/directional/north{
+	top_line = "LIFT";
+	bottom_line = "SOUTH"
+	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"aB" = (
+"aI" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/structure/extinguisher_cabinet/directional/north,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"aJ" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/structure/fluff/fake_vent,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"aK" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/structure/sign/poster/official/random/directional/north,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"aL" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"aM" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/item/kirbyplants/organic/plant10,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aN" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/item/kirbyplants/organic/plant21,
-/turf/open/indestructible/hoteltile,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aC" = (
+"aO" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/obj/item/kirbyplants/organic/plant21,
-/turf/open/indestructible/white,
+/obj/item/kirbyplants/organic/plant22,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aD" = (
+"aP" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
@@ -249,7 +356,7 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aE" = (
+"aQ" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
@@ -258,75 +365,85 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aF" = (
+"aR" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/obj/machinery/light/cold/dim/directional/north,
-/turf/open/indestructible/dark/small,
+/obj/machinery/computer/terminal{
+	dir = 2;
+	name = "air plant terminal";
+	desc = "Pressure logs for the bay's air main.";
+	upperinfo = "AIR PLANT";
+	content = list("Air main holding pressure.","All fill points open.")
+	},
+/turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"aG" = (
+"aS" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/machinery/digital_clock/directional/north,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aT" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/machinery/digital_clock/directional/north,
+/turf/open/indestructible/white/textured,
+/area/voidcrew/outpost_hangar)
+"aU" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/machinery/light/cold/directional/north,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"aV" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/machinery/light/small/directional/north,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"aH" = (
+"aW" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/obj/machinery/vending/boozeomat{
-	tiltable = 0
-	},
-/turf/open/indestructible/dark/small,
+/obj/machinery/status_display/outpost_berth/directional/north,
+/turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"aI" = (
+"aX" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/obj/machinery/vending/cola{
+/obj/machinery/vending/coffee{
 	tiltable = 0
 	},
-/turf/open/indestructible/white/herringbone,
+/obj/machinery/light/cold/dim/directional/north{
+	bulb_colour = "#a9c8ff"
+	},
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aJ" = (
+"aY" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/machinery/vending/snack{
 	tiltable = 0
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aK" = (
+"aZ" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/obj/structure/chair/sofa/left{
-	dir = 2
-	},
-/turf/open/indestructible/hoteltile,
-/area/voidcrew/outpost_hangar)
-"aL" = (
-/obj/effect/turf_decal/trimline/blue/line{
+/obj/structure/chair/comfy{
 	dir = 1
 	},
-/obj/structure/chair/sofa/middle{
-	dir = 2
-	},
-/turf/open/indestructible/hoteltile,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aM" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/structure/chair/sofa/right{
-	dir = 2
-	},
-/turf/open/indestructible/hoteltile,
-/area/voidcrew/outpost_hangar)
-"aN" = (
+"ba" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
@@ -338,7 +455,50 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aO" = (
+"bb" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/rack,
+/obj/item/folder/yellow{
+	pixel_x = -4;
+	pixel_y = 3
+	},
+/obj/item/clipboard{
+	pixel_x = 4;
+	pixel_y = -1
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bc" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/sign/departments/bar/directional/north,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bd" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/sign/departments/restroom/directional/north,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"be" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/sign/poster/official/random/directional/north,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bf" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/sign/warning/gas_mask/directional/north,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bg" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
@@ -346,7 +506,22 @@
 /obj/structure/mirror/directional/north,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"aP" = (
+"bh" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/table/reinforced,
+/obj/item/weldingtool{
+	pixel_x = -4;
+	pixel_y = 3
+	},
+/obj/item/clothing/glasses/welding{
+	pixel_x = 5;
+	pixel_y = -3
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bi" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
@@ -361,64 +536,75 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aQ" = (
+"bj" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /obj/structure/table/reinforced/titaniumglass,
-/obj/item/reagent_containers/cup/glass/bottle/whiskey{
-	pixel_x = -6;
-	pixel_y = 8
+/obj/item/flashlight/lamp{
+	pixel_y = 10;
+	anchored = 1
 	},
-/obj/item/reagent_containers/cup/glass/bottle/vodka{
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bk" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/table/reinforced{
+	name = "log desk"
+	},
+/obj/item/clipboard{
+	pixel_x = -3;
+	pixel_y = 3
+	},
+/obj/item/pen{
 	pixel_x = 6;
-	pixel_y = 8
+	pixel_y = 2
 	},
-/turf/open/indestructible/dark/small,
+/turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"aR" = (
+"bl" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/turf/open/indestructible/dark/small,
-/area/voidcrew/outpost_hangar)
-"aS" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
+/obj/structure/table/reinforced{
+	name = "parts bench"
 	},
-/turf/open/indestructible/hoteltile,
+/obj/item/clipboard{
+	pixel_x = -4;
+	pixel_y = 4
+	},
+/obj/item/paper{
+	pixel_x = 5;
+	pixel_y = -2
+	},
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aT" = (
+"bm" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"aU" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"aV" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/turf/open/indestructible/white/small,
-/area/voidcrew/outpost_hangar)
-"aW" = (
+"bn" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aX" = (
+"bo" = (
 /obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
+	dir = 2
+	},
+/obj/effect/turf_decal/bot_white,
+/obj/machinery/portable_atmospherics/pump{
+	anchored = 1;
+	name = "air pump"
 	},
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"aY" = (
+"bp" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -433,7 +619,7 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"aZ" = (
+"bq" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -443,7 +629,7 @@
 /obj/machinery/barsign/all_access/directional/south,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"ba" = (
+"br" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -453,7 +639,17 @@
 /obj/machinery/light/cold/directional/south,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bb" = (
+"bs" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/machinery/newscaster/directional/south,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bt" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -463,7 +659,7 @@
 /obj/machinery/status_display/outpost_berth/directional/south,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bc" = (
+"bu" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -476,7 +672,20 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bd" = (
+"bv" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/machinery/status_display/outpost_sign/directional/south{
+	top_line = "LOUNGE";
+	bottom_line = "OPEN"
+	},
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bw" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -489,7 +698,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"be" = (
+"bx" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -499,7 +708,7 @@
 /obj/machinery/status_display/outpost_sign/elevator/directional/south,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bf" = (
+"by" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -509,7 +718,27 @@
 /obj/structure/curtain,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"bg" = (
+"bz" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/fluff/fake_scrubber,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bA" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/fluff/fake_vent,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bB" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -518,33 +747,102 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bh" = (
+"bC" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
+/obj/item/kirbyplants/fern,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bD" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/organic/plant10,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bE" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/organic/plant21,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bF" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/organic/plant21,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bG" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/organic/plant22,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bH" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/organic/plant22,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bI" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/synthetic/plant27,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bJ" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/synthetic/plant27,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bK" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/item/kirbyplants/synthetic/plant28,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bL" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/machinery/computer/security/telescreen/entertainment/directional/south,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bM" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/machinery/light/cold/dim/directional/south{
+	bulb_colour = "#a9c8ff"
+	},
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bN" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/machinery/light/cold/dim/directional/south{
+	bulb_colour = "#a9c8ff"
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bO" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
 /obj/machinery/light/cold/directional/south,
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bi" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"bj" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/machinery/light/cold/directional/south,
-/turf/open/indestructible/white/textured,
-/area/voidcrew/outpost_hangar)
-"bk" = (
+"bP" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -554,7 +852,32 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bl" = (
+"bQ" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/machinery/status_display/outpost_sign/elevator/directional/south,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bR" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/structure/chair/sofa/left{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bS" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/structure/chair/sofa/right{
+	dir = 1
+	},
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"bT" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
@@ -566,31 +889,39 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"bm" = (
+"bU" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
-/turf/open/indestructible/hoteltile,
+/obj/structure/extinguisher_cabinet/directional/south,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"bn" = (
+"bV" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/structure/sign/poster/official/random/directional/south,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"bW" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bo" = (
+"bX" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"bp" = (
+"bY" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"bq" = (
+"bZ" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -601,150 +932,71 @@
 	},
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"br" = (
+"ca" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
 	},
 /obj/effect/turf_decal/box/white,
 /obj/structure/checkpoint_drone_bay,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bs" = (
+"cb" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/tile/dark_blue/fourcorners{
+	dir = 1
+	},
+/turf/open/indestructible/white/small,
+/area/voidcrew/outpost_hangar)
+"cc" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
+	},
+/obj/item/kirbyplants/fern,
+/turf/open/indestructible/white/small,
+/area/voidcrew/outpost_hangar)
+"cd" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 1
+	},
+/obj/structure/closet/crate/bin,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"ce" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
-/obj/item/kirbyplants/organic/plant22,
-/turf/open/indestructible/white/smooth_large,
+/obj/effect/turf_decal/box/white,
+/obj/structure/checkpoint_drone_bay,
+/turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bt" = (
+"cf" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/machinery/computer/terminal{
-	dir = 8;
-	name = "cradle terminal";
-	desc = "Service records for the bay droids.";
-	upperinfo = "DROID CRADLES";
-	content = list("All cradles charged.","Odysseus: service in progress.")
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"bu" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
+	dir = 2
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/obj/machinery/light/cold/directional/east,
-/turf/open/indestructible/white/textured,
-/area/voidcrew/outpost_hangar)
-"bv" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/machinery/shower/directional/south,
+/obj/machinery/shower/directional/west,
 /obj/structure/fluff/shower_drain{
 	deconstructible = 0
 	},
-/obj/structure/curtain,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"bw" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/structure/rack,
-/obj/item/stack/cable_coil/five{
-	pixel_x = -4;
-	pixel_y = 4
-	},
-/obj/item/stack/cable_coil/five{
-	pixel_x = 4;
-	pixel_y = -2
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"bx" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/turf/open/indestructible/dark/small,
-/area/voidcrew/outpost_hangar)
-"by" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"bz" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/effect/turf_decal/bot_white,
-/obj/machinery/portable_atmospherics/pump{
-	anchored = 1;
-	name = "air pump"
-	},
-/turf/open/indestructible/white/textured,
-/area/voidcrew/outpost_hangar)
-"bA" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/effect/turf_decal/box/white,
-/obj/structure/checkpoint_drone_bay,
-/turf/open/indestructible/white,
-/area/voidcrew/outpost_hangar)
-"bB" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 1
-	},
-/obj/structure/fluff/empty_sleeper/nanotrasen{
-	dir = 2;
-	name = "droid cradle";
-	desc = "An upright charging cradle for a service droid.";
-	deconstructible = 0
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"bC" = (
+"cg" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -759,88 +1011,64 @@
 	},
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"bD" = (
+"ch" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 2
 	},
-/obj/structure/chair/sofa/left{
-	dir = 8
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"bE" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/structure/table/reinforced,
-/obj/machinery/recharger,
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"bF" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
+/obj/machinery/light/small/directional/south,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"bG" = (
+"ci" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 2
+	},
+/obj/structure/sign/warning/no_smoking/directional/east,
+/turf/open/indestructible/white/small,
+/area/voidcrew/outpost_hangar)
+"cj" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/item/kirbyplants/fern,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bH" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/obj/item/kirbyplants/fern,
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"bI" = (
+"ck" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/item/kirbyplants/organic/plant21,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bJ" = (
+"cl" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/item/kirbyplants/organic/plant22,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bK" = (
+"cm" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/item/kirbyplants/synthetic/plant28,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bL" = (
+"cn" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
-/obj/machinery/computer/security/telescreen/entertainment/directional/east,
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"bM" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
+/obj/machinery/light/cold/dim/directional/east{
+	bulb_colour = "#a9c8ff"
 	},
-/obj/machinery/light/cold/dim/directional/east,
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"bN" = (
+"co" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -850,42 +1078,49 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bO" = (
+"cp" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/machinery/light/cold/directional/east,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bP" = (
+"cq" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/machinery/light/cold/directional/east,
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"bQ" = (
+"cr" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
-/obj/machinery/light/small/directional/east,
-/turf/open/indestructible/white/small,
+/obj/machinery/light/cold/directional/east,
+/turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"bR" = (
+"cs" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/machinery/newscaster/directional/east,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bS" = (
+"ct" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/machinery/newscaster/directional/east,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"cu" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/machinery/status_display/outpost_berth/directional/east,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bT" = (
+"cv" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -895,7 +1130,28 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bU" = (
+"cw" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/machinery/status_display/outpost_sign/directional/east{
+	top_line = "CRADLES";
+	bottom_line = "READY"
+	},
+/obj/structure/table/reinforced{
+	name = "diagnostic bench"
+	},
+/obj/item/flashlight/lamp{
+	pixel_y = 10;
+	anchored = 1
+	},
+/obj/item/folder/white{
+	pixel_x = 5;
+	pixel_y = -3
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"cx" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -905,7 +1161,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bV" = (
+"cy" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -914,7 +1170,7 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"bW" = (
+"cz" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -923,7 +1179,16 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bX" = (
+"cA" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/structure/chair/sofa/left{
+	dir = 8
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"cB" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -932,7 +1197,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"bY" = (
+"cC" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -941,14 +1206,21 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"bZ" = (
+"cD" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /obj/structure/closet/crate/bin,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"ca" = (
+"cE" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/structure/extinguisher_cabinet/directional/east,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"cF" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -956,7 +1228,22 @@
 /obj/item/mop,
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"cb" = (
+"cG" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/structure/rack,
+/obj/item/folder/blue{
+	pixel_x = -4;
+	pixel_y = 3
+	},
+/obj/item/folder/white{
+	pixel_x = 4;
+	pixel_y = -1
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"cH" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -969,31 +1256,32 @@
 	pixel_x = 5;
 	pixel_y = -2
 	},
-/turf/open/indestructible/white/textured,
-/area/voidcrew/outpost_hangar)
-"cc" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
 /obj/structure/sign/warning/gas_mask/directional/east,
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"cd" = (
+"cI" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
-/obj/structure/table/reinforced,
-/obj/item/weldingtool{
+/obj/structure/rack,
+/obj/item/stack/cable_coil/five{
 	pixel_x = -4;
-	pixel_y = 3
+	pixel_y = 4
 	},
-/obj/item/clothing/glasses/welding{
-	pixel_x = 5;
-	pixel_y = -3
+/obj/item/stack/cable_coil/five{
+	pixel_x = 4;
+	pixel_y = -2
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"ce" = (
+"cJ" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/structure/sign/poster/official/random/directional/east,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"cK" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -1012,7 +1300,16 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cf" = (
+"cL" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 4
+	},
+/obj/structure/table/reinforced,
+/obj/machinery/recharger,
+/obj/machinery/light/cold/directional/east,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"cM" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -1020,7 +1317,7 @@
 /obj/machinery/recharger,
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cg" = (
+"cN" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
@@ -1040,61 +1337,27 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"ch" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/turf/open/indestructible/dark/small,
-/area/voidcrew/outpost_hangar)
-"ci" = (
+"cO" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cj" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"ck" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/turf/open/indestructible/white/small,
-/area/voidcrew/outpost_hangar)
-"cl" = (
+"cP" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 4
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cm" = (
+"cQ" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
 	},
 /obj/effect/turf_decal/box/white,
 /obj/structure/checkpoint_drone_bay,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cn" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/item/kirbyplants/synthetic/plant28,
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"co" = (
+"cR" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1107,78 +1370,17 @@
 /obj/structure/sign/warning/no_smoking/directional/west,
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"cp" = (
+"cS" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 1
 	},
-/obj/machinery/vending/coffee{
-	tiltable = 0
-	},
-/turf/open/indestructible/white/herringbone,
+/obj/structure/closet/crate/bin,
+/turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cq" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/machinery/vending/tool{
-	tiltable = 0;
-	products = list(/obj/item/crowbar = 2,/obj/item/wrench = 2,/obj/item/screwdriver = 2,/obj/item/wirecutters = 2,/obj/item/weldingtool = 2,/obj/item/stack/cable_coil = 3,/obj/item/analyzer = 1,/obj/item/t_scanner = 1,/obj/item/flashlight = 2);
-	premium = list();
-	contraband = list()
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"cr" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/structure/closet/crate/medical{
-	name = "parts crate";
-	anchored = 1;
-	welded = 1;
-	can_weld_shut = 0
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"cs" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/structure/noticeboard/directional/west,
-/obj/item/paper{
-	name = "bay notice";
-	default_raw_text = "<b>BAY NOTICE</b><br>Cups back to the bar.<br>Wipe your boots at the lift.<br>Thank you."
-	},
-/obj/item/paper{
-	name = "note";
-	default_raw_text = "The rain is not a fault. Please stop reporting it."
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"ct" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 1
-	},
-/obj/structure/sink/directional/south,
-/obj/structure/mirror/directional/north,
-/turf/open/indestructible/white/small,
-/area/voidcrew/outpost_hangar)
-"cu" = (
+"cT" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1192,80 +1394,21 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cv" = (
+"cU" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/effect/turf_decal/tile/blue/half/contrasted{
-	dir = 1
-	},
-/obj/structure/fluff/empty_sleeper/nanotrasen{
-	dir = 2;
-	name = "droid cradle";
-	desc = "An upright charging cradle for a service droid.";
-	deconstructible = 0
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"cw" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
 	},
 /obj/item/kirbyplants/synthetic/plant27,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"cx" = (
+"cV" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/obj/structure/chair/sofa/right{
-	dir = 4
-	},
+/obj/item/kirbyplants/synthetic/plant28,
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cy" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 2
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"cz" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 4
-	},
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"cA" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/item/kirbyplants/fern,
-/obj/machinery/light/cold/dim/directional/west,
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"cB" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/obj/item/kirbyplants/organic/plant22,
-/turf/open/indestructible/white/smooth_large,
-/area/voidcrew/outpost_hangar)
-"cC" = (
+"cW" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1275,7 +1418,7 @@
 /obj/item/kirbyplants/organic/plant10,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cD" = (
+"cX" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1285,7 +1428,18 @@
 /obj/item/kirbyplants/synthetic/plant27,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cE" = (
+"cY" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/hidden{
+	dir = 1
+	},
+/obj/machinery/light/cold/directional/west,
+/obj/item/kirbyplants/organic/plant21,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"cZ" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1295,7 +1449,17 @@
 /obj/machinery/light/cold/directional/west,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cF" = (
+"da" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/hidden{
+	dir = 1
+	},
+/obj/machinery/newscaster/directional/west,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"db" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1305,7 +1469,7 @@
 /obj/machinery/status_display/outpost_berth/directional/west,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cG" = (
+"dc" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1318,7 +1482,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cH" = (
+"dd" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1331,7 +1495,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cI" = (
+"de" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1346,7 +1510,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cJ" = (
+"df" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1356,7 +1520,17 @@
 /obj/structure/extinguisher_cabinet/directional/west,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cK" = (
+"dg" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/hidden{
+	dir = 1
+	},
+/obj/structure/sign/poster/official/random/directional/west,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"dh" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1379,7 +1553,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cL" = (
+"di" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1402,7 +1576,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cM" = (
+"dj" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1411,7 +1585,7 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cN" = (
+"dk" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1421,7 +1595,17 @@
 /obj/machinery/light/cold/directional/west,
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"cO" = (
+"dl" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
+	dir = 1
+	},
+/obj/machinery/meter,
+/turf/open/indestructible/white/textured,
+/area/voidcrew/outpost_hangar)
+"dm" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1430,42 +1614,51 @@
 	},
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"cP" = (
+"dn" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/machinery/computer/terminal{
+	dir = 4;
+	name = "cradle terminal";
+	desc = "Service records for the bay droids.";
+	upperinfo = "DROID CRADLES";
+	content = list("All cradles charged.","Odysseus: service in progress.")
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"do" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /obj/machinery/jukebox/no_access,
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"cQ" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
+/obj/machinery/light/cold/dim/directional/west{
+	bulb_colour = "#a9c8ff"
 	},
-/obj/machinery/light/cold/dim/directional/west,
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cR" = (
+"dp" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /obj/machinery/light/cold/directional/west,
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cS" = (
+"dq" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /obj/machinery/light/cold/directional/west,
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cT" = (
+"dr" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /obj/machinery/light/small/directional/west,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"cU" = (
+"ds" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1475,7 +1668,28 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cV" = (
+"dt" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/machinery/vending/cola{
+	tiltable = 0
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"du" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/machinery/vending/tool{
+	tiltable = 0;
+	products = list(/obj/item/crowbar = 2,/obj/item/wrench = 2,/obj/item/screwdriver = 2,/obj/item/wirecutters = 2,/obj/item/weldingtool = 2,/obj/item/stack/cable_coil = 3,/obj/item/analyzer = 1,/obj/item/t_scanner = 1,/obj/item/flashlight = 2);
+	premium = list();
+	contraband = list()
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dv" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1484,7 +1698,7 @@
 	},
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"cW" = (
+"dw" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1493,7 +1707,7 @@
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"cX" = (
+"dx" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1502,7 +1716,16 @@
 	},
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"cY" = (
+"dy" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/structure/chair/sofa/right{
+	dir = 4
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dz" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1514,14 +1737,35 @@
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"cZ" = (
+"dA" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /obj/structure/extinguisher_cabinet/directional/west,
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"da" = (
+"dB" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/structure/filingcabinet/chestdrawer,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dC" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/structure/fluff/fake_scrubber,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"dD" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/structure/fluff/fake_vent,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"dE" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
@@ -1529,77 +1773,130 @@
 	name = "lounge piano";
 	desc = "A grand piano, tuned and polished."
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"db" = (
+"dF" = (
+/obj/effect/turf_decal/trimline/blue/line{
+	dir = 8
+	},
+/obj/structure/noticeboard/directional/west,
+/obj/item/paper{
+	name = "bay notice";
+	default_raw_text = "<b>BAY NOTICE</b><br>Cups back to the bar.<br>Wipe your boots at the lift.<br>Thank you."
+	},
+/obj/item/paper{
+	name = "note";
+	default_raw_text = "Please do not sleep in the droid cradles."
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dG" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"dc" = (
-/obj/effect/turf_decal/trimline/blue/line{
-	dir = 8
-	},
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"dd" = (
+"dH" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"de" = (
+"dI" = (
 /obj/effect/turf_decal/trimline/blue/line{
 	dir = 8
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"df" = (
+"dJ" = (
 /obj/machinery/atmospherics/components/tank/air{
 	dir = 1
 	},
-/turf/open/indestructible/dark/smooth_large,
-/area/voidcrew/outpost_hangar)
-"dg" = (
-/obj/machinery/atmospherics/pipe/smart/simple/cyan/hidden{
-	dir = 1
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
 	},
-/turf/closed/indestructible/reinforced/titanium/nodiagonal,
-/area/voidcrew/outpost_hangar)
-"dh" = (
-/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
-	dir = 1
-	},
-/turf/open/indestructible/dark/smooth_large,
-/area/voidcrew/outpost_hangar)
-"di" = (
-/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
+/obj/effect/turf_decal/trimline/blue/filled/line{
 	dir = 4
 	},
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dj" = (
-/obj/machinery/door/airlock/outpost/service,
-/turf/open/indestructible/white/herringbone,
+"dK" = (
+/obj/machinery/atmospherics/components/tank/air{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dk" = (
+"dL" = (
+/obj/machinery/atmospherics/components/tank/air{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 2
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dM" = (
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/hidden{
+	dir = 1
+	},
+/turf/closed/indestructible/riveted/plastinum/nodiagonal,
+/area/voidcrew/outpost_hangar)
+"dN" = (
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
+	dir = 1
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 8
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dO" = (
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dP" = (
+/obj/machinery/atmospherics/pipe/smart/simple/cyan/visible{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/trimline/blue/filled/line{
+	dir = 1
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"dQ" = (
 /obj/machinery/door/airlock/outpost/service,
 /turf/open/indestructible/white/small,
 /area/voidcrew/outpost_hangar)
-"dl" = (
+"dR" = (
 /obj/machinery/door/airlock/outpost/service,
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dm" = (
+"dS" = (
 /obj/machinery/door/airlock/outpost/service,
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"dn" = (
+"dT" = (
 /obj/machinery/holopad,
-/turf/open/indestructible/hoteltile,
+/turf/open/indestructible/carpet/royalblue,
 /area/voidcrew/outpost_hangar)
-"do" = (
+"dU" = (
 /obj/machinery/power/shuttle_engine/large{
 	dir = 4;
 	name = "engine block";
@@ -1607,32 +1904,74 @@
 	},
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dp" = (
+"dV" = (
 /obj/structure/chair/office/light{
 	dir = 1;
 	anchored = 1
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dq" = (
+"dW" = (
 /obj/structure/chair/office/light{
 	dir = 4
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dr" = (
+"dX" = (
 /obj/structure/chair/office/light{
 	dir = 8
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"ds" = (
+"dY" = (
 /obj/structure/chair/plastic{
 	dir = 1
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dt" = (
+"dZ" = (
+/obj/structure/chair/sofa/corner{
+	dir = 2
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ea" = (
+/obj/structure/chair/sofa/corner{
+	dir = 4
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"eb" = (
+/obj/structure/chair/sofa/left{
+	dir = 8
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ec" = (
+/obj/structure/chair/sofa/middle{
+	dir = 2
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ed" = (
+/obj/structure/chair/sofa/middle{
+	dir = 4
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ee" = (
+/obj/structure/chair/sofa/middle{
+	dir = 8
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ef" = (
+/obj/structure/chair/sofa/right{
+	dir = 4
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"eg" = (
 /obj/structure/fluff/big_chain{
 	deconstructible = 0;
 	name = "hoist chain";
@@ -1643,41 +1982,59 @@
 	},
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"du" = (
-/obj/structure/outpost_yard_droid/bartender,
-/turf/open/indestructible/dark/small,
+"eh" = (
+/obj/structure/fluff/fake_scrubber,
+/turf/open/indestructible/white,
 /area/voidcrew/outpost_hangar)
-"dv" = (
-/obj/structure/outpost_yard_droid/cleaner{
-	desc = "A floor-cleaning droid with a mop arm."
-	},
-/turf/open/indestructible/white/herringbone,
+"ei" = (
+/obj/structure/fluff/fake_scrubber,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dw" = (
+"ej" = (
+/obj/structure/fluff/fake_vent,
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"ek" = (
+/obj/structure/fluff/fake_vent,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"el" = (
+/obj/structure/fluff/fake_vent,
+/turf/open/indestructible/white/textured,
+/area/voidcrew/outpost_hangar)
+"em" = (
 /obj/structure/outpost_yard_droid/cleaner{
+	dir = 2;
 	desc = "A floor-cleaning droid with a mop arm."
 	},
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
-"dx" = (
-/obj/structure/outpost_yard_droid/labour,
-/turf/open/indestructible/white,
-/area/voidcrew/outpost_hangar)
-"dy" = (
-/obj/structure/outpost_yard_droid/labour,
+"en" = (
+/obj/structure/outpost_yard_droid/labour{
+	dir = 4
+	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dz" = (
-/obj/structure/outpost_yard_droid/loader,
+"eo" = (
+/obj/structure/outpost_yard_droid/labour{
+	dir = 8
+	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dA" = (
+"ep" = (
+/obj/structure/outpost_yard_droid/loader{
+	dir = 2
+	},
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"eq" = (
 /obj/structure/outpost_yard_droid/welder{
+	dir = 8;
 	desc = "A heavy welding droid with a torch arm."
 	},
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dB" = (
+"er" = (
 /obj/structure/showcase{
 	dir = 2;
 	icon = 'icons/mob/rideables/mecha.dmi';
@@ -1687,8 +2044,8 @@
 	},
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dC" = (
-/obj/structure/table/glass,
+"es" = (
+/obj/structure/table/reinforced/titaniumglass,
 /obj/item/flashlight/lamp{
 	pixel_x = -5;
 	pixel_y = 10;
@@ -1698,18 +2055,9 @@
 	pixel_x = 6;
 	pixel_y = 2
 	},
-/turf/open/indestructible/hoteltile,
+/turf/open/indestructible/carpet/royalblue,
 /area/voidcrew/outpost_hangar)
-"dD" = (
-/obj/structure/table/glass,
-/obj/item/flashlight/lamp{
-	pixel_x = -5;
-	pixel_y = 10;
-	anchored = 1
-	},
-/turf/open/indestructible/hoteltile,
-/area/voidcrew/outpost_hangar)
-"dE" = (
+"et" = (
 /obj/structure/table/reinforced/titaniumglass,
 /obj/item/reagent_containers/cup/glass/coffee{
 	pixel_x = -4;
@@ -1719,3663 +2067,3657 @@
 	pixel_x = 5;
 	pixel_y = -2
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dF" = (
+"eu" = (
 /obj/structure/table/reinforced/titaniumglass,
 /obj/item/reagent_containers/cup/glass/coffee{
 	pixel_x = -4;
 	pixel_y = 4
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dG" = (
+"ev" = (
 /obj/structure/table/reinforced/titaniumglass,
 /obj/item/reagent_containers/cup/glass/drinkingglass/shotglass{
 	pixel_x = 4;
 	pixel_y = 4
 	},
-/turf/open/indestructible/white/herringbone,
+/turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dH" = (
+"ew" = (
 /obj/structure/table/reinforced/titaniumglass,
 /obj/item/reagent_containers/cup/glass/drinkingglass{
 	pixel_x = -4;
 	pixel_y = 6
 	},
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"dI" = (
-/obj/structure/table/reinforced/titaniumglass,
-/obj/structure/desk_bell,
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"dJ" = (
-/obj/structure/table/reinforced/titaniumglass,
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"dK" = (
-/turf/closed/indestructible/reinforced/titanium,
-/area/voidcrew/outpost_hangar)
-"dL" = (
-/turf/closed/indestructible/reinforced/titanium/nodiagonal,
-/area/voidcrew/outpost_hangar)
-"dM" = (
-/turf/open/indestructible/dark/small,
-/area/voidcrew/outpost_hangar)
-"dN" = (
-/turf/open/indestructible/dark/smooth_large,
-/area/voidcrew/outpost_hangar)
-"dO" = (
-/turf/open/indestructible/hoteltile,
-/area/voidcrew/outpost_hangar)
-"dP" = (
-/turf/open/indestructible/large,
-/area/voidcrew/outpost_hangar)
-"dQ" = (
-/turf/open/indestructible/white,
-/area/voidcrew/outpost_hangar)
-"dR" = (
-/turf/open/indestructible/white/herringbone,
-/area/voidcrew/outpost_hangar)
-"dS" = (
-/turf/open/indestructible/white/small,
-/area/voidcrew/outpost_hangar)
-"dT" = (
 /turf/open/indestructible/white/smooth_large,
 /area/voidcrew/outpost_hangar)
-"dU" = (
+"ex" = (
+/obj/structure/table/reinforced/titaniumglass,
+/obj/structure/desk_bell,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ey" = (
+/obj/structure/table/reinforced/titaniumglass,
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"ez" = (
+/turf/closed/indestructible/riveted/plastinum,
+/area/voidcrew/outpost_hangar)
+"eA" = (
+/turf/closed/indestructible/riveted/plastinum/nodiagonal,
+/area/voidcrew/outpost_hangar)
+"eB" = (
+/turf/open/indestructible/carpet/royalblue,
+/area/voidcrew/outpost_hangar)
+"eC" = (
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
+"eD" = (
+/turf/open/indestructible/large,
+/area/voidcrew/outpost_hangar)
+"eE" = (
+/turf/open/indestructible/white,
+/area/voidcrew/outpost_hangar)
+"eF" = (
+/turf/open/indestructible/white/small,
+/area/voidcrew/outpost_hangar)
+"eG" = (
+/turf/open/indestructible/white/smooth_large,
+/area/voidcrew/outpost_hangar)
+"eH" = (
 /turf/open/indestructible/white/textured,
 /area/voidcrew/outpost_hangar)
 
 (1,1,1) = {"
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
 "}
 (2,1,1) = {"
-ak
-dL
-cm
-db
-cR
-cY
-db
-cG
-cM
-cM
-cD
-cM
-cE
-cM
-cH
-cM
-cM
-cG
-cM
-cL
-cM
-cM
-cE
-cM
-cF
-cM
-cM
-cG
-cM
-cI
-cJ
-cM
-cE
-cM
-cC
-cM
-cM
-cG
-cM
-cK
-cE
-cM
-cu
+eA
+ez
+cQ
+dG
+dp
+dz
+dG
+dc
+dj
 dg
-co
-cO
-cN
-cO
-cO
-dh
+cX
+dj
+cZ
+dj
+dd
+dj
+da
+dc
+dj
+di
+dj
+dj
+cY
+dj
+db
+dj
+dj
+dc
+dj
+de
 df
+dj
+cZ
+dj
+cW
+dg
+dj
+dc
+dj
+dh
+cZ
+dj
+cT
+dM
+cR
+dk
+dm
+dl
+dm
+dN
 dL
-cn
-al
-ak
+eA
+cS
+ez
+eA
 "}
 (3,1,1) = {"
-ak
-dL
-aC
-dQ
-dQ
-dQ
-dQ
-an
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-an
-dQ
-dQ
-dx
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-an
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-dQ
-an
-dQ
-dQ
-dQ
-dQ
-bk
-dL
-aX
-dU
-dU
-dU
-dU
-di
-df
-dL
-ay
+eA
+bm
+eE
+eE
+eE
+eE
+eE
 al
-ak
+eE
+eE
+eE
+eE
+ej
+eE
+eE
+eE
+eE
+al
+eE
+eE
+eE
+eE
+eh
+eE
+eE
+eE
+eE
+al
+eE
+eE
+eE
+eE
+ej
+eE
+eE
+eE
+eE
+al
+eE
+eE
+eE
+eE
+bP
+eA
+bk
+eH
+eH
+eH
+eH
+dO
+dK
+eA
+bm
+bW
+eA
 "}
 (4,1,1) = {"
-ak
-dL
-az
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-ci
-bn
-dL
-aX
-dU
-dU
-dU
-dU
-di
-df
-dL
-ay
-al
-ak
+eA
+aW
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+cO
+bO
+eA
+aT
+eH
+el
+eH
+eH
+dP
+dJ
+eA
+bm
+bK
+eA
 "}
 (5,1,1) = {"
-ak
-al
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
+eA
+aL
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
 aa
-aT
-dm
-dU
-dU
-dw
-dU
-dU
-dU
-dU
-dm
-bp
-al
-ak
+bm
+dS
+eH
+eH
+eH
+em
+eH
+eH
+eH
+dS
+eE
+bW
+eA
 "}
 (6,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aX
-dU
-dU
-dU
-dU
-dU
-bj
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+aR
+eH
+eH
+eH
+eH
+eH
+bo
+eA
+bf
+bM
+eA
 "}
 (7,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-ba
-dL
-bu
-bq
-bq
-cc
-ca
-cb
-bz
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+ez
+bZ
+bZ
+cr
+cF
+cH
+ez
+eA
+bm
+bW
+eA
 "}
 (8,1,1) = {"
-ak
-dL
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-aw
-dL
-ak
+eA
+aF
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+br
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+bm
+bW
+eA
 "}
 (9,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bc
-dL
-cr
-de
-cB
-de
-cS
-de
-cv
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+ez
+dB
+dn
+dI
+cV
+dq
+ez
+eA
+bm
+bD
+eA
 "}
 (10,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aN
-dT
-dT
-dT
-dT
-dT
-aY
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bu
+eA
+ba
+eG
+eG
+eG
+eG
+eG
+bp
+eA
+bm
+bR
+eA
 "}
 (11,1,1) = {"
+eA
+aK
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aW
-dT
-dT
-dz
-dT
-dT
-aY
-dL
-ay
-al
-ak
+ba
+eG
+eG
+eG
+eG
+ek
+bp
+eA
+be
+bS
+eA
 "}
 (12,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aW
-dT
-at
-av
-au
-dT
-aY
-dL
-ay
-al
-ak
+eA
+aI
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+br
+eA
+aU
+ep
+aB
+aD
+aC
+eG
+bp
+eA
+bm
+bE
+eA
 "}
 (13,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-aT
-dl
-dT
-dT
-ao
-dB
-ap
-dT
-aY
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bm
+dR
+eG
+eG
+aw
+er
+ax
+eG
+bp
+eA
+bm
+bW
+eA
 "}
 (14,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aW
-dT
-aq
-as
-ar
-dT
-aY
-dL
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+aS
+eG
 ay
-al
-ak
+aA
+az
+eG
+bp
+eA
+bm
+bM
+eA
 "}
 (15,1,1) = {"
+eA
+aF
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bA
 ak
-dL
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aW
-dT
-dT
-dT
-dy
-dT
-aY
-dL
-ay
-al
-ak
+aO
+eG
+ei
+eG
+eo
+eG
+bp
+eA
+bm
+bW
+eA
 "}
 (16,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dS
-dS
-dT
-dT
-dT
-dT
-dS
-dS
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-bt
-cl
-cl
-cg
-cl
-bP
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eF
+eF
+eG
+eF
+eF
+eG
+eF
+eF
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
 bB
-dL
-ay
-al
-ak
+eA
+ez
+cw
+cN
+cP
+cG
+cq
+ez
+eA
+bm
+bW
+eA
 "}
 (17,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-ba
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-aw
-dL
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+br
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+bm
+bW
+eA
 "}
 (18,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bd
-dL
-cq
-cU
-de
-cS
-de
-cZ
-cy
-dL
-ay
-al
-ak
+eA
+aK
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+ez
+du
+ds
+dq
+dI
+dA
+ez
+eA
+bm
+bE
+eA
 "}
 (19,1,1) = {"
+eA
+aJ
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aW
-dT
-dT
-at
-av
-av
-au
-dL
-ay
-al
-ak
+bl
+eG
+ei
+eG
+en
+eG
+bJ
+eA
+bm
+bR
+eA
 "}
 (20,1,1) = {"
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aW
-dT
-dT
-dt
-dN
-do
-ap
-dL
-ay
-al
-ak
+bn
+eG
+eG
+aB
+aD
+aD
+aC
+eA
+be
+bS
+eA
 "}
 (21,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aW
-dT
-dT
-dt
-dN
-dN
-ap
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bw
+eA
+aS
+eG
+eG
+eg
+eC
+dU
+ax
+eA
+bm
+bD
+eA
 "}
 (22,1,1) = {"
-ak
-dL
-dP
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dP
-aT
-dl
-dT
-dT
-dT
-aq
-as
-as
-ar
-dL
-ay
-al
-ak
+eA
+aF
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+bm
+dR
+eG
+eG
+eG
+eg
+eC
+eC
+ax
+eA
+bm
+bW
+eA
 "}
 (23,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aW
-dT
-dT
-dT
-dA
-dT
-bp
-dL
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+aU
+eG
+eG
 ay
-al
-ak
+aA
+aA
+az
+eA
+bm
+bM
+eA
 "}
 (24,1,1) = {"
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aW
-dT
-dT
-dT
-dT
-dT
-bl
-dL
-ay
-al
-ak
+bb
+eG
+eq
+eG
+ek
+eG
+bT
+eA
+bm
+bW
+eA
 "}
 (25,1,1) = {"
+eA
+aL
+eD
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dP
-bg
-am
-aW
-dT
-dT
-dT
-dT
-dT
-bp
-dL
-ay
-al
-ak
+bh
+eG
+eG
+eG
+eG
+eG
+bT
+eA
+bm
+bW
+eA
 "}
 (26,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dP
-bg
-dL
-bw
-bP
-dT
-cd
-ce
-cf
-bE
-dL
-ay
-al
-ak
+eA
+aH
+eD
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eD
+bB
+eA
+ez
+cI
+eG
+cK
+cL
+cM
+ez
+eA
+bm
+bI
+eA
 "}
 (27,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-ba
-dL
-dL
-dL
-dl
-dL
-dL
-dL
-dL
-dL
-aw
-dL
-ak
+eA
+aL
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+br
+eA
+eA
+eA
+dR
+eA
+eA
+eA
+eA
+eA
+bm
+bR
+eA
 "}
 (28,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-be
-dL
-dK
-cs
-dT
-cS
-cW
-cx
-dK
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+bx
+eA
+ez
+dF
+eG
+dq
+dw
+dy
+ez
+eA
+bm
+bS
+eA
 "}
 (29,1,1) = {"
-ak
-dL
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-aT
-dl
-de
-dT
-dT
-dT
-cl
-cl
-cz
-dl
-bp
-al
-ak
+eA
+aF
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+bm
+dR
+eG
+av
+av
+av
+cP
+cP
+cP
+dR
+eE
+bC
+eA
 "}
 (30,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-bg
-dL
-aW
-dT
-dT
-bp
-dL
-dL
-dL
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+bB
+eA
+aN
+eG
+eG
+bU
+eA
+eA
+eA
+eA
+bm
+bW
+eA
 "}
 (31,1,1) = {"
+eA
+aL
+eD
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dP
-bg
-am
-aD
-dp
-dO
-bp
+aP
+dV
+eG
+an
 ac
 ai
 af
-dL
-ay
-al
-ak
+eA
+bm
+bW
+eA
 "}
 (32,1,1) = {"
-ak
-al
-dP
+eA
+aE
+eD
+eG
+eF
+eF
+eF
+eF
+eF
+eF
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eF
+eF
+eF
+eF
+eF
+eF
+eG
+eD
+bt
+eA
+bi
+eB
 dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dP
-bb
-dL
-aP
-dO
-dn
-bm
+eB
 ad
 aj
 ag
-dL
-aw
-dL
-ak
+eA
+be
+bM
+eA
 "}
 (33,1,1) = {"
+eA
+aG
+eD
+eG
+eF
+eF
+eF
+eF
+eF
+eF
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eF
+eF
+eF
+eF
+eF
+eF
+eG
+eD
+bz
 ak
-al
-dP
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dP
-bg
+aQ
+dV
+eG
 am
-aE
-dp
-dO
-bp
 ab
 ah
 ae
-dL
-ay
-al
-ak
+eA
+bm
+bW
+eA
 "}
 (34,1,1) = {"
-ak
-al
-dP
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dP
-bg
-dL
-aW
-dT
-dT
-bp
-dL
-dL
-dL
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eD
+bB
+eA
+aN
+eG
+eG
+bQ
+eA
+eA
+eA
+eA
+bm
+bW
+eA
 "}
 (35,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-aT
-dl
-cl
-dT
-dT
-dT
-de
-de
-cz
-dl
-bp
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+bm
+dR
+eG
+av
+av
+av
+dI
+dI
+dI
+dR
+eE
+bC
+eA
 "}
 (36,1,1) = {"
-ak
-dL
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-be
-dL
-dK
-by
-bV
-bP
-bY
-bD
-dK
-dL
-ay
-al
-ak
+eA
+aF
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+bx
+eA
+ez
+cP
+cy
+cq
+cC
+cA
+ez
+eA
+bm
+bR
+eA
 "}
 (37,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-ba
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-ay
-dL
-ak
+eA
+aL
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+br
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+bm
+bS
+eA
 "}
 (38,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dP
-bg
-dL
-cp
-dc
-cQ
-cP
-dc
-da
-dc
-cA
-bi
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eD
+bB
+eA
+eA
+ez
+dt
+do
+dE
+ez
+eA
+eA
+bm
+bI
+eA
 "}
 (39,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dP
-bg
-dL
-aJ
-dR
-dR
-dR
-dR
-dR
-dR
-dR
-bi
-al
-ak
+eA
+aH
+eD
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eD
+bB
+eA
+ez
+eG
+eG
+eG
+eG
+eG
+ez
+eA
+bm
+bW
+eA
 "}
 (40,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dP
-bg
-dL
-aI
-dR
-dR
-dR
-dR
-dR
-aM
-dO
-bi
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eD
+bB
+eA
+aX
+eG
+eG
+ea
+ed
+ef
+bY
+eA
+be
+bW
+eA
 "}
 (41,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aU
-dR
-dR
-dq
-dR
-dR
+eA
 aL
-dD
-bi
-al
-ak
+eD
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+aY
+eG
+eG
+ec
+eB
+eB
+bF
+eA
+bm
+bM
+eA
 "}
 (42,1,1) = {"
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aU
-dq
-dR
-dF
-dR
-dR
-aK
-dO
-bi
-al
-ak
+aZ
+eG
+eG
+ec
+es
+eB
+bL
+eA
+bm
+bW
+eA
 "}
 (43,1,1) = {"
+eA
+aF
+eD
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-dL
-dP
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dP
-aZ
-dL
-aU
-dF
-dR
-dr
-dR
-dR
-aS
-dO
-bi
-al
-ak
+bj
+eG
+eG
+ec
+eB
+eB
+bF
+eA
+bm
+bG
+eA
 "}
 (44,1,1) = {"
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+eD
+eD
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dO
-dO
-dO
-dO
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aU
-dr
-dR
-dR
-dR
-dv
-aB
-dO
-bh
-dL
-ak
+aZ
+eG
+eG
+dZ
+ee
+eb
+bN
+eA
+bm
+bR
+eA
 "}
 (45,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aU
-dR
-dR
-dq
-dR
-dR
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bq
+eA
 aM
-dO
-bi
-al
-ak
+eG
+ei
+eG
+eG
+eG
+bH
+eA
+bc
+bS
+eA
 "}
 (46,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-aT
-dj
+eA
+aJ
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bm
 dR
+av
+av
+av
+ar
+av
+av
+av
 dR
-dR
-dE
-dR
-dR
-aL
-dC
-bi
-al
-ak
+eE
+bK
+eA
 "}
 (47,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-aT
-dj
-dR
-dR
-dR
-dr
-dR
-dR
+eA
 aK
-dO
-bi
-al
-ak
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bm
+dR
+av
+av
+av
+av
+av
+av
+av
+dR
+eE
+bW
+eA
 "}
 (48,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aU
-dR
-dR
-dR
-dR
-dR
-aS
-dO
-bi
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bv
+eA
+aM
+eG
+eG
+eG
+eG
+eG
+bH
+eA
+bc
+bW
+eA
 "}
 (49,1,1) = {"
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eF
+eF
+eG
+eF
+eF
+eG
+eF
+eF
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
 ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dS
-dS
-dT
-dT
-dT
-dT
-dS
-dS
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aR
-dM
-dJ
-ds
-dR
-dR
-aB
-dO
-bh
-dL
-ak
+ao
+au
+eG
+eG
+ek
+dW
+bV
+eA
+be
+bW
+eA
 "}
 (50,1,1) = {"
-ak
-dL
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dS
-dS
-dS
-dS
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-ba
-dL
+eA
 aF
-dM
-dH
-ds
-dR
-dR
-aM
-dO
-bi
-al
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eF
+eF
+eF
+eF
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
 ak
+at
+au
+ew
+dY
+eG
+eu
+bY
+eA
+bm
+bM
+eA
 "}
 (51,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aR
-du
-dJ
-ds
-dR
-dR
+eA
 aL
-dD
-bi
-al
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bA
 ak
+au
+aq
+ey
+dY
+eG
+dX
+bN
+eA
+bm
+bW
+eA
 "}
 (52,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-am
-aR
-dM
-dI
-ds
-dR
-dR
-aK
-dO
-bi
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+as
+au
+ex
+dY
+eG
+dW
+bY
+eA
+bm
+bK
+eA
 "}
 (53,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aQ
-dM
-dG
-ds
-dR
-dR
-aS
-dO
-bi
-al
-ak
+eA
+aI
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+br
+eA
+ap
+au
+ey
+dY
+eG
+et
+bY
+eA
+bm
+bR
+eA
 "}
 (54,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-aH
-dM
-dJ
-ds
-dR
-dR
-dR
-dR
-bi
-al
-ak
+eA
+aK
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+ez
+au
+ev
+dY
+eG
+dX
+ez
+eA
+bm
+bS
+eA
 "}
 (55,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-bx
-ch
-cj
-cj
-bM
-cj
-bL
-bH
-bi
-al
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+eA
+ez
+cP
+cn
+ct
+ez
+eA
+eA
+bm
+bG
+eA
 "}
 (56,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-ba
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-aw
-dL
-ak
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+br
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+bm
+bW
+eA
 "}
 (57,1,1) = {"
-ak
-dL
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
-bg
-dL
-ct
-dd
-dd
-cT
-cV
-cX
-cw
-dL
-ay
-al
-ak
+eA
+aF
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
+ez
+dr
+dv
+dx
+cU
+dH
+ez
+eA
+bm
+bW
+eA
 "}
 (58,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bB
+eA
 bg
-dL
-aO
-dS
-dS
-dS
-dS
-dS
-bo
-dL
-ax
-al
-ak
+eF
+au
+au
+au
+au
+bX
+eA
+bd
+bM
+eA
 "}
 (59,1,1) = {"
-ak
-al
-dP
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dT
-dP
+eA
+aL
+eD
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eG
+eD
+bs
+eA
 bg
-dL
-aV
-dS
-dS
-dS
-dS
-dS
-dS
-dk
-bp
-al
-ak
+eF
+au
+au
+au
+au
+eF
+dQ
+eE
+bW
+eA
 "}
 (60,1,1) = {"
-ak
-al
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-dP
-ba
-dL
-aG
-dS
-dS
-dS
-ck
-dS
-bF
-dL
-ay
-al
-ak
+eA
+aL
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+eD
+br
+eA
+bg
+eF
+cb
+au
+cb
+au
+ch
+eA
+bm
+bE
+eA
 "}
 (61,1,1) = {"
-ak
-dL
-aA
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-db
-bn
-dL
+eA
+aW
+dG
+dG
+dG
+dC
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dD
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dD
+dG
+dG
+dG
+dG
+dG
+dG
+dG
+dC
+dG
+dG
+dG
+dG
+bW
+eA
 aV
-dS
-dS
-bo
-dL
-bf
-dL
-dL
-ay
-al
-ak
+bX
+eA
+by
+eA
+by
+eA
+eA
+bm
+bW
+eA
 "}
 (62,1,1) = {"
-ak
-dL
-br
-ci
-bO
-bZ
-ci
-bG
-bX
-bW
-ci
-ci
-bO
-ci
-bU
-bI
-bX
-bW
-ci
-ci
-bS
-ci
-bO
-bK
-bX
-bW
-bR
-ci
-ci
-ci
-ci
-bJ
-bN
-bW
-ci
-ci
-bT
-ci
-bZ
-ci
-bO
-ci
-bA
-dL
-bv
+eA
+ez
+ca
+cO
+cp
+cD
+cO
+cj
+cB
+cz
+cO
+cJ
+cp
+cO
+cx
 ck
-bQ
-bF
-dL
-bC
-dL
-dL
-bs
-al
-ak
+cB
+cz
+cE
+cO
+cu
+cO
+cp
+cm
+cB
+cz
+cs
+cO
+cO
+cJ
+cO
+cl
+co
+cz
+cO
+cO
+cv
+cO
+cD
+cO
+cp
+cO
+ce
+eA
+cc
+ci
+eA
+cf
+eA
+cg
+eA
+eA
+cd
+ez
+eA
 "}
 (63,1,1) = {"
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
-dL
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
+eA
 "}

@@ -31,7 +31,7 @@ A **Registry uplink** implant adds an **Outpost Management** action that works f
 
 You can delegate management, bank withdrawals, and construction separately. Your founding ship's crew automatically become residents with construction permission. Other residents need construction permission granted separately.
 
-The **construction console** controls a building drone supplied by your local ore silo. Link the console to the silo with a multitool and deposit materials before building. You can also expand the habitat with ordinary tools.
+The **construction console** controls a building drone supplied by your local ore silo. Link the console to the silo with a multitool and deposit materials before building. You can also expand the habitat with ordinary tools. It works like a ship's construction drone (see [Ship Systems](ship-systems.md#changing-the-ship-itself)), and its **Tools** tab also places the hangar elevator.
 
 ## Money and deliveries
 

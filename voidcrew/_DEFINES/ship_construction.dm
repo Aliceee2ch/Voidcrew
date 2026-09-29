@@ -62,3 +62,22 @@
 #define SHIP_RLD_FLOOR_LIGHT_GLASS 25
 #define SHIP_RLD_GLOW_STICK_IRON 10
 #define SHIP_RLD_GLOW_STICK_GLASS 25
+
+/// How far the construction drone reaches from its own tile, in tiles. 3 gives a 7x7 square.
+#define SHIP_CONSTRUCTION_DRONE_REACH 3
+/// do_after key shared by every timed drone job, so the drone works on one tile at a time
+#define DOAFTER_SOURCE_SHIP_CONSTRUCTION "doafter_ship_construction"
+
+// Drone tools, picked in the console's Tools tab. The strings are the TGUI data contract.
+#define SHIP_DRONE_TOOL_RCD "rcd"
+#define SHIP_DRONE_TOOL_CAMERA "camera"
+#define SHIP_DRONE_TOOL_TILE "tile"
+#define SHIP_DRONE_TOOL_PIPE "pipe"
+#define SHIP_DRONE_TOOL_LIGHT "light"
+#define SHIP_DRONE_TOOL_DECAL "decal"
+
+// What the drone's Lights tool builds. The strings are the TGUI data contract.
+#define SHIP_DRONE_LIGHT_TUBE "tube"
+#define SHIP_DRONE_LIGHT_BULB "bulb"
+#define SHIP_DRONE_LIGHT_FLOOR "floor"
+#define SHIP_DRONE_LIGHT_GLOW "glow"

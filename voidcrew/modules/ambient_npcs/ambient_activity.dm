@@ -1003,14 +1003,15 @@
 		go_to(null)
 		return TRUE
 	var/turf/stand
-	if(doer.standable(refuge, failed_spots, TRUE) && !(outpost_place && outpost_place.crowded(refuge, doer)))
+	// Cover goes by who stands on or is heading to a tile, not by the crowd around it
+	if(doer.standable(refuge, failed_spots, TRUE) && !(outpost_place && outpost_place.crowd_count(refuge, doer) == INFINITY))
 		stand = refuge
 	else
 		var/list/candidates = list()
 		for(var/turf/tile as anything in RANGE_TURFS(AMBIENT_COVER_SPREAD, refuge))
 			if(tile == refuge || !doer.standable(tile, failed_spots, TRUE) || !can_see(refuge, tile, AMBIENT_COVER_SPREAD + 1))
 				continue
-			if(outpost_place && outpost_place.crowded(tile, doer))
+			if(outpost_place && outpost_place.crowd_count(tile, doer) == INFINITY)
 				continue
 			candidates += tile
 		stand = length(candidates) ? pick(candidates) : null

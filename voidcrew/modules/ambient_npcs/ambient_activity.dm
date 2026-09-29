@@ -861,8 +861,18 @@
 		return FALSE
 	// Its room is worked out around where they stand now, and it keeps them in it until the job is done
 	worker = doer.AddComponent(/datum/component/outpost_ambient_worker, weights, TRUE, CALLBACK(doer, TYPE_PROC_REF(/mob/living/basic/ambient_npc, show_work_look)))
-	var/list/job = worker?.find_work()
-	if(length(job) != 3 || !doer.standable(job[2], failed_spots))
+	// A job whose spot they keep off (a doorway, a counter's reach) is skipped for the next one found
+	var/list/job
+	for(var/attempt in 1 to AMBIENT_WORK_FIND_TRIES)
+		job = worker?.find_work()
+		if(length(job) != 3)
+			job = null
+			break
+		if(doer.standable(job[2], failed_spots))
+			break
+		worker.last_target = WEAKREF(job[1])
+		job = null
+	if(!job)
 		drop_worker()
 		return FALSE
 	target_ref = WEAKREF(job[1])

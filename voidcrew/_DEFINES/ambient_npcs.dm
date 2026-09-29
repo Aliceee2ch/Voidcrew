@@ -54,6 +54,9 @@
 /// NPCs this far from a fight at an outpost duck and leave; take_cover() reuses it for the kingpin's shootout
 #define AMBIENT_VIOLENCE_RANGE 9
 
+/// How many jobs a working NPC looks past before giving up on work for now
+#define AMBIENT_WORK_FIND_TRIES 3
+
 // ===== LOITERING =====
 
 /// Other ambient NPCs within this of a loiter spot count toward crowding it

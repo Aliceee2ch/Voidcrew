@@ -195,9 +195,9 @@
 		qdel(mechanic)
 	TEST_ASSERT(length(mechanic_outfits) >= 2, "Twelve mechanics all wore the same outfit")
 
-	// A mechanic next to a rack starts work and drops the worker component after
-	allocate(/obj/structure/rack, pa_tile(2, 2))
-	var/mob/living/basic/ambient_npc/outpost/worker/mechanic/rack_mechanic = pa_npc(/mob/living/basic/ambient_npc/outpost/worker/mechanic, pa_tile(1, 2), halcyon_place)
+	// A mechanic next to a rack starts work and drops the worker component after (on the bottom row, clear of the counters' reach)
+	allocate(/obj/structure/rack, pa_tile(2, 0))
+	var/mob/living/basic/ambient_npc/outpost/worker/mechanic/rack_mechanic = pa_npc(/mob/living/basic/ambient_npc/outpost/worker/mechanic, pa_tile(1, 0), halcyon_place)
 	var/datum/ambient_activity/work/work = rack_mechanic.start_activity(new /datum/ambient_activity/work(rack_mechanic))
 	TEST_ASSERT_NOTNULL(work, "A mechanic next to a rack could not start work")
 	TEST_ASSERT_NOTNULL(rack_mechanic.GetComponent(/datum/component/outpost_ambient_worker), "A working mechanic has no worker component")

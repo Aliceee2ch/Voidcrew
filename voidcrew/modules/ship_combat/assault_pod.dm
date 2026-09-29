@@ -43,8 +43,8 @@
  *
  * Rides the missile framework so it inherits everything that already knows how
  * to cross a reservation: hyperspace traits, the move loop, shield wall
- * interception, outpost shield envelopes. What it does on arrival is entirely
- * different - it cuts a doorway instead of making a crater.
+ * interception. What it does on arrival is entirely different - it cuts a
+ * doorway instead of making a crater.
  */
 /obj/effect/ship_missile/assault_pod
 	name = "assault pod"

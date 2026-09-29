@@ -117,13 +117,13 @@ GLOBAL_LIST_EMPTY(ambient_convicts)
 /proc/ambient_place_ruin_convict(obj/structure/overmap/space_ruin/ruin)
 	for(var/attempt in 1 to 10)
 		var/turf/spot = ruin.get_random_interior_turf()
-		if(!spot || !bounty_spawn_turf_ok(spot) || ambient_players_near(spot, CONVICT_SIGHT_RANGE + 2))
+		if(!spot || !bounty_spawn_turf_ok(spot) || ambient_any_player_near(spot, CONVICT_SIGHT_RANGE + 2))
 			continue
 		return ambient_spawn_convict(spot, ruin, BOUNTY_PLACEMENT_RUIN)
 	return null
 
 /// Whether a living player is within `range` of `spot`
-/proc/ambient_players_near(turf/spot, range)
+/proc/ambient_any_player_near(turf/spot, range)
 	for(var/mob/living/person in SSspatial_grid.orthogonal_range_search(spot, SPATIAL_GRID_CONTENTS_TYPE_CLIENTS, range))
 		if(person.stat != DEAD)
 			return TRUE

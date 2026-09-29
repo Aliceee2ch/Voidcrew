@@ -93,14 +93,14 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 			return locker
 	return null
 
-// A renter always reaches a paid locker, even while the room is closed to visitors
+// A renter always reaches a paid locker, whatever the room's entrance is keyed to
 /datum/outpost_upgrade/service/storage/admits_visitor_extra(mob/user)
 	if(!user?.ckey)
 		return FALSE
 	var/obj/structure/closet/secure_closet/outpost_storage/locker = rental_of(user.ckey)
 	return !!locker?.is_renter(user)
 
-// The card is the room's name and visitor switch; never contents, never who rents what
+// The card is the room's name; never contents, never who rents what
 /datum/outpost_upgrade/service/storage/service_ui_data(mob/user)
 	return list("kind" = "storage")
 

@@ -269,12 +269,13 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 			continue
 		strip_resident(member)
 
-/// Called by abandon(): no pricers, default prices, no playtest billing, every room back to its defaults
+/// Called by abandon(): no pricers, default prices, no playtest billing, every room and door back to its defaults
 /obj/structure/overmap/dynamic/player_outpost/proc/reset_market_on_abandon()
 	pricers.Cut()
 	reset_prices()
 	playtest_visitor_ckey = null
 	stop_all_bay_evictions()
+	reset_door_access()
 	for(var/datum/outpost_upgrade/service/room as anything in installed_service_rooms())
 		room.on_outpost_abandoned()
 
@@ -323,8 +324,6 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		services += list(list(
 			"id" = room.id,
 			"name" = room.name,
-			"visitors_allowed" = room.visitors_allowed,
-			"can_toggle_visitors" = can_manage && room.visitors_toggleable,
 			"detail" = detail,
 		))
 	return services
@@ -344,15 +343,12 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
  * in market_error and told to the user in chat.
  */
 /datum/player_outpost_management_ui/proc/market_action(action, list/params, mob/living/user)
-	if(!(action in list("set_price", "set_room_visitors", "service_act", "evict_bay_ship", "cancel_bay_eviction")))
+	if(!(action in list("set_price", "service_act", "evict_bay_ship", "cancel_bay_eviction")))
 		return FALSE
 	market_error = null
 	switch(action)
 		if("set_price")
 			market_error = outpost.set_price(user, params["key"], params["value"])
-		if("set_room_visitors")
-			var/datum/outpost_upgrade/service/room = outpost.service_upgrade(params["id"])
-			market_error = room ? room.set_visitors_allowed(user, params["allowed"]) : "No such room."
 		if("service_act")
 			var/datum/outpost_upgrade/service/room = outpost.service_upgrade(params["id"])
 			var/service_action = params["service_action"]
@@ -435,7 +431,6 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		services += list(list(
 			"id" = room.id,
 			"name" = room.name,
-			"visitors_allowed" = room.visitors_allowed,
 			"rows" = islist(rows) ? rows : list(),
 		))
 	selected_data["services"] = services

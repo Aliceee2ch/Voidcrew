@@ -33,7 +33,7 @@
 	TEST_ASSERT_NULL(home.founder_ckey, "Unowned admin creation silently assigned an owner")
 	TEST_ASSERT_EQUAL(home.resident_mode, "closed", "Unowned admin creation allowed resident arrivals")
 	TEST_ASSERT_NULL(panel.create_home(operator, sector, /datum/map_template/player_outpost/rundown, "Duplicate"), "Admin creation accepted an occupied sector")
-	TEST_ASSERT_NULL(panel.create_home(operator, SSovermap.get_unused_overmap_square(), /datum/map_template/player_outpost/nothing, "Bare Claim"), "Admin creation accepted an unsupported shell")
+	TEST_ASSERT_NULL(panel.create_home(operator, SSovermap.get_unused_overmap_square(), /datum/map_template/player_outpost/test_fixture, "Test Habitat"), "Admin creation accepted a shell founders cannot pick")
 
 	// The public override parameter must not be an authorization bypass for players.
 	TEST_ASSERT(!home.transfer_ownership(operator, operator, admin_override = TRUE), "A non-admin used the administrative ownership override")

@@ -817,6 +817,11 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/plating,
 /area/voidcrew/outpost_hangar)
+"eq" = (
+/obj/effect/decal/cleanable/rubble,
+/obj/structure/outpost_yard_droid/loader,
+/turf/open/indestructible/plating,
+/area/voidcrew/outpost_hangar)
 "es" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -2693,15 +2698,6 @@
 	color = "#F4F1EC"
 	},
 /area/voidcrew/outpost_hangar)
-"ve" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/structure/outpost_yard_droid/loader,
-/turf/open/indestructible/dark/textured,
-/area/voidcrew/outpost_hangar)
 "vf" = (
 /obj/effect/turf_decal/sand/plating{
 	alpha = 75
@@ -3280,12 +3276,6 @@
 	pixel_y = 12
 	},
 /turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
-"Ad" = (
-/obj/structure/outpost_yard_droid/labour{
-	dir = 4
-	},
-/turf/open/indestructible/dark/textured,
 /area/voidcrew/outpost_hangar)
 "Ag" = (
 /obj/effect/turf_decal{
@@ -5247,6 +5237,12 @@
 	color = "#C3B8AC"
 	},
 /area/voidcrew/outpost_hangar)
+"PD" = (
+/obj/structure/outpost_yard_droid/labour{
+	dir = 4
+	},
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/outpost_hangar)
 "PE" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
@@ -6465,10 +6461,6 @@
 	color = "#D6CDC3"
 	},
 /area/voidcrew/outpost_hangar)
-"XW" = (
-/obj/effect/decal/cleanable/rubble,
-/turf/open/indestructible/plating,
-/area/voidcrew/outpost_hangar)
 "XY" = (
 /obj/structure/rack,
 /obj/item/stack/cable_coil/five{
@@ -6816,7 +6808,7 @@ gJ
 Ub
 gJ
 XY
-Ad
+gJ
 vr
 Ug
 qA
@@ -6833,7 +6825,7 @@ yF
 Rz
 Vw
 ne
-ad
+PD
 It
 aM
 aR
@@ -7068,7 +7060,7 @@ aR
 "}
 (7,1,1) = {"
 uh
-ve
+Ng
 hT
 kl
 Ux
@@ -7460,7 +7452,7 @@ VW
 aW
 Ag
 tq
-XW
+eq
 Px
 aF
 aR

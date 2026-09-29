@@ -17,9 +17,22 @@
 /// One price change per user this often
 #define OUTPOST_PRICE_SET_COOLDOWN (1 SECONDS)
 
-/// Service door policies (outpost_service_doors.dm)
+/// Door access settings (outpost_door_access.dm). A service door's door_policy is PUBLIC or STAFF: the setting its room gives it.
 #define OUTPOST_DOOR_PUBLIC "public"
+#define OUTPOST_DOOR_MEMBERS "members"
 #define OUTPOST_DOOR_STAFF "staff"
+#define OUTPOST_DOOR_OWNER "owner"
+/// Open tiles a walk from one side of a door looks at before it calls that side big (outpost_door_reach())
+#define OUTPOST_DOOR_FLOOD_LIMIT 600
+/// What a walk from one side of a door found: ground off the outpost, nothing more to walk, or the limit
+#define OUTPOST_DOOR_REACH_OPEN "open"
+#define OUTPOST_DOOR_REACH_CLOSED "closed"
+#define OUTPOST_DOOR_REACH_CAPPED "capped"
+/// Door Access tints on the construction console, one per setting
+#define OUTPOST_DOOR_TINT_PUBLIC "#3fbf3f"
+#define OUTPOST_DOOR_TINT_MEMBERS "#3f8fff"
+#define OUTPOST_DOOR_TINT_STAFF "#ffb030"
+#define OUTPOST_DOOR_TINT_OWNER "#ff3f3f"
 
 /// Magic recall (the summon item spell) cannot pull an item out of a holder with this trait
 #define TRAIT_BLOCKS_RECALL "blocks_recall"

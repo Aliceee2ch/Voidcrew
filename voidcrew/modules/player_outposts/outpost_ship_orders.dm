@@ -235,7 +235,7 @@ GLOBAL_LIST_INIT(ship_order_refused_hulls, typecacheof(list(
 /datum/checkpoint_construction/order/load_copy(datum/shuttle_template_load/load_owner)
 	SSshuttle.loading_ship = null
 	SSshuttle.loading_order = order
-	. = SSshuttle.load_template(template, load_owner)
+	. = load_hidden_copy(load_owner)
 	SSshuttle.loading_order = null
 
 /// Nothing is scrubbed or restored: the ship is built as it spawns, starting supplies included.

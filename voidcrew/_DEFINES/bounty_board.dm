@@ -45,6 +45,8 @@
 #define BOUNTY_PUBLIC_POST_GAP (10 MINUTES)
 /// When a public posting found no site, how soon the board tries again
 #define BOUNTY_PUBLIC_POST_RETRY (1 MINUTES)
+/// How long after the round starts the board fills without news: a Most Wanted posted then isn't announced
+#define BOUNTY_OPENING_QUIET (5 MINUTES)
 /// How long a public bounty stays up; the clock waits while any ship hunts it
 #define BOUNTY_PUBLIC_EXPIRY (45 MINUTES)
 /// How long one ship's hunt holds a public bounty's clock

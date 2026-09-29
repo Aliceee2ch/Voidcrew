@@ -1150,6 +1150,11 @@
 	TEST_ASSERT_NOTNULL(most_wanted, "No Most Wanted bounty was posted at a plain ruin")
 	TEST_ASSERT(listener.board_test_heard("MOST WANTED: [most_wanted.record.name]."), "A new Most Wanted wasn't news")
 	most_wanted.close("admin")
+	// The board's opening fill at round start goes up quietly
+	var/datum/criminal_bounty/opening = post_criminal_bounty(3, "ruin", ruin, quiet = TRUE)
+	TEST_ASSERT_NOTNULL(opening, "No quiet Most Wanted bounty was posted at a plain ruin")
+	TEST_ASSERT(!listener.board_test_heard(opening.record.name), "A quiet Most Wanted went out as news")
+	opening.close("admin")
 
 	// Brought in: news for everyone but the winner (its own notice) and the hunters (told by the close)
 	var/turf/pad_turf = run_loc_floor_bottom_left

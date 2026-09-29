@@ -756,6 +756,40 @@
 	// so it stays scoped to the bounds instead of grinding through ~48k empty cordon
 	// tiles that cannot possibly hold anything.
 	var/list/turf/contents_turfs = get_teardown_contents_block(footprint, whole_level)
+
+	// Turfs and areas: the whole level for the last tenant out (the cordon has to go back
+	// to space or the recycled zone hands its next occupant a level walled in half), the
+	// tenant's own rectangle when anyone else is still home.
+	var/list/turf/block_turfs
+	var/list/edges
+	if(!whole_level && footprint)
+		block_turfs = footprint.get_block()
+		edges = list(footprint.low_x, footprint.low_y, footprint.high_x, footprint.high_y)
+	else
+		// Last tenant out: our rectangle plus the band we painted, or the whole level when
+		// the band cannot be bounded - see get_teardown_contents_block().
+		if(can_sweep_by_slot(footprint))
+			block_turfs = footprint.get_block()
+			block_turfs += get_cordon_band_block()
+		else
+			block_turfs = get_full_block()
+		// The level border either way: the band reaches it, and these bounds only decide
+		// which turfs are worth re-smoothing afterwards.
+		edges = list(1, 1, world.maxx, world.maxy)
+		cordon_placed = FALSE
+		cordon_breached = FALSE
+		cordon_strips = null
+
+	wipe_turfs(contents_turfs, block_turfs, space_area, edges, throttled)
+
+/**
+ * clear_reservation()'s sweep, for any ground: deletes everything on `contents_turfs` but
+ * observers, then resets every turf of `block_turfs` to bare reserved space in `reset_area`.
+ * Player outposts wipe their berth and yard zones with it (outpost_level_layout.dm).
+ *
+ * * edges - list(low_x, low_y, high_x, high_y): the bounds whose border turfs get re-smoothed.
+ */
+/datum/space_level/proc/wipe_turfs(list/turf/contents_turfs, list/turf/block_turfs, area/reset_area, list/edges, throttled = TRUE)
 	ghostize_teardown_mobs(contents_turfs)
 	for(var/turf/turf as anything in contents_turfs)
 		// don't waste time trying to qdelete the lighting object
@@ -770,37 +804,10 @@
 			// DO NOT CHECK_TICK HERE. IT CAN CAUSE ITEMS TO GET LEFT BEHIND
 			// THIS IS REALLY IMPORTANT FOR CONSISTENCY. SORRY ABOUT THE LAG SPIKE
 
-	// Turfs and areas: the whole level for the last tenant out (the cordon has to go back
-	// to space or the recycled zone hands its next occupant a level walled in half), the
-	// tenant's own rectangle when anyone else is still home.
-	var/list/turf/block_turfs
-	var/edge_low_x
-	var/edge_low_y
-	var/edge_high_x
-	var/edge_high_y
-	if(!whole_level && footprint)
-		block_turfs = footprint.get_block()
-		edge_low_x = footprint.low_x
-		edge_low_y = footprint.low_y
-		edge_high_x = footprint.high_x
-		edge_high_y = footprint.high_y
-	else
-		// Last tenant out: our rectangle plus the band we painted, or the whole level when
-		// the band cannot be bounded - see get_teardown_contents_block().
-		if(can_sweep_by_slot(footprint))
-			block_turfs = footprint.get_block()
-			block_turfs += get_cordon_band_block()
-		else
-			block_turfs = get_full_block()
-		// The level border either way: the band reaches it, and these bounds only decide
-		// which turfs are worth re-smoothing afterwards.
-		edge_low_x = 1
-		edge_low_y = 1
-		edge_high_x = world.maxx
-		edge_high_y = world.maxy
-		cordon_placed = FALSE
-		cordon_breached = FALSE
-		cordon_strips = null
+	var/edge_low_x = edges[1]
+	var/edge_low_y = edges[2]
+	var/edge_high_x = edges[3]
+	var/edge_high_y = edges[4]
 
 	// Every area instance we take turfs away from, so the emptied ones can be reaped after
 	// the sweep - see reap_emptied_areas().
@@ -816,9 +823,9 @@
 		turf.empty(RESERVED_TURF_TYPE, RESERVED_TURF_TYPE, null, CHANGETURF_IGNORE_AIR|CHANGETURF_DEFER_CHANGE)
 		// Reset area
 		var/area/old_area = get_area(turf)
-		if(old_area && old_area != space_area)
+		if(old_area && old_area != reset_area)
 			vacated_areas[old_area] = TRUE
-		turf.change_area(old_area, space_area)
+		turf.change_area(old_area, reset_area)
 		// Throttled yield, not CHECK_TICK - see worldgen_yield() in worldgen_queue.dm
 		SSovermap.worldgen_yield(throttled)
 

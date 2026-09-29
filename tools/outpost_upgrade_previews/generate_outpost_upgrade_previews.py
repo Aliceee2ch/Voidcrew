@@ -38,8 +38,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MAPS_DIR = REPO_ROOT / "voidcrew" / "_maps" / "map_files" / "outposts"
 OUTPUT_DIR = REPO_ROOT / "voidcrew" / "modules" / "player_outposts" / "previews"
 MAP_GLOBS = ("outpost_upgrade_*.dmm", "player_outpost_shell_*.dmm")
-# Shells founders never see need no picture
-SKIPPED = {"player_outpost_shell_nothing"}
+# Maps founders never see need no picture
+SKIPPED: set[str] = set()
 
 
 def map_stem(name: str) -> str:

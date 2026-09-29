@@ -5,7 +5,9 @@
  * hangar berth: a turf reservation sized to the ship, with the hangar generated
  * into it and a stationary docking port aligned to the ship's own port. Each
  * berth is a "floor" reachable via the hangar elevator (see outpost_elevator.dm);
- * floor 0 is the outpost concourse itself.
+ * floor 0 is the outpost concourse itself. Player outposts build the same berth
+ * in a fixed berth zone on their own level instead of a reservation
+ * (berths_on_level(), outpost_level_layout.dm).
  *
  * Standard berths (allocate_berth) are built per visit: the walls, deck and landing
  * pad come from /datum/outpost_berth_layout, with the fixed exit strip (airlock,
@@ -121,6 +123,8 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	/// The reserved turf block holding the hangar. Only claiming and releasing touch it;
 	/// everything that asks where the berth is uses the ground procs (GROUND below).
 	var/datum/turf_reservation/reservation
+	/// The zone on the host's own level holding the hangar instead of a reservation (player outposts)
+	var/datum/outpost_zone/zone
 	/// The stationary port the ship lands on
 	var/obj/docking_port/stationary/dock
 	/// Elevator alcove turfs inside the hangar, in block() order (y then x ascending)
@@ -131,6 +135,9 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	var/list/obj/machinery/status_display/outpost_berth/status_signs = list()
 	/// Bottom-left turf of the loaded hangar template
 	var/turf/hangar_bottom_left
+	/// Size of the loaded hangar; a zoned berth's ground is exactly this rectangle
+	var/hangar_width = 0
+	var/hangar_height = 0
 	/// Landing rect size the dock is built with, along x and y
 	var/pad_width = RESERVE_DOCK_MAX_SIZE_LONG
 	var/pad_height = RESERVE_DOCK_MAX_SIZE_SHORT
@@ -175,6 +182,13 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 		else
 			qdel(reservation) // async turf wipe deletes the hangar's contents
 		reservation = null
+	if(zone)
+		if(building)
+			// Same for a zone: build_standard_hangar() gives it back once the loader returns.
+			addtimer(CALLBACK(zone, TYPE_PROC_REF(/datum/outpost_zone, release_stalled_build)), 60 SECONDS)
+		else if(zone.is_held_by(src))
+			zone.release() // async wipe deletes the hangar's contents
+		zone = null
 	hangar_bottom_left = null
 	alcove_turfs = null
 	outpost?.refresh_elevator_uis()
@@ -183,22 +197,32 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 
 // ===== GROUND =====
 // The one rectangle of turfs a berth holds: its hangar, the pad and whatever is docked on it.
-// Every question about where a berth is goes through these procs. Today the ground is the
-// berth's turf reservation.
+// Every question about where a berth is goes through these procs. The ground is the berth's
+// turf reservation, or for a berth in a zone on its host's level the hangar loaded into it.
 
 /// Whether the berth holds ground right now: claimed and not yet given back.
 /datum/outpost_berth/proc/has_ground()
+	if(zone)
+		return !isnull(hangar_bottom_left)
 	return !QDELETED(reservation)
 
 /// Bottom-left turf of the berth's ground, or null when it holds none.
 /datum/outpost_berth/proc/get_bottom_left()
-	if(!has_ground() || !length(reservation.bottom_left_turfs))
+	if(!has_ground())
+		return null
+	if(zone)
+		return hangar_bottom_left
+	if(!length(reservation.bottom_left_turfs))
 		return null
 	return reservation.bottom_left_turfs[1]
 
 /// Top-right turf of the berth's ground, or null when it holds none.
 /datum/outpost_berth/proc/get_top_right()
-	if(!has_ground() || !length(reservation.top_right_turfs))
+	if(!has_ground())
+		return null
+	if(zone)
+		return locate(hangar_bottom_left.x + hangar_width - 1, hangar_bottom_left.y + hangar_height - 1, hangar_bottom_left.z)
+	if(!length(reservation.top_right_turfs))
 		return null
 	return reservation.top_right_turfs[1]
 
@@ -335,6 +359,12 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 	dock.height = pad_height
 	dock.dwidth = 0
 	dock.dheight = 0
+	if(zone)
+		// On the host's own level the map region is the whole outpost, so a dock dragged along
+		// with a hull is kept inside its hangar instead (clamp_reserve_dock_to_site()).
+		var/turf/ground_low = get_bottom_left()
+		var/turf/ground_high = get_top_right()
+		dock.site_rect = list(ground_low.x, ground_low.y, ground_high.x, ground_high.y)
 
 	for(var/obj/machinery/status_display/outpost_berth/sign as anything in status_signs)
 		sign.set_messages("BERTH [berth_number]", ship?.name || "FREIGHT")
@@ -374,22 +404,25 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 // Defined on the overmap base so both trader outposts and player outposts
 // (once they place a hangar elevator) can host berths.
 
+/// Whether this host builds its berths in zones on its own level (berth_zone_for()) instead of
+/// turf reservations. Player outposts do; trader outposts and the Colosseum do not.
+/obj/structure/overmap/proc/berths_on_level()
+	return FALSE
+
+/// How many hangar berths this host can hold at once. Also the elevator's berth floors.
+/obj/structure/overmap/proc/berth_capacity()
+	return OUTPOST_MAX_BERTHS
+
+/// The zone berth `berth_number` loads into, on a berths_on_level() host
+/obj/structure/overmap/proc/berth_zone_for(berth_number)
+	return null
+
 /**
- * Allocates the lowest free berth for a ship: reserves a hangar sized to the ship,
- * builds it and wires everything up. Returns the berth, or null if the outpost is
- * full, the ship cannot fit a berth, or the build failed.
+ * Allocates the lowest free berth for a ship: reserves a hangar sized to the ship (or takes
+ * the berth's zone on a berths_on_level() host), builds it and wires everything up. Returns
+ * the berth, or null if the outpost is full, the ship cannot fit a berth, or the build failed.
  */
 /obj/structure/overmap/proc/allocate_berth(obj/structure/overmap/ship/ship)
-	if(!berths)
-		berths = new /list(OUTPOST_MAX_BERTHS)
-	var/berth_number = 0
-	for(var/i in 1 to OUTPOST_MAX_BERTHS)
-		if(!berths[i])
-			berth_number = i
-			break
-	if(!berth_number)
-		return null
-
 	var/obj/docking_port/mobile/measured = ship?.shuttle
 	var/list/pad_size = outpost_berth_pad_size(measured)
 	if(!pad_size)
@@ -400,9 +433,35 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 		return null
 	var/datum/outpost_berth_layout/layout = new(pad_size[1], pad_size[2], strip.width, strip.height)
 
+	// Pick the slot and its ground with no yield before both are claimed below.
+	if(!berths)
+		berths = new /list(OUTPOST_MAX_BERTHS)
+	var/on_level = berths_on_level()
+	var/berth_number = 0
+	var/datum/outpost_zone/zone
+	for(var/i in 1 to min(berth_capacity(), length(berths)))
+		if(berths[i])
+			continue
+		if(on_level)
+			zone = berth_zone_for(i)
+			// A zone still being wiped after its last visitor is skipped, not waited on.
+			if(!zone?.is_vacant())
+				zone = null
+				continue
+		berth_number = i
+		break
+	if(!berth_number)
+		return null
+	if(zone && (layout.width > zone.get_width() || layout.height > zone.get_height()))
+		log_mapping("OUTPOST BERTH: a [layout.width]x[layout.height] berth does not fit the [zone.get_width()]x[zone.get_height()] zone at [src].")
+		return null
+
 	var/datum/outpost_berth/berth = new(src, berth_number, ship)
 	// Claim the slot before the build yields, so a second arrival cannot take it too.
 	berths[berth_number] = berth
+	if(zone)
+		zone.claim(berth)
+		berth.zone = zone
 	// Watch the ship from the start: its deletion, or a build that never finishes, frees the slot.
 	berth.setup_signals()
 	var/built = berth.build_standard_hangar(layout, strip)
@@ -417,36 +476,51 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/status_display/outpost_sign/elevator,
 
 /**
  * Reserves this berth's hangar and builds it in one load: generated walls, deck and pad
- * with the exit strip in the middle of the south wall. Parsing, reserving and loading
- * all yield, and the berth can be torn down in any of those gaps; each one is checked.
+ * with the exit strip in the middle of the south wall. A berth with a zone loads into it
+ * instead, on the zone's south edge and centred, so the exit strip is in the same place for
+ * every ship. Parsing, reserving and loading all yield, and the berth can be torn down in any
+ * of those gaps; each one is checked.
  */
 /datum/outpost_berth/proc/build_standard_hangar(datum/outpost_berth_layout/layout, datum/map_template/outpost_berth_strip/strip)
 	pad_width = layout.pad_width
 	pad_height = layout.pad_height
+	var/datum/outpost_zone/building_zone = zone
 	var/datum/map_template/outpost_berth_body/body = new
 	body.generate(layout, strip)
 	if(QDELETED(src))
 		return FALSE
-	var/datum/turf_reservation/claimed = SSmapping.request_turf_block_reservation(layout.width, layout.height, 1, requester = "outpost hangar berth for '[ship?.name]' at '[outpost?.name]'")
-	if(!claimed)
-		return FALSE
-	// A berth torn down while reserving has nobody left to free this.
-	if(QDELETED(src))
-		qdel(claimed)
-		return FALSE
-	reservation = claimed
-	var/turf/bottom_left = get_bottom_left()
+	var/datum/turf_reservation/claimed
+	var/turf/bottom_left
+	if(building_zone)
+		bottom_left = locate(building_zone.low_x + round((building_zone.get_width() - layout.width) / 2), building_zone.low_y, building_zone.z_value)
+	else
+		claimed = SSmapping.request_turf_block_reservation(layout.width, layout.height, 1, requester = "outpost hangar berth for '[ship?.name]' at '[outpost?.name]'")
+		if(!claimed)
+			return FALSE
+		// A berth torn down while reserving has nobody left to free this.
+		if(QDELETED(src))
+			qdel(claimed)
+			return FALSE
+		reservation = claimed
+		bottom_left = get_bottom_left()
 	hangar_bottom_left = bottom_left
+	hangar_width = layout.width
+	hangar_height = layout.height
 	building = TRUE
 	var/loaded = body.load(bottom_left)
 	building = FALSE
 	if(QDELETED(src))
-		// Destroy() left the reservation alone while the loader was writing into it.
-		qdel(claimed)
+		// Destroy() left the ground alone while the loader was writing into it.
+		if(claimed)
+			qdel(claimed)
+		building_zone?.release()
 		return FALSE
 	if(!loaded)
 		return FALSE
-	return link_hangar_contents()
+	if(!link_hangar_contents())
+		return FALSE
+	building_zone?.occupy()
+	return TRUE
 
 /// Called from complete_dock() once the ship has fully left the outpost.
 /obj/structure/overmap/proc/on_ship_undock_complete(obj/structure/overmap/ship/ship)

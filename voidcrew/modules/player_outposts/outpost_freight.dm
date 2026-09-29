@@ -10,9 +10,45 @@
 	var/landing_warning_time = 10 SECONDS
 	/// Timer for that alarm
 	var/landing_warning_timer
+	/// The pen on the outpost's level the ferry waits in until it lands (outpost_level_layout.dm)
+	var/datum/outpost_zone/pen_zone
 
 /datum/voidcrew_cargo_shuttle/outpost/New(obj/structure/overmap/dynamic/player_outpost/site)
 	home = site
+
+/// The ferry waits in the pen on the outpost's own level; an outpost never reserves turfs for it.
+/datum/voidcrew_cargo_shuttle/outpost/claim_parking(datum/map_template/shuttle/template)
+	var/datum/outpost_zone/pen = home?.level_zone(OUTPOST_ZONE_PEN)
+	if(!pen || template.width > pen.get_width() || template.height > pen.get_height())
+		return null
+	// The last ferry's pen may still be being wiped.
+	if(pen.state == OUTPOST_ZONE_WIPING)
+		var/deadline = world.time + 30 SECONDS
+		UNTIL(pen.state != OUTPOST_ZONE_WIPING || world.time > deadline)
+	if(QDELETED(src) || !pen.claim(src))
+		return null
+	return pen
+
+/datum/voidcrew_cargo_shuttle/outpost/parking_origin(datum/outpost_zone/pen, datum/map_template/shuttle/template)
+	return locate(pen.low_x + round((pen.get_width() - template.width) / 2), pen.low_y + round((pen.get_height() - template.height) / 2), pen.z_value)
+
+/datum/voidcrew_cargo_shuttle/outpost/release_parking(datum/outpost_zone/pen)
+	if(istype(pen) && pen.is_held_by(src))
+		pen.release()
+
+/datum/voidcrew_cargo_shuttle/outpost/keep_parking(datum/outpost_zone/pen)
+	pen_zone = pen
+	pen.occupy()
+
+/// The ferry has left the pen, landed or destroyed: the pen is wiped for the next one.
+/datum/voidcrew_cargo_shuttle/outpost/proc/release_pen()
+	var/datum/outpost_zone/pen = pen_zone
+	pen_zone = null
+	release_parking(pen)
+
+/datum/voidcrew_cargo_shuttle/outpost/destroy_shuttle()
+	. = ..()
+	release_pen()
 
 /datum/voidcrew_cargo_shuttle/outpost/Destroy()
 	cancel_pending()
@@ -169,6 +205,9 @@
 			error = "Landing pad blocked"
 	if(QDELETED(src) || operation_generation != delivery_generation)
 		return FALSE
+	// Landed: the pen it waited in is cleared for the next delivery.
+	if(!error)
+		release_pen()
 	if(!error)
 		error = availability_error()
 	if(error)

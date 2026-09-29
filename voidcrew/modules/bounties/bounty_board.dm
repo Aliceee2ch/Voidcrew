@@ -38,6 +38,8 @@ SUBSYSTEM_DEF(criminal_bounties)
 	var/board_last_tick = 0
 	/// world.time the next public bounty may go up
 	var/board_next_public_post = 0
+	/// world.time until which the board's own public postings go up without news (the round's opening fill)
+	var/board_quiet_until = 0
 	/// Goes up whenever a posting goes up, relists or comes down (a count for the logs and admins; each console watches its own postings' static_data_serial)
 	var/board_static_serial = 0
 	/// Weakref of a ship -> world.time it may be offered its next private bounty
@@ -64,6 +66,8 @@ SUBSYSTEM_DEF(criminal_bounties)
 /datum/controller/subsystem/criminal_bounties/proc/board_tick()
 	var/now = world.time
 	var/elapsed = board_last_tick ? clamp(now - board_last_tick, 0, 1 MINUTES) : 0
+	if(!board_last_tick)
+		board_quiet_until = now + BOUNTY_OPENING_QUIET
 	board_last_tick = now
 	for(var/datum/criminal_bounty/posting as anything in GLOB.criminal_bounties.Copy())
 		if(QDELETED(posting))
@@ -79,7 +83,8 @@ SUBSYSTEM_DEF(criminal_bounties)
 		return null
 	if(board_public_count() >= board_public_cap())
 		return null
-	var/datum/criminal_bounty/posted = post_criminal_bounty(board_roll_public_tier(), null)
+	// Crews are still boarding at round start: the opening fill goes up without news
+	var/datum/criminal_bounty/posted = post_criminal_bounty(board_roll_public_tier(), null, quiet = now < board_quiet_until)
 	board_next_public_post = now + (posted ? BOUNTY_PUBLIC_POST_GAP : BOUNTY_PUBLIC_POST_RETRY)
 	return posted
 
@@ -113,6 +118,7 @@ SUBSYSTEM_DEF(criminal_bounties)
 	for(var/datum/weakref/ref as anything in board_private_next)
 		board_private_next[ref] -= step
 	board_next_public_post -= step
+	board_quiet_until -= step
 	board_tick()
 
 /// Something about the set of postings changed: open boards resend their static data (the mugshots)
@@ -243,13 +249,14 @@ SUBSYSTEM_DEF(criminal_bounties)
  * Posts a bounty now: a criminal of `tier` (BOUNTY_TIER_*) at a `placement_kind`
  * (BOUNTY_PLACEMENT_*) site, at `site` (an /obj/structure/overmap planet, ruin, pirate ship or
  * trader outpost) or one the board picks, public or offered only to the ship `private_to`.
+ * A `quiet` Most Wanted isn't announced to every crew.
  * Returns the posting (/datum/criminal_bounty), or null if none could be made.
  */
-/proc/post_criminal_bounty(tier, placement_kind, obj/structure/overmap/site = null, obj/structure/overmap/ship/private_to = null)
-	return SScriminal_bounties.board_post(tier, placement_kind, site, private_to)
+/proc/post_criminal_bounty(tier, placement_kind, obj/structure/overmap/site = null, obj/structure/overmap/ship/private_to = null, quiet = FALSE)
+	return SScriminal_bounties.board_post(tier, placement_kind, site, private_to, quiet)
 
 /// post_criminal_bounty()'s body; see there
-/datum/controller/subsystem/criminal_bounties/proc/board_post(tier, placement_kind, obj/structure/overmap/site, obj/structure/overmap/ship/private_to)
+/datum/controller/subsystem/criminal_bounties/proc/board_post(tier, placement_kind, obj/structure/overmap/site, obj/structure/overmap/ship/private_to, quiet = FALSE)
 	if(private_to && QDELETED(private_to))
 		return null
 	if(!tier)
@@ -306,7 +313,7 @@ SUBSYSTEM_DEF(criminal_bounties)
 	board_changed()
 	log_game("BOUNTY: posted the [posting.board_log_name()] in zone [zone], worth [posting.value] cr and [posting.board_vouchers] voucher(s)")
 	// A Most Wanted is news for every crew (P8); Wanted and petty ones never are
-	if(tier == BOUNTY_TIER_MOST_WANTED && !private_to)
+	if(tier == BOUNTY_TIER_MOST_WANTED && !private_to && !quiet)
 		board_announce("MOST WANTED: [record.name]. [posting.board_place_text()].")
 	posting.board_arm()
 	return posting

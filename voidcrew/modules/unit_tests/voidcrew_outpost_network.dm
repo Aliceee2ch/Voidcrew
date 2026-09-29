@@ -261,9 +261,13 @@
 	TEST_ASSERT_NULL(pad_b.arrival_denial(owner_b, pad_a), "Lockdown refused a member")
 	home_b.dock_mode = "open"
 
-	// The room door stays open to visitors; the arrival policy is the owner's lever (F-33)
-	TEST_ASSERT_EQUAL(room_b.set_visitors_allowed(owner_b, FALSE), "Use the arrival policy.", "The teleporter room could be closed to visitors")
-	TEST_ASSERT(room_b.visitors_allowed, "The teleporter room was closed to visitors")
+	// The room door stays public and the door tool refuses it; the arrival policy is the owner's lever (F-33)
+	var/datum/weakref/room_door_ref = LAZYACCESS(room_b.doors, 1)
+	var/obj/machinery/door/room_door = room_door_ref?.resolve()
+	TEST_ASSERT_NOTNULL(room_door, "The teleporter room has no door")
+	TEST_ASSERT_EQUAL(outpost_door_access_of(room_door), "public", "The teleporter room's door did not start public")
+	TEST_ASSERT_EQUAL(home_b.set_door_access(owner_b, room_door, "members"), "Stays public.", "The teleporter room's door could be keyed")
+	TEST_ASSERT_EQUAL(outpost_door_access_of(room_door), "public", "The teleporter room's door was keyed")
 
 	// A room that opens onto vacuum takes no arrivals (F-03)
 	var/list/exits = room_b.exit_turfs()

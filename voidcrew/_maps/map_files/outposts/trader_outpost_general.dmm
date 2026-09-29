@@ -4240,11 +4240,6 @@
 	},
 /turf/open/indestructible/dark,
 /area/voidcrew/trader_outpost)
-"Ol" = (
-/obj/structure/flora/bush/sparsegrass/style_random,
-/obj/effect/zone_mobs/bug,
-/turf/open/floor/grass,
-/area/voidcrew/trader_outpost)
 "Oq" = (
 /obj/structure/flora/rock/pile/style_3,
 /turf/open/water/outpost_pond,
@@ -4537,10 +4532,6 @@
 	},
 /obj/structure/flora/bush/flowers_yw/style_random,
 /turf/open/indestructible/grass,
-/area/voidcrew/trader_outpost)
-"Rh" = (
-/obj/effect/zone_mobs/bug,
-/turf/open/floor/grass,
 /area/voidcrew/trader_outpost)
 "Ri" = (
 /turf/open/misc/dirt/station,
@@ -5331,11 +5322,6 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark/corner,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/trader_outpost)
-"YM" = (
-/obj/structure/flora/bush/fullgrass/style_random,
-/obj/effect/zone_mobs/bug,
-/turf/open/floor/grass,
-/area/voidcrew/trader_outpost)
 "YP" = (
 /obj/structure/flora/rock/pile/style_3,
 /obj/machinery/light/floor,
@@ -5761,7 +5747,7 @@ TD
 Ya
 TD
 nT
-YM
+fF
 TD
 Ri
 Uv
@@ -6085,7 +6071,7 @@ ul
 nU
 Ya
 Uv
-Ol
+Ya
 Br
 nT
 NF
@@ -6097,7 +6083,7 @@ Ya
 dc
 Uv
 Ya
-Rh
+Uv
 kA
 Uv
 nU

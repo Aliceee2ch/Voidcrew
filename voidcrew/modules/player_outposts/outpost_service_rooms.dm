@@ -9,8 +9,9 @@
  *   and no light switch; an outage stops the services with the rest of the outpost.
  * * Everything fixed in the room (machines and structures, never items or mobs) becomes
  *   outpost property. Walls and floors are indestructible turfs in the map itself.
- * * Doors are service airlocks (outpost_service_doors.dm): members pass, visitors pass public
- *   doors while the room admits them, and every door opens from the inside.
+ * * Doors are service airlocks (outpost_service_doors.dm), keyed like any outpost door
+ *   (outpost_door_access.dm): the entrance starts public, staff doors staff, and every door opens
+ *   from the inside.
  *
  * Deleting the outpost deletes the rooms and everything in them. Nothing is refunded.
  */
@@ -19,10 +20,6 @@
 /datum/outpost_upgrade/service
 	area_type = /area/voidcrew/player_outpost
 	entrance_side = SOUTH
-	/// FALSE makes the room's public doors member-only. Exits stay open.
-	var/visitors_allowed = TRUE
-	/// FALSE when the room must stay open to visitors, so the console offers no toggle
-	var/visitors_toggleable = TRUE
 	/// Turf -> the area it had before prepare_ground() moved it into the outpost area
 	var/list/prepared_areas
 	/// The room's service airlocks, found at install
@@ -120,7 +117,7 @@
 		return
 	pipe.set_init_directions(linked)
 
-/// Records the room's service airlocks. A door out of the room whose map forgot its unrestricted-side helper gets one pointing inside.
+/// Records the room's service airlocks and keys them to their defaults. A door out of the room whose map forgot its unrestricted-side helper gets one pointing inside.
 /datum/outpost_upgrade/service/proc/adopt_doors()
 	doors = list()
 	var/list/room = room_turfs()
@@ -143,6 +140,7 @@
 				door.update_appearance()
 				log_mapping("OUTPOST SERVICE ROOM: [door] at [AREACOORD(door)] in the [name] had no unrestricted side; set to [dir2text(inward)]")
 				break
+	apply_door_defaults()
 
 /datum/outpost_upgrade/service/proc/is_inside(atom/thing)
 	return contains_turf(get_turf(thing))
@@ -250,17 +248,6 @@
 	offsets_by_map[path] = cached
 	return cached
 
-/// Management opens or closes the room's public doors to visitors. Null when set, else a refusal.
-/datum/outpost_upgrade/service/proc/set_visitors_allowed(mob/living/user, allowed)
-	if(QDELETED(outpost) || !outpost.is_current_management_user(user))
-		return "Not authorised."
-	allowed = !!allowed
-	if(allowed == visitors_allowed)
-		return null
-	visitors_allowed = allowed
-	log_game("PLAYER OUTPOST: [key_name(user)] [allowed ? "opened" : "closed"] the [name] to visitors at '[outpost.name]'")
-	return null
-
 // ===== ROOM HOOKS (room packages override these) =====
 
 /// Called once the room is placed, protected and its doors adopted. Wire the room here.
@@ -283,7 +270,7 @@
 /datum/outpost_upgrade/service/proc/admin_ui_act(mob/user, action, list/params)
 	return FALSE
 
-/// TRUE lets this visitor through the room's public door while the room is closed to visitors
+/// TRUE lets this visitor through the room's entrance whatever it is keyed to: they paid for what is inside
 /datum/outpost_upgrade/service/proc/admits_visitor_extra(mob/user)
 	return FALSE
 

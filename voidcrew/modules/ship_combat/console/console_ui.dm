@@ -393,7 +393,7 @@
 		data["siphon_target_name"] = siphon_status["target_name"]
 		// What the locked target is actually carrying - the panel greys the button
 		// out on an empty hull instead of letting the siphon spin up and bounce.
-		// Outposts and other non-ship targets hold no account, so they read zero.
+		// Only ships hold an account; anything else reads zero.
 		var/obj/structure/overmap/ship/siphon_target = target_ship
 		data["siphon_target_credits"] = istype(siphon_target) ? (siphon_target.ship_account?.account_balance || 0) : 0
 	else

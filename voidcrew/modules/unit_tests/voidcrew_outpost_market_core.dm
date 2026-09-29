@@ -1,6 +1,7 @@
 /**
  * Outpost marketplace core: prices, the pricer role, membership, the one charge proc, the playtest
- * billing toggle, service rooms (area, protection, power, doors) and service doors.
+ * billing toggle, service rooms (area, protection, power, doors) and service doors. Door settings
+ * themselves are tested in voidcrew_outpost_door_access.dm.
  *
  * Voidcrew defines are not visible from test files, so prices, keys and messages appear as literals.
  * The test room (outpost_service_room_test.dmm) is 5x5: a public door at (3,1) facing south, a staff
@@ -484,8 +485,9 @@
 	var/list/services = owner_data["services"]
 	TEST_ASSERT_EQUAL(length(services), 4, "The Services tab does not list every installed room")
 	for(var/list/card as anything in services)
-		for(var/key in list("id", "name", "visitors_allowed", "can_toggle_visitors", "detail"))
+		for(var/key in list("id", "name", "detail"))
 			TEST_ASSERT(key in card, "A Services card has no [key]")
+		TEST_ASSERT(!("visitors_allowed" in card), "A Services card still sends the old visitor switch")
 		var/list/detail = card["detail"]
 		TEST_ASSERT_EQUAL(detail["kind"], "unit_test", "A Services card lost its room's detail")
 	act(panel, owner, "service_act", null, list("id" = first_room.id, "service_action" = "poke"))
@@ -493,7 +495,7 @@
 	act(panel, owner, "service_act", null, list("id" = 1, "service_action" = "poke"))
 	TEST_ASSERT_EQUAL(panel.market_error, "No such room.", "A numeric room id was accepted")
 
-	// Doors (on the first room).
+	// Doors (on the first room): the entrance starts public, the staff door staff.
 	var/obj/machinery/door/airlock/outpost/service/public_door
 	var/obj/machinery/door/airlock/outpost/service/staff_door
 	for(var/datum/weakref/door_ref as anything in first_room.doors)
@@ -504,6 +506,8 @@
 			public_door = door
 	TEST_ASSERT_NOTNULL(public_door, "The test room has no public door")
 	TEST_ASSERT_NOTNULL(staff_door, "The test room has no staff door")
+	TEST_ASSERT_EQUAL(outpost_door_access_of(public_door), "public", "The room's entrance did not start public")
+	TEST_ASSERT_EQUAL(outpost_door_access_of(staff_door), "staff", "The room's staff door did not start staff only")
 	var/turf/staff_outside = get_step(staff_door, turn(staff_door.unres_sides, 180))
 	var/turf/staff_inside = get_step(staff_door, staff_door.unres_sides)
 	var/turf/public_outside = get_step(public_door, turn(public_door.unres_sides, 180))
@@ -514,11 +518,16 @@
 	var/datum/team/voidcrew/crew = allocate(/datum/team/voidcrew)
 	LAZYADD(owner.mind.ship_teams, crew)
 	LAZYADD(crewmate.mind.ship_teams, crew)
+	var/mob/living/carbon/human/steward = market_test_resident(home, "marketroomsteward", "steward")
+	steward.forceMove(staff_outside)
 
+	// Staff only: the owner and role holders, not ordinary members
 	TEST_ASSERT(!staff_door.allowed(visitor), "A visitor passed a staff door")
 	TEST_ASSERT(staff_door.allowed(owner), "The owner was refused at a staff door")
-	TEST_ASSERT(staff_door.allowed(resident), "A resident was refused at a staff door")
-	TEST_ASSERT(staff_door.allowed(crewmate), "The owner's crewmate was refused at a staff door")
+	TEST_ASSERT(staff_door.allowed(steward), "A steward was refused at a staff door")
+	TEST_ASSERT(!staff_door.allowed(resident), "A resident with no role passed a staff door")
+	TEST_ASSERT(!staff_door.allowed(crewmate), "The owner's crewmate passed a staff door")
+	TEST_ASSERT(findtext(jointext(staff_door.examine(visitor), " "), "Staff only."), "A staff door does not say so")
 	visitor.forceMove(staff_inside)
 	TEST_ASSERT(staff_door.allowed(visitor), "A visitor inside the room could not leave by the staff door")
 	visitor.forceMove(staff_outside)
@@ -540,28 +549,28 @@
 	var/mob/living/silicon/robot/borg = allocate(/mob/living/silicon/robot, staff_outside)
 	TEST_ASSERT(!staff_door.allowed(borg), "A silicon visitor passed a staff door")
 
-	// Public doors admit visitors until the room closes to them.
+	// The entrance admits visitors until the owner keys it to members.
 	visitor.forceMove(public_outside)
-	TEST_ASSERT(public_door.allowed(visitor), "A visitor was refused at an open room's public door")
-	act(panel, owner, "set_room_visitors", null, list("id" = first_room.id, "allowed" = 0))
-	TEST_ASSERT(!first_room.visitors_allowed, "The console could not close a room to visitors")
-	TEST_ASSERT(!public_door.allowed(visitor), "A closed room's public door admitted a visitor")
+	TEST_ASSERT(public_door.allowed(visitor), "A visitor was refused at a public entrance")
+	TEST_ASSERT_NULL(home.set_door_access(owner, public_door, "members"), "The owner could not key the entrance to members")
+	TEST_ASSERT(!public_door.allowed(visitor), "A members-only entrance admitted a visitor")
 	resident.forceMove(public_outside)
-	TEST_ASSERT(public_door.allowed(resident), "A closed room's public door refused a member")
-	resident.forceMove(get_turf(home.management_console))
-	var/datum/player_outpost_management_ui/management_test/resident_panel = upgrade_test_panel(home, resident)
-	act(resident_panel, resident, "set_room_visitors", null, list("id" = first_room.id, "allowed" = 1))
-	TEST_ASSERT(!first_room.visitors_allowed, "A resident with no role opened a room to visitors")
+	TEST_ASSERT(public_door.allowed(resident), "A members-only entrance refused a member")
+	TEST_ASSERT_EQUAL(home.set_door_access(resident, public_door, "public"), "Not authorised.", "A resident with no role changed a door")
+	TEST_ASSERT_EQUAL(outpost_door_access_of(public_door), "members", "A refused change still changed the door")
+	TEST_ASSERT(public_door.unres_sides, "Keying the entrance lost its free side")
 
 	// A blocked resident is out (F-10).
 	act(panel, owner, "block_resident", null, list("ckey" = resident.ckey))
-	resident.forceMove(staff_outside)
-	TEST_ASSERT(!staff_door.allowed(resident), "A blocked resident passed a staff door")
+	TEST_ASSERT(!public_door.allowed(resident), "A blocked resident passed a members-only door")
 
-	// Abandonment tells every room.
+	// Abandonment tells every room, and every door goes back to its default.
 	home.abandon(owner)
 	for(var/datum/outpost_upgrade/service/unit_test/room as anything in placed)
 		TEST_ASSERT_EQUAL(room.abandoned_calls, 1, "Abandonment did not reach [room.id]")
+	TEST_ASSERT_EQUAL(outpost_door_access_of(public_door), "public", "Abandonment left the entrance keyed")
+	TEST_ASSERT_EQUAL(outpost_door_access_of(staff_door), "staff", "Abandonment took the staff door off staff")
+	TEST_ASSERT(public_door.allowed(visitor), "An ownerless outpost's door refused a visitor")
 
 	LAZYREMOVE(owner.mind.ship_teams, crew)
 	LAZYREMOVE(crewmate.mind.ship_teams, crew)

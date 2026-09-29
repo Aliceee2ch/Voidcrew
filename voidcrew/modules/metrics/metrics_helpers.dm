@@ -48,9 +48,17 @@
 		return 0
 	return max(0, round((world.time - SSticker.round_start_time) / 10))
 
-/// A ship's id for the round. Stays the same through renames.
+/// A ship's metrics id, handed out on first use. It never changes for the rest of the ship's life,
+/// including before its shuttle is attached and after it is detached.
+/obj/structure/overmap/ship/var/metric_id
+
+GLOBAL_VAR_INIT(metric_ship_count, 0)
+
+/// A ship's id for the round. Stays the same through renames and shuttle changes.
 /proc/metric_ship_id(obj/structure/overmap/ship/ship)
-	return ship.shuttle?.shuttle_id || REF(ship)
+	if(!ship.metric_id)
+		ship.metric_id = "ship_[++GLOB.metric_ship_count]"
+	return ship.metric_id
 
 /// The ckey of a mob, or of the player whose mind it holds while they are ghosted.
 /proc/metric_ckey(atom/thing)

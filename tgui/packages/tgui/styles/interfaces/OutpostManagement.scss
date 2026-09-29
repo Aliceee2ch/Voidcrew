@@ -266,6 +266,30 @@ $line: rgba(158, 36, 52, 0.36);
 .Outpost__plain { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .Outpost__grow { flex: 1 1 auto; min-width: 0; }
 .Outpost__none { padding: 9px 0; color: #6e695f; font-size: 11px; }
+// Shared with the prison warden console (OutpostPrison.tsx).
+.Outpost__section-label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-bottom: 7px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: $ice;
+  border-bottom: 1px solid rgba($ice, 0.18);
+  span { font-family: 'Consolas', monospace; color: $muted; }
+}
+.Outpost__quiet { padding: 10px 0; color: $muted; font-size: 11px; }
+.Outpost__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 65px;
+  color: $muted;
+  font-size: 11px;
+  > .Icon { font-size: 18px; opacity: 0.7; }
+}
 .Outpost__tag {
   flex: 0 0 auto;
   padding: 2px 7px;

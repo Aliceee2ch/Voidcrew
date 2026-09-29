@@ -474,7 +474,10 @@
 	if(!carrying)
 		return
 	carried = mutable_appearance('icons/obj/storage/box.dmi', "box")
-	carried.pixel_y = -3
+	// A box sized to the droid, held low in front of it
+	carried.transform = matrix(0.6, 0, 0, 0, 0.6, 0)
+	carried.appearance_flags |= PIXEL_SCALE
+	carried.pixel_y = -5
 	worker.add_overlay(carried)
 
 /// A droid leans a little towards its work. People do not: their offsets belong to other things.

@@ -1407,7 +1407,7 @@ GLOBAL_LIST_INIT(bounty_outpost_trader_react_lines, list(
  * `user` holds the warrant up to `target`.
  * - The fugitive it is for: exposed (outpost_confront()).
  * - Any other criminal or decoy: they protest; at the fugitive's outpost that raises the alert.
- * - Anyone else (a person, a trader, a loiterer): a look, and nothing else.
+ * - Anyone else (a person, a trader, an outpost regular): a look, and nothing else.
  * Showing it to a criminal or decoy starts the ship's BOUNTY_WARRANT_COOLDOWN.
  */
 /obj/item/paper/bounty_warrant/proc/show_warrant(mob/living/target, mob/living/user)

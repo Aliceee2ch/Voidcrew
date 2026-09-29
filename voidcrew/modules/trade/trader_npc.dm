@@ -11,8 +11,8 @@
  * (one interface per tgui src_object) so both can be open at once.
  *
  * Unkillable AND protected: godmode makes violence pointless, and attacking a
- * trader is aggression against outpost property. Embargo rules apply (unlike
- * the loiterers, who are squatters, not staff).
+ * trader is aggression against outpost property. Embargo rules apply. The
+ * ambient NPCs milling about are killable, and hurting them counts as violence too.
  *
  * Speech lines come from the outpost's shop datum, so each trader has their
  * own voice (see the trader_lines lists on the /datum/outpost_shop subtypes).

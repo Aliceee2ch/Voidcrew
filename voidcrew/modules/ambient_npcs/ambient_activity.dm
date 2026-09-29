@@ -20,7 +20,8 @@
  * /datum/component/outpost_ambient_worker on the NPC for one job, finds the job, walks to it, runs
  * the job's /datum/outpost_ambient_work kind (welding, a wrench, a panel, pipes, hauling, wiping,
  * pouring, mopping, with their sounds, sparks and working looks) and takes the component off
- * again. The yard droids and mechanics keep that component permanently, exactly as before.
+ * again. The mechanics are now ambient too, working one job at a time like this; only the yard
+ * droids keep that component permanently.
  *
  * Generic activities here: idle, wander (near a spot), sit, drink, chat, work, leave (by the lift),
  * go home (the leash), take cover (the kingpin's shootout) and shelter (a storm).
@@ -118,7 +119,7 @@
 	// Where they were made is only somewhere on the floor: first somewhere they may stand
 	move_to_settle_tile()
 	for(var/attempt in 1 to AMBIENT_SETTLE_TRIES)
-		if(pick_activity() && settle_here())
+		if(pick_activity() && !istype(activity, /datum/ambient_activity/leave) && !istype(activity, /datum/ambient_activity/go_home) && settle_here())
 			return TRUE
 		end_activity()
 		if(!move_to_settle_tile())
@@ -195,6 +196,10 @@
 		return FALSE
 	return ignore_floor || !place || place.spot_allowed(tile, src)
 
+/// Whether they could stand about on `tile`: standable, and their place's loiter rules. `ignore` is not counted in the crowd (their chat partner).
+/mob/living/basic/ambient_npc/proc/loiter_spot_ok(turf/tile, list/avoid, atom/ignore)
+	return standable(tile, avoid) && (!place || place.loiter_ok(tile, src, ignore))
+
 /**
  * The nearest free tile within `distance` of `thing` they could stand on (not its own tile), or
  * null. Right beside it (distance 1), nothing may stand between them (Adjacent(): no wall, glass or
@@ -225,9 +230,31 @@
 	var/area/center_area = get_area(center)
 	for(var/attempt in 1 to 8)
 		var/turf/tile = locate(center.x + rand(-radius, radius), center.y + rand(-radius, radius), center.z)
-		if(tile && tile != loc && get_area(tile) == center_area && standable(tile, avoid))
+		if(tile && tile != loc && get_area(tile) == center_area && can_see(center, tile, radius + 1) && loiter_spot_ok(tile, avoid))
 			return tile
 	return null
+
+/**
+ * The best loiter spot within `radius` of `near`, in sight of it: a random score favouring nearer
+ * tiles, a couple of points for one with a wall, a table or a dense anchored machine at its side
+ * (somewhere to lean on). Or null.
+ */
+/mob/living/basic/ambient_npc/proc/find_loiter_spot(atom/near, radius = AMBIENT_LOITER_RANGE, list/avoid)
+	var/turf/center = get_turf(near)
+	if(!center)
+		return null
+	var/turf/best
+	var/best_score = -INFINITY
+	for(var/turf/tile as anything in RANGE_TURFS(radius, center))
+		if(!can_see(center, tile, radius + 1) || !loiter_spot_ok(tile, avoid))
+			continue
+		var/score = rand(0, 20) / 10 - get_dist(src, tile) / 2
+		if(ambient_backed_by_wall_or_table(tile))
+			score += 2
+		if(score > best_score)
+			best_score = score
+			best = tile
+	return best
 
 /// A table right beside `thing`, or null
 /mob/living/basic/ambient_npc/proc/table_beside(atom/thing)
@@ -255,23 +282,26 @@
 			return FALSE
 	return seat.loc == loc || standable(seat.loc, avoid)
 
-/// The nearest seat within `range` of `near` they could sit on, beside a table if `needs_table`
+/// A random one of the three nearest seats within `range` of `near` they could sit on, beside a table if `needs_table`, in sight of `near`
 /mob/living/basic/ambient_npc/proc/find_seat(atom/near, range = AMBIENT_ACTIVITY_RANGE, needs_table = FALSE, list/avoid)
 	var/turf/center = get_turf(near) || get_turf(src)
 	if(!center)
 		return null
-	var/obj/structure/chair/best
-	var/best_distance = INFINITY
+	var/list/distances = list()
 	for(var/obj/structure/chair/seat in range(range, center))
-		if(!seat_usable(seat, avoid) || (needs_table && !table_beside(seat)))
+		if(!seat_usable(seat, avoid) || (needs_table && !table_beside(seat)) || !can_see(center, seat, range + 1))
 			continue
-		var/distance = get_dist(src, seat)
-		if(distance < best_distance)
-			best = seat
-			best_distance = distance
-	return best
+		distances[seat] = get_dist(src, seat)
+	if(!length(distances))
+		return null
+	var/list/nearest = list()
+	for(var/obj/structure/chair/seat as anything in sortTim(distances, GLOBAL_PROC_REF(cmp_numeric_asc), associative = TRUE))
+		nearest += seat
+		if(length(nearest) >= 3)
+			break
+	return pick(nearest)
 
-/// The nearest table within `range` of `near` with room to stand at, or null
+/// The nearest table within `range` of `near`, in sight of it, with room to stand at, or null
 /mob/living/basic/ambient_npc/proc/find_table(atom/near, range = AMBIENT_ACTIVITY_RANGE, list/avoid)
 	var/turf/center = get_turf(near) || get_turf(src)
 	if(!center)
@@ -279,7 +309,7 @@
 	var/obj/structure/table/best
 	var/best_distance = INFINITY
 	for(var/obj/structure/table/table in range(range, center))
-		if(!leash_ok(get_turf(table)))
+		if(!leash_ok(get_turf(table)) || !can_see(center, table, range + 1))
 			continue
 		var/distance = get_dist(src, table)
 		if(distance < best_distance && free_tile_beside(table, 1, avoid))
@@ -287,7 +317,7 @@
 			best_distance = distance
 	return best
 
-/// Another ambient NPC within `range` who is free to talk (awake, unplayed, doing nothing that can't wait), or null
+/// Another ambient NPC within `range`, in sight, who is free to talk (awake, unplayed, doing nothing that can't wait, standing somewhere not already crowded), or null
 /mob/living/basic/ambient_npc/proc/find_chat_partner(range = AMBIENT_ACTIVITY_RANGE)
 	var/turf/here = get_turf(src)
 	if(!here)
@@ -298,8 +328,29 @@
 			continue
 		if(other.activity && !other.activity.accepts_company)
 			continue
+		if(!can_see(here, other, range + 1))
+			continue
+		var/turf/other_turf = get_turf(other)
+		if(place && other_turf)
+			if(!other.buckled && !place.loiter_ok(other_turf, src, other))
+				continue
+			if(place.crowded(other_turf, src, other))
+				continue
 		options += other
 	return length(options) ? pick(options) : null
+
+/// Whether `tile` has a wall, a table or a dense anchored machine on a cardinal side: somewhere worth standing about beside
+/proc/ambient_backed_by_wall_or_table(turf/tile)
+	for(var/cdir in GLOB.cardinals)
+		var/turf/next = get_step(tile, cdir)
+		if(!next || !isopenturf(next))
+			return TRUE
+		if(locate(/obj/structure/table) in next)
+			return TRUE
+		for(var/obj/thing in next)
+			if(thing.density && thing.anchored)
+				return TRUE
+	return FALSE
 
 // =========================================================================
 // AI
@@ -500,6 +551,12 @@
 /datum/ambient_activity/idle/setup()
 	set_duration()
 	next_line = world.time + rand(10 SECONDS, 30 SECONDS)
+	if(doer.place && isturf(doer.loc) && !doer.buckled && !doer.loiter_spot_ok(doer.loc))
+		var/turf/better = doer.find_loiter_spot(doer)
+		if(!better && istype(doer.place, /datum/ambient_place/outpost))
+			better = doer.place.settle_turf(doer, doer, AMBIENT_LOITER_RANGE * 2)
+		if(better)
+			go_to(better)
 	return TRUE
 
 /datum/ambient_activity/idle/act(seconds)
@@ -712,7 +769,7 @@
 			return FALSE
 	return approach()
 
-/// Walks up beside their partner, if not there already
+/// Walks up beside their partner, if not there already: the nearest loiter-ok tile actually adjacent to them
 /datum/ambient_activity/chat/proc/approach()
 	var/mob/living/partner = partner()
 	if(!partner)
@@ -720,10 +777,21 @@
 	if(get_dist(doer, partner) <= 1)
 		go_to(null)
 		return TRUE
-	var/turf/stand = doer.free_tile_beside(partner, 1, failed_spots)
-	if(!stand)
+	var/turf/center = get_turf(partner)
+	if(!center)
 		return FALSE
-	go_to(stand)
+	var/turf/best
+	var/best_distance = INFINITY
+	for(var/turf/tile as anything in RANGE_TURFS(1, center))
+		if(tile == center || !tile.Adjacent(partner) || !doer.loiter_spot_ok(tile, failed_spots, partner))
+			continue
+		var/from_doer = get_dist(doer, tile)
+		if(from_doer < best_distance)
+			best = tile
+			best_distance = from_doer
+	if(!best)
+		return FALSE
+	go_to(best)
 	return TRUE
 
 /// Who they are talking to
@@ -793,8 +861,18 @@
 		return FALSE
 	// Its room is worked out around where they stand now, and it keeps them in it until the job is done
 	worker = doer.AddComponent(/datum/component/outpost_ambient_worker, weights, TRUE, CALLBACK(doer, TYPE_PROC_REF(/mob/living/basic/ambient_npc, show_work_look)))
-	var/list/job = worker?.find_work()
-	if(length(job) != 3 || !doer.standable(job[2], failed_spots))
+	// A job whose spot they keep off (a doorway, a counter's reach) is skipped for the next one found
+	var/list/job
+	for(var/attempt in 1 to AMBIENT_WORK_FIND_TRIES)
+		job = worker?.find_work()
+		if(length(job) != 3)
+			job = null
+			break
+		if(doer.standable(job[2], failed_spots))
+			break
+		worker.last_target = WEAKREF(job[1])
+		job = null
+	if(!job)
 		drop_worker()
 		return FALSE
 	target_ref = WEAKREF(job[1])
@@ -817,6 +895,8 @@
 	worker = null
 	old.stop_work()
 	qdel(old)
+	if(!QDELETED(doer) && doer.work_look)
+		doer.show_work_look(null)
 
 /datum/ambient_activity/work/arrive()
 	var/atom/target = target_ref?.resolve()
@@ -927,9 +1007,29 @@
 	var/turf/refuge = get_turf(anchor())
 	if(!refuge)
 		return FALSE
-	var/turf/stand = doer.standable(refuge, failed_spots, TRUE) ? refuge : doer.free_tile_beside(refuge, 2, failed_spots, TRUE)
-	go_to(stand)
 	set_duration()
+	var/datum/ambient_place/outpost/outpost_place = istype(doer.place, /datum/ambient_place/outpost) ? doer.place : null
+	var/obj/structure/overmap/trader_outpost/outpost = outpost_place?.outpost()
+	var/turf/fight = outpost ? ambient_kingpin_fight_center(outpost) : null
+	var/turf/doer_turf = get_turf(doer)
+	if(fight && doer_turf && (fight.z != doer_turf.z || get_dist(fight, doer_turf) > AMBIENT_VIOLENCE_RANGE || !can_see(fight, doer_turf, AMBIENT_VIOLENCE_RANGE + 1)))
+		// Out of sight or out of range of the actual fight: duck where they are
+		go_to(null)
+		return TRUE
+	var/turf/stand
+	// Cover goes by who stands on or is heading to a tile, not by the crowd around it
+	if(doer.standable(refuge, failed_spots, TRUE) && !(outpost_place && outpost_place.crowd_count(refuge, doer) == INFINITY))
+		stand = refuge
+	else
+		var/list/candidates = list()
+		for(var/turf/tile as anything in RANGE_TURFS(AMBIENT_COVER_SPREAD, refuge))
+			if(tile == refuge || !doer.standable(tile, failed_spots, TRUE) || !can_see(refuge, tile, AMBIENT_COVER_SPREAD + 1))
+				continue
+			if(outpost_place && outpost_place.crowd_count(tile, doer) == INFINITY)
+				continue
+			candidates += tile
+		stand = length(candidates) ? pick(candidates) : null
+	go_to(stand)
 	return TRUE
 
 /datum/ambient_activity/take_cover/arrive()

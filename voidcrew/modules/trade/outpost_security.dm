@@ -216,7 +216,7 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 		return TRUE
 	if(creature.client || creature.mind) // Player-driven, so the strike ladder decides, not the wildlife rule.
 		return FALSE
-	if(in_faction(creature)) // Traders, loiterers, bots and the other turrets.
+	if(in_faction(creature)) // Traders, ambient outpost NPCs, bots and the other turrets.
 		return FALSE
 	if(HAS_TRAIT(creature, TRAIT_OUTPOST_RESIDENT)) // Whatever the outpost was built with.
 		return FALSE

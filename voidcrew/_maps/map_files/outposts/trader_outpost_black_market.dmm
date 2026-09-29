@@ -390,7 +390,6 @@
 /obj/structure/chair/sofa/corp{
 	dir = 4
 	},
-/mob/living/basic/outpost_loiterer/off_duty_pirate,
 /obj/machinery/light/red/directional/west,
 /turf/open/floor/carpet/neon/simple/red/nodots,
 /area/voidcrew/trader_outpost)
@@ -493,7 +492,6 @@
 /obj/structure/window/reinforced/survival_pod/spawner/directional/north,
 /obj/structure/fluff/shower_drain,
 /obj/effect/turf_decal/weather/dirt,
-/mob/living/basic/outpost_loiterer/off_duty_pirate,
 /obj/machinery/light/small/directional/west,
 /turf/open/indestructible/stone,
 /area/voidcrew/trader_outpost)
@@ -2609,7 +2607,6 @@
 	},
 /obj/machinery/light/red/directional/west,
 /obj/machinery/light/floor,
-/mob/living/basic/outpost_loiterer/off_duty_pirate,
 /turf/open/floor/carpet/neon/simple/red/nodots,
 /area/voidcrew/trader_outpost)
 "Gv" = (
@@ -2842,7 +2839,6 @@
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/trader_outpost)
 "Jy" = (
-/mob/living/basic/outpost_loiterer/off_duty_pirate,
 /turf/open/indestructible/light,
 /area/voidcrew/trader_outpost)
 "Jz" = (

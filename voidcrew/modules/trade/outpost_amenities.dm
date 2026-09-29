@@ -8,8 +8,8 @@
  *
  * - Med alcove kit (all outposts): stocked first-aid closet + tuned-up sleeper
  * - Rental stash lockers (yellow depot): pay once, locker is yours for the round
- * - Flavor loiterers (one flavor per zone): unkillable NPCs with barks and
- *   zero gameplay hooks, they just stop the room reading as a console farm
+ * - Outpost crew outfits: the mechanic and off-duty pirate looks reused by the
+ *   ambient mechanic role and NPC-ship bounty companions
  */
 
 // =========================================================================
@@ -191,104 +191,11 @@
 #undef OUTPOST_LOCKER_RENTAL_FEE
 
 // =========================================================================
-// FLAVOR LOITERERS
+// OUTPOST CREW OUTFITS
 // =========================================================================
 
-/**
- * A non-hostile NPC who hangs around the outpost and talks to nobody in
- * particular. No gameplay hook. Unkillable (godmode) rather than protected:
- * attacking one deliberately does NOT trip the embargo, loiterers are
- * squatters, not outpost property, and the swing accomplishes nothing anyway.
- */
-/mob/living/basic/outpost_loiterer
-	name = "loiterer"
-	desc = "They live here now, apparently."
-	icon = 'icons/mob/simple/simple_human.dmi'
-	unique_name = FALSE
-	combat_mode = FALSE
-	mob_biotypes = MOB_ORGANIC | MOB_HUMANOID
-	sentience_type = SENTIENCE_HUMANOID
-	move_resist = MOVE_FORCE_VERY_STRONG // no dragging them out to space
-	density = TRUE
-	basic_mob_flags = NONE
-	ai_controller = /datum/ai_controller/basic_controller/outpost_loiterer
-
-	/// Outfit whose worn appearance builds this loiterer's look
-	var/outfit_path = /datum/outfit/job/assistant
-	/// Lines barked when someone takes a swing at them
-	var/list/attacked_lines = list("Hey! Watch it!")
-	/// Rate limit on the attacked bark
-	COOLDOWN_DECLARE(attacked_bark_cooldown)
-
-/mob/living/basic/outpost_loiterer/Initialize(mapload)
-	. = ..()
-	// A random person in the outfit, so two dockhands are two different people (outpost_npc_looks.dm)
-	INVOKE_ASYNC(src, PROC_REF(build_look))
-	// Unkillable, not protected: violence against them is pointless, not punished
-	ADD_TRAIT(src, TRAIT_GODMODE, INNATE_TRAIT)
-	// move_resist only stops pulling; drag-drops (buckling to beds, stuffing
-	// into crates/disposals) never check it, so cancel them at the source.
-	RegisterSignal(src, COMSIG_MOUSEDROP_ONTO, PROC_REF(block_being_dragged))
-	// A closet skips the drag path entirely - close() sweeps its own tile - so the
-	// containment ban needs its own trait too (#131).
-	ADD_TRAIT(src, TRAIT_NO_CONTAINMENT, INNATE_TRAIT)
-	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, INNATE_TRAIT)
-
-/// Dresses the loiterer as a random person in their outfit. Can sleep.
-/mob/living/basic/outpost_loiterer/proc/build_look()
-	set_outpost_npc_look(src, outfit_path, gender, random_outpost_npc_look_number())
-
-/// Cancels any attempt to drag-drop the loiterer onto something (beds, crates,
-/// disposals, ...): they live here now, apparently, and they're staying.
-/mob/living/basic/outpost_loiterer/proc/block_being_dragged(atom/over, mob/user)
-	SIGNAL_HANDLER
-	return COMPONENT_CANCEL_MOUSEDROP_ONTO
-
-/mob/living/basic/outpost_loiterer/proc/bark_attacked()
-	if(!COOLDOWN_FINISHED(src, attacked_bark_cooldown))
-		return
-	COOLDOWN_START(src, attacked_bark_cooldown, 5 SECONDS)
-	say(pick(attacked_lines))
-
-/mob/living/basic/outpost_loiterer/attackby(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
-	. = ..()
-	if(attacking_item.force)
-		bark_attacked()
-
-/mob/living/basic/outpost_loiterer/bullet_act(obj/projectile/hitting_projectile, def_zone, piercing_hit = FALSE)
-	. = ..()
-	bark_attacked()
-
-/mob/living/basic/outpost_loiterer/attack_hand(mob/living/user, list/modifiers)
-	. = ..()
-	if(user.combat_mode)
-		bark_attacked()
-
-/datum/ai_controller/basic_controller/outpost_loiterer
-	blackboard = list(
-		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic,
-	)
-	ai_traits = PASSIVE_AI_FLAGS
-	ai_movement = /datum/ai_movement/basic_avoidance
-	idle_behavior = /datum/idle_behavior/idle_random_walk/outpost_loiterer
-
-/// Loiterers never wander out of the sanctuary area (or out an airlock)
-/datum/idle_behavior/idle_random_walk/outpost_loiterer
-	walk_chance = 10
-
-/datum/idle_behavior/idle_random_walk/outpost_loiterer/perform_idle_behavior(seconds_per_tick, datum/ai_controller/controller)
-	var/mob/living/living_pawn = controller.pawn
-	if(LAZYLEN(living_pawn.do_afters))
-		return FALSE
-	if(SPT_PROB(walk_chance, seconds_per_tick) && (living_pawn.mobility_flags & MOBILITY_MOVE) && isturf(living_pawn.loc) && !living_pawn.pulledby)
-		var/move_dir = pick(GLOB.alldirs)
-		var/turf/destination_turf = get_step(living_pawn, move_dir)
-		if(!destination_turf?.can_cross_safely(living_pawn))
-			return FALSE
-		if(!istype(get_area(destination_turf), /area/voidcrew/trader_outpost))
-			return FALSE
-		living_pawn.Move(destination_turf, move_dir)
-	return TRUE
+// Worn looks reused by ambient NPCs: the mechanic role at Halcyon, and
+// NPC-ship bounty companions in the off-duty pirate look.
 
 // --- Green: the mechanics keeping Halcyon running ---
 
@@ -339,155 +246,6 @@
 	head = /obj/item/clothing/head/utility/hardhat/welding/dblue
 	gloves = /obj/item/clothing/gloves/color/black
 
-/mob/living/basic/outpost_loiterer/mechanic
-	name = "outpost mechanic"
-	desc = "Permanently mid-job. Nobody has ever seen the job finished."
-	outfit_path = /datum/outfit/outpost_mechanic
-	// An unhurried walk between jobs
-	speed = 4
-	attacked_lines = list(
-		"Oi! I'm covered in welding fuel, you maniac!",
-		"Swing at the walls if you have to, they're rated for it. I'd rather you didn't swing at me.",
-	)
-	ai_controller = /datum/ai_controller/basic_controller/outpost_loiterer/mechanic
-	/// The outfits a mechanic can turn up in, one picked for each
-	var/list/outfit_choices = list(
-		/datum/outfit/outpost_mechanic,
-		/datum/outfit/outpost_mechanic/overalls,
-		/datum/outfit/outpost_mechanic/hivis,
-		/datum/outfit/outpost_mechanic/coveralls,
-		/datum/outfit/outpost_mechanic/atmos,
-	)
-	/// Which person in that outfit (outpost_npc_looks.dm)
-	var/look_number
-	/// "idle", "weld" and "tool" looks of this mechanic, once built
-	var/list/work_looks
-
-/mob/living/basic/outpost_loiterer/mechanic/Initialize(mapload)
-	outfit_path = pick(outfit_choices)
-	gender = pick(MALE, FEMALE)
-	look_number = random_outpost_npc_look_number()
-	. = ..()
-	// People: they keep out of doorways, and they change looks as they pick up tools
-	AddComponent(/datum/component/outpost_ambient_worker, list(
-		/datum/outpost_ambient_work/weld = 3,
-		/datum/outpost_ambient_work/wrench = 2,
-		/datum/outpost_ambient_work/panel = 2,
-		/datum/outpost_ambient_work/pipe = 2,
-	), TRUE, CALLBACK(src, PROC_REF(show_work_look)))
-
-/mob/living/basic/outpost_loiterer/mechanic/build_look()
-	work_looks = get_outpost_worker_looks(outfit_path, gender, look_number)
-	show_work_look(null)
-
-/// Shows the mechanic holding what `look` needs ("weld", "tool"), or empty-handed for null
-/mob/living/basic/outpost_loiterer/mechanic/proc/show_work_look(look)
-	if(QDELETED(src) || !work_looks)
-		return
-	apply_outpost_npc_look(src, work_looks[look || "idle"] || work_looks["idle"])
-
-/// Works while someone is around to see it, and talks now and then
-/datum/ai_controller/basic_controller/outpost_loiterer/mechanic
-	idle_behavior = null
-	planning_subtrees = list(
-		/datum/ai_planning_subtree/random_speech/outpost_mechanic,
-		/datum/ai_planning_subtree/outpost_ambient_work,
-	)
-
-/datum/ai_planning_subtree/random_speech/outpost_mechanic
-	// Planning never stops while a mechanic is about, so a low chance keeps the old pace of chatter
-	speech_chance = 0.5
-	speak = list(
-		"Your port thruster sounds wrong. I can hear it from here. Through the hull.",
-		"Barnaby says I can't charge for advice, so: free advice, seal your ship.",
-		"I've been fixing this same compressor for six years. It's a lifestyle.",
-		"You'd be amazed what people leave in the repair bay. Mostly blood.",
-		"Green zone's quiet. Too quiet. No, wait. That's the compressor again.",
-	)
-	emote_see = list("wipes their hands on an oily rag.", "taps a pipe thoughtfully.")
-
-// --- Yellow: the dockhand who has seen every crew type come through ---
-
-/**
- * Hazard vest over a cargo sweater and gauntlets rated for dragging things
- * that don't want to be dragged. The vest is the whole read: on a dock, being
- * seen before you're run over is the job.
- */
-/datum/outfit/outpost_dockhand
-	name = "Depot dockhand"
-	uniform = /obj/item/clothing/under/rank/cargo/tech
-	suit = /obj/item/clothing/suit/hazardvest
-	gloves = /obj/item/clothing/gloves/cargo_gauntlet
-	head = /obj/item/clothing/head/soft/black
-	shoes = /obj/item/clothing/shoes/workboots
-
-/mob/living/basic/outpost_loiterer/dockhand
-	name = "depot dockhand"
-	desc = "Loads crates, unloads opinions."
-	outfit_path = /datum/outfit/outpost_dockhand
-	attacked_lines = list(
-		"Hey! Take it outside. Sarge charges for cleanup and it comes out of MY pay.",
-		"You hit like a cargo tech. I'd know.",
-	)
-	ai_controller = /datum/ai_controller/basic_controller/outpost_loiterer/dockhand
-
-/datum/ai_controller/basic_controller/outpost_loiterer/dockhand
-	planning_subtrees = list(
-		/datum/ai_planning_subtree/random_speech/outpost_dockhand,
-	)
-
-/datum/ai_planning_subtree/random_speech/outpost_dockhand
-	speech_chance = 2
-	speak = list(
-		"Rent a locker. Trust me. The yellow lanes eat cargo bays.",
-		"Last crew through here left in a hurry. Their locker's still paid up.",
-		"Sarge doesn't sleep. I've checked. Nobody knows how she does it.",
-		"I stack crates and I watch the docks. The second part is the job.",
-		"Convoy's late again. Convoy's always late. Convoy might be a myth.",
-	)
-	emote_see = list("counts crates under their breath.", "stretches their back with an audible pop.")
-
-// --- Red: the Dregs cantina's bartender, who has poured for worse ---
-
-/**
- * The Dregs' other apron. Same shirt and slacks as Dram behind the counter,
- * white apron instead of his blue one. She works the floor, he works the bar,
- * and the glass in her hand was already clean.
- */
-/datum/outfit/outpost_cantina_bartender
-	name = "Cantina bartender"
-	uniform = /obj/item/clothing/under/costume/buttondown/slacks/service
-	suit = /obj/item/clothing/suit/apron/chef
-	shoes = /obj/item/clothing/shoes/laceup
-	r_hand = /obj/item/reagent_containers/cup/glass/drinkingglass
-
-/mob/living/basic/outpost_loiterer/bartender
-	name = "cantina bartender"
-	desc = "Pours drinks in a red-zone bar and has never once asked a follow-up question."
-	gender = FEMALE
-	outfit_path = /datum/outfit/outpost_cantina_bartender
-	attacked_lines = list(
-		"HEY. You bleed on my bar, you buy the bar.",
-		"Swing again and you're cut off. From drinks AND oxygen, if Vex is feeling helpful.",
-	)
-	ai_controller = /datum/ai_controller/basic_controller/outpost_loiterer/bartender
-
-/datum/ai_controller/basic_controller/outpost_loiterer/bartender
-	planning_subtrees = list(
-		/datum/ai_planning_subtree/random_speech/outpost_bartender,
-	)
-
-/datum/ai_planning_subtree/random_speech/outpost_bartender
-	speech_chance = 2
-	speak = list(
-		"Dram works the counter. I work the floor. Guess which of us breaks up the fights.",
-		"Ice machine's been dead since the last convoy. Everything's warm. So am I.",
-		"Two rules. Pay first, and don't lean on the tap handles.",
-		"Third stool from the end wobbles. Always has. Sit somewhere else.",
-		"Glasses go back on the bar, not the floor. I sweep, and I remember who made me sweep.",
-	)
-	emote_see = list("polishes a glass that was already clean.", "restacks the same three bottles.")
-
 // --- Red: the off-duty pirate who considers the Undertow neutral ground ---
 
 /**
@@ -502,32 +260,6 @@
 	head = /obj/item/clothing/head/costume/pirate/bandana
 	shoes = /obj/item/clothing/shoes/pirate
 	r_hand = /obj/item/claymore/cutlass
-
-/mob/living/basic/outpost_loiterer/off_duty_pirate
-	name = "off-duty pirate"
-	desc = "Off duty, and about as relaxed as a pirate gets. The cutlass is mostly decorative."
-	outfit_path = /datum/outfit/outpost_off_duty_pirate
-	attacked_lines = list(
-		"Ha! In the Undertow? Vex would skin you if I were worth skinning.",
-		"Save it for the docks, friend. In here we drink.",
-	)
-	ai_controller = /datum/ai_controller/basic_controller/outpost_loiterer/off_duty_pirate
-
-/datum/ai_controller/basic_controller/outpost_loiterer/off_duty_pirate
-	planning_subtrees = list(
-		/datum/ai_planning_subtree/random_speech/outpost_pirate,
-	)
-
-/datum/ai_planning_subtree/random_speech/outpost_pirate
-	speech_chance = 2
-	speak = list(
-		"Everyone's armed in the red zone. That's why it's polite here.",
-		"My captain thinks I'm out resupplying. I am. Slowly.",
-		"The turrets only shoot rude people. Beautiful system. No survivors... I mean, no complaints.",
-		"Shore leave's four days. Two getting here, one drinking, one regretting it.",
-		"You didn't see me here. I'm not here. Nobody's ever here.",
-	)
-	emote_see = list("polishes a decorative cutlass.", "eyes your ship through the viewport.")
 
 // =========================================================================
 // GREENHOUSE

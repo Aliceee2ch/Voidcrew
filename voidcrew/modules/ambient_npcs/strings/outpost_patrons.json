@@ -382,6 +382,23 @@
 			}
 		]
 	},
+	"off_duty_pirate": {
+		"idle": [
+			"Everyone's armed in the red zone. That's why it's polite here.",
+			"My captain thinks I'm out resupplying. I am. Slowly.",
+			"The turrets only shoot rude people. Beautiful system. No survivors... I mean, no complaints.",
+			"Shore leave's four days. Two getting here, one drinking, one regretting it.",
+			"You didn't see me here. I'm not here. Nobody's ever here."
+		],
+		"attacked": [
+			"Ha! In the Undertow? Vex would skin you if I were worth skinning.",
+			"Save it for the docks, friend. In here we drink."
+		],
+		"talk": [
+			"Everyone's armed in the red zone. That's why it's polite here.",
+			"My captain thinks I'm out resupplying. I am. Slowly."
+		]
+	},
 	"bar_dregs": {
 		"order": [
 			"Dram, the usual.",

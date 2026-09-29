@@ -21,7 +21,7 @@
 // ===== TRADER OUTPOSTS (2.4) =====
 
 /// Most ambient NPCs at one trader outpost at once, made in place or off the lift
-#define AMBIENT_OUTPOST_TRANSIENT_CAP 10
+#define AMBIENT_OUTPOST_TRANSIENT_CAP 8
 /// While players are on a concourse, someone steps off the lift at most this often (to replace someone who left)
 #define AMBIENT_OUTPOST_ARRIVAL_EVERY (10 SECONDS)
 /// People made in place at the trader outposts per tick of SSambient_npcs, all outposts together
@@ -51,8 +51,26 @@
 #define AMBIENT_DEATH_CASH_HIGH 30
 /// An outpost's public floor is worked out again this often while it is occupied
 #define AMBIENT_OUTPOST_FLOOR_REFRESH (10 MINUTES)
-/// NPCs this far from a fight at an outpost duck and leave
+/// NPCs this far from a fight at an outpost duck and leave; take_cover() reuses it for the kingpin's shootout
 #define AMBIENT_VIOLENCE_RANGE 9
+
+/// How many jobs a working NPC looks past before giving up on work for now
+#define AMBIENT_WORK_FIND_TRIES 3
+
+// ===== LOITERING =====
+
+/// Other ambient NPCs within this of a loiter spot count toward crowding it
+#define AMBIENT_CROWD_RADIUS 2
+/// A loiter spot is crowded once this many other NPCs stand, or are headed, within AMBIENT_CROWD_RADIUS of it
+#define AMBIENT_CROWD_MAX 2
+/// An open run across a tile at or under this many tiles (on the public floor) makes it a passage: never a loiter spot
+#define AMBIENT_PASSAGE_WIDTH 3
+/// The loiter floor keeps this far from the hangar lift alcove
+#define AMBIENT_LIFT_CLEARANCE 2
+/// Cover spots the kingpin's shootout picks around the refuge are within this of it
+#define AMBIENT_COVER_SPREAD 3
+/// How far an idle NPC standing somewhere bad looks for a better loiter spot
+#define AMBIENT_LOITER_RANGE 6
 
 // ===== PLANETS AND FIELDS (2.4, 4.1) =====
 
@@ -98,7 +116,7 @@
 
 /// Where every ambient dialogue file lives
 #define AMBIENT_STRINGS_DIR "voidcrew/modules/ambient_npcs/strings"
-/// The core's own lines: fallbacks for every context an NPC's own file leaves out (P0)
+/// The core's own lines: fallbacks for every context an NPC's own file leaves out
 #define AMBIENT_STRINGS_CORE "ambient_core.json"
 /// Customers, drinkers and the outpost crowd (PA)
 #define AMBIENT_STRINGS_PATRONS "outpost_patrons.json"

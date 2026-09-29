@@ -19,6 +19,10 @@
 /mob/living/basic/ambient_npc/core_test/sitter
 	routine = list(/datum/ambient_activity/sit = 1)
 
+/// One whose only routine is leaving: settle_in() must never settle them into it
+/mob/living/basic/ambient_npc/core_test/leaver
+	routine = list(/datum/ambient_activity/leave = 1)
+
 /// A site kind the tests hand to the subsystem. No planet types and no npc_type, so the shared instance never rolls or spawns.
 /datum/ambient_site_kind/core_test
 	name = "core test camp"
@@ -252,7 +256,7 @@
 		SSambient_npcs.update_outpost(place, 1, roles)
 		for(var/mob/living/basic/ambient_npc/arrival in lift)
 			arrival.forceMove(run_loc_floor_bottom_left)
-	TEST_ASSERT_EQUAL(length(place.living_npcs()), 10, "A trader outpost has [length(place.living_npcs())] NPCs, not the cap of 10") // AMBIENT_OUTPOST_TRANSIENT_CAP
+	TEST_ASSERT_EQUAL(length(place.living_npcs()), 8, "A trader outpost has [length(place.living_npcs())] NPCs, not the cap of 8") // AMBIENT_OUTPOST_TRANSIENT_CAP
 
 	// A fight near them: they duck and head off
 	var/mob/living/basic/ambient_npc/witness = place.npcs[1]
@@ -288,6 +292,18 @@
 	TEST_ASSERT(place.occupied, "A returning player did not wake the outpost")
 	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
 		TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_AI_PAUSED), "[npc] is still held still after a player came back")
+
+/// Settling in never starts someone off heading for the lift: a role whose only routine is leaving fails to settle rather than starting it
+/datum/unit_test/voidcrew_ambient_settle_never_leaves
+
+/datum/unit_test/voidcrew_ambient_settle_never_leaves/Run()
+	var/obj/structure/overmap/trader_outpost/outpost = ambient_test_outpost()
+	var/datum/ambient_place/outpost/place = SSambient_npcs.outpost_place(outpost)
+	var/mob/living/basic/ambient_npc/core_test/leaver/npc = new(run_loc_floor_bottom_left)
+	npc.set_place(place)
+	TEST_ASSERT(!npc.settle_in(), "Someone whose only routine is leaving was settled into it")
+	TEST_ASSERT_NULL(npc.activity, "A failed settle left an activity running")
+	TEST_ASSERT(get_dist(npc, run_loc_floor_top_right) > 1, "Someone whose only routine is leaving ended up on or beside the lift")
 
 // =========================================================================
 // PLANET SITES
@@ -482,3 +498,129 @@
 	TEST_ASSERT_NOTNULL(work.worker?.work, "No job was started at the rack")
 	worker.end_activity()
 	TEST_ASSERT_NULL(worker.GetComponent(/datum/component/outpost_ambient_worker), "The work loop stayed on after the job")
+
+// =========================================================================
+// LOITERING AND CROWDING
+// =========================================================================
+
+/// ambient_open_span(), the loiter floor (lift clearance, doors), crowded(), settling spread out, idle and wander landing on loiter tiles, chat partners skipping a crowd, and cover spreading out from the refuge
+/datum/unit_test/voidcrew_ambient_outpost_spread
+
+/datum/unit_test/voidcrew_ambient_outpost_spread/Run()
+	var/turf/bl = run_loc_floor_bottom_left
+	var/turf/lift = run_loc_floor_top_right
+
+	// ambient_open_span(): a single 5-tile row is a passage on its short axis; the full 5x5 room is wide open at its centre
+	var/list/row = list()
+	for(var/x in bl.x to bl.x + 4)
+		row[locate(x, bl.y, bl.z)] = TRUE
+	TEST_ASSERT_EQUAL(ambient_open_span(locate(bl.x + 2, bl.y, bl.z), row), 1, "A one-tile-wide row has an open span other than 1")
+	var/list/room = list()
+	for(var/turf/tile as anything in block(locate(bl.x, bl.y, bl.z), locate(bl.x + 4, bl.y + 4, bl.z)))
+		room[tile] = TRUE
+	TEST_ASSERT_EQUAL(ambient_open_span(locate(bl.x + 2, bl.y + 2, bl.z), room), 5, "The centre of a 5x5 room has an open span other than 5")
+
+	// The loiter floor: the lift's clearance, a door and its cardinal side are out; a far corner is in
+	var/obj/structure/overmap/trader_outpost/outpost = ambient_test_outpost()
+	var/datum/ambient_place/outpost/place = SSambient_npcs.outpost_place(outpost)
+	var/turf/near_lift = locate(lift.x - 1, lift.y, lift.z)
+	var/obj/machinery/door/airlock/door = allocate(/obj/machinery/door/airlock, locate(bl.x + 1, bl.y + 1, bl.z))
+	var/turf/door_turf = get_turf(door)
+	var/turf/beside_door = locate(door_turf.x - 1, door_turf.y, door_turf.z)
+	var/turf/far_corner = bl
+	var/list/loiter = place.get_loiter_floor()
+	TEST_ASSERT(!loiter[near_lift], "A tile within 2 of the lift is a loiter tile") // AMBIENT_LIFT_CLEARANCE
+	TEST_ASSERT(!loiter[door_turf], "A door tile is a loiter tile")
+	TEST_ASSERT(!loiter[beside_door], "A tile beside a door is a loiter tile")
+	TEST_ASSERT(loiter[far_corner], "The far corner is not a loiter tile")
+
+	// crowded(): one NPC within 2 tiles does not crowd it; two do; a claimed (not yet arrived) spot is crowded too
+	var/turf/target = locate(far_corner.x + 2, far_corner.y + 2, far_corner.z)
+	var/mob/living/basic/ambient_npc/core_test/watcher1 = new(locate(target.x - 1, target.y, target.z))
+	watcher1.set_place(place)
+	TEST_ASSERT(!place.crowded(target, null), "One NPC within 2 tiles already crowds a tile") // AMBIENT_CROWD_MAX
+	var/mob/living/basic/ambient_npc/core_test/watcher2 = new(locate(target.x, target.y - 1, target.z))
+	watcher2.set_place(place)
+	TEST_ASSERT(place.crowded(target, null), "Two NPCs within 2 tiles do not crowd a tile") // AMBIENT_CROWD_RADIUS, AMBIENT_CROWD_MAX
+	qdel(watcher1)
+	qdel(watcher2)
+	var/mob/living/basic/ambient_npc/core_test/claimer = new(bl)
+	claimer.set_place(place)
+	claimer.activity = new /datum/ambient_activity/idle(claimer)
+	claimer.activity.go_to(target)
+	TEST_ASSERT(place.crowded(target, null), "A tile someone is walking to is not claimed")
+	qdel(claimer)
+
+	// An NPC starting idle beside the door is sent to a loiter tile; a wander stop is a loiter tile
+	var/mob/living/basic/ambient_npc/core_test/idler = new(beside_door)
+	idler.set_place(place)
+	var/datum/ambient_activity/idle/idle_act = idler.start_activity(new /datum/ambient_activity/idle(idler))
+	TEST_ASSERT_NOTNULL(idle_act, "Idle could not start beside the door")
+	TEST_ASSERT(idle_act.spot && loiter[idle_act.spot], "An NPC idling beside the door was not sent to a loiter tile")
+	qdel(idler)
+	var/mob/living/basic/ambient_npc/core_test/wanderer = new(far_corner)
+	wanderer.set_place(place)
+	var/stops = 0
+	for(var/i in 1 to 20)
+		var/turf/stop = wanderer.random_tile_near(far_corner, 4)
+		if(!stop)
+			continue
+		stops++
+		TEST_ASSERT(loiter[stop], "A wander stop was not a loiter tile")
+	TEST_ASSERT(stops > 0, "Wandering never found a stop")
+	qdel(wanderer)
+
+	// find_chat_partner() skips a candidate crowded by two others already beside them
+	var/mob/living/basic/ambient_npc/core_test/crowded_a = new(far_corner)
+	crowded_a.set_place(place)
+	var/mob/living/basic/ambient_npc/core_test/crowded_b = new(locate(far_corner.x + 1, far_corner.y, far_corner.z))
+	crowded_b.set_place(place)
+	var/mob/living/basic/ambient_npc/core_test/crowded_c = new(locate(far_corner.x, far_corner.y + 1, far_corner.z))
+	crowded_c.set_place(place)
+	var/mob/living/basic/ambient_npc/core_test/asker = new(locate(far_corner.x + 2, far_corner.y, far_corner.z))
+	asker.set_place(place)
+	TEST_ASSERT_NULL(asker.find_chat_partner(), "find_chat_partner() picked a partner already crowded by two others")
+	qdel(crowded_a)
+	qdel(crowded_b)
+	qdel(crowded_c)
+	qdel(asker)
+
+	// Settling three with a role of max_count = 3: none within 2 of the lift, none with 2 or more others within 2 tiles
+	var/datum/ambient_outpost_role/core_test/spread_role = allocate(/datum/ambient_outpost_role/core_test)
+	spread_role.npc_type = /mob/living/basic/ambient_npc/core_test
+	spread_role.max_count = 3
+	place.needs_settling = TRUE
+	SSambient_npcs.settle_outpost(place, list(spread_role), 10)
+	TEST_ASSERT_EQUAL(length(place.npcs), 3, "Settling a role of three made [length(place.npcs)] NPCs")
+	var/list/settled = place.npcs.Copy()
+	for(var/i in 1 to length(settled))
+		var/mob/living/basic/ambient_npc/npc = settled[i]
+		TEST_ASSERT(get_dist(npc, lift) > 2, "[npc] settled within 2 tiles of the lift") // AMBIENT_LIFT_CLEARANCE
+		var/earlier_nearby = 0
+		for(var/j in 1 to i - 1)
+			if(get_dist(npc, settled[j]) <= 2) // AMBIENT_CROWD_RADIUS
+				earlier_nearby++
+		TEST_ASSERT(earlier_nearby < 2, "[npc] settled with 2 or more earlier arrivals within 2 tiles") // AMBIENT_CROWD_MAX
+	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs.Copy())
+		qdel(npc)
+
+	// Cover: with no crew fighting, three NPCs sent for cover get three different spots, the first one the refuge
+	var/turf/refuge = locate(bl.x + 2, bl.y + 2, bl.z)
+	var/mob/living/basic/ambient_npc/core_test/first = new(bl)
+	first.set_place(place)
+	var/mob/living/basic/ambient_npc/core_test/second = new(bl)
+	second.set_place(place)
+	var/mob/living/basic/ambient_npc/core_test/third = new(bl)
+	third.set_place(place)
+	first.react_shootout(refuge)
+	TEST_ASSERT(istype(first.activity, /datum/ambient_activity/take_cover), "The first NPC did not take cover")
+	TEST_ASSERT_EQUAL(first.activity.spot, refuge, "The first NPC to take cover did not go to the refuge")
+	second.react_shootout(refuge)
+	TEST_ASSERT(istype(second.activity, /datum/ambient_activity/take_cover), "The second NPC did not take cover")
+	TEST_ASSERT(second.activity.spot != refuge, "The second NPC also went to the refuge")
+	third.react_shootout(refuge)
+	TEST_ASSERT(istype(third.activity, /datum/ambient_activity/take_cover), "The third NPC did not take cover")
+	TEST_ASSERT(third.activity.spot != refuge && third.activity.spot != second.activity.spot, "Two NPCs got the same cover spot")
+	qdel(first)
+	qdel(second)
+	qdel(third)

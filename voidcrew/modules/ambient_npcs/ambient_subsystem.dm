@@ -122,10 +122,13 @@ SUBSYSTEM_DEF(ambient_npcs)
 		if(ambient_in_bounds(get_turf(player), bounds))
 			. += player
 
-/// A free tile of `outpost`'s hangar lift alcove, where someone arriving steps off, or null
+/// A tile of `outpost`'s hangar lift alcove where someone arriving steps off, or null. Nobody comes up while anyone is still in the lift.
 /datum/controller/subsystem/ambient_npcs/proc/lift_arrival_turf(obj/structure/overmap/trader_outpost/outpost)
 	if(!length(outpost?.lobby_alcove_turfs))
 		return null
+	for(var/turf/alcove as anything in outpost.lobby_alcove_turfs)
+		if(locate(/mob/living) in alcove)
+			return null
 	for(var/turf/alcove as anything in shuffle(outpost.lobby_alcove_turfs.Copy()))
 		if(!alcove.is_blocked_turf(exclude_mobs = FALSE))
 			return alcove
@@ -299,6 +302,21 @@ SUBSYSTEM_DEF(ambient_npcs)
 		var/turf/refuge = crew.crew_refuge
 		if(refuge && get_trader_outpost_for_turf(refuge) == outpost)
 			return refuge
+	return null
+
+/**
+ * Where the kingpin's crew is actually fighting at `outpost` (their seat), or null when his crew is
+ * calm or somewhere else. Read only (ambient_activity.dm's take_cover).
+ */
+/proc/ambient_kingpin_fight_center(obj/structure/overmap/trader_outpost/outpost)
+	if(!outpost)
+		return null
+	for(var/datum/bounty_kingpin_crew/crew in GLOB.bounty_kingpin_crews)
+		if(crew.crew_state == BOUNTY_KINGPIN_CALM)
+			continue
+		var/turf/seat = crew.crew_seat
+		if(seat && get_trader_outpost_for_turf(seat) == outpost)
+			return seat
 	return null
 
 // =========================================================================
@@ -538,6 +556,36 @@ SUBSYSTEM_DEF(ambient_npcs)
 /datum/ambient_place/proc/spot_allowed(turf/tile, mob/living/basic/ambient_npc/npc)
 	return TRUE
 
+/// Whether `npc` may stand about on `tile` here (idle, a stroll, a queue). Override.
+/datum/ambient_place/proc/loiter_ok(turf/tile, mob/living/basic/ambient_npc/npc, atom/ignore)
+	return TRUE
+
+/**
+ * How many of its NPCs stand, or are headed (their activity's `spot`, if they have not got there
+ * yet), within AMBIENT_CROWD_RADIUS of `tile`; `asker` and `ignore` are never counted. INFINITY if
+ * anyone is on `tile` itself.
+ */
+/datum/ambient_place/proc/crowd_count(turf/tile, mob/living/basic/ambient_npc/asker, atom/ignore)
+	if(!tile)
+		return INFINITY
+	var/nearby = 0
+	for(var/mob/living/basic/ambient_npc/npc as anything in living_npcs())
+		if(npc == asker || npc == ignore)
+			continue
+		var/datum/ambient_activity/current = npc.activity
+		var/turf/at = (current && current.spot && !current.at_spot()) ? current.spot : get_turf(npc)
+		if(!at || at.z != tile.z)
+			continue
+		if(at == tile)
+			return INFINITY
+		if(get_dist(at, tile) <= AMBIENT_CROWD_RADIUS)
+			nearby++
+	return nearby
+
+/// Whether `tile` is crowded for `asker`: someone on it, or AMBIENT_CROWD_MAX or more of its NPCs within AMBIENT_CROWD_RADIUS
+/datum/ambient_place/proc/crowded(turf/tile, mob/living/basic/ambient_npc/asker, atom/ignore)
+	return crowd_count(tile, asker, ignore) >= AMBIENT_CROWD_MAX
+
 /// Where `npc` leaves from (a lift), or null to fade where they stand. Override.
 /datum/ambient_place/proc/exit_turf(mob/living/basic/ambient_npc/npc)
 	return null
@@ -565,6 +613,11 @@ SUBSYSTEM_DEF(ambient_npcs)
 
 // ----- trader outposts -----
 
+/datum/ambient_place/outpost
+	/// The public floor minus passages, doors and the lift's clearance: where someone may stand about, not just pass through
+	var/list/loiter_floor
+	var/loiter_built_at = 0
+
 /datum/ambient_place/outpost/New(obj/structure/overmap/trader_outpost/outpost)
 	. = ..()
 	outpost_ref = WEAKREF(outpost)
@@ -582,6 +635,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 		if(!QDELETED(npc))
 			qdel(npc)
 	public_floor = null
+	loiter_floor = null
 	shootout_refuge = null
 	concourse = null
 	role_next_at = null
@@ -700,6 +754,44 @@ SUBSYSTEM_DEF(ambient_npcs)
 			public_floor[tile] = TRUE
 	return public_floor
 
+/**
+ * The public floor (turf = TRUE) minus the lift's clearance, doors and their cardinal neighbours,
+ * and passages (a narrow run of floor, ambient_open_span() <= AMBIENT_PASSAGE_WIDTH): tiles where
+ * an NPC may stand about rather than only pass through. Rebuilt whenever get_public_floor() is.
+ */
+/datum/ambient_place/outpost/proc/get_loiter_floor()
+	var/list/floor = get_public_floor()
+	if(loiter_floor && loiter_built_at == floor_built_at)
+		return loiter_floor
+	loiter_built_at = floor_built_at
+	loiter_floor = list()
+	if(!length(floor))
+		return loiter_floor
+	var/obj/structure/overmap/trader_outpost/outpost = outpost()
+	var/list/passages = list()
+	for(var/turf/tile as anything in floor)
+		if(ambient_open_span(tile, floor) <= AMBIENT_PASSAGE_WIDTH)
+			passages[tile] = TRUE
+	for(var/turf/tile as anything in floor)
+		if(passages[tile] || (locate(/obj/machinery/door) in tile))
+			continue
+		var/skip = FALSE
+		for(var/cdir in GLOB.cardinals)
+			var/turf/next = get_step(tile, cdir)
+			if(!next)
+				continue
+			if(passages[next] || (locate(/obj/machinery/door) in next))
+				skip = TRUE
+				break
+		if(!skip && outpost)
+			for(var/turf/alcove as anything in outpost.lobby_alcove_turfs)
+				if(alcove.z == tile.z && get_dist(alcove, tile) <= AMBIENT_LIFT_CLEARANCE)
+					skip = TRUE
+					break
+		if(!skip)
+			loiter_floor[tile] = TRUE
+	return loiter_floor
+
 // On the concourse: the lift alcove included, so someone just off the lift is not off their leash
 /datum/ambient_place/outpost/leash_ok(turf/tile, mob/living/basic/ambient_npc/npc)
 	return ambient_in_bounds(tile, concourse_bounds())
@@ -712,16 +804,52 @@ SUBSYSTEM_DEF(ambient_npcs)
 	var/list/floor = get_public_floor()
 	return !!floor[tile]
 
+// The loiter floor, less anyone standing about within AMBIENT_CROWD_RADIUS. Sites keep the base TRUE.
+/datum/ambient_place/outpost/loiter_ok(turf/tile, mob/living/basic/ambient_npc/npc, atom/ignore)
+	return !!get_loiter_floor()[tile] && !crowded(tile, npc, ignore)
+
 /datum/ambient_place/outpost/exit_turf(mob/living/basic/ambient_npc/npc)
 	return bounty_outpost_exit_turf(npc, outpost())
 
-// The public floor, never on the lift or right beside it (people step off there), with nothing on it
+/// Whether `tile` is free to settle someone on: real ground, nothing on it, not on or right beside the lift (people step off there), and standable for `npc` if given
+/datum/ambient_place/outpost/proc/settle_free(turf/tile, obj/structure/overmap/trader_outpost/outpost, mob/living/basic/ambient_npc/npc)
+	if(!tile || !ambient_ground_ok(tile) || tile.is_blocked_turf(exclude_mobs = FALSE))
+		return FALSE
+	for(var/turf/alcove as anything in outpost.lobby_alcove_turfs)
+		if(alcove.z == tile.z && get_dist(alcove, tile) <= 1)
+			return FALSE
+	return !npc || npc.standable(tile)
+
+/**
+ * A free tile to make someone at: an uncrowded loiter tile within `radius` of `near` first, the
+ * least crowded free loiter tile seen if none is uncrowded, and the old public-floor sampling
+ * (tiny test rooms and odd maps) only when the loiter floor itself is empty.
+ */
 /datum/ambient_place/outpost/settle_turf(mob/living/basic/ambient_npc/npc, atom/near, radius = 6)
 	var/obj/structure/overmap/trader_outpost/outpost = outpost()
 	var/list/floor = get_public_floor()
 	if(!outpost || !length(floor))
 		return null
 	var/turf/middle = get_turf(near)
+	var/list/loiter = get_loiter_floor()
+	if(length(loiter))
+		var/turf/least_crowded
+		var/least_crowd = INFINITY
+		for(var/attempt in 1 to AMBIENT_SETTLE_TRIES * 4)
+			var/turf/tile = pick(loiter)
+			if(middle && (tile.z != middle.z || get_dist(middle, tile) > radius))
+				continue
+			if(!settle_free(tile, outpost, npc))
+				continue
+			if(!crowded(tile, npc))
+				return tile
+			var/crowd = crowd_count(tile, npc)
+			if(crowd < least_crowd)
+				least_crowd = crowd
+				least_crowded = tile
+		if(least_crowded)
+			return least_crowded
+	// The loiter floor gave nothing at all: fall back to any free tile of the public floor
 	for(var/attempt in 1 to AMBIENT_SETTLE_TRIES * 4)
 		var/turf/tile
 		if(middle)
@@ -730,14 +858,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 				continue
 		else
 			tile = pick(floor)
-		if(!ambient_ground_ok(tile) || tile.is_blocked_turf(exclude_mobs = FALSE))
-			continue
-		var/by_the_lift = FALSE
-		for(var/turf/alcove as anything in outpost.lobby_alcove_turfs)
-			if(alcove.z == tile.z && get_dist(alcove, tile) <= 1)
-				by_the_lift = TRUE
-				break
-		if(by_the_lift || (npc && !npc.standable(tile)))
+		if(!settle_free(tile, outpost, npc))
 			continue
 		return tile
 	return null
@@ -976,6 +1097,29 @@ SUBSYSTEM_DEF(ambient_npcs)
 /// `time` (a world.time someone waits for) moved on by `delay`; 0 (not waiting) stays 0
 /proc/ambient_shifted(time, delay)
 	return time ? time + delay : time
+
+/**
+ * How wide the open run across `tile` is on `floor` (turf = TRUE): the smaller of its x and y run,
+ * each counted up to 4 steps either way and including `tile` itself. Used to find passages.
+ */
+/proc/ambient_open_span(turf/tile, list/floor)
+	if(!floor[tile])
+		return 0
+	var/x_run = ambient_open_run(tile, floor, EAST) + ambient_open_run(tile, floor, WEST) - 1
+	var/y_run = ambient_open_run(tile, floor, NORTH) + ambient_open_run(tile, floor, SOUTH) - 1
+	return min(x_run, y_run)
+
+/// `tile` itself, plus up to 4 more steps of `floor` in `dir`
+/proc/ambient_open_run(turf/tile, list/floor, dir)
+	var/turf/current = tile
+	var/steps = 1
+	for(var/i in 1 to 4)
+		var/turf/next = get_step(current, dir)
+		if(!next || !floor[next])
+			break
+		current = next
+		steps++
+	return steps
 
 /// Whether `tile` is within `distance` of any turf in `others`
 /proc/ambient_too_close(turf/tile, list/others, distance)

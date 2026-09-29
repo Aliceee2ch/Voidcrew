@@ -1,8 +1,6 @@
 /**
  * # World population: customers and drinkers at the trader outposts (owner items 2 and 3)
  *
- * Owner: PA (trader outpost life). P0 made this file as a stub; only PA edits it.
- *
  * Built here (spec 3.1, 3.2):
  * - /mob/living/basic/ambient_npc/outpost: the base for everyone PA brings to a trader outpost
  *   (customers, drinkers, the staff in outpost_workers.dm, the angler in outpost_angler.dm). They
@@ -81,7 +79,7 @@
 // =========================================================================
 
 /**
- * Everyone PA brings to a trader outpost. Passive like every outpost NPC, and killable (P0). Their
+ * Everyone PA brings to a trader outpost. Passive like every outpost NPC, and killable. Their
  * activities never send them into the pond, into or beside a doorway, into the lift's mouth, into
  * the kingpin's lounge or near an apiary.
  */
@@ -324,9 +322,11 @@
 
 /**
  * A tile where `npc` could wait near `center` without being in anyone's way: `low` to `high` tiles
- * from it (out of a counter's reach), the nearest to them. Null if none.
+ * from it (out of a counter's reach), in sight of it, a random one of the three nearest to `npc`.
+ * With `loiter` (default), only loiter spots count, so a crowded or bad queue gives up the
+ * spot instead of stacking. Null if none.
  */
-/proc/ambient_waiting_spot(mob/living/basic/ambient_npc/npc, atom/center, low = 3, high = 4, list/avoid)
+/proc/ambient_waiting_spot(mob/living/basic/ambient_npc/npc, atom/center, low = 3, high = 4, list/avoid, loiter = TRUE)
 	var/turf/middle = get_turf(center)
 	if(!middle || !npc)
 		return null
@@ -334,8 +334,25 @@
 	for(var/turf/tile as anything in RANGE_TURFS(high, middle))
 		if(get_dist(tile, middle) < low || !npc.standable(tile, avoid))
 			continue
+		if(!can_see(middle, tile, high + 1))
+			continue
+		if(loiter && !npc.loiter_spot_ok(tile, avoid))
+			continue
 		options += tile
-	return ambient_nearest_tile(npc, options)
+	if(!length(options))
+		return null
+	var/list/nearest = list()
+	for(var/i in 1 to min(3, length(options)))
+		var/turf/closest
+		var/closest_distance = INFINITY
+		for(var/turf/tile as anything in options)
+			var/distance = get_dist(npc, tile)
+			if(distance < closest_distance)
+				closest = tile
+				closest_distance = distance
+		nearest += closest
+		options -= closest
+	return pick(nearest)
 
 /**
  * `trader` answers `speaker` a moment from now with a line for `context` from `section` of dialogue
@@ -437,6 +454,16 @@
 		var/mob/living/basic/outpost_trader/roux = ambient_outpost_trader_of(place, /datum/outpost_shop/vendor/diner)
 		return roux ? list(roux, roux, PATRON_BAR_CHOWDER) : null
 	return null
+
+/// Whether `place`'s outpost has a barback to clear glasses; if not, a finished drink is dropped instead of left on a table
+/proc/ambient_outpost_has_barback(datum/ambient_place/outpost/place)
+	var/obj/structure/overmap/trader_outpost/outpost = istype(place) ? place.outpost() : null
+	if(!outpost)
+		return FALSE
+	for(var/datum/ambient_outpost_role/barback/role in SSambient_npcs.get_outpost_roles())
+		if(role.max_count > 0 && role.applies_to(outpost))
+			return TRUE
+	return FALSE
 
 /// Whether `seat` is within reach of a trader whose counter already has its share of ambient NPCs, `asker` aside
 /proc/ambient_seat_crowds_counter(obj/structure/chair/seat, datum/ambient_place/outpost/place, mob/living/asker)
@@ -1230,6 +1257,8 @@
 	var/obj/item/reagent_containers/cup/glass/drinkingglass/glass = doer?.held_item
 	if(istype(glass))
 		glass.reagents?.clear_reagents()
+	if(!QDELETED(doer) && !ambient_outpost_has_barback(doer.place))
+		table_ref = null
 	return ..()
 
 /datum/ambient_activity/drink/bar/shift_times(delay)
@@ -1325,7 +1354,7 @@
 // WHO COMES, AND HOW MANY (the outpost population rules)
 // =========================================================================
 
-/// Customers at every trader outpost: three at a time, one every minute or so
+/// Customers at every trader outpost: two at a time (one at the Undertow), one every minute or so
 /datum/ambient_outpost_role/customer
 	name = "customer"
 	npc_type = /mob/living/basic/ambient_npc/outpost/customer
@@ -1334,15 +1363,20 @@
 		/obj/structure/overmap/trader_outpost/outfitter,
 		/obj/structure/overmap/trader_outpost/black_market,
 	)
-	max_count = 3
+	max_count = 2
 	weight = 4
 	gap_low = 40 SECONDS
 	gap_high = 100 SECONDS
 
 /datum/ambient_outpost_role/customer/wanted(datum/ambient_place/outpost/place)
-	return length(ambient_outpost_traders(place)) ? max_count : 0
+	if(!length(ambient_outpost_traders(place)))
+		return 0
+	var/obj/structure/overmap/trader_outpost/outpost = place.outpost()
+	if(istype(outpost, /obj/structure/overmap/trader_outpost/black_market))
+		return 1
+	return max_count
 
-/// Drinkers: three at the Dregs, two at the Chowder Pot, one or two after shift in Quartermain's crew room
+/// One drinker at each outpost's bar
 /datum/ambient_outpost_role/drinker
 	name = "drinker"
 	npc_type = /mob/living/basic/ambient_npc/outpost/drinker
@@ -1351,21 +1385,13 @@
 		/obj/structure/overmap/trader_outpost/outfitter,
 		/obj/structure/overmap/trader_outpost/black_market,
 	)
-	max_count = 3
+	max_count = 1
 	weight = 2
 	gap_low = 60 SECONDS
 	gap_high = 150 SECONDS
 
 /datum/ambient_outpost_role/drinker/wanted(datum/ambient_place/outpost/place)
-	if(!length(ambient_outpost_bar(place)))
-		return 0
-	var/obj/structure/overmap/trader_outpost/outpost = place.outpost()
-	if(istype(outpost, /obj/structure/overmap/trader_outpost/black_market))
-		return 3
-	if(istype(outpost, /obj/structure/overmap/trader_outpost/general))
-		return 2
-	// The crew room: a second one once there is a crowd
-	return place.players > 1 ? 2 : 1
+	return length(ambient_outpost_bar(place)) ? max_count : 0
 
 /datum/ambient_outpost_role/drinker/arrive(datum/ambient_place/outpost/place, turf/where)
 	. = ..()

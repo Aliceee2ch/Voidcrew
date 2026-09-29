@@ -7,7 +7,7 @@
  */
 
 // Supply pods take any living mob on their tile when they leave. Mobs banned from containment
-// (outpost prisoners, traders, loiterers, vestige patrons) stay behind, as they do for lockers.
+// (outpost prisoners, traders, ambient outpost NPCs, vestige patrons) stay behind, as they do for lockers.
 /obj/structure/closet/supplypod/insertion_allowed(atom/to_insert)
 	if(HAS_TRAIT(to_insert, TRAIT_NO_CONTAINMENT))
 		return FALSE

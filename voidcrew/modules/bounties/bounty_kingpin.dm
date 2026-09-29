@@ -39,7 +39,7 @@
  *   reach for their guns"), then first shots spread over half a second, at most two goons on one
  *   hunter in cover. He never leaves the sofa and fires a revolver after a visible 0.5 s aim. Goons
  *   stay within 7 tiles of the sofa, never shoot anyone who is down, and half of those left flee once
- *   he falls. The loiterer walks out, the barkeep ducks, the turret ignores both sides, and hunters
+ *   he falls. The barkeep ducks, the turret ignores both sides, and hunters
  *   fighting his crew take no outpost property strikes (one marked hook in outpost.dm). His crew
  *   lives as long as he does.
  * - His body is P2's (/mob/living/basic/bounty_criminal), with or without a posting: downed at 25%,
@@ -964,8 +964,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /**
  * # Kingpin crew
  *
- * Everything around the kingpin: his goons and their posts, the lounge's tables, the loiterer and
- * the barkeep, the shootout, and the job he holds for a crew. Owned by the kingpin and deleted with
+ * Everything around the kingpin: his goons and their posts, the lounge's tables, the barkeep, the
+ * shootout, and the job he holds for a crew. Owned by the kingpin and deleted with
  * him: it lives as long as he does, posting or none. Holds its mobs by weakref. Processes on
  * SSfastprocess: at ease it keeps the room lively and watches for known hunters; in a shootout it
  * moves the goons and fires their guns and his.
@@ -1018,9 +1018,6 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/list/crew_broken_spots = list()
 	/// Weakrefs to the tables the crew flipped this fight, the coffee table's too
 	var/list/crew_flipped = list()
-	/// Weakref to the loiterer who walks out when the guns come out, and where he was
-	var/datum/weakref/crew_loiterer_ref
-	var/turf/crew_loiterer_home
 	/// Weakref to the barkeep who ducks
 	var/datum/weakref/crew_barkeep_ref
 	/// The barkeep is down behind the bar, and how he stood before
@@ -1078,9 +1075,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	crew_seat = null
 	crew_refuge = null
 	crew_lead = null
-	crew_loiterer_home = null
 	kingpin_ref = null
-	crew_loiterer_ref = null
 	crew_barkeep_ref = null
 	return ..()
 
@@ -1280,7 +1275,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 /**
  * Finds the room around the sofa: the coffee table in front of it and the tables at the goons' posts
- * (breakable while he is here, and put back if missing), the loiterer, the barkeep who can see the
+ * (breakable while he is here, and put back if missing), the barkeep who can see the
  * sofa, and the refuge.
  */
 /datum/bounty_kingpin_crew/proc/find_room()
@@ -1309,14 +1304,6 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		if(spot in coffee_spots)
 			crew_coffee_table |= ref
 		make_table_breakable(table)
-	crew_loiterer_ref = null
-	var/nearest_loiterer
-	for(var/mob/living/basic/outpost_loiterer/loiterer in range(BOUNTY_GOON_LEASH, crew_seat))
-		if(!nearest_loiterer || get_dist(loiterer, crew_seat) < get_dist(nearest_loiterer, crew_seat))
-			nearest_loiterer = loiterer
-	if(nearest_loiterer)
-		crew_loiterer_ref = WEAKREF(nearest_loiterer)
-		crew_loiterer_home = get_turf(nearest_loiterer)
 	// The barkeep is the trader in this room: the nearest one with a clear line to the sofa, never one behind a wall or a window (M4)
 	crew_barkeep_ref = null
 	var/mob/living/basic/outpost_trader/nearest_trader
@@ -1692,8 +1679,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /**
  * The shootout starts, set off by `instigator` ("We're here for you" when `confronted`, else an
  * attack): the telegraph. For BOUNTY_KINGPIN_TELEGRAPH nobody in the crew fires: the goons reach
- * for their guns, the table goons flip their tables, he kicks the coffee table over, the loiterer
- * walks out and the barkeep ducks. The instigator and their shipmates nearby are hunters now. It
+ * for their guns, the table goons flip their tables, he kicks the coffee table over and the
+ * barkeep ducks. The instigator and their shipmates nearby are hunters now. It
  * puts nobody on the board. Nothing starts when the crew won't fight the instigator (L6) or nobody
  * can shoot. Doesn't sleep. Returns TRUE if it started.
  */
@@ -1783,18 +1770,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		kingpin.visible_message(span_danger("[kingpin] kicks the table over!"), vision_distance = BOUNTY_KINGPIN_SIGHT)
 	return kicked
 
-/// The loiterer walks out to the refuge and the barkeep ducks
+/// The barkeep ducks
 /datum/bounty_kingpin_crew/proc/clear_room()
-	var/mob/living/basic/outpost_loiterer/loiterer = crew_loiterer_ref?.resolve()
-	if(!QDELETED(loiterer) && !HAS_TRAIT_FROM(loiterer, TRAIT_AI_PAUSED, BOUNTY_KINGPIN_TRAIT))
-		crew_loiterer_home = get_turf(loiterer)
-		ADD_TRAIT(loiterer, TRAIT_AI_PAUSED, BOUNTY_KINGPIN_TRAIT)
-		var/line = bounty_kingpin_line("room", "loiterer_leave")
-		if(line)
-			INVOKE_ASYNC(loiterer, TYPE_PROC_REF(/atom/movable, say), line)
-		var/turf/exit = exit_turf(loiterer)
-		if(exit && isturf(loiterer.loc))
-			GLOB.move_manager.jps_move(loiterer, exit, delay = 2, timeout = 20 SECONDS, repath_delay = 2 SECONDS, max_path_length = 80, simulated_only = TRUE, priority = MOVEMENT_ABOVE_SPACE_PRIORITY)
 	var/mob/living/basic/outpost_trader/barkeep = crew_barkeep_ref?.resolve()
 	if(!QDELETED(barkeep) && !crew_barkeep_ducked)
 		crew_barkeep_ducked = TRUE
@@ -1810,23 +1787,11 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 
 /**
  * The room goes back to how it was: every lounge table upright and whole (restore_tables()), the
- * loiterer back in (put back outright from another level or too far to walk), the barkeep up.
- * `final` when the crew is done.
+ * barkeep up. `final` when the crew is done.
  */
 /datum/bounty_kingpin_crew/proc/restore_room(final = FALSE)
 	restore_tables(final)
 	crew_flipped.Cut()
-	var/mob/living/basic/outpost_loiterer/loiterer = crew_loiterer_ref?.resolve()
-	if(!QDELETED(loiterer) && HAS_TRAIT_FROM(loiterer, TRAIT_AI_PAUSED, BOUNTY_KINGPIN_TRAIT))
-		REMOVE_TRAIT(loiterer, TRAIT_AI_PAUSED, BOUNTY_KINGPIN_TRAIT)
-		var/turf/home = crew_loiterer_home
-		if(home)
-			var/turf/here = get_turf(loiterer)
-			if(!here || here.z != home.z || get_dist(here, home) > BOUNTY_KINGPIN_WALK_HOME_MAX || !isturf(loiterer.loc))
-				GLOB.move_manager.stop_looping(loiterer)
-				loiterer.forceMove(home)
-			else if(here != home)
-				GLOB.move_manager.jps_move(loiterer, home, delay = 3, timeout = 30 SECONDS, repath_delay = 2 SECONDS, max_path_length = 80, simulated_only = TRUE, priority = MOVEMENT_ABOVE_SPACE_PRIORITY)
 	var/mob/living/basic/outpost_trader/barkeep = crew_barkeep_ref?.resolve()
 	if(!QDELETED(barkeep) && crew_barkeep_ducked)
 		crew_barkeep_ducked = FALSE

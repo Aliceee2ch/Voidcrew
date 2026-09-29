@@ -284,35 +284,33 @@
 	TEST_ASSERT(!has_state(looks["idle"], "weldvisor"), "A mechanic walks about with the visor down")
 	TEST_ASSERT(get_outpost_worker_looks(/datum/outfit/outpost_mechanic, FEMALE, 1) == looks, "Working looks are not cached")
 
-	// A crew of mechanics is not all in one outfit
-	var/list/outfits = list()
-	for(var/i in 1 to 12)
-		var/mob/living/basic/outpost_loiterer/mechanic/someone = allocate(/mob/living/basic/outpost_loiterer/mechanic, run_loc_floor_bottom_left)
-		TEST_ASSERT(someone.outfit_path in someone.outfit_choices, "A mechanic wears [someone.outfit_path]")
-		outfits |= someone.outfit_path
-	TEST_ASSERT(length(outfits) >= 2, "Twelve mechanics all wear [outfits[1]]")
-
 	// In a room with a door on its east wall: never through it, never stopping beside it
 	var/turf/start = locate(run_loc_floor_bottom_left.x, run_loc_floor_bottom_left.y + 2, run_loc_floor_bottom_left.z)
 	var/turf/door_turf = locate(run_loc_floor_top_right.x, run_loc_floor_bottom_left.y + 2, run_loc_floor_bottom_left.z)
 	allocate(/obj/machinery/door/airlock, door_turf)
-	var/mob/living/basic/outpost_loiterer/mechanic/mechanic = allocate(/mob/living/basic/outpost_loiterer/mechanic, start)
+	var/mob/living/basic/ambient_npc/mechanic = allocate(/mob/living/basic/ambient_npc, start)
+	mechanic.AddComponent(/datum/component/outpost_ambient_worker, list(
+		/datum/outpost_ambient_work/weld = 3,
+		/datum/outpost_ambient_work/wrench = 2,
+		/datum/outpost_ambient_work/panel = 2,
+		/datum/outpost_ambient_work/pipe = 2,
+	), TRUE)
 	var/datum/component/outpost_ambient_worker/worker = mechanic.GetComponent(/datum/component/outpost_ambient_worker)
-	TEST_ASSERT_NOTNULL(worker, "A mechanic does not work")
+	TEST_ASSERT_NOTNULL(worker, "A worker does not work")
 	var/list/room = worker.get_room()
-	TEST_ASSERT(!room[door_turf], "A mechanic's room runs through a door")
+	TEST_ASSERT(!room[door_turf], "A worker's room runs through a door")
 	var/list/visited = list()
 	for(var/step in 1 to 150)
 		worker.wander_step()
 		var/turf/here = get_turf(mechanic)
 		visited[here] = TRUE
-		TEST_ASSERT(here != door_turf, "A mechanic walked into the doorway")
+		TEST_ASSERT(here != door_turf, "A worker walked into the doorway")
 		var/beside_door = get_dist(here, door_turf) == 1 && (here.x == door_turf.x || here.y == door_turf.y)
-		TEST_ASSERT(!beside_door, "A mechanic stopped beside the door at [here.x],[here.y]")
-	TEST_ASSERT(length(visited) > 1, "A mechanic never moved")
+		TEST_ASSERT(!beside_door, "A worker stopped beside the door at [here.x],[here.y]")
+	TEST_ASSERT(length(visited) > 1, "A worker never moved")
 	var/turf/before_teleport = get_turf(mechanic)
-	TEST_ASSERT(!do_teleport(mechanic, run_loc_floor_top_right, forced = TRUE, no_effects = TRUE), "A mechanic was teleported")
-	TEST_ASSERT_EQUAL(get_turf(mechanic), before_teleport, "A mechanic moved when teleported")
+	TEST_ASSERT(!do_teleport(mechanic, run_loc_floor_top_right, forced = TRUE, no_effects = TRUE), "A worker was teleported")
+	TEST_ASSERT_EQUAL(get_turf(mechanic), before_teleport, "A worker moved when teleported")
 
 /// What a look is drawn from: every overlay's icon, state and colour, nested overlays included
 /datum/unit_test/voidcrew_outpost_mechanic_work/proc/signature(mutable_appearance/look, depth = 0)

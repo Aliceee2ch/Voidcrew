@@ -191,10 +191,6 @@
 		]
 	},
 	"room": {
-		"loiterer_leave": [
-			"Nope. Not getting shot over this.",
-			"I'll finish my drink somewhere else."
-		],
 		"barkeep_duck": [
 			"Not again!",
 			"Keep it away from the bottles!"

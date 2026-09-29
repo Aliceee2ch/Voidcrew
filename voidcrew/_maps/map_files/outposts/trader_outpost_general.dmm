@@ -167,7 +167,6 @@
 /obj/effect/turf_decal/trimline/neutral/filled/mid_joiner{
 	dir = 8
 	},
-/mob/living/basic/outpost_loiterer/mechanic,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/trader_outpost)
 "av" = (
@@ -605,7 +604,6 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 8
 	},
-/mob/living/basic/outpost_loiterer/mechanic,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/trader_outpost)
 "cs" = (
@@ -1659,7 +1657,6 @@
 /obj/effect/turf_decal/trimline/neutral/filled/mid_joiner{
 	dir = 1
 	},
-/mob/living/basic/outpost_loiterer/mechanic,
 /turf/open/indestructible/dark/smooth_large,
 /area/voidcrew/trader_outpost)
 "nx" = (
@@ -1840,7 +1837,6 @@
 /area/voidcrew/trader_outpost)
 "qw" = (
 /obj/structure/flora/bush/ferny/style_random,
-/mob/living/basic/outpost_loiterer/mechanic,
 /turf/open/floor/grass,
 /area/voidcrew/trader_outpost)
 "qy" = (
@@ -5214,7 +5210,6 @@
 	pixel_z = 8
 	},
 /obj/machinery/light/floor,
-/mob/living/basic/outpost_loiterer/mechanic,
 /turf/open/indestructible/hotelwood,
 /area/voidcrew/trader_outpost)
 "XM" = (

@@ -131,7 +131,6 @@
 #define BOUNTY_KINGPIN_TALK_HERE "We're here for you."
 #define BOUNTY_KINGPIN_TALK_WORK "Got any work?"
 #define BOUNTY_KINGPIN_TALK_TAKE_JOB "I'll take it."
-#define BOUNTY_KINGPIN_TALK_WALK "Walk away."
 
 // ===== HIS BUSINESS =====
 

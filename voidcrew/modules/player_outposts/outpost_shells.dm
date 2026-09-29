@@ -15,6 +15,8 @@
  * - one ordinary cargo console, bank terminal and resident cryopod on accessible
  *   interior floors (install_home_bundle binds them without spawning stock)
  * - one /obj/effect/landmark/player_outpost_arrival
+ * - no shipyard console (/obj/machinery/computer/ship_checkpoint): it works only with a ship bay,
+ *   and every ship bay map brings its own (outpost_ship_bay.dm)
  * - a hangar elevator kit on the north side: 3x3 /obj/effect/landmark/outpost_elevator_alcove
  *   with one /obj/machinery/outpost_elevator/directional panel, so visiting ships
  *   get hangar berths from the moment of founding (see outpost_hangar.dm)
@@ -126,15 +128,14 @@
 /// Everything else (frames, materials, the silo, air) is the owner's problem.
 /obj/structure/closet/crate/player_outpost_start
 	name = "colonial registry claim crate"
-	desc = "The colonial registry's idea of a starter kit: the circuit boards for an outpost's management, construction and shipyard consoles, and a packing slip wishing you luck."
+	desc = "The colonial registry's idea of a starter kit: the circuit boards for an outpost's management and construction consoles, and a packing slip wishing you luck."
 
 /obj/structure/closet/crate/player_outpost_start/PopulateContents()
 	. = ..()
 	new /obj/item/circuitboard/computer/player_outpost_management(src)
 	new /obj/item/circuitboard/computer/player_outpost_construction(src)
-	new /obj/item/circuitboard/computer/ship_checkpoint(src)
 	new /obj/item/paper/fluff/player_outpost_claim(src)
 
 /obj/item/paper/fluff/player_outpost_claim
 	name = "packing slip"
-	default_raw_text = "CONTENTS: outpost management console board (1), outpost construction console board (1), shipyard console board (1). The Colonial Registry congratulates you on your new claim and reminds you that unimproved sectors carry no warranty, atmosphere, or floor. Good luck."
+	default_raw_text = "CONTENTS: outpost management console board (1), outpost construction console board (1). The Colonial Registry congratulates you on your new claim and reminds you that unimproved sectors carry no warranty, atmosphere, or floor. Good luck."

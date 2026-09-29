@@ -171,10 +171,9 @@
 	home.founder_ckey = "registrycaptain"
 	TEST_ASSERT(home.load_level(), "The registry outpost did not load")
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The permanent recovery bay did not load")
-	for(var/obj/machinery/computer/ship_checkpoint/candidate as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/ship_checkpoint))
-		if(get_outpost_from_atom(candidate) == home)
-			terminal = candidate
-	TEST_ASSERT_NOTNULL(terminal, "The primary deck has no dedicated checkpoint console")
+	// Checkpoints are saved and rebuilt at the ship bay's own shipyard console.
+	terminal = outpost_bay_shipyard_console(LAZYACCESS(home.bay_berths, 1))
+	TEST_ASSERT_NOTNULL(terminal, "The ship bay has no shipyard console")
 	terminal_turf = get_turf(terminal)
 	var/mob/living/carbon/human/captain = make_player(terminal_turf, "registrycaptain")
 	var/mob/living/carbon/human/visitor = make_player(terminal_turf, "registryvisitor")

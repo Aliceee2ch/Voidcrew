@@ -22,11 +22,9 @@
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
 	return home
 
+/// The ship bay's shipyard console, where ships are ordered.
 /datum/unit_test/voidcrew_checkpoints/proc/find_console(obj/structure/overmap/dynamic/player_outpost/home)
-	for(var/obj/machinery/computer/ship_checkpoint/candidate as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/ship_checkpoint))
-		if(get_outpost_from_atom(candidate) == home)
-			return candidate
-	return null
+	return outpost_bay_shipyard_console(LAZYACCESS(home.bay_berths, 1))
 
 /// The shelf hull with the fewest tiles, for cases that only need some ship.
 /datum/unit_test/voidcrew_checkpoints/proc/smallest_order_hull()

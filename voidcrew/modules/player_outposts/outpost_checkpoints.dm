@@ -7,7 +7,7 @@
 	var/checkpoint_rebuilding = FALSE
 	var/retired_by_checkpoint = FALSE
 
-/// Checkpoints remain accessible on the primary deck while every bay is unloaded.
+/// Every ship bay map has a shipyard console; the board replaces a lost one.
 /obj/item/circuitboard/computer/ship_checkpoint
 	name = "Shipyard Console (Computer Board)"
 	greyscale_colors = CIRCUIT_COLOR_COMMAND

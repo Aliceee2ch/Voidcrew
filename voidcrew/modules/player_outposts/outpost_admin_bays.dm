@@ -1,4 +1,4 @@
-/// Administrative bay operations retain normal reservation and permission cleanup.
+/// Administrative bay operations keep the normal bay zone and permission cleanup.
 /datum/outpost_manipulator/proc/ship_bay_data(obj/structure/overmap/dynamic/player_outpost/home)
 	var/list/slots = list()
 	for(var/number in 1 to length(home.bay_berths))
@@ -41,7 +41,7 @@
 		return "Select an outpost silo first."
 	return null
 
-/// Never disable recovery or truncate reservations belonging to an active visit.
+/// Never disable recovery or pull the bay out from under an active visit.
 /datum/outpost_manipulator/proc/bay_removal_denial(obj/structure/overmap/dynamic/player_outpost/home)
 	if(!home.ship_bay_installed)
 		return "The ship bay is not installed."

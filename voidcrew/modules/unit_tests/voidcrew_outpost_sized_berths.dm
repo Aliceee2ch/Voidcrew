@@ -355,24 +355,8 @@
 
 /// Every tile of a vacant zone is bare space in the vacant area with nothing left on it.
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/check_zone_clean(datum/outpost_zone/zone, label)
-	var/area/vacant = GLOB.areas_by_type[/area/voidcrew/outpost_vacant]
-	var/leftovers = 0
-	var/wrong_turfs = 0
-	var/wrong_areas = 0
-	var/first_problem
-	for(var/turf/tile as anything in zone.get_block())
-		if(!isspaceturf(tile))
-			wrong_turfs++
-			first_problem ||= "([tile.x],[tile.y]) is [tile.type]"
-		if(tile.loc != vacant)
-			wrong_areas++
-			first_problem ||= "([tile.x],[tile.y]) is in [tile.loc?.type]"
-		for(var/atom/movable/thing as anything in tile)
-			if(thing == tile.lighting_object || isobserver(thing))
-				continue
-			leftovers++
-			first_problem ||= "[thing.type] left at ([tile.x],[tile.y])"
-	TEST_ASSERT(!wrong_turfs && !wrong_areas && !leftovers, "[label]: the wiped zone has [wrong_turfs] non-space tiles, [wrong_areas] tiles outside the vacant area and [leftovers] leftovers; first: [first_problem]")
+	var/problem = outpost_zone_leftovers(zone)
+	TEST_ASSERT_NULL(problem, "[label]: the wiped zone is not bare: [problem]")
 
 /// Three berths of different sizes at once: separate ground, separate floors, all released.
 /datum/unit_test/voidcrew_outpost_sized_berths/proc/check_several_berths(obj/structure/overmap/dynamic/player_outpost/home)
@@ -495,9 +479,8 @@
 
 /**
  * The berth ground procs agree with what holds the ground: the reservation for a trader outpost
- * berth and a player outpost's ship bay, the hangar loaded into its zone for a player outpost
- * berth. The corners, the size, the block, and which tiles are on it. Given-back ground reads as
- * none.
+ * berth, the hangar loaded into its zone for a player outpost berth and ship bay. The corners,
+ * the size, the block, and which tiles are on it. Given-back ground reads as none.
  */
 /datum/unit_test/voidcrew_outpost_berth_ground
 
@@ -526,7 +509,7 @@
 	TEST_ASSERT_NULL(home.enable_ship_bays(), "The ship bay did not load")
 	var/datum/outpost_berth/ship_bay/bay = LAZYACCESS(home.bay_berths, 1)
 	TEST_ASSERT_NOTNULL(bay, "The player outpost has no ship bay")
-	check_ground(bay, "ship bay")
+	check_zone_ground(bay, "ship bay")
 	var/turf/bay_corner = bay.get_top_right()
 	TEST_ASSERT(home.contains_site_turf(bay_corner), "The ship bay is not part of its outpost")
 	TEST_ASSERT(checkpoint_yard_noise_at(bay_corner), "The ship bay is not heard as a construction yard")

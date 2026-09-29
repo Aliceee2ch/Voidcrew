@@ -293,7 +293,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 			rooms += room
 	return rooms
 
-// ===== MANAGEMENT CONSOLE (Pricing and Services tabs, bay eviction) =====
+// ===== MANAGEMENT CONSOLE (Pricing tab, room settings, bay eviction) =====
 
 /datum/player_outpost_management_ui
 	/// Why the last pricing, service room or eviction action was refused, or null. The user is told in chat.
@@ -329,7 +329,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		))
 	return services
 
-/// Adds the bay's eviction state (the dock fee package fills it in) to a Docking tab bay row
+/// Adds the bay's eviction state (the dock fee package fills it in) to its ship's `ships_here` row
 /datum/player_outpost_management_ui/proc/bay_eviction_ui_data(datum/outpost_berth/ship_bay/bay, mob/user, list/row)
 	row["evict_denial"] = "Not available."
 	row["evicting"] = FALSE
@@ -339,7 +339,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		row[key] = eviction[key]
 
 /**
- * Pricing, Services tab and bay eviction actions. Each checks its own permission, so this runs
+ * Pricing, room settings and bay eviction actions. Each checks its own permission, so this runs
  * before the console's management gate. TRUE when the action was one of these. A refusal is kept
  * in market_error and told to the user in chat.
  */

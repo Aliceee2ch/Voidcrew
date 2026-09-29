@@ -2,11 +2,6 @@
  * A claim-bound management panel accessed through a console or installed Registry uplink.
  */
 
-/datum/asset/simple/outpost_management_plate
-	assets = list(
-		"outpost_management_plate.png" = 'voidcrew/modules/cyberware/icons/chrome_cradle_plate.png',
-	)
-
 /datum/player_outpost_management_ui
 	var/obj/structure/overmap/dynamic/player_outpost/outpost
 	var/mob/manager
@@ -74,7 +69,7 @@
 		qdel(src)
 
 /datum/player_outpost_management_ui/ui_assets(mob/user)
-	return list(get_asset_datum(/datum/asset/simple/outpost_management_plate), get_asset_datum(/datum/asset/simple/outpost_upgrade_previews))
+	return list(get_asset_datum(/datum/asset/simple/outpost_upgrade_previews))
 
 /datum/player_outpost_management_ui/ui_data(mob/user)
 	var/list/data = list("linked" = !!outpost)
@@ -135,26 +130,16 @@
 		data["resident_blocked"] = list()
 		data["residents"] = list()
 		data["research_servers"] = list()
-		data["research_ships"] = list()
-		data["research_connections"] = list()
 	data["ship_bay_installed"] = outpost.ship_bay_installed
 	data["ship_bay_cost"] = OUTPOST_SHIP_BAY_COST
 	data["ship_bay_denial"] = outpost.ship_bay_install_denial(user)
-	var/list/bays = list()
-	for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
-		if(!bay)
-			continue
-		bay.reconcile_silo()
-		var/list/bay_row = list("ref" = REF(bay), "number" = bay.bay_number, "ship" = bay.ship?.name, "status" = bay.status_text(), "requested" = !!bay.silo_requested_at, "approved" = !!bay.approved_silo)
-		bay_eviction_ui_data(bay, user, bay_row)
-		bays += list(bay_row)
-	data["ship_bays"] = bays
+	ships_ui_data(user, data, can_manage)
 	data["upgrades"] = upgrade_ui_data(user)
 	data["upgrade_surveying"] = outpost.upgrade_surveying
 	market_ui_data(user, data, can_manage)
 	return data
 
-/// The roster, construction grants and research links: management only
+/// The roster, construction grants and research servers: management only
 /datum/player_outpost_management_ui/proc/manager_ui_data(mob/user, list/data)
 	data["builders"] = outpost.authorized_builder_ckeys.Copy()
 	var/list/candidates = list()
@@ -178,21 +163,79 @@
 		var/obj/machinery/rnd/server/ship/server = server_options[label]
 		servers += list(list("ref" = REF(server), "name" = "[server.name] - [server.source_code_hdd.name]"))
 	data["research_servers"] = servers
-	var/list/ships = list()
-	var/list/ship_options = outpost.research_ship_options()
-	for(var/label in ship_options)
-		var/obj/structure/overmap/ship/ship = ship_options[label]
-		ships += list(list("ref" = REF(ship), "name" = ship.name))
-	data["research_ships"] = ships
-	var/list/connections = list()
-	for(var/datum/outpost_research_link/link as anything in outpost.research_links.Copy())
-		link.reconcile()
-		if(QDELETED(link))
+
+/**
+ * The Ships tab. `ships_here`: one row per ship settled at this outpost (ship bay, hangar berth or
+ * pad), with its research link for managers and, in the ship bay, its materials and eviction.
+ * `research_away`: for managers, every research link no row shows. A link outlives the visit
+ * (outpost_relay.dm), so a ship that left stays connected until someone disconnects it here.
+ */
+/datum/player_outpost_management_ui/proc/ships_ui_data(mob/user, list/data, can_manage)
+	for(var/datum/outpost_berth/ship_bay/bay as anything in outpost.bay_berths)
+		bay?.reconcile_silo()
+	// Ship -> the link its row offers, a connected link before a pending one. The rest go in research_away.
+	var/list/ship_links = list()
+	var/list/away = list()
+	if(can_manage)
+		for(var/datum/outpost_research_link/link as anything in outpost.research_links.Copy())
+			link.reconcile()
+			if(QDELETED(link))
+				continue
+			var/obj/structure/overmap/ship/linked_ship = link.ship_ref.resolve()
+			var/datum/outpost_research_link/shown = ship_links[linked_ship]
+			if(shown && (shown.ship_approved || !link.ship_approved))
+				away += link
+				continue
+			if(shown)
+				away += shown
+			ship_links[linked_ship] = link
+	var/list/rows = list()
+	for(var/obj/structure/overmap/ship/ship as anything in SSovermap.simulated_ships)
+		if(QDELETED(ship) || ship.docked != outpost || ship.state != OVERMAP_SHIP_IDLE)
 			continue
-		var/obj/structure/overmap/ship/ship = link.ship_ref.resolve()
-		var/obj/machinery/rnd/server/ship/server = link.home_server.resolve()
-		connections += list(list("ref" = REF(link), "ship" = ship.name, "server" = server.name, "status" = link.status_text(), "approved" = link.ship_approved))
-	data["research_connections"] = connections
+		var/datum/outpost_research_link/link = ship_links[ship]
+		ship_links -= ship
+		var/list/row = list(
+			"ref" = REF(ship),
+			"name" = ship.name,
+			"berth" = ship_berth_label(ship),
+			"crew" = length(ship.ship_team?.members),
+			"research" = research_link_state(link),
+			"research_ref" = link ? REF(link) : null,
+		)
+		// Materials and eviction exist only for the ship bay
+		var/datum/outpost_berth/ship_bay/bay = outpost.ship_bay_of(ship)
+		if(bay)
+			row["bay_ref"] = REF(bay)
+			row["materials"] = bay.approved_silo ? "allowed" : (bay.silo_requested_at ? "requested" : "none")
+			bay_eviction_ui_data(bay, user, row)
+		rows += list(row)
+	data["ships_here"] = rows
+	for(var/linked_ship in ship_links)
+		away += ship_links[linked_ship]
+	var/list/away_rows = list()
+	for(var/datum/outpost_research_link/link as anything in away)
+		var/obj/structure/overmap/ship/linked_ship = link.ship_ref.resolve()
+		away_rows += list(list("ref" = REF(link), "ship" = linked_ship?.name, "research" = research_link_state(link)))
+	data["research_away"] = away_rows
+
+/// "connected", "pending" or "none" for a ships_here or research_away row
+/datum/player_outpost_management_ui/proc/research_link_state(datum/outpost_research_link/link)
+	if(!link)
+		return "none"
+	return link.ship_approved ? "connected" : "pending"
+
+/// The short berth label of a ships_here row
+/datum/player_outpost_management_ui/proc/ship_berth_label(obj/structure/overmap/ship/ship)
+	var/datum/outpost_berth/ship_bay/bay = outpost.ship_bay_of(ship)
+	if(bay)
+		return "Bay [bay.bay_number]"
+	for(var/datum/outpost_berth/berth as anything in outpost.berths)
+		if(berth?.ship == ship)
+			return "Berth [berth.berth_number]"
+	if(ship.dock_index)
+		return "Pad [ship.dock_index]"
+	return "Docked"
 
 /datum/player_outpost_management_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
@@ -209,7 +252,7 @@
 		var/obj/machinery/ore_silo/silo = locate(params["ref"]) in outpost.service_silos()
 		outpost.select_service_silo(user, silo)
 		return TRUE
-	// Pricing, Services tab and bay eviction actions check their own permissions
+	// Pricing, room settings and bay eviction actions check their own permissions
 	if(market_action(action, params, user))
 		return TRUE
 	if(!outpost.is_current_management_user(user))

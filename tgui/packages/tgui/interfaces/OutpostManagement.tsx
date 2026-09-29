@@ -1,3 +1,10 @@
+/**
+ * Outpost management console.
+ *
+ * A slim header (name, owner, treasury), a tab bar, and each tab owns the
+ * whole window below it, split into framed columns. Styles live in
+ * styles/interfaces/OutpostManagement.scss.
+ */
 import {
   type ReactNode,
   type PointerEvent as ReactPointerEvent,
@@ -21,22 +28,12 @@ import { formatMoney } from 'tgui-core/format';
 import { acquireHotKey, releaseHotKey } from 'tgui-core/hotkeys';
 import { KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP } from 'tgui-core/keycodes';
 import type { BooleanLike } from 'tgui-core/react';
+import { HelmPlane } from '../../voidcrew_tgui/interfaces/Helm/HelmPlane';
 import { resolveAsset } from '../assets';
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
 
-// Matches the existing 1200 x 760 console plate, including its inset borders.
-const FRAME = { width: 1200, height: 760 };
-const PANELS = {
-  identity: [8, 6, 470, 30],
-  owner: [486, 6, 430, 30],
-  status: [924, 6, 268, 30],
-  directory: [10, 50, 586, 556],
-  registry: [606, 50, 586, 556],
-  broadcast: [10, 616, 586, 136],
-  command: [606, 616, 586, 136],
-  placement: [10, 50, 1182, 556],
-} as const;
+// ===== Data =====
 
 type Vessel = { ref: string; name: string };
 type Candidate = Vessel & {
@@ -50,22 +47,30 @@ type Resident = Vessel & {
   treasurer: BooleanLike;
   pricer?: BooleanLike;
 };
-type ShipBay = {
-  ref: string;
-  number: number;
-  ship: string | null;
-  status: string;
-  requested: BooleanLike;
-  approved: BooleanLike;
-  /** Eviction keys: absent until the dock fee package sends them. */
+type ResearchState = 'connected' | 'pending' | 'none';
+/** One ship settled at the outpost (ships_ui_data()). */
+type ShipHere = Vessel & {
+  /** "Bay 1", "Berth 2", "Pad 1" */
+  berth: string;
+  /** People on its crew */
+  crew: number;
+  /** Always "none" for someone who does not manage the outpost */
+  research: ResearchState | string;
+  research_ref: string | null;
+  /** Ship bay rows only: materials and eviction exist for the bay alone. */
+  bay_ref?: string | null;
+  materials?: 'allowed' | 'requested' | 'none' | string | null;
   evict_denial?: string | null;
   evicting?: BooleanLike;
   /** Seconds until the ship is sent off. */
   evict_eta?: number;
 };
-
-// ===== Marketplace (Pricing and Services tabs) =====
-
+/** A research link whose ship is not listed in ships_here (it left, or is still docking). */
+type ResearchAway = {
+  ref: string;
+  ship: string | null;
+  research: ResearchState | string;
+};
 type PriceRow = {
   key: string;
   label: string;
@@ -87,50 +92,26 @@ type Pricing = {
   ledger?: LedgerEntry[] | null;
   totals?: ServiceTotal[] | null;
 };
-type CloningVat = {
-  ref: string;
-  state: 'empty' | 'growing' | 'ready' | 'offline' | string;
-  holder: string | null;
-  evict_denial: string | null;
-};
-type CloningDetail = {
-  kind: 'cloning';
-  can_evict?: BooleanLike;
-  vats?: CloningVat[];
-};
 type ShopDetail = {
   kind: 'shop';
   open?: BooleanLike;
   can_toggle?: BooleanLike;
 };
-type MedicalDetail = {
-  kind: 'medical';
-  can_edit?: BooleanLike;
-  procedures?: { id: string; name: string; enabled: BooleanLike }[];
-};
-type NetworkPad = { id: string; name: string; zone?: number | string | null };
-/** grounding-teleporter §7.5; `policy`, `allow` and `trips` are the older spec names. */
+type NetworkPad = { id: string; name: string };
 type TeleporterDetail = {
   kind: 'teleporter';
-  installed?: BooleanLike;
   padName?: string;
   arrivals?: string;
-  policy?: string;
   allowlist?: NetworkPad[];
   candidates?: NetworkPad[];
   can_edit?: BooleanLike;
 };
-type ServiceDetail =
-  | CloningDetail
-  | ShopDetail
-  | MedicalDetail
-  | TeleporterDetail;
 type ServiceRoom = {
   id: string;
   name: string;
   visitors_allowed?: BooleanLike;
   can_toggle_visitors?: BooleanLike;
-  detail?: ServiceDetail | { kind?: string; [key: string]: unknown } | null;
+  detail?: { kind?: string; [key: string]: unknown } | null;
 };
 type UpgradeEntry = {
   id: string;
@@ -157,13 +138,6 @@ type UpgradeSurvey = {
   cells: string;
   near: string;
 };
-type ResearchConnection = {
-  ref: string;
-  ship: string;
-  server: string;
-  status: string;
-  approved: BooleanLike;
-};
 export type OutpostData = {
   linked: BooleanLike;
   outpost_name: string;
@@ -175,17 +149,15 @@ export type OutpostData = {
   can_manage: BooleanLike;
   can_spend: BooleanLike;
   can_set_prices: BooleanLike;
-  /** Treasury user: picks the service silo. Older servers used can_set_prices. */
+  /** Treasury user: picks the service silo. */
   can_select_silo?: BooleanLike;
   can_view_income?: BooleanLike;
   /** This user is billed as a visitor (admin testing aid). */
   playtest_visitor?: BooleanLike;
   pricing?: Pricing | null;
   services?: ServiceRoom[] | null;
-  /** Ship names whose crews count as members (abuse review F-12). */
+  /** Ship names whose crews count as members. */
   owner_crews?: (string | Vessel)[] | null;
-  /** grounding-teleporter §7.5 top-level shape, used when no service row carries it. */
-  teleporter?: Omit<TeleporterDetail, 'kind'> | null;
   treasury_balance: number;
   service_silo: string | null;
   service_silos: Vessel[];
@@ -198,6 +170,8 @@ export type OutpostData = {
   dock_requests: Vessel[];
   approved_ships: Vessel[];
   banned_ships: Vessel[];
+  ships_here?: ShipHere[] | null;
+  research_away?: ResearchAway[] | null;
   builders: string[];
   candidates: Candidate[];
   resident_mode: string;
@@ -206,12 +180,9 @@ export type OutpostData = {
   resident_invites: Record<string, BooleanLike>;
   resident_blocked: string[];
   research_servers: Vessel[];
-  research_ships: Vessel[];
-  research_connections: ResearchConnection[];
   ship_bay_installed: BooleanLike;
   ship_bay_cost: number;
   ship_bay_denial: string | null;
-  ship_bays: ShipBay[];
   upgrade_catalog: UpgradeEntry[];
   upgrades: UpgradeStatus[];
   upgrade_surveying: BooleanLike;
@@ -220,38 +191,108 @@ export type OutpostData = {
 type Act = (action: string, params?: Record<string, unknown>) => unknown;
 type Props = { data: OutpostData; act: Act };
 
-function Panel({
-  slot,
+// ===== Small parts =====
+
+function Frame({
+  title,
+  icon,
+  extra,
+  foot,
+  fill,
+  flush,
+  bodyClassName = '',
   children,
-  className = '',
 }: {
-  slot: keyof typeof PANELS;
-  children: ReactNode;
-  className?: string;
+  title: ReactNode;
+  icon: string;
+  extra?: ReactNode;
+  foot?: ReactNode;
+  fill?: boolean;
+  flush?: boolean;
+  bodyClassName?: string;
+  children?: ReactNode;
 }) {
-  const [x, y, width, height] = PANELS[slot];
   return (
-    <div
-      className={`Outpost__panel Outpost__panel--${slot} ${className}`}
-      style={{
-        left: `${(x / FRAME.width) * 100}%`,
-        top: `${(y / FRAME.height) * 100}%`,
-        width: `${(width / FRAME.width) * 100}%`,
-        height: `${(height / FRAME.height) * 100}%`,
-      }}
-    >
-      {children}
+    <section className={`Outpost__frame ${fill ? 'Outpost__frame--fill' : ''}`}>
+      <div className="Outpost__frame-head">
+        <Icon name={icon} />
+        <span>{title}</span>
+        {extra !== undefined && extra !== null ? (
+          <span className="Outpost__frame-extra">{extra}</span>
+        ) : null}
+      </div>
+      <div
+        className={`Outpost__frame-body ${flush ? 'Outpost__frame-body--flush' : ''} ${bodyClassName}`}
+      >
+        {children}
+      </div>
+      {foot ? <div className="Outpost__frame-foot">{foot}</div> : null}
+    </section>
+  );
+}
+
+function Section({ title, count }: { title: string; count?: number }) {
+  return (
+    <div className="Outpost__section">
+      {title}
+      {count !== undefined ? (
+        <span className="Outpost__section-count">{count}</span>
+      ) : null}
     </div>
   );
 }
 
-function Empty({ icon, children }: { icon: string; children: ReactNode }) {
+function None({ children }: { children: ReactNode }) {
+  return <div className="Outpost__none">{children}</div>;
+}
+
+type Choice = { id: string; name: string; icon?: string };
+
+/** A row of mutually exclusive buttons. Picking the current choice does nothing. */
+function Segmented({
+  choices,
+  value,
+  disabled,
+  inline,
+  onPick,
+}: {
+  choices: Choice[];
+  value: string;
+  disabled?: boolean;
+  inline?: boolean;
+  onPick: (id: string) => void;
+}) {
   return (
-    <div className="Outpost__empty">
-      <Icon name={icon} />
-      <span>{children}</span>
+    <div
+      className={`Outpost__segment ${inline ? 'Outpost__segment--inline' : ''}`}
+    >
+      {choices.map((choice) => (
+        <Button
+          key={choice.id}
+          icon={choice.icon}
+          selected={value === choice.id}
+          disabled={disabled}
+          onClick={() => {
+            if (value !== choice.id) {
+              onPick(choice.id);
+            }
+          }}
+        >
+          {choice.name}
+        </Button>
+      ))}
     </div>
   );
+}
+
+function credits(amount: number) {
+  return `${formatMoney(Number(amount) || 0)} cr`;
+}
+
+/** Whole seconds as m:ss. */
+function clock(seconds?: number | null) {
+  const total = Math.max(0, Math.ceil(Number(seconds) || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /** Silo choice belongs to treasury users; older servers only sent can_set_prices. */
@@ -261,168 +302,283 @@ function canSelectSilo(data: OutpostData) {
     : !!data.can_select_silo;
 }
 
-/** Whole seconds as m:ss. */
-function clock(seconds?: number | null) {
-  const total = Math.max(0, Math.ceil(Number(seconds) || 0));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
+// ===== Ships =====
 
-/** Evict or cancel for one bay row. Hidden until the server sends eviction keys. */
-function BayEviction({ bay, data, act }: Props & { bay: ShipBay }) {
-  if (bay.evict_denial === undefined && !bay.evicting) {
-    return null;
-  }
-  if (bay.evicting) {
-    return (
-      <>
-        <span className="Outpost__countdown">
-          <Icon name="stopwatch" /> {clock(bay.evict_eta)}
-        </span>
-        <Button
-          icon="xmark"
-          disabled={!data.can_manage}
-          onClick={() => act('cancel_bay_eviction', { ref: bay.ref })}
-        >
-          Cancel
-        </Button>
-      </>
-    );
-  }
-  if (!bay.ship) {
-    return null;
-  }
+const DOCK_MODES: Choice[] = [
+  { id: 'open', name: 'Open', icon: 'door-open' },
+  { id: 'request', name: 'Request', icon: 'hand' },
+  { id: 'lockdown', name: 'Lockdown', icon: 'lock' },
+];
+
+function DockingFrame({ data, act }: Props) {
+  const requests = data.dock_requests || [];
+  const cleared = data.approved_ships || [];
+  const blocked = data.banned_ships || [];
+  const manage = !!data.can_manage;
+  const block = (ship: Vessel) => (
+    <Button
+      icon="ban"
+      tooltip="Block"
+      disabled={!manage}
+      onClick={() => act('ban_ship', { ref: ship.ref })}
+    />
+  );
   return (
-    <Button.Confirm
-      icon="right-from-bracket"
-      color="bad"
-      disabled={!data.can_manage || !!bay.evict_denial}
-      tooltip={bay.evict_denial || undefined}
-      onClick={() => act('evict_bay_ship', { ref: bay.ref })}
-    >
-      Evict
-    </Button.Confirm>
+    <Frame title="Docking" icon="tower-observation" fill>
+      <Segmented
+        choices={DOCK_MODES}
+        value={data.dock_mode}
+        disabled={!manage}
+        onPick={(mode) => act('set_dock_mode', { mode })}
+      />
+      <Section title="Requests" count={requests.length} />
+      {requests.length === 0 ? <None>No requests</None> : null}
+      {requests.map((ship) => (
+        <div className="Outpost__row" key={ship.ref}>
+          <Icon name="shuttle-space" />
+          <span className="Outpost__name">{ship.name}</span>
+          <Button
+            icon="check"
+            color="good"
+            disabled={!manage}
+            onClick={() => act('approve_request', { ref: ship.ref })}
+          >
+            Clear
+          </Button>
+          <Button
+            disabled={!manage}
+            onClick={() => act('deny_request', { ref: ship.ref })}
+          >
+            Deny
+          </Button>
+          {block(ship)}
+        </div>
+      ))}
+      <Section title="Cleared" count={cleared.length} />
+      {cleared.length === 0 ? <None>None</None> : null}
+      {cleared.map((ship) => (
+        <div className="Outpost__row" key={ship.ref}>
+          <Icon name="shuttle-space" />
+          <span className="Outpost__name">{ship.name}</span>
+          <Button
+            disabled={!manage}
+            onClick={() => act('revoke_approval', { ref: ship.ref })}
+          >
+            Revoke
+          </Button>
+          {block(ship)}
+        </div>
+      ))}
+      <Section title="Blocked" count={blocked.length} />
+      {blocked.length === 0 ? <None>None</None> : null}
+      {blocked.map((ship) => (
+        <div className="Outpost__row" key={ship.ref}>
+          <Icon name="ban" />
+          <span className="Outpost__name">{ship.name}</span>
+          <Button
+            icon="unlock"
+            disabled={!manage}
+            onClick={() => act('unban_ship', { ref: ship.ref })}
+          >
+            Unblock
+          </Button>
+        </div>
+      ))}
+    </Frame>
   );
 }
 
-function Residents({ data, act }: Props) {
-  const { residents = [], candidates = [], builders = [] } = data;
-  const crews = (data.owner_crews || [])
-    .map((crew) => (typeof crew === 'string' ? crew : crew?.name))
-    .filter(Boolean);
+/** R&D cell of a ship row: connect, pending with cancel, or disconnect. */
+function ShipResearch({
+  ship,
+  server,
+  data,
+  act,
+}: Props & { ship: ShipHere; server: Vessel | undefined }) {
+  const manage = !!data.can_manage;
+  if (!manage) {
+    return <span className="Outpost__dash">-</span>;
+  }
+  const link = ship.research_ref;
+  if (ship.research === 'connected') {
+    return (
+      <Button
+        icon="link-slash"
+        disabled={!link}
+        onClick={() => link && act('revoke_research', { ref: link })}
+      >
+        Disconnect
+      </Button>
+    );
+  }
+  if (ship.research === 'pending') {
+    return (
+      <>
+        <span className="Outpost__state">Pending</span>
+        <Button
+          icon="xmark"
+          tooltip="Cancel"
+          disabled={!link}
+          onClick={() => link && act('revoke_research', { ref: link })}
+        />
+      </>
+    );
+  }
+  return (
+    <Button
+      icon="link"
+      disabled={!server}
+      tooltip={server ? undefined : 'No R&D server'}
+      onClick={() =>
+        server && act('invite_research', { ship: ship.ref, server: server.ref })
+      }
+    >
+      Connect
+    </Button>
+  );
+}
+
+function ShipRow({
+  ship,
+  server,
+  data,
+  act,
+}: Props & { ship: ShipHere; server: Vessel | undefined }) {
+  const manage = !!data.can_manage;
+  const materials = !!data.can_spend && manage;
+  const bay = ship.bay_ref;
+  const evicting = !!bay && !!ship.evicting;
+  return (
+    <div
+      className={`Outpost__ship ${evicting ? 'Outpost__ship--leaving' : ''}`}
+    >
+      <div>
+        <div className="Outpost__ship-name">{ship.name}</div>
+        <div className="Outpost__ship-sub">
+          {ship.berth} · {ship.crew} crew
+        </div>
+      </div>
+      <div className="Outpost__slot">
+        <ShipResearch ship={ship} server={server} data={data} act={act} />
+      </div>
+      <div className="Outpost__slot">
+        {bay && ship.materials === 'requested' ? (
+          <>
+            <Button
+              color="good"
+              disabled={!materials}
+              onClick={() => act('approve_bay_silo', { ref: bay })}
+            >
+              Allow
+            </Button>
+            <Button
+              disabled={!materials}
+              onClick={() => act('revoke_bay_silo', { ref: bay })}
+            >
+              Deny
+            </Button>
+          </>
+        ) : bay && ship.materials === 'allowed' ? (
+          <Button
+            disabled={!materials}
+            onClick={() => act('revoke_bay_silo', { ref: bay })}
+          >
+            Revoke
+          </Button>
+        ) : (
+          <span className="Outpost__dash">-</span>
+        )}
+      </div>
+      <div className="Outpost__slot Outpost__slot--end">
+        {!bay ? null : evicting ? (
+          <>
+            <span className="Outpost__countdown">
+              <Icon name="stopwatch" /> {clock(ship.evict_eta)}
+            </span>
+            <Button
+              icon="xmark"
+              tooltip="Cancel"
+              disabled={!manage}
+              onClick={() => act('cancel_bay_eviction', { ref: bay })}
+            />
+          </>
+        ) : (
+          <Button.Confirm
+            color="bad"
+            disabled={!manage || !!ship.evict_denial}
+            tooltip={ship.evict_denial || undefined}
+            onClick={() => act('evict_bay_ship', { ref: bay })}
+          >
+            Evict
+          </Button.Confirm>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Research links whose ship is not at the outpost: they stay live until cut. */
+function ResearchAwayRows({
+  links,
+  data,
+  act,
+}: Props & { links: ResearchAway[] }) {
+  if (links.length === 0) {
+    return null;
+  }
   return (
     <>
-      {crews.length > 0 ? (
-        <div className="Outpost__quiet">Owner's crews: {crews.join(', ')}</div>
-      ) : null}
-      {residents.length > 0 ? (
-        <div className="Outpost__section-label">Residents</div>
-      ) : null}
-      {residents.map((person) => (
-        <div className="Outpost__row" key={person.ref}>
-          <span
-            className={`Outpost__dot ${person.active ? 'Outpost__dot--online' : ''}`}
-          />
-          <strong className="Outpost__grow">{person.name}</strong>
-          {!!data.is_owner && (
+      <Section title="R&D away" count={links.length} />
+      {links.map((link) => (
+        <div className="Outpost__row" key={link.ref}>
+          <Icon name="shuttle-space" />
+          <span className="Outpost__name">{link.ship || 'Unknown ship'}</span>
+          {link.research === 'connected' ? (
+            <Button
+              icon="link-slash"
+              disabled={!data.can_manage}
+              onClick={() => act('revoke_research', { ref: link.ref })}
+            >
+              Disconnect
+            </Button>
+          ) : (
             <>
+              <span className="Outpost__state">Pending</span>
               <Button
-                icon="id-badge"
-                selected={!!person.steward}
-                tooltip="Steward"
-                onClick={() =>
-                  act('delegate', { ref: person.ref, role: 'steward' })
-                }
-              />
-              <Button
-                icon="coins"
-                selected={!!person.treasurer}
-                tooltip="Treasurer"
-                onClick={() =>
-                  act('delegate', { ref: person.ref, role: 'treasurer' })
-                }
-              />
-              <Button
-                icon="tags"
-                selected={!!person.pricer}
-                tooltip="Pricer"
-                onClick={() =>
-                  act('delegate', { ref: person.ref, role: 'pricer' })
-                }
+                icon="xmark"
+                tooltip="Cancel"
+                disabled={!data.can_manage}
+                onClick={() => act('revoke_research', { ref: link.ref })}
               />
             </>
           )}
-          <Button
-            icon="user-minus"
-            tooltip="Remove"
-            disabled={!data.can_manage || !!person.is_self}
-            onClick={() => act('remove_resident', { ref: person.ref })}
-          />
-        </div>
-      ))}
-      {candidates.length > 0 ? (
-        <div className="Outpost__section-label">On site</div>
-      ) : null}
-      {candidates.map((person) => (
-        <div className="Outpost__row" key={person.ref}>
-          <strong className="Outpost__grow">{person.name}</strong>
-          <Button
-            icon="user-plus"
-            tooltip="Add resident"
-            selected={!!person.is_resident}
-            disabled={!data.can_manage || !!person.is_resident}
-            onClick={() => act('add_resident', { ref: person.ref })}
-          />
-          {!!data.is_owner && (
-            <Button
-              icon="hammer"
-              tooltip="Builder"
-              selected={builders.includes(person.ckey)}
-              onClick={() =>
-                act(
-                  builders.includes(person.ckey)
-                    ? 'remove_builder'
-                    : 'add_builder',
-                  { ref: person.ref, ckey: person.ckey },
-                )
-              }
-            />
-          )}
-        </div>
-      ))}
-      {builders.length > 0 ? (
-        <div className="Outpost__section-label">Builders</div>
-      ) : null}
-      {builders.map((key) => (
-        <div className="Outpost__row" key={key}>
-          <span className="Outpost__grow">{key}</span>
-          <Button
-            icon="xmark"
-            tooltip="Remove builder"
-            disabled={!data.is_owner}
-            onClick={() => act('remove_builder', { ckey: key })}
-          />
         </div>
       ))}
     </>
   );
 }
 
-function Docking({ data, act }: Props) {
-  const groups = [
-    { title: 'Requests', ships: data.dock_requests || [], kind: 'request' },
-    { title: 'Cleared', ships: data.approved_ships || [], kind: 'approved' },
-    { title: 'Blocked', ships: data.banned_ships || [], kind: 'banned' },
-  ];
+function HarbourFrame({ data, act }: Props) {
+  const ships = data.ships_here || [];
+  const away = data.research_away || [];
   const silos = data.service_silos || [];
-  return (
+  const servers = data.research_servers || [];
+  const [serverRef, setServerRef] = useState('');
+  const server =
+    servers.find((candidate) => candidate.ref === serverRef) || servers[0];
+  const foot = (
     <>
       {silos.length > 1 ? (
-        <div className="Outpost__row">
-          <span>Silo</span>
+        <div className="Outpost__field-row">
+          <span className="Outpost__label">Silo</span>
           <Dropdown
             width="100%"
             disabled={!canSelectSilo(data)}
             selected={data.service_silo || ''}
+            displayText={
+              silos.find((silo) => silo.ref === data.service_silo)?.name ||
+              'No silo'
+            }
             options={silos.map((silo) => ({
               value: silo.ref,
               displayText: silo.name,
@@ -432,14 +588,31 @@ function Docking({ data, act }: Props) {
           />
         </div>
       ) : null}
+      {servers.length > 1 ? (
+        <div className="Outpost__field-row">
+          <span className="Outpost__label">R&amp;D</span>
+          <Dropdown
+            width="100%"
+            disabled={!data.can_manage}
+            selected={server?.ref || ''}
+            displayText={server?.name || 'No server'}
+            options={servers.map((candidate) => ({
+              value: candidate.ref,
+              displayText: candidate.name,
+            }))}
+            onSelected={setServerRef}
+          />
+        </div>
+      ) : null}
       {data.ship_bay_installed ? null : (
-        <div className="Outpost__row">
-          <span className="Outpost__grow">
-            Ship bay {formatMoney(data.ship_bay_cost || 0)} cr, 100 iron, 50
-            glass
+        <div className="Outpost__field-row">
+          <span className="Outpost__label">Ship bay</span>
+          <span className="Outpost__grow Outpost__mono Outpost__muted">
+            {credits(data.ship_bay_cost)} · 100 iron · 50 glass
           </span>
           <Button
-            disabled={!!data.ship_bay_denial}
+            icon="hammer"
+            disabled={!data.can_manage || !!data.ship_bay_denial}
             tooltip={data.ship_bay_denial || undefined}
             onClick={() => act('install_ship_bay')}
           >
@@ -447,163 +620,685 @@ function Docking({ data, act }: Props) {
           </Button>
         </div>
       )}
-      {(data.ship_bays || []).map((bay) => (
-        <div className="Outpost__row" key={bay.ref}>
-          <span className="Outpost__grow">
-            Bay {bay.number}:{' '}
-            {bay.ship ? `${bay.ship} - ${bay.status}` : bay.status}
-          </span>
-          {!!bay.requested && (
+    </>
+  );
+  const hasFoot =
+    silos.length > 1 || servers.length > 1 || !data.ship_bay_installed;
+  return (
+    <Frame
+      title="At the outpost"
+      icon="anchor"
+      extra={ships.length}
+      fill
+      foot={hasFoot ? foot : undefined}
+    >
+      {ships.length === 0 ? (
+        <None>No ships docked</None>
+      ) : (
+        <>
+          <div className="Outpost__ships-head">
+            <span>Ship</span>
+            <span>R&amp;D</span>
+            <span>Materials</span>
+            <span />
+          </div>
+          {ships.map((ship) => (
+            <ShipRow
+              key={ship.ref}
+              ship={ship}
+              server={server}
+              data={data}
+              act={act}
+            />
+          ))}
+        </>
+      )}
+      <ResearchAwayRows links={away} data={data} act={act} />
+    </Frame>
+  );
+}
+
+function ShipsTab({ data, act }: Props) {
+  return (
+    <div className="Outpost__page Outpost__page--ships">
+      <div className="Outpost__col">
+        <DockingFrame data={data} act={act} />
+      </div>
+      <div className="Outpost__col">
+        <HarbourFrame data={data} act={act} />
+      </div>
+    </div>
+  );
+}
+
+// ===== People =====
+
+const ROLES = [
+  { id: 'steward', name: 'Steward' },
+  { id: 'treasurer', name: 'Treasurer' },
+  { id: 'pricer', name: 'Pricer' },
+] as const;
+
+function ResidentsFrame({ data, act }: Props) {
+  const residents = data.residents || [];
+  const candidates = data.candidates || [];
+  const builders = data.builders || [];
+  const crews = (data.owner_crews || [])
+    .map((crew) => (typeof crew === 'string' ? crew : crew?.name))
+    .filter(Boolean);
+  return (
+    <Frame title="Residents" icon="users" extra={residents.length} fill>
+      {residents.length === 0 ? <None>No residents</None> : null}
+      {residents.map((person) => (
+        <div className="Outpost__row" key={person.ref}>
+          <span
+            className={`Outpost__dot ${person.active ? 'Outpost__dot--online' : ''}`}
+          />
+          <span className="Outpost__name">{person.name}</span>
+          {data.is_owner && person.is_self ? (
+            <span className="Outpost__tag">Owner</span>
+          ) : null}
+          {!!data.is_owner && !person.is_self ? (
+            <div className="Outpost__chips">
+              {ROLES.map((role) => (
+                <Button
+                  key={role.id}
+                  selected={!!person[role.id]}
+                  onClick={() =>
+                    act('delegate', { ref: person.ref, role: role.id })
+                  }
+                >
+                  {role.name}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {person.is_self ? null : (
             <Button
-              disabled={!data.can_spend || !data.can_manage}
-              onClick={() => act('approve_bay_silo', { ref: bay.ref })}
-            >
-              Allow materials
-            </Button>
+              icon="user-minus"
+              tooltip="Remove"
+              disabled={!data.can_manage}
+              onClick={() => act('remove_resident', { ref: person.ref })}
+            />
           )}
-          {(!!bay.requested || !!bay.approved) && (
-            <Button
-              disabled={!data.can_spend || !data.can_manage}
-              onClick={() => act('revoke_bay_silo', { ref: bay.ref })}
-            >
-              {bay.approved ? 'Revoke materials' : 'Deny'}
-            </Button>
-          )}
-          <BayEviction bay={bay} data={data} act={act} />
         </div>
       ))}
-      {groups.map(({ title, ships, kind }) =>
-        ships.length === 0 ? null : (
-          <div key={kind}>
-            <div className="Outpost__section-label">{title}</div>
-            {ships.map((ship) => (
-              <div className="Outpost__row" key={ship.ref}>
-                <Icon name="shuttle-space" />
-                <strong className="Outpost__grow">{ship.name}</strong>
-                {kind === 'request' && (
-                  <Button
-                    icon="check"
-                    color="good"
-                    tooltip="Clear approach"
-                    disabled={!data.can_manage}
-                    onClick={() => act('approve_request', { ref: ship.ref })}
-                  />
-                )}
-                <Button
-                  icon={kind === 'banned' ? 'unlock' : 'xmark'}
-                  tooltip={
-                    kind === 'banned'
-                      ? 'Unblock vessel'
-                      : kind === 'request'
-                        ? 'Deny approach'
-                        : 'Revoke clearance'
-                  }
-                  disabled={!data.can_manage}
-                  onClick={() =>
-                    act(
-                      kind === 'banned'
-                        ? 'unban_ship'
-                        : kind === 'request'
-                          ? 'deny_request'
-                          : 'revoke_approval',
-                      { ref: ship.ref },
-                    )
-                  }
-                />
-                {kind !== 'banned' && (
-                  <Button
-                    icon="ban"
-                    tooltip="Block vessel"
-                    disabled={!data.can_manage}
-                    onClick={() => act('ban_ship', { ref: ship.ref })}
-                  />
-                )}
-              </div>
-            ))}
+      <Section title="On site" count={candidates.length} />
+      {candidates.length === 0 ? <None>Nobody nearby</None> : null}
+      {candidates.map((person) => {
+        const builder = builders.includes(person.ckey);
+        return (
+          <div className="Outpost__row" key={person.ref}>
+            <Icon name="user" />
+            <span className="Outpost__name">{person.name}</span>
+            {person.is_resident ? (
+              <span className="Outpost__tag">Resident</span>
+            ) : (
+              <Button
+                icon="user-plus"
+                disabled={!data.can_manage}
+                onClick={() => act('add_resident', { ref: person.ref })}
+              >
+                Add
+              </Button>
+            )}
+            {data.is_owner ? (
+              <Button
+                icon="hammer"
+                selected={builder}
+                onClick={() =>
+                  act(builder ? 'remove_builder' : 'add_builder', {
+                    ref: person.ref,
+                    ckey: person.ckey,
+                  })
+                }
+              >
+                Builder
+              </Button>
+            ) : null}
           </div>
-        ),
+        );
+      })}
+      <Section title="Builders" count={builders.length} />
+      {builders.length === 0 ? <None>None</None> : null}
+      {builders.map((key) => (
+        <div className="Outpost__row" key={key}>
+          <Icon name="hammer" />
+          <span className="Outpost__plain Outpost__mono">{key}</span>
+          <Button
+            icon="xmark"
+            tooltip="Remove"
+            disabled={!data.is_owner}
+            onClick={() => act('remove_builder', { ckey: key })}
+          />
+        </div>
+      ))}
+      {crews.length > 0 ? (
+        <>
+          <Section title="Owner's crews" count={crews.length} />
+          {crews.map((crew) => (
+            <div className="Outpost__row" key={crew}>
+              <Icon name="shuttle-space" />
+              <span className="Outpost__plain">{crew}</span>
+            </div>
+          ))}
+        </>
+      ) : null}
+    </Frame>
+  );
+}
+
+const ARRIVAL_MODES: Choice[] = [
+  { id: 'open', name: 'Open' },
+  { id: 'password', name: 'Password' },
+  { id: 'approved', name: 'Invite' },
+  { id: 'closed', name: 'Closed' },
+];
+
+function ArrivalsFrame({ data, act }: Props) {
+  const [account, setAccount] = useState('');
+  const [password, setPassword] = useState('');
+  const manage = !!data.can_manage;
+  const invites = Object.keys(data.resident_invites || {});
+  const blocked = data.resident_blocked || [];
+  const submit = (action: string) => {
+    act(action, { ckey: account.trim() });
+    setAccount('');
+  };
+  return (
+    <Frame
+      title="Arrivals"
+      icon="id-card"
+      fill
+      foot={
+        <div className="Outpost__field-row">
+          <span className="Outpost__grow" />
+          <Button.Confirm
+            icon="rotate-left"
+            color="bad"
+            disabled={!manage}
+            onClick={() => act('reset_resident_access')}
+          >
+            Reset access
+          </Button.Confirm>
+        </div>
+      }
+    >
+      <Segmented
+        choices={ARRIVAL_MODES}
+        value={data.resident_mode}
+        disabled={!manage}
+        onPick={(mode) => act('resident_mode', { mode })}
+      />
+      {data.resident_mode === 'password' ? (
+        <div className="Outpost__field-row Outpost__field-row--password">
+          <input
+            className="Input Input--fluid"
+            type="password"
+            placeholder="New password"
+            value={password}
+            onChange={(event) => setPassword(event.currentTarget.value)}
+            autoComplete="new-password"
+            maxLength={64}
+            disabled={!manage}
+          />
+          <Button
+            icon="key"
+            disabled={!manage || !password.trim()}
+            onClick={() => {
+              act('resident_password', { password });
+              setPassword('');
+            }}
+          >
+            Set
+          </Button>
+        </div>
+      ) : null}
+      {data.arrival_available ? null : (
+        <div className="Outpost__alert">
+          <Icon name="bed" />
+          No free cryopod
+        </div>
       )}
+      <label className="Outpost__field-label">Account</label>
+      <div className="Outpost__field-row">
+        <Input
+          fluid
+          placeholder="Account name"
+          value={account}
+          onChange={setAccount}
+          disabled={!manage}
+        />
+        <Button
+          icon="user-check"
+          disabled={!manage || !account.trim()}
+          onClick={() => submit('invite_resident')}
+        >
+          Invite
+        </Button>
+        <Button
+          icon="user-slash"
+          disabled={!manage || !account.trim()}
+          onClick={() => submit('block_resident')}
+        >
+          Block
+        </Button>
+      </div>
+      <Section title="Invited" count={invites.length} />
+      {invites.length === 0 ? <None>None</None> : null}
+      {invites.map((key) => (
+        <div className="Outpost__row" key={key}>
+          <Icon name="envelope" />
+          <span className="Outpost__plain Outpost__mono">{key}</span>
+        </div>
+      ))}
+      <Section title="Blocked" count={blocked.length} />
+      {blocked.length === 0 ? <None>None</None> : null}
+      {blocked.map((key) => (
+        <div className="Outpost__row" key={key}>
+          <Icon name="user-slash" />
+          <span className="Outpost__plain Outpost__mono">{key}</span>
+          <Button
+            icon="unlock"
+            disabled={!manage}
+            onClick={() => act('unblock_resident', { ckey: key })}
+          >
+            Unblock
+          </Button>
+        </div>
+      ))}
+    </Frame>
+  );
+}
+
+function PeopleTab({ data, act }: Props) {
+  return (
+    <div className="Outpost__page Outpost__page--wide-left">
+      <div className="Outpost__col">
+        <ResidentsFrame data={data} act={act} />
+      </div>
+      <div className="Outpost__col">
+        <ArrivalsFrame data={data} act={act} />
+      </div>
+    </div>
+  );
+}
+
+// ===== Rooms =====
+
+/** Built rooms that carry settings (the server's `services` rows). */
+function serviceRooms(data: OutpostData): ServiceRoom[] {
+  return (data.services || []).filter((room) => !!room?.id);
+}
+
+const ACCESS: Choice[] = [
+  { id: 'public', name: 'Public' },
+  { id: 'members', name: 'Members' },
+];
+const SHOP_STATES: Choice[] = [
+  { id: 'open', name: 'Open' },
+  { id: 'closed', name: 'Closed' },
+];
+const TELEPORTER_ARRIVALS: Choice[] = [
+  { id: 'open', name: 'Open' },
+  { id: 'members', name: 'Members' },
+  { id: 'allowlist', name: 'Allow list' },
+  { id: 'closed', name: 'Closed' },
+];
+
+function TeleporterSettings({
+  detail,
+  canManage,
+  serviceAct,
+}: {
+  detail: TeleporterDetail;
+  canManage: boolean;
+  serviceAct: (action: string, params?: Record<string, unknown>) => void;
+}) {
+  const [pick, setPick] = useState('');
+  const canEdit = detail.can_edit === undefined ? canManage : !!detail.can_edit;
+  const arrivals = detail.arrivals || 'open';
+  const allowlist = detail.allowlist || [];
+  const listed = new Set(allowlist.map((pad) => pad.id));
+  const candidates = (detail.candidates || []).filter(
+    (pad) => !listed.has(pad.id),
+  );
+  const chosen = candidates.find((pad) => pad.id === pick);
+  return (
+    <div className="Outpost__room-sub">
+      <div className="Outpost__field-row">
+        <span className="Outpost__label">Arrivals</span>
+        <Segmented
+          inline
+          choices={TELEPORTER_ARRIVALS}
+          value={arrivals}
+          disabled={!canEdit}
+          onPick={(mode) => serviceAct('set_teleporter_arrivals', { mode })}
+        />
+      </div>
+      {arrivals === 'allowlist' ? (
+        <>
+          {allowlist.map((pad) => (
+            <div className="Outpost__row" key={pad.id}>
+              <Icon name="circle-nodes" />
+              <span className="Outpost__plain">{pad.name}</span>
+              <Button
+                icon="xmark"
+                tooltip="Remove"
+                disabled={!canEdit}
+                onClick={() =>
+                  serviceAct('teleporter_disallow', { target: pad.id })
+                }
+              />
+            </div>
+          ))}
+          <div className="Outpost__field-row Outpost__field-row--follow">
+            <Dropdown
+              width="100%"
+              placeholder="Outpost pad"
+              selected={chosen?.id || ''}
+              displayText={chosen?.name || 'Outpost pad'}
+              options={candidates.map((pad) => ({
+                displayText: pad.name,
+                value: pad.id,
+              }))}
+              onSelected={setPick}
+              disabled={!canEdit || candidates.length === 0}
+            />
+            <Button
+              icon="plus"
+              disabled={!canEdit || !chosen}
+              onClick={() => {
+                if (!chosen) {
+                  return;
+                }
+                serviceAct('teleporter_allow', { target: chosen.id });
+                setPick('');
+              }}
+            >
+              Allow
+            </Button>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function RoomRow({
+  entry,
+  status,
+  room,
+  selected,
+  onSelect,
+  data,
+  act,
+}: Props & {
+  entry: UpgradeEntry;
+  status: UpgradeStatus | undefined;
+  room: ServiceRoom | undefined;
+  selected: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const state = status?.state || 'available';
+  const serviceAct = (
+    service_action: string,
+    params: Record<string, unknown> = {},
+  ) => act('service_act', { ...params, id: room?.id, service_action });
+  const kind = room?.detail?.kind;
+  // The teleporter is always public; its arrival rules are the lever.
+  const showAccess =
+    state === 'installed' &&
+    !!room &&
+    room.visitors_allowed !== undefined &&
+    room.visitors_allowed !== null &&
+    kind !== 'teleporter';
+  const shop = kind === 'shop' ? (room?.detail as ShopDetail) : null;
+  return (
+    <>
+      <div
+        className={`Outpost__room ${selected ? 'Outpost__room--selected' : ''}`}
+        onClick={() => onSelect(entry.id)}
+      >
+        <span className="Outpost__name">{entry.name}</span>
+        <div className="Outpost__slot">
+          {showAccess && room ? (
+            <Segmented
+              inline
+              choices={ACCESS}
+              value={room.visitors_allowed ? 'public' : 'members'}
+              disabled={!room.can_toggle_visitors}
+              onPick={(access) =>
+                act('set_room_visitors', {
+                  id: room.id,
+                  allowed: access === 'public' ? 1 : 0,
+                })
+              }
+            />
+          ) : null}
+        </div>
+        <div className="Outpost__slot Outpost__slot--end">
+          {state === 'available' ? (
+            <span className="Outpost__price">
+              {entry.price > 0 ? credits(entry.price) : 'Free'}
+            </span>
+          ) : null}
+          {shop ? (
+            <Segmented
+              inline
+              choices={SHOP_STATES}
+              value={shop.open ? 'open' : 'closed'}
+              disabled={!shop.can_toggle}
+              onPick={() => serviceAct('toggle_open')}
+            />
+          ) : null}
+        </div>
+      </div>
+      {state === 'installed' && kind === 'teleporter' && room?.detail ? (
+        <TeleporterSettings
+          detail={room.detail as TeleporterDetail}
+          canManage={!!data.can_manage}
+          serviceAct={serviceAct}
+        />
+      ) : null}
     </>
   );
 }
 
-function upgradePrice(price: number) {
-  return price > 0 ? `${formatMoney(price)} cr` : 'Free';
-}
-
-type UpgradesProps = Props & { onPlace: (id: string) => void };
-
-function Upgrades({ data, act, onPlace }: UpgradesProps) {
-  const [index, setIndex] = useState(0);
-  const catalog = data.upgrade_catalog || [];
-  if (catalog.length === 0) {
-    return <Empty icon="cubes">No upgrades</Empty>;
-  }
-  const current = Math.min(index, catalog.length - 1);
-  const upgrade = catalog[current];
-  const status = (data.upgrades || []).find((entry) => entry.id === upgrade.id);
+function RoomDetail({
+  entry,
+  status,
+  act,
+  onPlace,
+}: {
+  entry: UpgradeEntry;
+  status: UpgradeStatus | undefined;
+  act: Act;
+  onPlace: (id: string) => void;
+}) {
   const state = status?.state || 'available';
-  const step = (delta: number) =>
-    setIndex((current + delta + catalog.length) % catalog.length);
-  return (
-    <>
-      <div className="Outpost__carousel">
-        <Button
-          icon="chevron-left"
-          disabled={catalog.length < 2}
-          onClick={() => step(-1)}
-        />
-        <strong className="Outpost__grow">{upgrade.name}</strong>
-        <Button
-          icon="chevron-right"
-          disabled={catalog.length < 2}
-          onClick={() => step(1)}
-        />
-      </div>
-      <div className="Outpost__preview">
-        {upgrade.preview ? (
-          <img src={resolveAsset(upgrade.preview)} alt={upgrade.name} />
-        ) : (
-          <Empty icon="image">No preview</Empty>
-        )}
-      </div>
-      <div className="Outpost__quiet">{upgrade.desc}</div>
-      <div className="Outpost__row">
-        <span className="Outpost__grow">{upgradePrice(upgrade.price)}</span>
-        {state === 'available' ? (
+  const foot = (
+    <div className="Outpost__buy">
+      {state === 'available' ? (
+        <>
+          <span className="Outpost__price">
+            {entry.price > 0 ? credits(entry.price) : 'Free'}
+          </span>
           <Button.Confirm
             icon="cart-shopping"
             disabled={!status || !!status.denial}
             tooltip={status?.denial || undefined}
-            onClick={() => act('buy_upgrade', { id: upgrade.id })}
+            onClick={() => act('buy_upgrade', { id: entry.id })}
           >
             Buy
           </Button.Confirm>
-        ) : null}
-        {state === 'ready' ? (
-          <>
-            <Button
-              icon="map-location-dot"
-              disabled={!!status?.manage_denial}
-              tooltip={status?.manage_denial || undefined}
-              onClick={() => onPlace(upgrade.id)}
-            >
-              Place
-            </Button>
-            <Button.Confirm
-              icon="rotate-left"
-              color="bad"
-              disabled={!!status?.manage_denial}
-              tooltip={status?.manage_denial || undefined}
-              onClick={() => act('cancel_upgrade', { id: upgrade.id })}
-            >
-              Cancel purchase
-            </Button.Confirm>
-          </>
-        ) : null}
-        {state === 'installed' ? <span>Built</span> : null}
+        </>
+      ) : state === 'ready' ? (
+        <>
+          <span className="Outpost__price Outpost__muted">Paid</span>
+          <Button
+            icon="map-location-dot"
+            disabled={!!status?.manage_denial}
+            tooltip={status?.manage_denial || undefined}
+            onClick={() => onPlace(entry.id)}
+          >
+            Place
+          </Button>
+          <Button.Confirm
+            icon="rotate-left"
+            color="bad"
+            disabled={!!status?.manage_denial}
+            tooltip={status?.manage_denial || undefined}
+            onClick={() => act('cancel_upgrade', { id: entry.id })}
+          >
+            Cancel purchase
+          </Button.Confirm>
+        </>
+      ) : (
+        <span className="Outpost__price Outpost__muted">Built</span>
+      )}
+    </div>
+  );
+  return (
+    <Frame
+      title={entry.name}
+      icon="cube"
+      extra={`${entry.width} x ${entry.height}`}
+      fill
+      flush
+      foot={foot}
+    >
+      <div className="Outpost__preview">
+        <UpgradePreview name={entry.preview} />
       </div>
-    </>
+      <div className="Outpost__desc">{entry.desc}</div>
+    </Frame>
+  );
+}
+
+function RoomsTab({
+  data,
+  act,
+  onPlace,
+}: Props & { onPlace: (id: string) => void }) {
+  const catalog = data.upgrade_catalog || [];
+  const rooms = serviceRooms(data);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const statusOf = (id: string) =>
+    (data.upgrades || []).find((entry) => entry.id === id);
+  const stateOf = (id: string) => statusOf(id)?.state || 'available';
+  const groups = [
+    { title: 'Built', state: 'installed' },
+    { title: 'Ready to place', state: 'ready' },
+    { title: 'For sale', state: 'available' },
+  ].map((group) => ({
+    ...group,
+    entries: catalog.filter((entry) => stateOf(entry.id) === group.state),
+  }));
+  if (catalog.length === 0) {
+    return (
+      <div className="Outpost__page Outpost__page--single">
+        <Frame title="Rooms" icon="cubes" fill>
+          <None>No rooms</None>
+        </Frame>
+      </div>
+    );
+  }
+  const fallback =
+    catalog.find((entry) => stateOf(entry.id) === 'ready') ||
+    catalog.find((entry) => stateOf(entry.id) === 'available') ||
+    catalog[0];
+  const current = catalog.find((entry) => entry.id === chosen) || fallback;
+  return (
+    <div className="Outpost__page Outpost__page--wide-left">
+      <div className="Outpost__col">
+        <Frame title="Rooms" icon="cubes" fill>
+          {groups.map((group) =>
+            group.entries.length === 0 ? null : (
+              <div key={group.state}>
+                <Section title={group.title} count={group.entries.length} />
+                {group.entries.map((entry) => (
+                  <RoomRow
+                    key={entry.id}
+                    entry={entry}
+                    status={statusOf(entry.id)}
+                    room={rooms.find((room) => room.id === entry.id)}
+                    selected={entry.id === current.id}
+                    onSelect={setChosen}
+                    data={data}
+                    act={act}
+                  />
+                ))}
+              </div>
+            ),
+          )}
+        </Frame>
+      </div>
+      <div className="Outpost__col">
+        <RoomDetail
+          entry={current}
+          status={statusOf(current.id)}
+          act={act}
+          onPlace={onPlace}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ===== Room preview =====
+
+function usePreviewImage(name: string | null) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    setImage(null);
+    if (!name) {
+      return;
+    }
+    let live = true;
+    const loading = new Image();
+    loading.onload = () => {
+      if (live) {
+        setImage(loading);
+      }
+    };
+    loading.src = resolveAsset(name);
+    return () => {
+      live = false;
+    };
+  }, [name]);
+  return image;
+}
+
+/** A room's preview picture that zooms and pans, sized from the picture itself. */
+function UpgradePreview({ name }: { name: string | null }) {
+  const image = usePreviewImage(name);
+  if (!name) {
+    return <None>No preview</None>;
+  }
+  if (!image) {
+    return null;
+  }
+  return (
+    <HelmPlane
+      key={name}
+      mapWidth={image.naturalWidth}
+      mapHeight={image.naturalHeight}
+      maxScale={3}
+      background={
+        <img
+          src={resolveAsset(name)}
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: '100%',
+            height: '100%',
+            imageRendering: 'pixelated',
+          }}
+        />
+      }
+    />
   );
 }
 
@@ -845,13 +1540,13 @@ const RANGE_COLOR = '#e03c3c';
 const RANGE_LINE = 2;
 
 /** x1, y1, x2, y2 in world tiles: one straight run of tile edges. */
-export type Segment = [number, number, number, number];
+type Segment = [number, number, number, number];
 
 /**
  * Every tile edge between an in-range tile and an out-of-range tile or the survey
  * edge, with runs along one line merged. Built once per survey.
  */
-export function rangeOutline(survey: UpgradeSurvey): Segment[] {
+function rangeOutline(survey: UpgradeSurvey): Segment[] {
   const { x, y, width, height, near } = survey;
   const inside = (column: number, row: number) =>
     column >= 0 &&
@@ -1052,28 +1747,6 @@ function drawMap(
     pixelWidth - line,
     pixelHeight - line,
   );
-}
-
-function usePreviewImage(name: string | null) {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-  useEffect(() => {
-    setImage(null);
-    if (!name) {
-      return;
-    }
-    let live = true;
-    const loading = new Image();
-    loading.onload = () => {
-      if (live) {
-        setImage(loading);
-      }
-    };
-    loading.src = resolveAsset(name);
-    return () => {
-      live = false;
-    };
-  }, [name]);
-  return image;
 }
 
 type PlacementProps = Props & {
@@ -1294,6 +1967,11 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
     };
   }, []);
 
+  const rotate = () => {
+    setRotation((rotation + 90) % 360);
+    setMenu(null);
+  };
+
   return (
     <>
       <KeyListener onKeyDown={(key) => handlersRef.current?.key(key)} />
@@ -1417,31 +2095,15 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
             >
               Build
             </Button.Confirm>
-            <Button
-              icon="rotate-right"
-              onClick={() => {
-                setRotation((rotation + 90) % 360);
-                setMenu(null);
-              }}
-            >
+            <Button icon="rotate-right" onClick={rotate}>
               Rotate
             </Button>
           </div>
         ) : null}
       </div>
       <div className="Outpost__map-side">
-        <div className="Outpost__heading">
-          <Icon name="map-location-dot" />
-          {upgrade.name}
-        </div>
-        <div className="Outpost__map-actions">
-          <Button
-            icon="rotate-right"
-            onClick={() => {
-              setRotation((rotation + 90) % 360);
-              setMenu(null);
-            }}
-          >
+        <div className="Outpost__map-actions Outpost__map-actions--first">
+          <Button icon="rotate-right" onClick={rotate}>
             Rotate
           </Button>
           <Button
@@ -1461,6 +2123,8 @@ function UpgradePlacement({ data, act, upgrade, onBack }: PlacementProps) {
     </>
   );
 }
+
+// ===== Pricing =====
 
 function PriceEditor({
   row,
@@ -1482,7 +2146,7 @@ function PriceEditor({
   return (
     <div className="Outpost__row">
       <span
-        className={`Outpost__grow ${row.available ? '' : 'Outpost__quiet'}`}
+        className={`Outpost__plain ${row.available ? '' : 'Outpost__muted'}`}
       >
         {row.label || row.key}
       </span>
@@ -1515,634 +2179,147 @@ function PricingTab({ data, act }: Props) {
   const prices = pricing.prices || [];
   const ledger = pricing.ledger || [];
   const totals = pricing.totals || [];
-  const canSet = !!data.can_set_prices;
-  return (
-    <>
-      {prices.map((row) => (
-        <PriceEditor key={row.key} row={row} canSet={canSet} act={act} />
-      ))}
-      {totals.length > 0 ? (
-        <>
-          <div className="Outpost__section-label">Income</div>
-          {totals.map((entry) => (
-            <div className="Outpost__row" key={entry.service}>
-              <span className="Outpost__grow">
-                {entry.label || entry.service}
-              </span>
-              <strong className="Outpost__amount">
-                {formatMoney(Number(entry.total) || 0)} cr
-              </strong>
-            </div>
-          ))}
-        </>
-      ) : null}
-      {ledger.length > 0 ? (
-        <>
-          <div className="Outpost__section-label">Ledger</div>
-          {/* The server sends the ledger newest first. */}
-          {ledger.map((entry, index) => (
-            <div
-              className="Outpost__row"
-              key={`${entry.time}-${ledger.length - index}`}
-            >
-              <span className="Outpost__time">{entry.time}</span>
-              <div className="Outpost__person">
-                <strong>{entry.label}</strong>
-                {entry.who ? <small>{entry.who}</small> : null}
-              </div>
-              {Number(entry.amount) > 0 ? (
-                <strong className="Outpost__amount">
-                  +{formatMoney(Number(entry.amount))} cr
-                </strong>
-              ) : Number(entry.amount) < 0 ? (
-                <strong className="Outpost__amount Outpost__amount--refund">
-                  -{formatMoney(Math.abs(Number(entry.amount)))} cr
-                </strong>
-              ) : null}
-            </div>
-          ))}
-        </>
-      ) : null}
-    </>
+  const sum = totals.reduce(
+    (total, entry) => total + (Number(entry.total) || 0),
+    0,
   );
-}
-
-type ServiceAct = (action: string, params?: Record<string, unknown>) => void;
-
-const VAT_STATES: Record<string, string> = {
-  empty: 'Empty',
-  growing: 'Growing',
-  ready: 'Ready',
-  offline: 'Offline',
-};
-
-function CloningCard({
-  detail,
-  serviceAct,
-}: {
-  detail: CloningDetail;
-  serviceAct: ServiceAct;
-}) {
-  const vats = detail.vats || [];
+  const takings = totals.length > 0 || ledger.length > 0;
   return (
-    <>
-      {vats.map((vat, index) => (
-        <div className="Outpost__row" key={vat.ref || index}>
-          <Icon name="dna" />
-          <span className="Outpost__grow">
-            Vat {index + 1}: {VAT_STATES[vat.state] || vat.state || 'Unknown'}
-            {vat.holder ? `, ${vat.holder}` : ''}
-          </span>
-          {vat.holder ? (
-            <Button.Confirm
-              icon="eject"
-              color="bad"
-              disabled={!detail.can_evict || !!vat.evict_denial}
-              tooltip={vat.evict_denial || undefined}
-              onClick={() => serviceAct('evict', { ref: vat.ref })}
-            >
-              Evict
-            </Button.Confirm>
-          ) : null}
+    <div
+      className={`Outpost__page ${takings ? 'Outpost__page--halves' : 'Outpost__page--single'}`}
+    >
+      <div className="Outpost__col">
+        <Frame title="Prices" icon="tags" fill>
+          {prices.length === 0 ? <None>Nothing to price</None> : null}
+          {prices.map((row) => (
+            <PriceEditor
+              key={row.key}
+              row={row}
+              canSet={!!data.can_set_prices}
+              act={act}
+            />
+          ))}
+        </Frame>
+      </div>
+      {takings ? (
+        <div className="Outpost__col">
+          <Frame title="Takings" icon="coins" fill>
+            {totals.length > 0 ? (
+              <>
+                <Section title="By service" />
+                {totals.map((entry) => (
+                  <div className="Outpost__row" key={entry.service}>
+                    <span className="Outpost__plain">
+                      {entry.label || entry.service}
+                    </span>
+                    <strong className="Outpost__amount">
+                      {credits(entry.total)}
+                    </strong>
+                  </div>
+                ))}
+                <div className="Outpost__total">
+                  <span>Total</span>
+                  <span className="Outpost__mono">{credits(sum)}</span>
+                </div>
+              </>
+            ) : null}
+            {ledger.length > 0 ? (
+              <>
+                <Section title="Ledger" />
+                {/* The server sends the ledger newest first. */}
+                {ledger.map((entry, index) => (
+                  <div
+                    className="Outpost__row"
+                    key={`${entry.time}-${ledger.length - index}`}
+                  >
+                    <span className="Outpost__time">{entry.time}</span>
+                    <div className="Outpost__person">
+                      <strong>{entry.label}</strong>
+                      {entry.who ? <small>{entry.who}</small> : null}
+                    </div>
+                    {Number(entry.amount) > 0 ? (
+                      <strong className="Outpost__amount">
+                        +{credits(entry.amount)}
+                      </strong>
+                    ) : Number(entry.amount) < 0 ? (
+                      <strong className="Outpost__amount Outpost__amount--refund">
+                        -{credits(Math.abs(Number(entry.amount)))}
+                      </strong>
+                    ) : null}
+                  </div>
+                ))}
+              </>
+            ) : null}
+          </Frame>
         </div>
-      ))}
-    </>
-  );
-}
-
-function ShopCard({
-  detail,
-  serviceAct,
-}: {
-  detail: ShopDetail;
-  serviceAct: ServiceAct;
-}) {
-  return (
-    <div className="Outpost__row">
-      <Icon name="store" />
-      <span className="Outpost__grow">{detail.open ? 'Open' : 'Closed'}</span>
-      <Button
-        icon={detail.open ? 'door-closed' : 'door-open'}
-        disabled={!detail.can_toggle}
-        onClick={() => serviceAct('toggle_open')}
-      >
-        {detail.open ? 'Close shop' : 'Open shop'}
-      </Button>
+      ) : null}
     </div>
   );
 }
 
-function MedicalCard({
-  detail,
-  serviceAct,
-}: {
-  detail: MedicalDetail;
-  serviceAct: ServiceAct;
-}) {
-  const procedures = detail.procedures || [];
-  return (
-    <>
-      {procedures.map((procedure) => (
-        <div className="Outpost__row" key={procedure.id}>
-          <span className="Outpost__grow">{procedure.name}</span>
-          <Button
-            icon={procedure.enabled ? 'toggle-on' : 'toggle-off'}
-            selected={!!procedure.enabled}
-            disabled={!detail.can_edit}
-            onClick={() =>
-              serviceAct('toggle_procedure', { procedure: procedure.id })
-            }
-          >
-            {procedure.enabled ? 'Offered' : 'Disabled'}
-          </Button>
-        </div>
-      ))}
-    </>
-  );
-}
+// ===== Outpost =====
 
-const ARRIVAL_POLICIES = [
-  { id: 'open', name: 'Open', icon: 'door-open' },
-  { id: 'members', name: 'Members', icon: 'users' },
-  { id: 'allowlist', name: 'Allow list', icon: 'list-check' },
-  { id: 'closed', name: 'Closed', icon: 'lock' },
-];
-
-function TeleporterCard({
-  detail,
-  canManage,
-  serviceAct,
-}: {
-  detail: TeleporterDetail;
-  canManage: boolean;
-  serviceAct: ServiceAct;
-}) {
-  const [pick, setPick] = useState('');
-  const canEdit = detail.can_edit === undefined ? canManage : !!detail.can_edit;
-  const arrivals = detail.arrivals || detail.policy || 'open';
-  const allowlist = detail.allowlist || [];
-  const listed = new Set(allowlist.map((pad) => pad.id));
-  const candidates = (detail.candidates || []).filter(
-    (pad) => !listed.has(pad.id),
-  );
-  const chosen = candidates.find((pad) => pad.id === pick);
-  return (
-    <>
-      {detail.padName ? (
-        <div className="Outpost__row">
-          <Icon name="circle-nodes" />
-          <strong className="Outpost__grow">{detail.padName}</strong>
-        </div>
-      ) : null}
-      <div className="Outpost__switches">
-        {ARRIVAL_POLICIES.map((mode) => (
-          <Button
-            key={mode.id}
-            icon={mode.icon}
-            selected={arrivals === mode.id}
-            disabled={!canEdit}
-            onClick={() =>
-              serviceAct('set_teleporter_arrivals', { mode: mode.id })
-            }
-          >
-            {mode.name}
-          </Button>
-        ))}
-      </div>
-      {allowlist.map((pad) => (
-        <div className="Outpost__row" key={pad.id}>
-          <Icon name="circle-nodes" />
-          <span className="Outpost__grow">{pad.name}</span>
-          <Button
-            icon="xmark"
-            disabled={!canEdit}
-            onClick={() =>
-              serviceAct('teleporter_disallow', { target: pad.id })
-            }
-          />
-        </div>
-      ))}
-      <div className="Outpost__inline Outpost__allow-add">
-        <Dropdown
-          fluid
-          placeholder="Outpost pad"
-          selected={chosen?.id || ''}
-          displayText={chosen?.name || 'Outpost pad'}
-          options={candidates.map((pad) => ({
-            displayText: pad.name,
-            value: pad.id,
-          }))}
-          onSelected={setPick}
-          disabled={!canEdit || candidates.length === 0}
-        />
-        <Button
-          icon="plus"
-          disabled={!canEdit || !chosen}
-          onClick={() => {
-            if (!chosen) {
-              return;
-            }
-            serviceAct('teleporter_allow', { target: chosen.id });
-            setPick('');
-          }}
-        >
-          Allow
-        </Button>
-      </div>
-    </>
-  );
-}
-
-/** Any detail kind this console does not know: its plain values, so nothing is hidden. */
-function GenericCard({ detail }: { detail: Record<string, unknown> }) {
-  const rows = Object.entries(detail).filter(
-    ([key, value]) =>
-      key !== 'kind' &&
-      (typeof value === 'string' ||
-        typeof value === 'number' ||
-        typeof value === 'boolean'),
-  );
-  if (rows.length === 0) {
-    return null;
-  }
-  return (
-    <>
-      {rows.map(([key, value]) => (
-        <div className="Outpost__row" key={key}>
-          <span className="Outpost__grow">{key.replace(/_/g, ' ')}</span>
-          <span>{String(value)}</span>
-        </div>
-      ))}
-    </>
-  );
-}
-
-function ServiceCard({
-  room,
-  data,
-  act,
-}: Props & {
-  room: ServiceRoom;
-}) {
-  const serviceAct: ServiceAct = (service_action, params = {}) =>
-    act('service_act', { ...params, id: room.id, service_action });
-  const detail = room.detail;
-  const kind = detail && typeof detail === 'object' ? detail.kind : undefined;
-  // The teleporter is always public; its arrival policy is the lever (abuse review F-33).
-  const showVisitors =
-    room.visitors_allowed !== undefined &&
-    room.visitors_allowed !== null &&
-    kind !== 'teleporter';
-  return (
-    <div className="Outpost__service">
-      <div className="Outpost__row">
-        <strong className="Outpost__grow">{room.name || room.id}</strong>
-        {showVisitors ? (
-          <Button
-            icon={room.visitors_allowed ? 'door-open' : 'door-closed'}
-            selected={!!room.visitors_allowed}
-            disabled={!room.can_toggle_visitors}
-            onClick={() =>
-              act('set_room_visitors', {
-                id: room.id,
-                allowed: room.visitors_allowed ? 0 : 1,
-              })
-            }
-          >
-            {room.visitors_allowed ? 'Public' : 'Members only'}
-          </Button>
-        ) : null}
-      </div>
-      {!detail ? null : kind === 'cloning' ? (
-        <CloningCard detail={detail as CloningDetail} serviceAct={serviceAct} />
-      ) : kind === 'shop' ? (
-        <ShopCard detail={detail as ShopDetail} serviceAct={serviceAct} />
-      ) : kind === 'medical' ? (
-        <MedicalCard detail={detail as MedicalDetail} serviceAct={serviceAct} />
-      ) : kind === 'storage' ? null : kind === 'teleporter' ? (
-        <TeleporterCard
-          detail={detail as TeleporterDetail}
-          canManage={!!data.can_manage}
-          serviceAct={serviceAct}
-        />
-      ) : (
-        <GenericCard detail={detail as Record<string, unknown>} />
-      )}
-    </div>
-  );
-}
-
-/** Installed rooms; the §7.5 top-level teleporter block becomes a card when no row carries it. */
-function serviceRooms(data: OutpostData): ServiceRoom[] {
-  const rooms = (data.services || []).filter((room) => !!room?.id);
-  const teleporter = data.teleporter;
-  if (
-    teleporter?.installed &&
-    !rooms.some((room) => room.detail?.kind === 'teleporter')
-  ) {
-    rooms.push({
-      id: 'teleporter',
-      name: 'Teleporter',
-      detail: { ...teleporter, kind: 'teleporter' },
-    });
-  }
-  return rooms;
-}
-
-function Services({ data, act }: Props) {
-  const rooms = serviceRooms(data);
-  if (rooms.length === 0) {
-    return <Empty icon="store">No service rooms</Empty>;
-  }
-  return (
-    <>
-      {rooms.map((room) => (
-        <ServiceCard key={room.id} room={room} data={data} act={act} />
-      ))}
-    </>
-  );
-}
-
-const ARRIVAL_MODES = [
-  { id: 'open', name: 'Open' },
-  { id: 'password', name: 'Password' },
-  { id: 'approved', name: 'Invite' },
-  { id: 'closed', name: 'Closed' },
-];
-
-function Arrivals({ data, act }: Props) {
-  const [account, setAccount] = useState('');
-  const [password, setPassword] = useState('');
-  const invites = Object.keys(data.resident_invites || {});
-  const blocked = data.resident_blocked || [];
-  const submit = (action: string) => {
-    act(action, { ckey: account.trim() });
-    setAccount('');
-  };
-  return (
-    <>
-      <div className="Outpost__switches">
-        {ARRIVAL_MODES.map((mode) => (
-          <Button
-            key={mode.id}
-            selected={data.resident_mode === mode.id}
-            disabled={!data.can_manage}
-            onClick={() => act('resident_mode', { mode: mode.id })}
-          >
-            {mode.name}
-          </Button>
-        ))}
-      </div>
-      {data.resident_mode === 'password' && (
-        <div className="Outpost__inline Outpost__password">
-          <input
-            className="Input Input--fluid"
-            type="password"
-            placeholder="New password"
-            value={password}
-            onChange={(event) => setPassword(event.currentTarget.value)}
-            autoComplete="new-password"
-            maxLength={64}
-            disabled={!data.can_manage}
-          />
-          <Button
-            icon="key"
-            tooltip="Set password"
-            disabled={!data.can_manage || !password.trim()}
-            onClick={() => {
-              act('resident_password', { password });
-              setPassword('');
-            }}
-          />
-        </div>
-      )}
-      <div className="Outpost__inline">
-        <Input
-          fluid
-          placeholder="Account name"
-          value={account}
-          onChange={setAccount}
-          disabled={!data.can_manage}
-        />
-        <Button
-          icon="user-check"
-          tooltip="Invite"
-          disabled={!data.can_manage || !account.trim()}
-          onClick={() => submit('invite_resident')}
-        />
-        <Button
-          icon="user-slash"
-          tooltip="Block"
-          disabled={!data.can_manage || !account.trim()}
-          onClick={() => submit('block_resident')}
-        />
-      </div>
-      {invites.length > 0 ? (
-        <div className="Outpost__section-label">Invited</div>
-      ) : null}
-      {invites.map((key) => (
-        <div className="Outpost__row" key={key}>
-          <span className="Outpost__grow">{key}</span>
-        </div>
-      ))}
-      {blocked.length > 0 ? (
-        <div className="Outpost__section-label">Blocked</div>
-      ) : null}
-      {blocked.map((key) => (
-        <div className="Outpost__row" key={key}>
-          <span className="Outpost__grow">{key}</span>
-          <Button
-            icon="unlock"
-            tooltip="Unblock"
-            disabled={!data.can_manage}
-            onClick={() => act('unblock_resident', { ckey: key })}
-          />
-        </div>
-      ))}
-      {data.arrival_available ? null : (
-        <div className="Outpost__arrival">
-          <Icon name="bed" />
-          No free cryopod
-        </div>
-      )}
-      <Button.Confirm
-        className="Outpost__reset"
-        icon="rotate-left"
-        color="bad"
-        disabled={!data.can_manage}
-        onClick={() => act('reset_resident_access')}
-      >
-        Reset access
-      </Button.Confirm>
-    </>
-  );
-}
-
-function Research({ data, act }: Props) {
-  const [serverRef, setServerRef] = useState('');
-  const [shipRef, setShipRef] = useState('');
-  const servers = data.research_servers || [];
-  const ships = data.research_ships || [];
-  const connections = data.research_connections || [];
-  const server =
-    servers.find((candidate) => candidate.ref === serverRef) || servers[0];
-  const ship = ships.find((candidate) => candidate.ref === shipRef) || ships[0];
-  const canInvite = !!data.can_manage && !!server && !!ship;
-
-  return (
-    <>
-      <label className="Outpost__field-label">Server</label>
-      <div className="Outpost__inline">
-        <Dropdown
-          fluid
-          placeholder="No local server"
-          selected={server?.ref || ''}
-          displayText={server?.name || 'No local server'}
-          options={servers.map((candidate) => ({
-            displayText: candidate.name,
-            value: candidate.ref,
-          }))}
-          onSelected={setServerRef}
-          disabled={!data.can_manage || servers.length === 0}
-        />
-      </div>
-      <label className="Outpost__field-label">Ship</label>
-      <div className="Outpost__inline">
-        <Dropdown
-          fluid
-          placeholder="No docked ship"
-          selected={ship?.ref || ''}
-          displayText={ship?.name || 'No docked ship'}
-          options={ships.map((candidate) => ({
-            displayText: candidate.name,
-            value: candidate.ref,
-          }))}
-          onSelected={setShipRef}
-          disabled={!data.can_manage || ships.length === 0}
-        />
-        <Button
-          icon="link"
-          color="good"
-          disabled={!canInvite}
-          onClick={() => {
-            if (!server || !ship) {
-              return;
-            }
-            act('invite_research', { ship: ship.ref, server: server.ref });
-          }}
-        >
-          Invite
-        </Button>
-      </div>
-      {connections.length > 0 ? (
-        <div className="Outpost__section-label">Connections</div>
-      ) : null}
-      {connections.map((connection) => {
-        const approved = !!connection.approved;
-        return (
-          <div className="Outpost__row" key={connection.ref}>
-            <div className="Outpost__person">
-              <strong>{connection.ship}</strong>
-              <small>{connection.server}</small>
-            </div>
-            <span className="Outpost__research-status">
-              {connection.status || (approved ? 'Connected' : 'Pending')}
-            </span>
-            <Button
-              icon={approved ? 'link-slash' : 'xmark'}
-              color={approved ? 'bad' : undefined}
-              disabled={!data.can_manage}
-              onClick={() => act('revoke_research', { ref: connection.ref })}
-            >
-              {approved ? 'Disconnect' : 'Cancel'}
-            </Button>
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-function Registry({ data, act }: Props) {
+function RegistryFrame({ data, act }: Props) {
   const [name, setName] = useState(data.outpost_name || '');
   const [memo, setMemo] = useState(data.memo || '');
-  const docking = [
-    { id: 'open', name: 'Open', icon: 'door-open' },
-    { id: 'request', name: 'Request', icon: 'hand' },
-    { id: 'lockdown', name: 'Lockdown', icon: 'lock' },
-  ];
+  const manage = !!data.can_manage;
   return (
-    <div className="Outpost__registry-scroll">
-      <div className="Outpost__inline">
+    <Frame title="Registry" icon="house-flag" fill>
+      <label className="Outpost__field-label">Name</label>
+      <div className="Outpost__field-row">
         <Input
           fluid
           value={name}
           onChange={setName}
-          disabled={!data.can_manage}
+          disabled={!manage}
           maxLength={64}
         />
         <Button
           icon="check"
-          tooltip={data.rename_cooldown > 0 ? 'Renamed recently' : 'Rename'}
+          tooltip={data.rename_cooldown > 0 ? 'Renamed recently' : undefined}
           disabled={
-            !data.can_manage ||
+            !manage ||
             !name.trim() ||
             name.trim() === data.outpost_name ||
             data.rename_cooldown > 0
           }
           onClick={() => act('rename', { name: name.trim() })}
-        />
+        >
+          Rename
+        </Button>
       </div>
-      <div className="Outpost__memo">
-        <TextArea
-          fluid
-          height="62px"
-          value={memo}
-          onChange={setMemo}
-          disabled={!data.can_manage}
-          placeholder="Public memo"
-        />
+      <label className="Outpost__field-label">Public memo</label>
+      <TextArea
+        fluid
+        height="150px"
+        value={memo}
+        onChange={setMemo}
+        disabled={!manage}
+      />
+      <div className="Outpost__field-row Outpost__field-row--follow">
+        <span className="Outpost__grow" />
         <Button
           icon="floppy-disk"
-          tooltip="Save memo"
-          disabled={!data.can_manage || memo === data.memo}
+          disabled={!manage || memo === data.memo}
           onClick={() => act('set_memo', { memo })}
-        />
+        >
+          Save memo
+        </Button>
       </div>
-      <label className="Outpost__field-label">Docking</label>
-      <div className="Outpost__switches">
-        {docking.map((mode) => (
-          <Button
-            key={mode.id}
-            icon={mode.icon}
-            selected={data.dock_mode === mode.id}
-            disabled={!data.can_manage}
-            onClick={() => act('set_dock_mode', { mode: mode.id })}
-          >
-            {mode.name}
-          </Button>
-        ))}
-      </div>
-    </div>
+    </Frame>
   );
 }
 
-function Broadcast({ data, act }: Props) {
+function BroadcastFrame({ data, act }: Props) {
   const live = data.advert_remaining > 0;
   return (
-    <>
-      <div className="Outpost__heading">
-        <Icon name="satellite-dish" />
-        Broadcast
-      </div>
-      <div className="Outpost__footer-row">
-        <div className="Outpost__readout">
-          <strong>
-            {live
-              ? `On air, ${Math.ceil(data.advert_remaining / 60)} min`
-              : `${formatMoney(data.advert_cost || 0)} cr`}
-          </strong>
-        </div>
+    <Frame title="Broadcast" icon="satellite-dish">
+      <div className="Outpost__field-row Outpost__field-row--lead">
+        <span className="Outpost__grow Outpost__readout">
+          {live
+            ? `On air, ${Math.ceil(data.advert_remaining / 60)} min`
+            : credits(data.advert_cost)}
+        </span>
         <Button
           icon="tower-broadcast"
           disabled={
@@ -2158,100 +2335,162 @@ function Broadcast({ data, act }: Props) {
           {live ? 'On air' : 'Broadcast'}
         </Button>
       </div>
-    </>
+    </Frame>
   );
 }
 
-function Ownership({ data, act }: Props) {
-  const [recipient, setRecipient] = useState<string>('');
+function OwnershipFrame({ data, act }: Props) {
+  const [recipient, setRecipient] = useState('');
   const candidates = data.candidates || [];
   const selected = candidates.find((person) => person.ref === recipient);
   if (data.is_owner) {
     return (
-      <div className="Outpost__ownership">
-        <Dropdown
-          fluid
-          placeholder="New owner"
-          displayText={selected?.name || 'New owner'}
-          selected={recipient}
-          options={candidates.map((person) => ({
-            displayText: person.name,
-            value: person.ref,
-          }))}
-          onSelected={setRecipient}
-        />
-        <Button
-          icon="right-left"
-          disabled={!selected}
-          onClick={() => act('transfer', { ref: recipient })}
-        >
-          Transfer
-        </Button>
-        <Button
-          color="bad"
-          icon="arrow-right-from-bracket"
-          onClick={() => act('abandon')}
-        >
-          Abandon
-        </Button>
-      </div>
+      <Frame title="Ownership" icon="key">
+        <label className="Outpost__field-label">Transfer to</label>
+        <div className="Outpost__field-row">
+          <Dropdown
+            width="100%"
+            placeholder="Someone on site"
+            displayText={selected?.name || 'Someone on site'}
+            selected={recipient}
+            options={candidates.map((person) => ({
+              displayText: person.name,
+              value: person.ref,
+            }))}
+            onSelected={setRecipient}
+          />
+          <Button
+            icon="right-left"
+            disabled={!selected}
+            onClick={() => act('transfer', { ref: recipient })}
+          >
+            Transfer
+          </Button>
+        </div>
+        <div className="Outpost__field-row Outpost__field-row--apart">
+          <span className="Outpost__grow" />
+          <Button
+            color="bad"
+            icon="arrow-right-from-bracket"
+            onClick={() => act('abandon')}
+          >
+            Abandon outpost
+          </Button>
+        </div>
+      </Frame>
     );
   }
   if (!data.has_owner) {
     return (
-      <div className="Outpost__ownership">
-        <Button
-          icon="flag"
-          disabled={!data.can_claim}
-          onClick={() => act('claim')}
-        >
-          Claim outpost
-        </Button>
-      </div>
+      <Frame title="Ownership" icon="key">
+        <div className="Outpost__field-row Outpost__field-row--lead">
+          <span className="Outpost__grow" />
+          <Button
+            icon="flag"
+            disabled={!data.can_claim}
+            onClick={() => act('claim')}
+          >
+            Claim outpost
+          </Button>
+        </div>
+      </Frame>
     );
   }
   return null;
 }
 
-type Tab = { id: string; title: string; icon: string };
-const TAB_DOCKING: Tab = { id: 'docking', title: 'Docking', icon: 'anchor' };
-const TAB_PRICING: Tab = { id: 'pricing', title: 'Pricing', icon: 'tags' };
-const TAB_SERVICES: Tab = { id: 'services', title: 'Services', icon: 'store' };
+function OutpostTab({ data, act }: Props) {
+  return (
+    <div className="Outpost__page Outpost__page--halves">
+      <div className="Outpost__col">
+        {data.can_manage ? (
+          <RegistryFrame data={data} act={act} />
+        ) : (
+          <Frame title="Registry" icon="house-flag" fill>
+            <label className="Outpost__field-label">Public memo</label>
+            <div className="Outpost__plain">{data.memo}</div>
+          </Frame>
+        )}
+      </div>
+      <div className="Outpost__col">
+        {data.can_manage ? <BroadcastFrame data={data} act={act} /> : null}
+        <OwnershipFrame data={data} act={act} />
+      </div>
+    </div>
+  );
+}
+
+// ===== Shell =====
+
+type TabId = 'ships' | 'people' | 'rooms' | 'pricing' | 'outpost';
+type Tab = { id: TabId; title: string; icon: string };
+const TABS: Record<TabId, Tab> = {
+  ships: { id: 'ships', title: 'Ships', icon: 'shuttle-space' },
+  people: { id: 'people', title: 'People', icon: 'users' },
+  rooms: { id: 'rooms', title: 'Rooms', icon: 'cubes' },
+  pricing: { id: 'pricing', title: 'Pricing', icon: 'tags' },
+  outpost: { id: 'outpost', title: 'Outpost', icon: 'house-flag' },
+};
 
 /**
- * Tabs by role (spec §1.4): managers see all; treasurers Docking and Pricing; pricers Pricing;
- * others Docking. Staff also get Services when the server sends them room cards: a treasurer
- * evicts unused vat imprints there (ruling R4), and each card gates its own buttons.
+ * Managers see every tab. Treasurers get Ships (materials) and Pricing; pricers
+ * Pricing; anyone else Ships. Rooms shows for staff when a room lets them change
+ * a setting; Outpost shows while the outpost is unclaimed, for the claim button.
  */
 function visibleTabs(data: OutpostData): Tab[] {
   if (data.is_owner || data.can_manage) {
-    return [
-      TAB_DOCKING,
-      TAB_PRICING,
-      { id: 'residents', title: 'Residents', icon: 'users' },
-      { id: 'arrivals', title: 'Arrivals', icon: 'id-card' },
-      { id: 'research', title: 'Research', icon: 'flask' },
-      { id: 'upgrades', title: 'Upgrades', icon: 'cubes' },
-      TAB_SERVICES,
-    ];
+    return [TABS.ships, TABS.people, TABS.rooms, TABS.pricing, TABS.outpost];
   }
   const pricing = !!data.can_set_prices || !!data.can_view_income;
   const treasurer = canSelectSilo(data) || !!data.can_spend;
   const tabs: Tab[] = [];
   if (treasurer || !pricing) {
-    tabs.push(TAB_DOCKING);
+    tabs.push(TABS.ships);
+  }
+  if (
+    serviceRooms(data).some(
+      (room) =>
+        !!room.can_toggle_visitors ||
+        !!room.detail?.can_toggle ||
+        !!room.detail?.can_edit,
+    )
+  ) {
+    tabs.push(TABS.rooms);
   }
   if (pricing) {
-    tabs.push(TAB_PRICING);
+    tabs.push(TABS.pricing);
   }
-  if ((data.services?.length || 0) > 0) {
-    tabs.push(TAB_SERVICES);
+  if (!data.has_owner) {
+    tabs.push(TABS.outpost);
   }
   return tabs;
 }
 
+function Header({ data }: { data: OutpostData }) {
+  return (
+    <header className="Outpost__header">
+      <div className="Outpost__cell Outpost__cell--name">
+        <Icon name="house-flag" />
+        <strong title={data.outpost_name}>
+          {data.outpost_name || 'Outpost registry'}
+        </strong>
+      </div>
+      <div className="Outpost__cell Outpost__cell--owner">
+        <span className="Outpost__cell-label">OWNER</span>
+        <strong>{data.founder_name || 'Unclaimed'}</strong>
+      </div>
+      {data.can_manage || data.can_spend ? (
+        <div className="Outpost__cell Outpost__cell--treasury">
+          <span className="Outpost__cell-label">TREASURY</span>
+          <strong>{credits(data.treasury_balance)}</strong>
+        </div>
+      ) : null}
+    </header>
+  );
+}
+
 export function OutpostManagementPanel({ data, act }: Props) {
-  const [chosenTab, setTab] = useState('docking');
+  const [chosenTab, setTab] = useState<TabId>('ships');
   const [placingId, setPlacingId] = useState<string | null>(null);
   const placingUpgrade = (data.upgrade_catalog || []).find(
     (entry) => entry.id === placingId,
@@ -2259,8 +2498,7 @@ export function OutpostManagementPanel({ data, act }: Props) {
   const placingStatus = (data.upgrades || []).find(
     (entry) => entry.id === placingId,
   );
-  const placing = !!data.linked && !!placingUpgrade;
-  // Placed, cancelled or refused: back to the carousel.
+  // Placed, cancelled or refused: back to the room list.
   useEffect(() => {
     if (placingId && placingStatus?.state !== 'ready') {
       setPlacingId(null);
@@ -2269,120 +2507,90 @@ export function OutpostManagementPanel({ data, act }: Props) {
   const tabs = visibleTabs(data);
   const tab = tabs.some((item) => item.id === chosenTab)
     ? chosenTab
-    : tabs[0].id;
-  return (
-    <div className="Outpost">
-      <div
-        className="Outpost__plate"
-        style={{
-          backgroundImage: `url("${resolveAsset('outpost_management_plate.png')}")`,
+    : tabs[0]?.id;
+  const requests = data.dock_requests?.length || 0;
+  const placing = !!data.linked && !!placingUpgrade && tab === 'rooms';
+
+  let page: ReactNode = null;
+  if (!data.linked) {
+    page = (
+      <div className="Outpost__page Outpost__page--single">
+        <Frame title="Outpost" icon="link-slash" fill>
+          <None>No outpost link</None>
+        </Frame>
+      </div>
+    );
+  } else if (placing && placingUpgrade) {
+    page = (
+      <div className="Outpost__page Outpost__page--single">
+        <Frame
+          title={`Place ${placingUpgrade.name}`}
+          icon="map-location-dot"
+          fill
+          flush
+          bodyClassName="Outpost__placement"
+        >
+          <UpgradePlacement
+            data={data}
+            act={act}
+            upgrade={placingUpgrade}
+            onBack={() => {
+              act('close_upgrade_map');
+              setPlacingId(null);
+            }}
+          />
+        </Frame>
+      </div>
+    );
+  } else if (tab === 'ships') {
+    page = <ShipsTab data={data} act={act} />;
+  } else if (tab === 'people') {
+    page = <PeopleTab data={data} act={act} />;
+  } else if (tab === 'rooms') {
+    page = (
+      <RoomsTab
+        data={data}
+        act={act}
+        onPlace={(id) => {
+          act('open_upgrade_map', { id });
+          setPlacingId(id);
         }}
       />
-      <Panel slot="identity" className="Outpost__rail">
-        <Icon name="house-flag" />
-        <strong title={data.outpost_name}>
-          {data.outpost_name || 'Outpost registry'}
-        </strong>
-      </Panel>
-      <Panel slot="owner" className="Outpost__rail">
-        <span>OWNER</span>
-        <strong>{data.founder_name || 'Unclaimed'}</strong>
-      </Panel>
-      <Panel slot="status" className="Outpost__rail Outpost__rail--status">
-        {data.can_manage || data.can_spend ? (
-          <>
-            <span>TREASURY</span>
-            <strong>{formatMoney(data.treasury_balance || 0)} cr</strong>
-          </>
-        ) : null}
-      </Panel>
-      {placing && placingUpgrade ? (
-        <>
-          <Panel slot="placement">
-            <UpgradePlacement
-              data={data}
-              act={act}
-              upgrade={placingUpgrade}
-              onBack={() => {
-                act('close_upgrade_map');
-                setPlacingId(null);
-              }}
-            />
-          </Panel>
-          <Panel slot="broadcast">
-            <Broadcast data={data} act={act} />
-          </Panel>
-          <Panel slot="command">
-            <Ownership data={data} act={act} />
-          </Panel>
-        </>
-      ) : data.linked ? (
-        <>
-          <Panel slot="directory">
-            <nav className="Outpost__tabs">
-              {tabs.map((item) => (
-                <Button
-                  key={item.id}
-                  icon={item.icon}
-                  selected={tab === item.id}
-                  onClick={() => setTab(item.id)}
-                >
-                  {item.title}
-                  {item.id === 'docking' &&
-                  (data.dock_requests?.length || 0) > 0 ? (
-                    <span className="Outpost__count">
-                      {data.dock_requests.length}
-                    </span>
-                  ) : null}
-                </Button>
-              ))}
-            </nav>
-            {data.playtest_visitor ? (
-              <div className="Outpost__banner" role="status">
-                <Icon name="user-secret" />
-                Billed as a visitor.
-              </div>
-            ) : null}
-            <div className="Outpost__directory-scroll">
-              {tab === 'docking' ? (
-                <Docking data={data} act={act} />
-              ) : tab === 'pricing' ? (
-                <PricingTab data={data} act={act} />
-              ) : tab === 'services' ? (
-                <Services data={data} act={act} />
-              ) : tab === 'residents' ? (
-                <Residents data={data} act={act} />
-              ) : tab === 'research' ? (
-                <Research data={data} act={act} />
-              ) : tab === 'upgrades' ? (
-                <Upgrades
-                  data={data}
-                  act={act}
-                  onPlace={(id) => {
-                    act('open_upgrade_map', { id });
-                    setPlacingId(id);
-                  }}
-                />
-              ) : (
-                <Arrivals data={data} act={act} />
-              )}
-            </div>
-          </Panel>
-          <Panel slot="registry">
-            <Registry data={data} act={act} />
-          </Panel>
-          <Panel slot="broadcast">
-            <Broadcast data={data} act={act} />
-          </Panel>
-          <Panel slot="command">
-            <Ownership data={data} act={act} />
-          </Panel>
-        </>
-      ) : (
-        <Panel slot="directory">
-          <Empty icon="link-slash">No outpost link</Empty>
-        </Panel>
-      )}
+    );
+  } else if (tab === 'pricing') {
+    page = <PricingTab data={data} act={act} />;
+  } else if (tab === 'outpost') {
+    page = <OutpostTab data={data} act={act} />;
+  }
+
+  return (
+    <div className="Outpost">
+      <Header data={data} />
+      {data.linked && tabs.length > 0 ? (
+        <nav className="Outpost__tabs">
+          {tabs.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              className={`Outpost__tab ${tab === item.id ? 'Outpost__tab--active' : ''}`}
+              onClick={() => setTab(item.id)}
+            >
+              <Icon name={item.icon} />
+              {item.title}
+              {item.id === 'ships' && requests > 0 ? (
+                <span className="Outpost__badge">{requests}</span>
+              ) : null}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+      {data.playtest_visitor ? (
+        <div className="Outpost__banner" role="status">
+          <Icon name="user-secret" />
+          Billed as a visitor.
+        </div>
+      ) : null}
+      {page}
     </div>
   );
 }

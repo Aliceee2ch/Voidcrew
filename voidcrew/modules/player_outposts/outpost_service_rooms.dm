@@ -267,11 +267,11 @@
 /datum/outpost_upgrade/service/proc/on_service_installed(mob/user)
 	return
 
-/// This room's detail for the management console's Services tab, or null
+/// This room's settings for the management console's Rooms tab, or null
 /datum/outpost_upgrade/service/proc/service_ui_data(mob/user)
 	return null
 
-/// A Services tab action for this room. TRUE when handled.
+/// A Rooms tab action for this room. TRUE when handled.
 /datum/outpost_upgrade/service/proc/service_ui_act(mob/user, action, list/params)
 	return FALSE
 

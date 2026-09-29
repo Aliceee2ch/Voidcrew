@@ -451,7 +451,7 @@
 		return "Eviction already under way."
 	return null
 
-/// Eviction state of a ship bay for the Docking tab (merged into its `ship_bays` row)
+/// Eviction state of a ship bay for the Ships tab (merged into its ship's `ships_here` row)
 /obj/structure/overmap/dynamic/player_outpost/proc/bay_eviction_row(datum/outpost_berth/ship_bay/bay, mob/user)
 	var/list/eviction = istype(bay) && bay.ship ? bay_evictions[WEAKREF(bay.ship)] : null
 	var/eta = 0

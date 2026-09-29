@@ -490,3 +490,125 @@
 	qdel(doomed)
 	TEST_ASSERT_EQUAL(length(home.bay_evictions), 0, "A deleted ship's eviction outlived it")
 	TEST_ASSERT_EQUAL(length(home.bay_visit_fees), 0, "A deleted ship's visit fee outlived it")
+
+// ===== MANAGEMENT CONSOLE SHIP ROWS =====
+
+/// The console's Ships tab: `ships_here` rows, and the bay and research actions sent with their refs
+/datum/unit_test/voidcrew_outpost_console_ships
+	parent_type = /datum/unit_test/voidcrew_outpost_dock_fees
+
+/// The panel's `ships_here` row for `ship`, or null when it is not listed
+/datum/unit_test/voidcrew_outpost_console_ships/proc/ship_row(datum/player_outpost_management_ui/panel, mob/user, obj/structure/overmap/ship/ship)
+	var/list/data = panel.ui_data(user)
+	for(var/list/row as anything in data["ships_here"])
+		if(row["ref"] == REF(ship))
+			return row
+	return null
+
+/// Sends a console action with exactly these params, as the interface does
+/datum/unit_test/voidcrew_outpost_console_ships/proc/row_act(datum/player_outpost_management_ui/panel, mob/user, action, list/params)
+	var/datum/tgui/ui = allocate(/datum/tgui, user, panel, "OutpostManagement")
+	world.push_usr(user, CALLBACK(panel, TYPE_PROC_REF(/datum, ui_act), action, params, ui))
+
+/datum/unit_test/voidcrew_outpost_console_ships/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = fee_claim("consoleowner")
+	TEST_ASSERT_NOTNULL(home, "The console claim did not load with a ship bay")
+	var/turf/shore = get_turf(home.management_console)
+	var/mob/living/carbon/human/owner = make_player(shore, "consoleowner")
+	var/mob/living/carbon/human/captain = make_player(shore, "consolecaptain")
+	var/mob/living/carbon/human/stranger = make_player(shore, "consolestranger")
+	var/datum/player_outpost_management_ui/management_test/panel = upgrade_test_panel(home, owner)
+	var/datum/player_outpost_management_ui/management_test/stranger_panel = upgrade_test_panel(home, stranger)
+	var/obj/structure/overmap/ship/ship = fee_ship("Console Test Ship", 1000)
+	SSovermap.simulated_ships |= ship
+	ship.ship_team.add_member(captain.mind)
+	var/datum/outpost_berth/ship_bay/bay = home.allocate_ship_bay(ship)
+	TEST_ASSERT_NOTNULL(bay, "The bay could not be allocated")
+	TEST_ASSERT_NULL(ship_row(panel, owner, ship), "A ship still on approach was listed as docked")
+	settle_in_bay(home, ship, bay)
+	SEND_SIGNAL(ship, "voidcrew_ship_docked")
+	TEST_ASSERT(bay.is_ship_present(), "The test ship is not settled in the bay")
+
+	var/list/row = ship_row(panel, owner, ship)
+	TEST_ASSERT_NOTNULL(row, "ships_here did not list the ship in the bay")
+	TEST_ASSERT_EQUAL(row["bay_ref"], REF(bay), "The ship's row carries the wrong bay ref")
+	TEST_ASSERT_EQUAL(row["berth"], "Bay 1", "The ship's row has the wrong berth label")
+	TEST_ASSERT_EQUAL(row["crew"], 1, "The ship's row has the wrong crew count")
+	TEST_ASSERT_EQUAL(row["research"], "none", "An unlinked ship showed research")
+	TEST_ASSERT_NULL(row["research_ref"], "An unlinked ship carried a research ref")
+	TEST_ASSERT_EQUAL(row["materials"], "none", "Materials showed before any request")
+	TEST_ASSERT_NULL(row["evict_denial"], "The owner was refused an eviction: [row["evict_denial"]]")
+	TEST_ASSERT(!row["evicting"], "The row shows an eviction before one started")
+
+	// Materials, through the row's bay ref
+	TEST_ASSERT(bay.request_silo(captain), "The crew could not request outpost materials")
+	row = ship_row(panel, owner, ship)
+	TEST_ASSERT_EQUAL(row["materials"], "requested", "A material request did not show on the row")
+	row_act(stranger_panel, stranger, "approve_bay_silo", list("ref" = row["bay_ref"]))
+	TEST_ASSERT_NULL(bay.approved_silo, "A stranger approved outpost materials")
+	row_act(panel, owner, "approve_bay_silo", list("ref" = row["bay_ref"]))
+	TEST_ASSERT_NOTNULL(bay.approved_silo, "Approving through the row's bay ref did not grant materials")
+	row = ship_row(panel, owner, ship)
+	TEST_ASSERT_EQUAL(row["materials"], "allowed", "Granted materials did not show on the row")
+	row_act(panel, owner, "revoke_bay_silo", list("ref" = row["bay_ref"]))
+	TEST_ASSERT_NULL(bay.approved_silo, "Revoking through the row's bay ref kept the grant")
+	row = ship_row(panel, owner, ship)
+	TEST_ASSERT_EQUAL(row["materials"], "none", "Revoked materials still showed on the row")
+
+	// Eviction, through the row's bay ref
+	row_act(stranger_panel, stranger, "evict_bay_ship", list("ref" = row["bay_ref"]))
+	TEST_ASSERT_EQUAL(length(home.bay_evictions), 0, "A stranger evicted a ship from the console")
+	row_act(panel, owner, "evict_bay_ship", list("ref" = row["bay_ref"]))
+	row = ship_row(panel, owner, ship)
+	TEST_ASSERT(row["evicting"], "Evicting through the row's bay ref did not start an eviction")
+	TEST_ASSERT(row["evict_eta"] > 0, "The evicting row has no countdown")
+	TEST_ASSERT_NOTNULL(row["evict_denial"], "A second eviction was offered while one runs")
+	row_act(panel, owner, "cancel_bay_eviction", list("ref" = row["bay_ref"]))
+	row = ship_row(panel, owner, ship)
+	TEST_ASSERT(!row["evicting"], "Cancelling through the row's bay ref left the eviction running")
+	TEST_ASSERT_EQUAL(length(home.bay_evictions), 0, "Cancelling kept the eviction record")
+
+	// Research, through the row's ship ref and research ref
+	var/obj/machinery/rnd/server/ship/research_server = allocate(__IMPLIED_TYPE__, shore)
+	var/obj/item/computer_disk/ship_disk/research_disk = allocate(__IMPLIED_TYPE__, shore)
+	research_server.attacked_by(research_disk, owner)
+	row_act(panel, owner, "invite_research", list("ship" = row["ref"], "server" = REF(research_server)))
+	TEST_ASSERT_EQUAL(length(home.research_links), 1, "Connecting from the row sent no invitation")
+	var/datum/outpost_research_link/research_link = home.research_links[1]
+	row = ship_row(panel, owner, ship)
+	TEST_ASSERT_EQUAL(row["research"], "pending", "A sent invitation did not show as pending")
+	TEST_ASSERT_EQUAL(row["research_ref"], REF(research_link), "The row carries the wrong research ref")
+	var/list/stranger_row = ship_row(stranger_panel, stranger, ship)
+	TEST_ASSERT_EQUAL(stranger_row["research"], "none", "A stranger saw the outpost's research links")
+	TEST_ASSERT_NULL(stranger_row["research_ref"], "A stranger was sent a research ref")
+	// An invitation outlives the visit: the ship leaves the rows and its link stays reachable
+	ship.docked = null
+	TEST_ASSERT_NULL(ship_row(panel, owner, ship), "A departed ship was still listed")
+	var/list/data = panel.ui_data(owner)
+	var/list/away = data["research_away"]
+	TEST_ASSERT_EQUAL(length(away), 1, "A departed ship's research link was not listed")
+	var/list/away_row = away[1]
+	TEST_ASSERT_EQUAL(away_row["ref"], REF(research_link), "The away row carries the wrong research ref")
+	ship.docked = home
+	data = panel.ui_data(owner)
+	TEST_ASSERT_EQUAL(length(data["research_away"]), 0, "A docked ship's link was listed twice")
+	row = ship_row(panel, owner, ship)
+	row_act(panel, owner, "revoke_research", list("ref" = row["research_ref"]))
+	TEST_ASSERT(QDELETED(research_link), "Disconnecting through the row's research ref kept the link")
+	row = ship_row(panel, owner, ship)
+	TEST_ASSERT_EQUAL(row["research"], "none", "A cancelled invitation still showed")
+
+	// A hangar berth row: no bay, so no materials and no eviction
+	var/obj/structure/overmap/ship/berthed = fee_ship("Berthed Ship", 1000)
+	SSovermap.simulated_ships |= berthed
+	var/datum/outpost_berth/berth = allocate(/datum/outpost_berth, home, 2, berthed)
+	home.berths = list(null, berth)
+	berthed.docked = home
+	berthed.state = "idle"
+	var/list/berth_row = ship_row(panel, owner, berthed)
+	TEST_ASSERT_NOTNULL(berth_row, "ships_here did not list the ship in a hangar berth")
+	TEST_ASSERT_EQUAL(berth_row["berth"], "Berth 2", "The hangar berth row has the wrong berth label")
+	TEST_ASSERT_NULL(berth_row["bay_ref"], "A hangar berth row carried a bay ref")
+	TEST_ASSERT_NULL(berth_row["materials"], "A hangar berth row offered materials")
+	TEST_ASSERT(!("evict_denial" in berth_row) && !berth_row["evicting"], "A hangar berth row offered eviction")
+	home.berths = null

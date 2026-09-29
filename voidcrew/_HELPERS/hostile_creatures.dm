@@ -78,6 +78,12 @@ GLOBAL_LIST_INIT(turret_retaliating_subtrees, typecacheof(list(
 	if(istype(creature, /mob/living/basic/bounty_criminal) || istype(creature, /mob/living/basic/bounty_companion))
 		if(bounty_turret_ignores(creature, istype(get_area(creature), /area/voidcrew/trader_outpost)))
 			return FALSE
+	// Bees from an outpost's own apiary never sting anyone (outpost_apiary.dm), but their
+	// stock AI still carries the hunting subtree.
+	if(istype(creature, /mob/living/basic/bee))
+		var/mob/living/basic/bee/bee = creature
+		if(bee.is_outpost_bee())
+			return FALSE
 
 	// The /hostile branch of the old simple animal tree is aggressive by definition; its
 	// retaliate-only subtypes were all moved over to /mob/living/basic long ago.

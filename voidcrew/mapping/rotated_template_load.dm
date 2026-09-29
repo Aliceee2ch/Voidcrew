@@ -145,7 +145,25 @@
 				if(!preexisting[created] && !(created.flags_1 & INITIALIZED_1))
 					created.template_load_rotate(rotation)
 
+	// Initialization yields with SSatoms' mapload state cleared, so SSicon_smooth can run in the
+	// middle of it. An initialized smoother on or beside the footprint that is still queued (a wall
+	// the room joins) would then read a neighbour that has not initialized yet, whose smoothing
+	// groups are still raw text: "bad index" in bitmask_smooth(). Hold those until the room is up.
+	var/list/atom/held_smoothers = list()
+	for(var/turf/near_turf as anything in CORNER_BLOCK_OFFSET(bottom_left, footprint_width + 2, footprint_height + 2, -1, -1))
+		if((near_turf.smoothing_flags & SMOOTH_QUEUED) && (near_turf.flags_1 & INITIALIZED_1))
+			held_smoothers += near_turf
+		for(var/atom/movable/near_thing as anything in near_turf)
+			if((near_thing.smoothing_flags & SMOOTH_QUEUED) && (near_thing.flags_1 & INITIALIZED_1))
+				held_smoothers += near_thing
+	for(var/atom/held as anything in held_smoothers)
+		SSicon_smooth.remove_from_queues(held)
+
 	initTemplateBounds(bounds)
+
+	for(var/atom/held as anything in held_smoothers)
+		if(!QDELETED(held))
+			QUEUE_SMOOTH(held)
 
 	if(has_ceiling)
 		generate_ceiling(footprint_turfs)

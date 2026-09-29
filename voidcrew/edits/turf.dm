@@ -63,6 +63,16 @@
 /turf/proc/scrub_datum_state_for_raw_swap()
 	if(HAS_TRAIT(src, TURF_Z_TRANSPARENT_TRAIT))
 		RemoveElement(/datum/element/turf_z_transparency)
+	// Every other detach-on-destroy element (a grass patch's diggable) waits on our COMSIG_QDELETING,
+	// which a raw swap never sends. Detach them the way qdel would, or the element keeps this
+	// coordinate on its books and the next turf here that adds it trips the signal override warning
+	// and is left unregistered.
+	var/qdeleting_listeners = _listen_lookup?[COMSIG_QDELETING]
+	if(qdeleting_listeners)
+		var/list/listeners = islist(qdeleting_listeners) ? qdeleting_listeners : list(qdeleting_listeners)
+		for(var/datum/element/element in listeners.Copy())
+			if(element.element_flags & ELEMENT_DETACH_ON_HOST_DESTROY)
+				element.Detach(src)
 	var/list/component_table = _datum_components
 	if(!component_table)
 		return

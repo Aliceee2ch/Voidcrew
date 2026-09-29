@@ -48,14 +48,17 @@
 	site.habitat = list(run_loc_floor_bottom_left)
 
 	var/mob/living/basic/skeleton/dead_pawn = allocate(/mob/living/basic/skeleton, run_loc_floor_bottom_left)
+	dead_pawn.basic_mob_flags &= ~DEL_ON_DEATH // skeletons crumble on death; keep the body for this check
 	dead_pawn.AddComponent(/datum/component/derelict_leash, site)
 	dead_pawn.death()
+	TEST_ASSERT(!QDELETED(dead_pawn), "the dead hostile was deleted, so the leash check below proves nothing")
 	dead_pawn.forceMove(run_loc_floor_top_right)
 	TEST_ASSERT_EQUAL(get_turf(dead_pawn), run_loc_floor_top_right, "a dead leashed hostile moved outside the habitat was pulled back")
 
 	var/mob/living/basic/skeleton/player_pawn = allocate(/mob/living/basic/skeleton, run_loc_floor_bottom_left)
 	var/datum/component/derelict_leash/leash = player_pawn.AddComponent(/datum/component/derelict_leash, site)
-	player_pawn.key = "derelictleashplayer" // simulates a player taking the body, same as other outpost tests (kit trap)
+	// A clientless test world never runs Login() for a set key; send what Login() sends when a player takes the body.
+	SEND_SIGNAL(player_pawn, COMSIG_MOB_LOGIN)
 	TEST_ASSERT(QDELETED(leash), "a hostile taken over by a player kept its leash")
 
 	player_pawn.forceMove(run_loc_floor_top_right)

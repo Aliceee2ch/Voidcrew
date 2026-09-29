@@ -49,39 +49,26 @@
 /// A red bikini and blue performer's boots
 /datum/outfit/ambient_dancer
 	name = "Outpost dancer (red)"
-	shoes = /obj/item/clothing/shoes/singerb
 	/// Her bikini: an underwear accessory, by name (SSaccessories.underwear_list)
-	var/bikini = "Bikini"
-	/// Its colour
-	var/bikini_color = "#b3122e"
+	var/bikini = "Neko Bikini (Black)"
 
 /**
  * No uniform: the bikini is underwear on the body, drawn by the update_body() that ends equip().
- * Also fixes her look on the dummy this is built on: always a woman, fair-skinned, blonde,
- * blue-eyed and clean-shaven, with red lipstick (owner request: she should clearly look like a
- * woman). Baked into the cached look (outpost_npc_looks.dm) alongside the bikini.
  */
 /datum/outfit/ambient_dancer/pre_equip(mob/living/carbon/human/user, visuals_only = FALSE)
 	user.underwear = bikini
-	user.underwear_color = bikini_color
 	user.undershirt = "Nude"
-	user.socks = "Nude"
+	user.socks = "Thigh-high (Fishnet)"
 	user.gender = FEMALE
 	user.physique = FEMALE
 	user.skin_tone = "caucasian2"
-	user.set_hairstyle("Long Hair 3", update = FALSE)
-	user.set_haircolor("#e8c66a", update = FALSE)
+	user.set_hairstyle("Ponytail 7", update = FALSE)
+	user.set_haircolor("#CC0000", update = FALSE)
 	user.set_facial_hairstyle("Shaved", update = FALSE)
-	user.set_eye_color("#3b7fd9")
-	user.update_lips("lipstick", "#b3122e", update = FALSE)
+	user.set_eye_color("#663300")
+	user.update_lips("lipstick", "#000000", update = FALSE)
 	// The update_body() that ends equip() isn't is_creating, so it won't pick up the skin tone above on its own
 	user.update_body(is_creating = TRUE)
-
-/// A gold bikini and yellow performer's boots
-/datum/outfit/ambient_dancer/gold
-	name = "Outpost dancer (gold)"
-	shoes = /obj/item/clothing/shoes/singery
-	bikini_color = "#e8c21a"
 
 // =========================================================================
 // THE DANCER
@@ -95,8 +82,7 @@
 	gender = FEMALE
 	random_gender = FALSE
 	outfit_choices = list(
-		/datum/outfit/ambient_dancer,
-		/datum/outfit/ambient_dancer/gold,
+		/datum/outfit/ambient_dancer
 	)
 	routine = list(
 		/datum/ambient_activity/dance_pole = 6,

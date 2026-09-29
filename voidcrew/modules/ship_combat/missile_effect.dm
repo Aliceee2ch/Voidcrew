@@ -194,6 +194,7 @@
 
 	var/turf/impact_loc = get_turf(src)
 	exploded = TRUE
+	ship_metric_missile_hit(src, "hull")
 
 	// Play impact sound - limited to target ship's areas to prevent bleed to other ships in reserved space
 	var/sound_range
@@ -329,6 +330,7 @@
 
 	var/turf/impact_loc = get_turf(src)
 	exploded = TRUE
+	ship_metric_missile_hit(src, "hull")
 
 	// Play impact sound - limited to target ship's areas
 	playsound_ship(impact_loc, impact_sound, 80, TRUE, 10, target_ship)

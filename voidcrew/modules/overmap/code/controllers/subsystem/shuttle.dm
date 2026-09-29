@@ -180,6 +180,7 @@
 	ship_to_spawn.calculate_mass()
 
 	SEND_SIGNAL(loaded, COMSIG_VOIDCREW_SHIP_LOADED)
+	ship_metric_spawned(ship_to_spawn, selected_theme)
 
 	place_ship_landmarks(loaded)
 

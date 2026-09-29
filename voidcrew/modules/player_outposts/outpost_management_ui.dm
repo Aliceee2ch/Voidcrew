@@ -395,6 +395,7 @@
 	COOLDOWN_START(outpost, advert_cooldown, OUTPOST_ADVERT_COOLDOWN)
 	outpost.current_advert = new /datum/outpost_advert(outpost)
 	log_game("PLAYER OUTPOST: [key_name(user)] bought an advertisement for '[outpost.name]'")
+	metric_outpost_advert(outpost, user, OUTPOST_ADVERT_COST)
 	to_chat(user, span_notice("Broadcast live: [outpost.name]."))
 	return TRUE
 

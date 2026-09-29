@@ -95,6 +95,7 @@
 	if(linked_console?.bank_account_holder?.synced_bank_account && pending_loan.bonus_credits > 0)
 		linked_console.bank_account_holder.synced_bank_account.adjust_money(pending_loan.bonus_credits)
 		record_transaction("loan", pending_loan.logging_desc, 1, pending_loan.bonus_credits)
+		metric_cargo_loan(pending_loan, linked_console.bank_account_holder.synced_bank_account, usr)
 
 	// Announce acceptance
 	if(target_ship)

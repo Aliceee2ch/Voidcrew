@@ -301,6 +301,7 @@
 
 	// Award credits
 	sender_ship.ship_account?.adjust_money(reward)
+	record_metric_paid(sender_ship, sent_count) // round metrics, voidcrew/modules/metrics/mission_metrics.dm
 
 	// Announcements
 	var/obj/structure/overmap/ship/creator_ship = get_creator_ship()
@@ -356,6 +357,7 @@
  * Refunds reward to creator.
  */
 /datum/player_bounty/proc/cancel()
+	record_metric_cancelled() // round metrics, voidcrew/modules/metrics/mission_metrics.dm
 	var/obj/structure/overmap/ship/creator_ship = get_creator_ship()
 
 	// Refund the creator

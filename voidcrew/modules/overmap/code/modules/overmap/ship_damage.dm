@@ -101,6 +101,7 @@
 /obj/structure/overmap/ship/proc/on_ship_recovered()
 	has_crash_landed = FALSE
 	crashed_at_integrity = 0
+	ship_metric_hull_restored(src)
 	play_ship_sound('sound/machines/computer/computer_start.ogg', 15)
 
 	// "Systems operational" on its own sends the crew straight to a refused undock, because the
@@ -138,6 +139,7 @@
 	has_crash_landed = TRUE
 	// Record current integrity for repair progress calculation
 	crashed_at_integrity = integrity
+	ship_metric_hull_failed(src)
 
 	// Stop the ship dead
 	speed[1] = 0

@@ -340,6 +340,7 @@
 #include "voidcrew_bitrunning.dm"
 #include "voidcrew_blueprint_guns.dm"
 #include "voidcrew_colosseum.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_combat_metrics.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_construction_refunds.dm"
 #include "../../../voidcrew/modules/unit_tests/voidcrew_combat_camera_breaches.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_construction_automation.dm"
@@ -353,10 +354,12 @@
 #include "voidcrew_drug_lab.dm"
 #include "voidcrew_drug_recipe.dm"
 #include "voidcrew_dynamic_events.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_economy_metrics.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_fleet_waypoints.dm"
 #include "voidcrew_helpers.dm"
 #include "voidcrew_hull_containment.dm"
 #include "voidcrew_hull_survey.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_round_metrics.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_windoor_survey.dm"
 #include "voidcrew_lich.dm"
 #include "voidcrew_launch_access.dm"
@@ -380,6 +383,7 @@
 #include "voidcrew_missions.dm"
 #include "voidcrew_mining_input.dm"
 #include "voidcrew_mission_gps.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_mission_metrics.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_npc_boarding_docking.dm"
 #include "voidcrew_npc_disarm.dm"
 #include "voidcrew_player_outpost.dm"

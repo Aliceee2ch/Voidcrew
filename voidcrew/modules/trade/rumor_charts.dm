@@ -167,4 +167,5 @@
 	ship.add_pending_rumor(chart)
 
 	to_chat(user, span_notice("The rumor data is encrypted and beamed to [ship]'s helm console. Reveal it when your crew is ready to move."))
+	metric_shop_purchase(src, user, credit_price, price_vouchers)
 	return TRUE

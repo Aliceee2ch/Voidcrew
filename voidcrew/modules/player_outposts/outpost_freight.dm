@@ -276,6 +276,7 @@
 		home.treasury.add_log_to_history(0, "Delivered order #[order.id] from cargo registry: [order.ship_paid_cost] cr")
 		SSeconomy.track_purchase(home.treasury, order.ship_paid_cost, order.pack.name)
 		SSeconomy.import_total += order.ship_paid_cost
+		metric_outpost_cargo_order(home, order)
 		qdel(order)
 	cancel_pending()
 	state = CARGO_SHUTTLE_DOCKED
@@ -306,6 +307,7 @@
 	if(!length(GLOB.exports_list))
 		setupExports()
 	var/datum/export_report/report = new
+	metric_watch_exports(report)
 	for(var/turf/location as anything in get_cargo_bay_turfs())
 		for(var/atom/movable/goods in location)
 			if(goods.anchored || ismob(goods) || istype(goods, /obj/docking_port) || istype(goods, /obj/effect/landmark))
@@ -316,6 +318,7 @@
 		home.treasury.adjust_money(value, "Export to cargo registry: [report.total_amount[export]] [export.unit_name]")
 		record_transaction("sell", export.unit_name || "goods", report.total_amount[export], value)
 		SSeconomy.export_total += value
+	metric_cargo_exports(report, home.treasury, home)
 	qdel(report)
 	destroy_shuttle()
 	busy = FALSE

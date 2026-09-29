@@ -222,6 +222,7 @@
 		return FALSE
 	if(!istype(npc_ship))
 		return FALSE
+	npc_metric_claimed(npc_ship, claimer, "key")
 
 	// Cancel abandonment timer if one is running
 	if(npc_ship.abandonment_timer)
@@ -853,7 +854,8 @@
 		reset_jump()
 		return
 	// Extract ship parts from all players on the ship before jumping
-	extract_ship_parts_from_ship(current_ship, "bluespace_jump")
+	var/parts_extracted = extract_ship_parts_from_ship(current_ship, "bluespace_jump")
+	ship_metric_jumping(current_ship, parts_extracted)
 	// ignore_crew: the jump is supposed to take the crew with it, and the console
 	// asked for confirmation before any of this started.
 	if(current_ship.destroy_ship(TRUE, ignore_crew = TRUE))

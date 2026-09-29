@@ -501,6 +501,7 @@
 				return FALSE
 
 			to_chat(user, span_notice("Successfully unlocked [hull.name]!"))
+			ship_metric_hull_unlocked(user, hull)
 
 		if("select_theme")
 			// Select a theme (must be unlocked)
@@ -714,6 +715,7 @@
 		return FALSE
 
 	log_game("SHIP_UPGRADE: [ckey] purchased theme '[theme.id]' for [template.type]")
+	ship_metric_unlocked("ship_theme_unlocked", purchasing_user, template.type, theme.id, cost, CONFIG_GET(flag/free_ships))
 	return TRUE
 
 /**
@@ -775,4 +777,5 @@
 		return FALSE
 
 	log_game("SHIP_UPGRADE: [ckey] purchased upgrade '[module.id]' for [template.type]")
+	ship_metric_unlocked("ship_module_unlocked", purchasing_user, template.type, module.id, cost, CONFIG_GET(flag/free_ships))
 	return TRUE

@@ -443,6 +443,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 
 /// Decants the clone and moves the player into it.
 /obj/machinery/cloning_vat/proc/claim(mob/dead/observer/user, datum/mind/mind)
+	var/mob/old_body = mind.current
 	var/mob/living/carbon/human/clone = create_clone_body()
 	mind.transfer_to(clone, force_key_move = TRUE)
 	clone.forceMove(drop_location())
@@ -460,6 +461,7 @@ GLOBAL_LIST_EMPTY(imprinted_vats_by_ckey)
 	to_chat(clone, span_boldnotice("You wake up in a brand-new body, gasping and retching as the vat's fluid drains out of your lungs."))
 	to_chat(clone, span_notice("Everything you were carrying is still on your old corpse."))
 	clone.log_message("was reborn from a cloning vat imprint.", LOG_GAME)
+	metric_clone_revival(clone, old_body)
 
 	after_claim(clone)
 

@@ -27,6 +27,16 @@
 	place.public_floor = null
 	return place
 
+/// A trader outpost of `outpost_type` (general, outfitter, black_market), mapped onto the test room like ambient_test_outpost()
+/datum/unit_test/proc/pa_typed_outpost(outpost_type)
+	var/obj/structure/overmap/trader_outpost/outpost = allocate(outpost_type)
+	outpost.outpost_template = allocate(/datum/map_template/trader_outpost)
+	outpost.outpost_template.width = run_loc_floor_top_right.x - run_loc_floor_bottom_left.x + 1
+	outpost.outpost_template.height = run_loc_floor_top_right.y - run_loc_floor_bottom_left.y + 1
+	outpost.template_bottom_left = run_loc_floor_bottom_left
+	outpost.lobby_alcove_turfs = list(run_loc_floor_top_right)
+	return outpost
+
 /// A trader for `outpost` at `where`, running `shop_type`, behind a counter table at `counter` if given
 /datum/unit_test/proc/pa_trader(obj/structure/overmap/trader_outpost/outpost, turf/where, turf/counter, shop_type)
 	if(counter)
@@ -57,11 +67,13 @@
 	var/list/expected = list(
 		/datum/ambient_outpost_role/customer = list(halcyon, quartermain, undertow),
 		/datum/ambient_outpost_role/drinker = list(halcyon, quartermain, undertow),
-		/datum/ambient_outpost_role/janitor = list(halcyon, quartermain, undertow),
+		/datum/ambient_outpost_role/janitor = list(quartermain),
 		/datum/ambient_outpost_role/gardener = list(halcyon),
-		/datum/ambient_outpost_role/barback = list(halcyon, undertow),
+		/datum/ambient_outpost_role/barback = list(undertow),
 		/datum/ambient_outpost_role/dock_worker = list(quartermain),
 		/datum/ambient_outpost_role/angler = list(halcyon),
+		/datum/ambient_outpost_role/mechanic = list(halcyon),
+		/datum/ambient_outpost_role/drinker/off_duty_pirate = list(undertow),
 	)
 	for(var/role_type in expected)
 		var/datum/ambient_outpost_role/role = allocate(role_type)
@@ -78,7 +90,7 @@
 	TEST_ASSERT_EQUAL(customers.wanted(place), 0, "Customers come to an outpost with no traders")
 	TEST_ASSERT_EQUAL(drinkers.wanted(place), 0, "Drinkers come to an outpost with no bar")
 	pa_trader(outpost, pa_tile(2, 4), null, /datum/outpost_shop/vendor/bait_shop)
-	TEST_ASSERT_EQUAL(customers.wanted(place), 3, "An outpost with a trader wants [customers.wanted(place)] customers, not 3")
+	TEST_ASSERT_EQUAL(customers.wanted(place), 2, "An outpost with a trader wants [customers.wanted(place)] customers, not 2")
 
 	// Every one of them can come to an outpost with nothing in it and not fall over
 	for(var/npc_type in subtypesof(/mob/living/basic/ambient_npc/outpost))
@@ -94,6 +106,146 @@
 		TEST_ASSERT(get_dist(npc, pa_tile(4, 4)) > 1, "[npc_type] was found on or beside the lift")
 		TEST_ASSERT(HAS_TRAIT(npc, TRAIT_AI_PAUSED), "[npc_type] at an empty outpost is not holding still")
 		qdel(npc)
+
+/**
+ * The regulars that replaced the mapped loiterers (P2): the mechanic (Halcyon) and the off-duty
+ * pirate (the Undertow), how many of each wanted role, and the queue giving up on a crowded spot.
+ */
+/datum/unit_test/voidcrew_ambient_outpost_regulars
+
+/datum/unit_test/voidcrew_ambient_outpost_regulars/Run()
+	var/general = /obj/structure/overmap/trader_outpost/general
+	var/outfitter = /obj/structure/overmap/trader_outpost/outfitter
+	var/black_market = /obj/structure/overmap/trader_outpost/black_market
+
+	// Halcyon: Roux runs the diner (the bar) and a second trader for customers
+	var/obj/structure/overmap/trader_outpost/halcyon_outpost = pa_typed_outpost(general)
+	pa_trader(halcyon_outpost, pa_tile(0, 4), null, /datum/outpost_shop/vendor/diner)
+	pa_trader(halcyon_outpost, pa_tile(2, 4), null, /datum/outpost_shop/vendor/bait_shop)
+	var/datum/ambient_place/outpost/halcyon_place = pa_place(halcyon_outpost)
+
+	// Quartermain: a coffee machine for the crew room, a trader for customers
+	var/obj/structure/overmap/trader_outpost/quartermain_outpost = pa_typed_outpost(outfitter)
+	allocate(/obj/machinery/vending/coffee, pa_tile(0, 4))
+	pa_trader(quartermain_outpost, pa_tile(2, 4), null, /datum/outpost_shop/vendor/bait_shop)
+	var/datum/ambient_place/outpost/quartermain_place = pa_place(quartermain_outpost)
+
+	// The Undertow: Dram runs the Dregs (the bar) and a second trader for customers
+	var/obj/structure/overmap/trader_outpost/undertow_outpost = pa_typed_outpost(black_market)
+	pa_trader(undertow_outpost, pa_tile(0, 4), null, /datum/outpost_shop/vendor/dregs_bar)
+	pa_trader(undertow_outpost, pa_tile(2, 4), null, /datum/outpost_shop/vendor/bait_shop)
+	var/datum/ambient_place/outpost/undertow_place = pa_place(undertow_outpost)
+
+	// Customers: two everywhere but the Undertow, which wants one
+	var/datum/ambient_outpost_role/customer/customer_role = allocate(/datum/ambient_outpost_role/customer)
+	TEST_ASSERT_EQUAL(customer_role.wanted(halcyon_place), 2, "Halcyon wants [customer_role.wanted(halcyon_place)] customers, not 2")
+	TEST_ASSERT_EQUAL(customer_role.wanted(quartermain_place), 2, "Quartermain wants [customer_role.wanted(quartermain_place)] customers, not 2")
+	TEST_ASSERT_EQUAL(customer_role.wanted(undertow_place), 1, "The Undertow wants [customer_role.wanted(undertow_place)] customers, not 1")
+
+	// One drinker at each bar
+	var/datum/ambient_outpost_role/drinker/drinker_role = allocate(/datum/ambient_outpost_role/drinker)
+	TEST_ASSERT_EQUAL(drinker_role.wanted(halcyon_place), 1, "Halcyon wants [drinker_role.wanted(halcyon_place)] drinkers, not 1")
+	TEST_ASSERT_EQUAL(drinker_role.wanted(quartermain_place), 1, "Quartermain wants [drinker_role.wanted(quartermain_place)] drinkers, not 1")
+	TEST_ASSERT_EQUAL(drinker_role.wanted(undertow_place), 1, "The Undertow wants [drinker_role.wanted(undertow_place)] drinkers, not 1")
+
+	// The off-duty pirate: only the Undertow
+	var/datum/ambient_outpost_role/drinker/off_duty_pirate/pirate_role = allocate(/datum/ambient_outpost_role/drinker/off_duty_pirate)
+	TEST_ASSERT(!pirate_role.applies_to(halcyon_outpost), "An off-duty pirate applies to Halcyon")
+	TEST_ASSERT(!pirate_role.applies_to(quartermain_outpost), "An off-duty pirate applies to Quartermain")
+	TEST_ASSERT(pirate_role.applies_to(undertow_outpost), "An off-duty pirate does not apply to the Undertow")
+	TEST_ASSERT_EQUAL(pirate_role.wanted(undertow_place), 1, "The Undertow wants [pirate_role.wanted(undertow_place)] off-duty pirates, not 1")
+
+	// The mechanic: only Halcyon
+	var/datum/ambient_outpost_role/mechanic/mechanic_role = allocate(/datum/ambient_outpost_role/mechanic)
+	TEST_ASSERT(mechanic_role.applies_to(halcyon_outpost), "A mechanic does not apply to Halcyon")
+	TEST_ASSERT(!mechanic_role.applies_to(quartermain_outpost), "A mechanic applies to Quartermain")
+	TEST_ASSERT(!mechanic_role.applies_to(undertow_outpost), "A mechanic applies to the Undertow")
+	TEST_ASSERT_EQUAL(mechanic_role.wanted(halcyon_place), 1, "Halcyon wants [mechanic_role.wanted(halcyon_place)] mechanics, not 1")
+
+	// The janitor and dock worker: only Quartermain now; the barback: only the Undertow now
+	var/datum/ambient_outpost_role/janitor/janitor_role = allocate(/datum/ambient_outpost_role/janitor)
+	TEST_ASSERT(!janitor_role.applies_to(halcyon_outpost), "A janitor still applies to Halcyon")
+	TEST_ASSERT(janitor_role.applies_to(quartermain_outpost), "A janitor does not apply to Quartermain")
+	var/datum/ambient_outpost_role/dock_worker/dock_role = allocate(/datum/ambient_outpost_role/dock_worker)
+	TEST_ASSERT_EQUAL(dock_role.wanted(quartermain_place), 1, "Quartermain wants [dock_role.wanted(quartermain_place)] dock workers, not 1")
+	var/datum/ambient_outpost_role/barback/barback_role = allocate(/datum/ambient_outpost_role/barback)
+	TEST_ASSERT(!barback_role.applies_to(halcyon_outpost), "A barback still applies to Halcyon")
+	TEST_ASSERT(barback_role.applies_to(undertow_outpost), "A barback does not apply to the Undertow")
+
+	// The floor crowd matches spec exactly, and never crosses the transient cap
+	var/list/expected_crowd = list(halcyon_place = 7, quartermain_place = 7, undertow_place = 6)
+	for(var/datum/ambient_place/outpost/crowd_place as anything in expected_crowd)
+		var/obj/structure/overmap/trader_outpost/crowd_outpost = crowd_place.outpost()
+		var/total = 0
+		for(var/role_type in subtypesof(/datum/ambient_outpost_role))
+			var/datum/ambient_outpost_role/role = allocate(role_type)
+			if(!role.npc_type || !role.applies_to(crowd_outpost))
+				continue
+			total += role.wanted(crowd_place)
+		TEST_ASSERT_EQUAL(total, expected_crowd[crowd_place], "[crowd_outpost.type] wants [total] floor crowd, not [expected_crowd[crowd_place]]")
+		TEST_ASSERT(total <= 8, "[crowd_outpost.type] wants more than the ambient outpost transient cap") // AMBIENT_OUTPOST_TRANSIENT_CAP
+
+	// Twelve mechanics wear at least two different outfits, all from outfit_choices
+	var/list/mechanic_outfits = list()
+	for(var/i in 1 to 12)
+		var/mob/living/basic/ambient_npc/outpost/worker/mechanic/mechanic = pa_npc(/mob/living/basic/ambient_npc/outpost/worker/mechanic, pa_tile(0, 0), halcyon_place)
+		TEST_ASSERT(mechanic.outfit in mechanic.outfit_choices, "A mechanic wore an outfit not in outfit_choices")
+		mechanic_outfits[mechanic.outfit] = TRUE
+		qdel(mechanic)
+	TEST_ASSERT(length(mechanic_outfits) >= 2, "Twelve mechanics all wore the same outfit")
+
+	// A mechanic next to a rack starts work and drops the worker component after
+	allocate(/obj/structure/rack, pa_tile(2, 2))
+	var/mob/living/basic/ambient_npc/outpost/worker/mechanic/rack_mechanic = pa_npc(/mob/living/basic/ambient_npc/outpost/worker/mechanic, pa_tile(1, 2), halcyon_place)
+	var/datum/ambient_activity/work/work = rack_mechanic.start_activity(new /datum/ambient_activity/work(rack_mechanic))
+	TEST_ASSERT_NOTNULL(work, "A mechanic next to a rack could not start work")
+	TEST_ASSERT_NOTNULL(rack_mechanic.GetComponent(/datum/component/outpost_ambient_worker), "A working mechanic has no worker component")
+	rack_mechanic.end_activity()
+	TEST_ASSERT_NULL(rack_mechanic.GetComponent(/datum/component/outpost_ambient_worker), "A mechanic kept the worker component after the job")
+	qdel(rack_mechanic)
+
+	// The pirate speaks their own line idle, and falls back to the drinker's staged line once drunk
+	var/mob/living/basic/ambient_npc/outpost/drinker/off_duty_pirate/pirate = pa_npc(/mob/living/basic/ambient_npc/outpost/drinker/off_duty_pirate, pa_tile(1, 1), undertow_place)
+	var/list/idle_lines = pirate.get_lines("idle") // AMBIENT_LINE_IDLE
+	TEST_ASSERT("Everyone's armed in the red zone. That's why it's polite here." in idle_lines, "An off-duty pirate's idle line is not one of their own")
+	pirate.drunk = 2
+	var/list/staged = ambient_dialogue_lines(pirate.dialogue_file, pirate.dialogue_section, "talk_2")
+	TEST_ASSERT(length(staged), "The drinker has no talk_2 staged lines to compare against")
+	TEST_ASSERT_EQUAL(pirate.get_lines("talk"), staged, "A drunk off-duty pirate did not fall back to the drinker's staged line") // AMBIENT_LINE_TALK
+	var/datum/outfit/pirate_outfit = new pirate.outfit()
+	TEST_ASSERT_NULL(pirate_outfit.r_hand, "An off-duty pirate's outfit put something in their hand")
+	TEST_ASSERT_EQUAL(pirate_outfit.back, /obj/item/claymore/cutlass, "An off-duty pirate's outfit has no cutlass on the back")
+	qdel(pirate_outfit)
+	qdel(pirate)
+
+	// A drinker's finished glass is dropped, not left on a table, where there is no barback (Halcyon, now)
+	var/mob/living/basic/ambient_npc/outpost/drinker/no_barback_drinker = pa_npc(/mob/living/basic/ambient_npc/outpost/drinker, pa_tile(1, 1), halcyon_place)
+	var/obj/structure/table/drink_table = allocate(/obj/structure/table, pa_tile(1, 0))
+	var/obj/item/reagent_containers/cup/glass/drinkingglass/glass = new(no_barback_drinker)
+	no_barback_drinker.held_item = glass
+	var/datum/ambient_activity/drink/bar/drink_finish = new(no_barback_drinker)
+	drink_finish.table_ref = WEAKREF(drink_table)
+	drink_finish.finish()
+	TEST_ASSERT(QDELETED(glass), "A drinker's glass was left instead of dropped where there is no barback")
+
+	// ambient_waiting_spot() keeps off the lift and doors, and gives up when every candidate is crowded
+	var/turf/door_turf = pa_tile(1, 2)
+	allocate(/obj/machinery/door/airlock, door_turf)
+	var/mob/living/basic/ambient_npc/outpost/customer/asker = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(0, 0), halcyon_place)
+	var/turf/spot = ambient_waiting_spot(asker, pa_tile(1, 1), 0, 3, list())
+	if(spot)
+		TEST_ASSERT(get_dist(spot, pa_tile(4, 4)) > 2, "A waiting spot was within 2 of the lift")
+		var/beside_door = FALSE
+		for(var/direction in GLOB.cardinals)
+			if(get_step(spot, direction) == door_turf || spot == door_turf)
+				beside_door = TRUE
+		TEST_ASSERT(!beside_door, "A waiting spot was a doorway or beside one")
+	var/mob/living/basic/ambient_npc/outpost/customer/filler_a = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(2, 2), halcyon_place)
+	var/mob/living/basic/ambient_npc/outpost/customer/filler_b = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(2, 3), halcyon_place)
+	filler_a.start_activity(new /datum/ambient_activity/idle(filler_a))
+	filler_b.start_activity(new /datum/ambient_activity/idle(filler_b))
+	var/turf/crowded_spot = ambient_waiting_spot(asker, pa_tile(1, 1), 0, 3, list())
+	TEST_ASSERT_NULL(crowded_spot, "A waiting spot was found even though every candidate is crowded")
 
 // =========================================================================
 // ALREADY THERE WHEN PLAYERS COME

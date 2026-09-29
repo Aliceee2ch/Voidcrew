@@ -58,6 +58,27 @@
 			}
 		]
 	},
+	"mechanic": {
+		"idle": [
+			"Your port thruster sounds wrong. I can hear it from here. Through the hull.",
+			"Barnaby says I can't charge for advice, so: free advice, seal your ship.",
+			"I've been fixing this same compressor for six years. It's a lifestyle.",
+			"You'd be amazed what people leave in the repair bay. Mostly blood.",
+			"Green zone's quiet. Too quiet. No, wait. That's the compressor again."
+		],
+		"work": [
+			"I've been fixing this same compressor for six years. It's a lifestyle.",
+			"Green zone's quiet. Too quiet. No, wait. That's the compressor again."
+		],
+		"talk": [
+			"Your port thruster sounds wrong. I can hear it from here. Through the hull.",
+			"Barnaby says I can't charge for advice, so: free advice, seal your ship."
+		],
+		"attacked": [
+			"Oi! I'm covered in welding fuel, you maniac!",
+			"Swing at the walls if you have to, they're rated for it. I'd rather you didn't swing at me."
+		]
+	},
 	"gardener": {
 		"idle": [
 			"Morning, tomatoes. Don't give me that look.",

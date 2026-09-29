@@ -324,7 +324,7 @@
 
 /// Bottlers must draw one real input per processing tick from a piled backlog.
 /datum/unit_test/voidcrew_slime_extract_piles_bottler/Run()
-	// VOIDCREW EDIT - run_loc_floor_bottom_left always holds the unit-test landmark and may hold stray docking ports (round 2 P2)
+	// VOIDCREW EDIT - run_loc_floor_bottom_left always holds the unit-test landmark and may hold stray docking ports
 	var/turf/floor = get_step(run_loc_floor_bottom_left, EAST)
 	var/obj/machinery/plumbing/bottler/bottler = allocate(/obj/machinery/plumbing/bottler, get_step(floor, NORTH))
 	bottler.setDir(NORTH)

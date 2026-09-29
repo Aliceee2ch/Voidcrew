@@ -383,6 +383,8 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	// Open storefront UIs are looking at a stale catalog now; refresh them
 	for(var/mob/living/basic/outpost_trader/npc as anything in traders)
 		npc.shop_ui?.update_static_data_for_all_viewers()
+	// World population (voidcrew/modules/ambient_npcs): the dock workers unload it
+	SEND_SIGNAL(src, COMSIG_TRADER_OUTPOST_CONVOY)
 
 // ===== EMBARGO / AGGRESSION =====
 
@@ -423,6 +425,8 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	if(!istype(offender) || !offender.mind)
 		return
 	if(bounty_kingpin_excuses_aggression(src, offender)) return // BOUNTY P9 (kingpin): no property strikes for hunters in his shootout; PvP still counts
+	// World population (voidcrew/modules/ambient_npcs): bystanders near the fight duck and leave
+	SEND_SIGNAL(src, COMSIG_TRADER_OUTPOST_VIOLENCE, offender)
 	if(is_marked_aggressor(offender.mind))
 		return
 

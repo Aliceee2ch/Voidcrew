@@ -808,6 +808,21 @@
 			// DO NOT CHECK_TICK HERE. IT CAN CAUSE ITEMS TO GET LEFT BEHIND
 			// THIS IS REALLY IMPORTANT FOR CONSISTENCY. SORRY ABOUT THE LAG SPIKE
 
+	// Empty the ground's air before the sweep below turns it into space a turf at a time.
+	// That sweep yields, and each old turf's Destroy() wakes its atmos neighbours, including
+	// tiles already swept to space (adjacency is only rebuilt by the AfterChange() pass at the
+	// end). SSair can then run such a space tile before the floor beside it in the same cycle.
+	// The floor skips a neighbour that already ran, forms no excited group, and its 100% share
+	// into that space reads the null group: LAST_SHARE_CHECK in process_cell(), which outpost
+	// berth wipes kept hitting. A drained floor has nothing to share.
+	// This runs after the contents sweep (deleted pipes hand their gas to the floor) and does
+	// not yield (undrained floors would refill drained ones). Immutable mixes (space, the
+	// shared planetary mix) are left alone.
+	for(var/turf/open/open_turf in contents_turfs)
+		var/datum/gas_mixture/ground_air = open_turf.air
+		if(ground_air && !istype(ground_air, /datum/gas_mixture/immutable))
+			ground_air.remove_ratio(1)
+
 	var/edge_low_x = edges[1]
 	var/edge_low_y = edges[2]
 	var/edge_high_x = edges[3]

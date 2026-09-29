@@ -131,7 +131,7 @@
 
 /datum/criminal_bounty/kill_only/board_warrant_text()
 	var/list/lines = list()
-	lines += "<center><h2>WANTED: DEAD</h2><b>[bounty_tier_name(record?.tier)]</b></center>"
+	lines += "<center><h2>WANTED: DEAD</h2></center>"
 	var/mugshot = record ? bounty_mugshot_asset(record) : ""
 	if(mugshot)
 		lines += "<center><img src='data:image/png;base64,[mugshot]' width='96' height='96'></center>"

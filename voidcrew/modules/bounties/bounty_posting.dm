@@ -629,7 +629,8 @@
 /// The warrant's text
 /datum/criminal_bounty/proc/board_warrant_text()
 	var/list/lines = list()
-	lines += "<center><h2>WANTED</h2><b>[bounty_tier_name(record?.tier)]</b></center>"
+	// One heading: the tier's name under it said Wanted twice
+	lines += "<center><h2>[record?.tier == BOUNTY_TIER_MOST_WANTED ? "MOST WANTED" : "WANTED"]</h2></center>"
 	// Never builds here (ui_act mustn't sleep): the board asked for it when its card was first shown
 	var/mugshot = record ? bounty_mugshot_asset(record) : ""
 	if(mugshot)

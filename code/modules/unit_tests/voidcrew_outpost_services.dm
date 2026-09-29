@@ -335,6 +335,8 @@
 	tool.buffer = silo
 	home.construction_console.multitool_act(steward, tool)
 	TEST_ASSERT_EQUAL(home.construction_console.get_linked_silo(), silo, "Construction could not link its physical home silo")
+	// The console saves itself into the buffer for drone linking, so buffer the silo again
+	tool.buffer = silo
 	lathe.materials.OnMultitool(lathe, steward, tool)
 	TEST_ASSERT_EQUAL(lathe.materials.silo, silo, "Protolathe did not connect to actual home stock")
 	var/list/stock_before = list()

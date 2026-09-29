@@ -12,12 +12,17 @@
  *
  * A worker's room is the open floor it can reach from where it was put, within
  * OUTPOST_WORK_RANGE tiles, in the same area, without passing a door, a window or a fence, and
- * never onto a landing pad or an elevator lift. The worker refuses any move out of that room, and a
- * worker that ends up far from it anyway (carried off, admin moved) is put back where it started.
+ * never onto a docking floor or an elevator lift. A docking floor is a landing pad at its largest, a
+ * margin round it, and all the open floor joined to it without a door between: in a ship bay, the
+ * whole hangar floor. Hulls land and are rebuilt only on the pad, so a worker is never under one.
+ * The worker refuses any move out of its room, and a worker that ends up far from it anyway
+ * (carried off, admin moved) is put back where it started.
  */
 
 /// How far from where it was put a worker may go
 #define OUTPOST_WORK_RANGE 6
+/// Tiles round a landing pad kept clear of workers, walls or no walls
+#define OUTPOST_WORK_PAD_MARGIN 2
 /// How far from where it stands a worker looks for something to work on
 #define OUTPOST_WORK_SEARCH_RANGE 4
 /// Most objects looked at in one search, however much junk is piled nearby
@@ -138,8 +143,9 @@
 
 /**
  * The tiles this worker may be on: open floor reachable from home within OUTPOST_WORK_RANGE, in
- * home's area, never through a door, window or fence, never on a landing pad or an elevator lift.
+ * home's area, never through a door, window or fence, never on a docking floor or an elevator lift.
  * Tiles with furniture on them are kept; whether one can be entered is decided when stepping.
+ * A worker put down on a docking floor gets no room at all and stays where it is.
  */
 /datum/component/outpost_ambient_worker/proc/get_room()
 	if(room && world.time < room_built_at + OUTPOST_WORK_ROOM_REFRESH)
@@ -149,9 +155,11 @@
 	if(!isopenturf(home))
 		return room
 	var/area/home_area = get_area(home)
-	var/list/pads = landing_pads_near(home, OUTPOST_WORK_RANGE)
+	var/list/docking_floor = docking_floor_near(home)
 	var/list/lifts = lift_turfs_near(home, OUTPOST_WORK_RANGE)
 	room[home] = TRUE
+	if(docking_floor[home])
+		return room
 	var/list/seen = list()
 	seen[home] = TRUE
 	var/list/queue = list(home)
@@ -163,18 +171,19 @@
 			if(isnull(next) || seen[next])
 				continue
 			seen[next] = TRUE
-			if(get_dist(next, home) > OUTPOST_WORK_RANGE || !room_tile_allowed(next, home_area, pads, lifts))
+			if(get_dist(next, home) > OUTPOST_WORK_RANGE || !room_tile_allowed(next, home_area, docking_floor, lifts))
 				continue
 			room[next] = TRUE
 			queue += next
 	return room
 
-/datum/component/outpost_ambient_worker/proc/room_tile_allowed(turf/tile, area/home_area, list/pads, list/lifts)
-	if(!isopenturf(tile) || get_area(tile) != home_area || lifts[tile])
+/datum/component/outpost_ambient_worker/proc/room_tile_allowed(turf/tile, area/home_area, list/docking_floor, list/lifts)
+	if(!isopenturf(tile) || get_area(tile) != home_area || lifts[tile] || docking_floor[tile])
 		return FALSE
-	for(var/list/pad as anything in pads)
-		if(tile.x >= pad[1] && tile.x <= pad[3] && tile.y >= pad[2] && tile.y <= pad[4])
-			return FALSE
+	return !outpost_work_barrier(tile)
+
+/// Whether `tile` closes a room off: a door, a full window, a fence, a grille, flaps or the lift nook
+/proc/outpost_work_barrier(turf/tile)
 	var/static/list/barriers = typecacheof(list(
 		/obj/effect/landmark/outpost_elevator_alcove,
 		/obj/machinery/door,
@@ -184,24 +193,75 @@
 	))
 	for(var/atom/movable/thing as anything in tile)
 		if(is_type_in_typecache(thing, barriers))
-			return FALSE
+			return TRUE
 		if(istype(thing, /obj/structure/window))
 			var/obj/structure/window/pane = thing
 			if(pane.fulltile)
-				return FALSE
-	return TRUE
+				return TRUE
+	return FALSE
 
-/// Landing rects of the docking ports near `center`, as list(min x, min y, max x, max y)
-/datum/component/outpost_ambient_worker/proc/landing_pads_near(turf/center, range)
+/// The ground `port` lands hulls on at its largest, as list(min x, min y, max x, max y)
+/proc/outpost_work_landing_rect(obj/docking_port/stationary/port)
+	var/list/coords = port.return_coords()
+	var/list/rect = list(min(coords[1], coords[3]), min(coords[2], coords[4]), max(coords[1], coords[3]), max(coords[2], coords[4]))
+	// A reserve berth turns and shifts to fit each arrival. Where it was built, it is at its largest.
+	if(port.reserve_home_z && port.reserve_home_z == port.z)
+		rect[1] = min(rect[1], port.reserve_home_x)
+		rect[2] = min(rect[2], port.reserve_home_y)
+		rect[3] = max(rect[3], port.reserve_home_x + RESERVE_DOCK_MAX_SIZE_LONG - 1)
+		rect[4] = max(rect[4], port.reserve_home_y + RESERVE_DOCK_MAX_SIZE_SHORT - 1)
+	return rect
+
+/**
+ * The docking floors a worker at `center` could reach, as an assoc list of turfs. For each landing
+ * pad near it: the pad at its largest, OUTPOST_WORK_PAD_MARGIN tiles round it whatever stands there,
+ * and every open tile joined to the pad without a door, window or fence between. A ship bay's
+ * docking floor may run anywhere in the bay; elsewhere it is followed only as far as a worker could
+ * reach from beside the pad.
+ */
+/datum/component/outpost_ambient_worker/proc/docking_floor_near(turf/center)
 	. = list()
+	var/reach = OUTPOST_WORK_PAD_MARGIN + OUTPOST_WORK_RANGE
 	for(var/obj/docking_port/stationary/port as anything in SSshuttle.stationary_docking_ports)
 		if(QDELETED(port) || port.z != center.z)
 			continue
-		var/list/coords = port.return_coords()
-		var/list/box = list(min(coords[1], coords[3]), min(coords[2], coords[4]), max(coords[1], coords[3]), max(coords[2], coords[4]))
-		if(box[1] > center.x + range || box[3] < center.x - range || box[2] > center.y + range || box[4] < center.y - range)
+		var/list/pad = outpost_work_landing_rect(port)
+		var/datum/outpost_berth/ship_bay/bay = port.ship_bay
+		if(bay?.has_ground())
+			if(!bay.contains_turf(center))
+				continue
+		else if(center.x < pad[1] - reach || center.x > pad[3] + reach || center.y < pad[2] - reach || center.y > pad[4] + reach)
 			continue
-		. += list(box)
+		add_docking_floor(., pad, center.z, bay?.has_ground() ? bay : null, reach + OUTPOST_WORK_RANGE)
+
+/// Adds one pad's docking floor to `floor`. Followed inside `bay`'s ground, or `bound` tiles round the pad.
+/datum/component/outpost_ambient_worker/proc/add_docking_floor(list/floor, list/pad, z, datum/outpost_berth/ship_bay/bay, bound)
+	var/list/seen = list()
+	var/list/queue = list()
+	for(var/x in max(1, pad[1] - OUTPOST_WORK_PAD_MARGIN) to min(world.maxx, pad[3] + OUTPOST_WORK_PAD_MARGIN))
+		for(var/y in max(1, pad[2] - OUTPOST_WORK_PAD_MARGIN) to min(world.maxy, pad[4] + OUTPOST_WORK_PAD_MARGIN))
+			var/turf/tile = locate(x, y, z)
+			floor[tile] = TRUE
+			// Only the pad spreads: a margin tile behind a wall must not carry the floor into the room there
+			if(x >= pad[1] && x <= pad[3] && y >= pad[2] && y <= pad[4])
+				seen[tile] = TRUE
+				queue += tile
+	var/index = 1
+	while(index <= length(queue))
+		var/turf/tile = queue[index++]
+		if(!isopenturf(tile) || outpost_work_barrier(tile))
+			continue
+		for(var/direction in GLOB.cardinals)
+			var/turf/next = get_step(tile, direction)
+			if(isnull(next) || seen[next])
+				continue
+			seen[next] = TRUE
+			if(bay ? !bay.contains_turf(next) : (next.x < pad[1] - bound || next.x > pad[3] + bound || next.y < pad[2] - bound || next.y > pad[4] + bound))
+				continue
+			if(!isopenturf(next) || outpost_work_barrier(next))
+				continue
+			floor[next] = TRUE
+			queue += next
 
 /// Elevator lift tiles near `center`: the lift carries off whatever stands on it
 /datum/component/outpost_ambient_worker/proc/lift_turfs_near(turf/center, range)

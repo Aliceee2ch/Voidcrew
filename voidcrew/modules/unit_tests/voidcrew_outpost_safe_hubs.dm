@@ -1,5 +1,6 @@
 /**
- * Outposts are safe hubs: ship weapons never target one, player-owned or trader.
+ * Outposts are safe hubs: ship weapons never target one, player-owned or trader, and no trader
+ * outpost map rolls hostile creatures inside itself.
  */
 
 /// Neither a player outpost nor a trader outpost is a ship combat target, and a weapons console will not lock onto either
@@ -23,3 +24,24 @@
 		TEST_ASSERT_NULL(console.targeting_ship, "A weapons console is locking onto [outpost] ([outpost.type])")
 		TEST_ASSERT_NULL(console.target_ship, "A weapons console holds a lock on [outpost] ([outpost.type])")
 		TEST_ASSERT(!console.is_targeting, "A weapons console is acquiring a lock after refusing [outpost] ([outpost.type])")
+
+/// No trader outpost map places a zone mob marker or a mob spawner: those roll hostiles after the load, inside a safe hub
+/datum/unit_test/voidcrew_trader_outpost_no_hostile_spawners
+
+/datum/unit_test/voidcrew_trader_outpost_no_hostile_spawners/Run()
+	var/static/list/banned_paths = list(
+		"/obj/effect/zone_mobs",
+		"/obj/structure/spawner",
+	)
+	var/checked = 0
+	for(var/datum/map_template/trader_outpost/template_path as anything in subtypesof(/datum/map_template/trader_outpost))
+		var/map_path = initial(template_path.mappath)
+		if(!map_path)
+			continue
+		var/text = file2text(map_path)
+		TEST_ASSERT(length(text), "[template_path] points at [map_path], which could not be read")
+		checked++
+		for(var/banned in banned_paths)
+			if(findtext(text, banned))
+				TEST_FAIL("[map_path] ([template_path]) places [banned], which spawns hostiles inside a trader outpost")
+	TEST_ASSERT(checked, "No trader outpost map was checked")

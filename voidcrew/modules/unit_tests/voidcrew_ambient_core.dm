@@ -410,12 +410,15 @@
 	var/mob/living/basic/ambient_npc/core_test/sitter/sitter = allocate(/mob/living/basic/ambient_npc/core_test/sitter, corner)
 	var/datum/ai_controller/controller = sitter.ai_controller
 	TEST_ASSERT(istype(controller, /datum/ai_controller/basic_controller/ambient_npc), "An ambient NPC has no ambient AI")
+	// A test world has no client near: every move (update_grid(), recalculate_idle()) would idle the AI, and the planner only runs while it is on
+	controller.can_idle = FALSE
 	controller.set_ai_status(AI_STATUS_ON)
 	controller.SelectBehaviors(1)
 	TEST_ASSERT(istype(sitter.activity, /datum/ambient_activity/sit), "The planner did not start the routine's activity")
 	TEST_ASSERT_EQUAL(controller.blackboard["ambient_destination"], chair_turf, "The planner is not walking to the chair") // BB_AMBIENT_DESTINATION
 	// The walk, then the next plan runs the activity where it happens
 	sitter.forceMove(chair_turf)
+	TEST_ASSERT_EQUAL(controller.ai_status, AI_STATUS_ON, "The walk to the chair turned the AI off")
 	controller.SelectBehaviors(1)
 	var/datum/ai_behavior/ambient_activity/runner = GET_AI_BEHAVIOR(/datum/ai_behavior/ambient_activity)
 	TEST_ASSERT(controller.planned_behaviors[runner], "The planner did not run the activity at the chair")

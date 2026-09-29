@@ -179,7 +179,7 @@
 	shell_type = /datum/map_template/player_outpost/rundown
 	theme_id = "xeno" // DERELICT_THEME_XENO
 	band = 2
-	boss_type = /mob/living/basic/alien/queen
+	boss_type = /mob/living/basic/alien/queen/large/derelict
 	roster = list(
 		/mob/living/basic/alien = list(3, 5),
 		/mob/living/basic/alien/sentinel = list(2, 3),

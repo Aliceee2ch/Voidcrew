@@ -70,11 +70,21 @@
 /datum/derelict_theme/proc/prepare_hostile(mob/living/hostile)
 	return
 
+/// The nest's empress: the big queen sprite, at the small queen's strength
+/mob/living/basic/alien/queen/large/derelict
+	maxHealth = 250
+	health = 250
+
+/mob/living/basic/alien/queen/large/derelict/Initialize(mapload)
+	. = ..()
+	// The sprite is two tiles wide; centre it on her tile
+	SET_BASE_PIXEL(-16, 0)
+
 /// Xenomorphs: weeds thick round the queen and two lesser nests, resin on the walls, a hatched clutch and the dead
 /datum/derelict_theme/xeno
 	id = DERELICT_THEME_XENO
 	name = "Xeno nest"
-	boss_type = /mob/living/basic/alien/queen
+	boss_type = /mob/living/basic/alien/queen/large/derelict
 	roster = list(
 		/mob/living/basic/alien = list(3, 5),
 		/mob/living/basic/alien/sentinel = list(2, 3),

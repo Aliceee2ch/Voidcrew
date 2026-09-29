@@ -451,6 +451,7 @@
 	prison.rep_greet_chance = 0
 	prisoner.rep_greeted = null
 	TEST_ASSERT_NULL(prison.social_extra_speech(prisoner), "A greeting came at a 0% chance")
+	visitor.key = null // a test key on a deleted mob is a runtime; the fixture only clears keys at the end
 	qdel(visitor)
 
 	// Word on arrival: what they heard about a fair member or a brute, by name; nothing about anyone else.
@@ -684,6 +685,7 @@
 	TEST_ASSERT(!prisoner.talk_menu_order(owner), "A prisoner at mood 5 went back to the cell")
 	TEST_ASSERT(!("Calm down" in prisoner.talk_menu_choices(owner)), "A prisoner at mood 5 was offered a talk-down")
 	TEST_ASSERT(!prisoner.talk_menu_act(owner, "Calm down"), "A prisoner at mood 5 was talked down")
+	visitor.key = null // a test key on a deleted mob is a runtime; the fixture only clears keys at the end
 	qdel(visitor)
 	settle_prison_air(home)
 
@@ -1126,6 +1128,7 @@
 	TEST_ASSERT(!istype(rioter.activity, /datum/prisoner_activity/let_go), "A cuffed rioter let go stood still for it")
 	rioter.calm_down()
 	rioter.remove_cuffs()
+	visitor.key = null // a test key on a deleted mob is a runtime; the fixture only clears keys at the end
 	qdel(visitor)
 	settle_prison_air(home)
 

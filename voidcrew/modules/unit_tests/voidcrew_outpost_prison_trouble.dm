@@ -1412,6 +1412,7 @@
 	// Anyone else stepping in is defending staff.
 	var/mob/living/carbon/human/deputy = make_player(prison_spot(home, 7, 8), "hitbackdeputy")
 	TEST_ASSERT(prisoner.hit_justified(deputy), "Someone else stepping in on a prisoner hitting back was unprovoked")
+	deputy.key = null // a test key on a deleted mob is a runtime; the fixture only clears keys at the end
 	qdel(deputy)
 	// One blow does not end it.
 	var/brute_before = warden.getBruteLoss()

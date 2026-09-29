@@ -27,7 +27,8 @@
  *
  * She wears a bikini and performer's boots. The bikini is an underwear accessory set on the dummy
  * her look is built on (outpost_npc_looks.dm), so it is drawn on her body and cached per outfit
- * like every other look; she carries nothing drawn over her.
+ * like every other look; she carries nothing drawn over her. That same pre_equip() fixes the rest
+ * of her look too: always a woman, fair-skinned, blonde and blue-eyed (owner request).
  *
  * Her lines are in strings/outpost_dancer.json, section "dancer".
  */
@@ -54,12 +55,27 @@
 	/// Its colour
 	var/bikini_color = "#b3122e"
 
-// No uniform: the bikini is underwear on the body, drawn by the update_body() that ends equip()
+/**
+ * No uniform: the bikini is underwear on the body, drawn by the update_body() that ends equip().
+ * Also fixes her look on the dummy this is built on: always a woman, fair-skinned, blonde,
+ * blue-eyed and clean-shaven, with red lipstick (owner request: she should clearly look like a
+ * woman). Baked into the cached look (outpost_npc_looks.dm) alongside the bikini.
+ */
 /datum/outfit/ambient_dancer/pre_equip(mob/living/carbon/human/user, visuals_only = FALSE)
 	user.underwear = bikini
 	user.underwear_color = bikini_color
 	user.undershirt = "Nude"
 	user.socks = "Nude"
+	user.gender = FEMALE
+	user.physique = FEMALE
+	user.skin_tone = "caucasian2"
+	user.set_hairstyle("Long Hair 3", update = FALSE)
+	user.set_haircolor("#e8c66a", update = FALSE)
+	user.set_facial_hairstyle("Shaved", update = FALSE)
+	user.set_eye_color("#3b7fd9")
+	user.update_lips("lipstick", "#b3122e", update = FALSE)
+	// The update_body() that ends equip() isn't is_creating, so it won't pick up the skin tone above on its own
+	user.update_body(is_creating = TRUE)
 
 /// A gold bikini and yellow performer's boots
 /datum/outfit/ambient_dancer/gold

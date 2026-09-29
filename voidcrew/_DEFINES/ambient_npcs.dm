@@ -54,7 +54,7 @@
 /// NPCs this far from a fight at an outpost duck and leave; take_cover() reuses it for the kingpin's shootout
 #define AMBIENT_VIOLENCE_RANGE 9
 
-// ===== LOITERING (P3) =====
+// ===== LOITERING =====
 
 /// Other ambient NPCs within this of a loiter spot count toward crowding it
 #define AMBIENT_CROWD_RADIUS 2
@@ -113,7 +113,7 @@
 
 /// Where every ambient dialogue file lives
 #define AMBIENT_STRINGS_DIR "voidcrew/modules/ambient_npcs/strings"
-/// The core's own lines: fallbacks for every context an NPC's own file leaves out (P0)
+/// The core's own lines: fallbacks for every context an NPC's own file leaves out
 #define AMBIENT_STRINGS_CORE "ambient_core.json"
 /// Customers, drinkers and the outpost crowd (PA)
 #define AMBIENT_STRINGS_PATRONS "outpost_patrons.json"

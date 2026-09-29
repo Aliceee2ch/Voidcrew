@@ -1,8 +1,6 @@
 /**
  * # World population: customers and drinkers at the trader outposts (owner items 2 and 3)
  *
- * Owner: PA (trader outpost life). P0 made this file as a stub; only PA edits it.
- *
  * Built here (spec 3.1, 3.2):
  * - /mob/living/basic/ambient_npc/outpost: the base for everyone PA brings to a trader outpost
  *   (customers, drinkers, the staff in outpost_workers.dm, the angler in outpost_angler.dm). They
@@ -81,7 +79,7 @@
 // =========================================================================
 
 /**
- * Everyone PA brings to a trader outpost. Passive like every outpost NPC, and killable (P0). Their
+ * Everyone PA brings to a trader outpost. Passive like every outpost NPC, and killable. Their
  * activities never send them into the pond, into or beside a doorway, into the lift's mouth, into
  * the kingpin's lounge or near an apiary.
  */
@@ -325,7 +323,7 @@
 /**
  * A tile where `npc` could wait near `center` without being in anyone's way: `low` to `high` tiles
  * from it (out of a counter's reach), in sight of it, a random one of the three nearest to `npc`.
- * With `loiter` (default), only loiter spots (P3) count, so a crowded or bad queue gives up the
+ * With `loiter` (default), only loiter spots count, so a crowded or bad queue gives up the
  * spot instead of stacking. Null if none.
  */
 /proc/ambient_waiting_spot(mob/living/basic/ambient_npc/npc, atom/center, low = 3, high = 4, list/avoid, loiter = TRUE)

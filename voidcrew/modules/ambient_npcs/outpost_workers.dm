@@ -1,16 +1,14 @@
 /**
  * # World population: people who work at the trader outposts (owner item 4)
  *
- * Owner: PA (trader outpost life). P0 made this file as a stub; only PA edits it.
- *
  * Built here (spec 3.4), on PA's outpost base (outpost_patrons.dm):
- * - the janitor (every outpost): finds fresh mess (blood, vomit, broken glass, spilled food, food
+ * - the janitor (Quartermain): finds fresh mess (blood, vomit, broken glass, spilled food, food
  *   wrappers), puts a wet floor sign down, mops it up, waits for the floor to dry and takes the sign
  *   back. Never the map's own grime or anything else. Mops round the floor with the mechanics' work
  *   loop when there is nothing to clean.
  * - the gardener (Halcyon): a watering can, filled at a sink, poured on the outpost's own trays
  *   (never a player's), a word to the plants. Keeps clear of the hives.
- * - the barback (the Dregs, the Chowder Pot): collects empty glasses left on tables and the floor,
+ * - the barback (the Dregs): collects empty glasses left on tables and the floor,
  *   washes them at a sink (or hands them over the bar), wipes tables with the work loop, and walks a
  *   passed-out drinker to the lift.
  * - the dock worker (Quartermain): hauls boxes along the intake row with the work loop, takes a

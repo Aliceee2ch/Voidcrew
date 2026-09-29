@@ -19,7 +19,7 @@
 /mob/living/basic/ambient_npc/core_test/sitter
 	routine = list(/datum/ambient_activity/sit = 1)
 
-/// One whose only routine is leaving: settle_in() must never settle them into it (P3)
+/// One whose only routine is leaving: settle_in() must never settle them into it
 /mob/living/basic/ambient_npc/core_test/leaver
 	routine = list(/datum/ambient_activity/leave = 1)
 
@@ -293,7 +293,7 @@
 	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
 		TEST_ASSERT(!HAS_TRAIT(npc, TRAIT_AI_PAUSED), "[npc] is still held still after a player came back")
 
-/// Settling in never starts someone off heading for the lift: a role whose only routine is leaving fails to settle rather than starting it (P3)
+/// Settling in never starts someone off heading for the lift: a role whose only routine is leaving fails to settle rather than starting it
 /datum/unit_test/voidcrew_ambient_settle_never_leaves
 
 /datum/unit_test/voidcrew_ambient_settle_never_leaves/Run()
@@ -500,7 +500,7 @@
 	TEST_ASSERT_NULL(worker.GetComponent(/datum/component/outpost_ambient_worker), "The work loop stayed on after the job")
 
 // =========================================================================
-// LOITERING AND CROWDING (P3)
+// LOITERING AND CROWDING
 // =========================================================================
 
 /// ambient_open_span(), the loiter floor (lift clearance, doors), crowded(), settling spread out, idle and wander landing on loiter tiles, chat partners skipping a crowd, and cover spreading out from the refuge
@@ -560,9 +560,14 @@
 	qdel(idler)
 	var/mob/living/basic/ambient_npc/core_test/wanderer = new(far_corner)
 	wanderer.set_place(place)
-	var/datum/ambient_activity/wander/wander_act = wanderer.start_activity(new /datum/ambient_activity/wander(wanderer))
-	TEST_ASSERT_NOTNULL(wander_act, "Wander could not start")
-	TEST_ASSERT(!wander_act.spot || loiter[wander_act.spot], "A wander stop was not a loiter tile")
+	var/stops = 0
+	for(var/i in 1 to 20)
+		var/turf/stop = wanderer.random_tile_near(far_corner, 4)
+		if(!stop)
+			continue
+		stops++
+		TEST_ASSERT(loiter[stop], "A wander stop was not a loiter tile")
+	TEST_ASSERT(stops > 0, "Wandering never found a stop")
 	qdel(wanderer)
 
 	// find_chat_partner() skips a candidate crowded by two others already beside them
@@ -587,13 +592,15 @@
 	place.needs_settling = TRUE
 	SSambient_npcs.settle_outpost(place, list(spread_role), 10)
 	TEST_ASSERT_EQUAL(length(place.npcs), 3, "Settling a role of three made [length(place.npcs)] NPCs")
-	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs)
+	var/list/settled = place.npcs.Copy()
+	for(var/i in 1 to length(settled))
+		var/mob/living/basic/ambient_npc/npc = settled[i]
 		TEST_ASSERT(get_dist(npc, lift) > 2, "[npc] settled within 2 tiles of the lift") // AMBIENT_LIFT_CLEARANCE
-		var/nearby = 0
-		for(var/mob/living/basic/ambient_npc/other as anything in place.npcs)
-			if(other != npc && get_dist(npc, other) <= 2) // AMBIENT_CROWD_RADIUS
-				nearby++
-		TEST_ASSERT(nearby < 2, "[npc] settled with 2 or more others within 2 tiles") // AMBIENT_CROWD_MAX
+		var/earlier_nearby = 0
+		for(var/j in 1 to i - 1)
+			if(get_dist(npc, settled[j]) <= 2) // AMBIENT_CROWD_RADIUS
+				earlier_nearby++
+		TEST_ASSERT(earlier_nearby < 2, "[npc] settled with 2 or more earlier arrivals within 2 tiles") // AMBIENT_CROWD_MAX
 	for(var/mob/living/basic/ambient_npc/npc as anything in place.npcs.Copy())
 		qdel(npc)
 

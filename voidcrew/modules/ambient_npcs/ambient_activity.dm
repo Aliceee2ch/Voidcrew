@@ -553,6 +553,8 @@
 	next_line = world.time + rand(10 SECONDS, 30 SECONDS)
 	if(doer.place && isturf(doer.loc) && !doer.buckled && !doer.loiter_spot_ok(doer.loc))
 		var/turf/better = doer.find_loiter_spot(doer)
+		if(!better && istype(doer.place, /datum/ambient_place/outpost))
+			better = doer.place.settle_turf(doer, doer, AMBIENT_LOITER_RANGE * 2)
 		if(better)
 			go_to(better)
 	return TRUE
@@ -883,6 +885,8 @@
 	worker = null
 	old.stop_work()
 	qdel(old)
+	if(!QDELETED(doer) && doer.work_look)
+		doer.show_work_look(null)
 
 /datum/ambient_activity/work/arrive()
 	var/atom/target = target_ref?.resolve()

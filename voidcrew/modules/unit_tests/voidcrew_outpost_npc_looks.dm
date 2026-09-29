@@ -55,7 +55,7 @@
 
 /**
  * Ambient NPCs hold what they carry the way a player does: a dummy in the NPC's outfit with a real
- * item in hand, cached (outpost_npc_looks.dm), applied as the NPC's whole look (ambient_npc.dm) —
+ * item in hand, cached (outpost_npc_looks.dm), applied as the NPC's whole look (ambient_npc.dm),
  * instead of the old pasted-icon vis_contents effect.
  */
 /datum/unit_test/voidcrew_ambient_held_looks
@@ -111,14 +111,14 @@
 	UNTIL(npc.icon == 'icons/mob/human/human.dmi' || world.time > deadline)
 	npc.set_held(/obj/item/mop)
 	deadline = world.time + 5 SECONDS
-	UNTIL(npc.held_visual == /obj/item/mop || world.time > deadline)
-	TEST_ASSERT_EQUAL(npc.held_visual, /obj/item/mop, "Holding a mop did not set held_visual")
 	var/obj/item/mop/mop_type = /obj/item/mop
+	UNTIL(held_look_has_icon(npc, initial(mop_type.righthand_file)) || world.time > deadline)
+	TEST_ASSERT_EQUAL(npc.held_visual, /obj/item/mop, "Holding a mop did not set held_visual")
 	TEST_ASSERT(held_look_has_icon(npc, initial(mop_type.righthand_file)), "Holding a mop left no custodial right-hand overlay")
 	TEST_ASSERT_NULL(locate(/obj/effect/abstract/bounty_held) in npc.vis_contents, "An ambient NPC still carries the old pasted-icon holder")
 	npc.set_held(null)
 	deadline = world.time + 5 SECONDS
-	UNTIL(isnull(npc.held_visual) || world.time > deadline)
+	UNTIL(!held_look_has_icon(npc, initial(mop_type.righthand_file)) || world.time > deadline)
 	TEST_ASSERT_NULL(npc.held_visual, "Letting go did not clear held_visual")
 	TEST_ASSERT(!held_look_has_icon(npc, initial(mop_type.righthand_file)), "Letting go of the mop left its right-hand overlay")
 

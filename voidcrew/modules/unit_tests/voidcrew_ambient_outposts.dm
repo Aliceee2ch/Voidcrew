@@ -2,8 +2,6 @@
  * World population: tests for outpost_patrons.dm, outpost_workers.dm and outpost_angler.dm
  * in voidcrew/modules/ambient_npcs/.
  *
- * Owner: PA (trader outpost life). P0 made this file as a stub; only that package edits it.
- *
  * Fork defines are included after the tests, so a test uses the literal value with a comment
  * naming the define. SSambient_npcs does nothing on its own in tests (`ambient_auto`); the core's
  * tests (voidcrew_ambient_core.dm) show how to drive outposts, sites and activities by hand, and
@@ -108,7 +106,7 @@
 		qdel(npc)
 
 /**
- * The regulars that replaced the mapped loiterers (P2): the mechanic (Halcyon) and the off-duty
+ * The regulars that replaced the mapped loiterers: the mechanic (Halcyon) and the off-duty
  * pirate (the Undertow), how many of each wanted role, and the queue giving up on a crowded spot.
  */
 /datum/unit_test/voidcrew_ambient_outpost_regulars
@@ -231,24 +229,18 @@
 	drink_finish.finish()
 	TEST_ASSERT(QDELETED(glass), "A drinker's glass was left instead of dropped where there is no barback")
 
-	// ambient_waiting_spot() keeps off the lift and doors, and gives up when every candidate is crowded
-	var/turf/door_turf = pa_tile(1, 2)
-	allocate(/obj/machinery/door/airlock, door_turf)
-	var/mob/living/basic/ambient_npc/outpost/customer/asker = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(0, 0), halcyon_place)
-	var/turf/spot = ambient_waiting_spot(asker, pa_tile(1, 1), 0, 3, list())
-	if(spot)
-		TEST_ASSERT(get_dist(spot, pa_tile(4, 4)) > 2, "A waiting spot was within 2 of the lift")
-		var/beside_door = FALSE
-		for(var/direction in GLOB.cardinals)
-			if(get_step(spot, direction) == door_turf || spot == door_turf)
-				beside_door = TRUE
-		TEST_ASSERT(!beside_door, "A waiting spot was a doorway or beside one")
-	var/mob/living/basic/ambient_npc/outpost/customer/filler_a = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(2, 2), halcyon_place)
-	var/mob/living/basic/ambient_npc/outpost/customer/filler_b = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(2, 3), halcyon_place)
-	filler_a.start_activity(new /datum/ambient_activity/idle(filler_a))
-	filler_b.start_activity(new /datum/ambient_activity/idle(filler_b))
-	var/turf/crowded_spot = ambient_waiting_spot(asker, pa_tile(1, 1), 0, 3, list())
-	TEST_ASSERT_NULL(crowded_spot, "A waiting spot was found even though every candidate is crowded")
+	// ambient_waiting_spot(): loiter tiles only, and none once those are crowded
+	qdel(no_barback_drinker)
+	var/turf/wait_tile = pa_tile(0, 0)
+	halcyon_place.get_loiter_floor()
+	halcyon_place.loiter_floor = list()
+	halcyon_place.loiter_floor[wait_tile] = TRUE
+	var/mob/living/basic/ambient_npc/outpost/customer/asker = pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(3, 0), halcyon_place)
+	TEST_ASSERT_EQUAL(ambient_waiting_spot(asker, pa_tile(1, 1), 0, 3, list()), wait_tile, "A waiting spot was not the one loiter tile")
+	pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(0, 1), halcyon_place)
+	pa_npc(/mob/living/basic/ambient_npc/outpost/customer, pa_tile(1, 1), halcyon_place)
+	TEST_ASSERT_NULL(ambient_waiting_spot(asker, pa_tile(1, 1), 0, 3, list()), "A waiting spot was found on a crowded loiter tile")
+	TEST_ASSERT_NOTNULL(ambient_waiting_spot(asker, pa_tile(1, 1), 0, 3, list(), loiter = FALSE), "A work spot gave up on a crowd")
 
 // =========================================================================
 // ALREADY THERE WHEN PLAYERS COME

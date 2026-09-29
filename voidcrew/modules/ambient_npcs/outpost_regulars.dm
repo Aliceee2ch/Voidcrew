@@ -1,8 +1,7 @@
 /**
- * # World population: the outposts' regulars (owner NPC tidy, P2)
+ * # World population: the outposts' regulars
  *
- * Owner: PA (trader outpost life). Replaces the old mapped loiterers (outpost_amenities.dm, P4)
- * with two ambient roles: Halcyon's mechanic (one, reusing the mechanic outfits and work loop)
+ * Replaces the old mapped loiterers with two ambient roles: Halcyon's mechanic (one, reusing the mechanic outfits and work loop)
  * and the Undertow's off-duty pirate (a drinker flavour at the Dregs, with the old pirate lines).
  * Lines are in strings/outpost_patrons.json and strings/outpost_workers.json.
  *

@@ -902,6 +902,10 @@
 	TEST_ASSERT(!crew.crew_barkeep_ducked || QDELETED(crew), "The barkeep stayed down")
 	TEST_ASSERT(SSbounty_kingpin.kingpin_gone, "Deleted, he isn't gone for the round")
 	qdel(hunter)
+	var/datum/ambient_place/outpost/ambient_place = SSambient_npcs.outpost_place(outpost)
+	var/list/loiter = ambient_place.get_loiter_floor()
+	TEST_ASSERT(length(loiter) >= 40, "The Undertow has only [length(loiter)] loiter tiles")
+	TEST_ASSERT(!loiter[refuge], "The kingpin's refuge, mid-hallway, is a loiter tile")
 	qdel(outpost)
 
 // ===== H1: SHOTS FROM MECHS, AND ANY DAMAGE =====

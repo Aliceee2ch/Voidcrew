@@ -611,7 +611,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 // ----- trader outposts -----
 
 /datum/ambient_place/outpost
-	/// The public floor minus passages, doors and the lift's clearance (P3): where someone may stand about, not just pass through
+	/// The public floor minus passages, doors and the lift's clearance: where someone may stand about, not just pass through
 	var/list/loiter_floor
 	var/loiter_built_at = 0
 
@@ -1097,7 +1097,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 
 /**
  * How wide the open run across `tile` is on `floor` (turf = TRUE): the smaller of its x and y run,
- * each counted up to 4 steps either way and including `tile` itself. Used to find passages (P3).
+ * each counted up to 4 steps either way and including `tile` itself. Used to find passages.
  */
 /proc/ambient_open_span(turf/tile, list/floor)
 	if(!floor[tile])

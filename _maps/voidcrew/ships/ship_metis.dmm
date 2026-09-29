@@ -1707,7 +1707,6 @@
 /turf/open/floor/mineral/titanium/tiled,
 /area/shuttle/voidcrew/metis/hallway/fore)
 "HA" = (
-/mob/living/basic/slime,
 /turf/open/floor/circuit/telecomms{
 	name = "coldroom"
 	},
@@ -2702,6 +2701,7 @@
 /turf/open/floor/mineral/titanium/tiled/white,
 /area/shuttle/voidcrew/metis/science/xenobiology)
 "Yo" = (
+/mob/living/basic/slime,
 /obj/effect/decal/cleanable/blood/old,
 /obj/item/toy/plush/moth,
 /obj/machinery/camera/autoname{

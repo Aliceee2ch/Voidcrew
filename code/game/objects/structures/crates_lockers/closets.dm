@@ -301,7 +301,6 @@ GLOBAL_LIST_EMPTY(roundstart_station_closets)
 	vis_contents += door_obj
 	door_obj.icon = icon
 	door_obj.icon_state = default_door_icon
-	door_obj.dir = dir
 	is_animating_door = TRUE
 	var/num_steps = door_anim_time / world.tick_lag
 

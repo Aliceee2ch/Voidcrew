@@ -3,7 +3,7 @@
 	desc = "It's a basic storage unit. Now wallmounted."
 	anchored = TRUE
 	density = FALSE
-	icon = 'icons/obj/storage/wallcloset.dmi'
+	icon = 'voidcrew/icons/obj/storage/wallcloset.dmi'
 	icon_state = "generic"
 	max_mob_size = MOB_SIZE_TINY
 	storage_capacity = 15
@@ -14,6 +14,15 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/closet/wall, 32)
 	. = ..()
 	if(mapload)
 		find_and_hang_on_wall()
+
+/obj/structure/closet/wall/animate_door(closing = FALSE)
+	if(!door_anim_time)
+		return ..()
+	if(!door_obj)
+		door_obj = new
+	// The animated door is a separate atom, so it must match the wall locker's direction.
+	door_obj.dir = dir
+	return ..()
 
 /obj/structure/closet/wall/close(mob/living/user)
 	if(!opened || !can_close(user))

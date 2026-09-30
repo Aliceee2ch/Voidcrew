@@ -75,6 +75,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/power/apc/outpost, APC_PIXEL_OFFSET)
 
 /// Outpost wiring: only the outpost's builders can cut it, and bombs, fire, acid and rats can't
 /obj/structure/cable/outpost
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 
 /// Whether `user` may cut this cable
 /obj/structure/cable/outpost/proc/outpost_cut_allowed(mob/user)
@@ -205,7 +206,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/power/apc/outpost, APC_PIXEL_OFFSET)
 	for(var/turf/door_tile as anything in exterior_door_turfs())
 		for(var/direction in GLOB.cardinals)
 			var/turf/beyond = get_step(door_tile, direction)
-			if(!beyond || (beyond in distance) || contains_turf(beyond) || !feeder_tile_walkable(beyond))
+			if(!beyond || distance[beyond] || contains_turf(beyond) || !feeder_tile_walkable(beyond))
 				continue
 			distance[beyond] = 1
 			queue += beyond
@@ -221,7 +222,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/power/apc/outpost, APC_PIXEL_OFFSET)
 			continue
 		for(var/direction in GLOB.cardinals)
 			var/turf/next = get_step(current, direction)
-			if(!next || (next in distance) || !feeder_tile_walkable(next))
+			if(!next || distance[next] || !feeder_tile_walkable(next))
 				continue
 			distance[next] = distance[current] + 1
 			parent[next] = current

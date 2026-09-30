@@ -23,6 +23,14 @@
 	var/datum/map_template/template = templates[map_type]
 	return template?.width ? template : null
 
+/// The baked picture of the ship bay drawn for `style` (tools/outpost_upgrade_previews), or null until it exists
+/proc/outpost_ship_bay_preview(style)
+	var/map_type = outpost_style_map(/datum/map_template/outpost_hangar/ship_bay, style || OUTPOST_STYLE_DEFAULT)
+	var/preview = map_type && outpost_map_preview_name(map_type)
+	if(!preview || !fexists("[OUTPOST_PREVIEW_DIR][preview].png"))
+		return null
+	return "[preview].png"
+
 /obj/structure/overmap/dynamic/player_outpost
 	var/ship_bay_installed = FALSE
 	var/ship_bay_installing = FALSE

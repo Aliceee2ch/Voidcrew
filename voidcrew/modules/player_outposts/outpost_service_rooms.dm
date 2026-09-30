@@ -8,7 +8,8 @@
  *   initializes on the outpost's power. Room maps use /area/template_noop and carry no APC
  *   and no light switch; an outage stops the services with the rest of the outpost.
  * * Everything fixed in the room (machines and structures, never items or mobs) becomes
- *   outpost property. Walls and floors are indestructible turfs in the map itself.
+ *   outpost property. Walls and floors are indestructible turfs in the map itself; only the
+ *   outpost's construction drone takes them apart (outpost_drone_may_strip()).
  * * Doors are service airlocks (outpost_service_doors.dm), keyed like any outpost door
  *   (outpost_door_access.dm): the entrance starts public, staff doors staff, and every door opens
  *   from the inside.

@@ -574,3 +574,138 @@
 
 	LAZYREMOVE(owner.mind.ship_teams, crew)
 	LAZYREMOVE(crewmate.mind.ship_teams, crew)
+
+// ===== 8. THE OWNER'S DRONE REWORKS A SERVICE ROOM =====
+
+/**
+ * The construction drone takes a service room's walls and floors down to plating for the owner, and
+ * pays nothing for them. A hand RCD cannot, even the owner's; a visitor at the console cannot; the
+ * drone leaves a fixture's floor, the fixture itself and indestructible walls outside the rooms alone;
+ * and a visitor's RCD builds nothing on the plating left behind. Drives the console's own RCD the way
+ * its Deconstruct tool does: mode, rcd_vals(), rcd_create().
+ */
+/datum/unit_test/voidcrew_outpost_service_room_rebuild
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_service_room_rebuild/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = market_test_claim("roomrebuildowner")
+	TEST_ASSERT_NOTNULL(home, "The room rebuild test outpost did not load")
+	var/mob/living/carbon/human/owner = market_test_owner(home, "roomrebuildowner")
+	var/mob/living/carbon/human/visitor = make_player(get_turf(home.management_console), "roomrebuildvisitor")
+	var/datum/outpost_upgrade/service/unit_test/room = new(home)
+	room.id = "service_room_rebuild_test"
+	room.key = room.id
+	var/result = place_test_service_room(home, room, list(0, 90, 180, 270), owner)
+	TEST_ASSERT_EQUAL(result, room, "The test room was not placed: [result]")
+	var/list/room_turfs = room.room_turfs()
+
+	// A bare wall, a bare floor, the table and the computer (outpost_service_room_test.dmm)
+	var/turf/wall
+	var/turf/floor
+	var/obj/structure/table/table
+	var/obj/machinery/computer/terminal
+	for(var/turf/tile as anything in room_turfs)
+		if(!table)
+			table = locate(/obj/structure/table) in tile
+		if(!terminal)
+			terminal = locate(/obj/machinery/computer) in tile
+		if(locate(/obj/structure) in tile)
+			continue
+		if(locate(/obj/machinery) in tile)
+			continue
+		if(!wall && istype(tile, /turf/closed/indestructible))
+			wall = tile
+		else if(!floor && istype(tile, /turf/open/indestructible))
+			floor = tile
+	TEST_ASSERT_NOTNULL(wall, "The test room has no bare indestructible wall")
+	TEST_ASSERT_NOTNULL(floor, "The test room has no bare indestructible floor")
+	TEST_ASSERT_NOTNULL(table, "The test room has no table")
+	TEST_ASSERT_NOTNULL(terminal, "The test room has no computer")
+	var/wall_x = wall.x
+	var/wall_y = wall.y
+	var/floor_x = floor.x
+	var/floor_y = floor.y
+	var/site_z = wall.z
+
+	var/obj/machinery/computer/camera_advanced/base_construction/ship/outpost/console = home.construction_console
+	TEST_ASSERT_NOTNULL(console, "The test outpost has no construction console")
+	TEST_ASSERT(console.can_build_at(wall) && console.can_build_at(floor), "The test room is outside the build region")
+	var/obj/item/construction/rcd/internal/ship/drone_rcd = console.internal_rcd
+	var/obj/machinery/ore_silo/silo = console.get_linked_silo()
+	if(!silo)
+		silo = allocate(/obj/machinery/ore_silo, get_turf(console))
+		TEST_ASSERT(console.link_internal_device(drone_rcd, drone_rcd.silo_mats, silo), "The construction console could not link a silo")
+	drone_rcd.silo_link = TRUE
+	var/silo_before = silo.materials.total_amount()
+	var/old_mode = drone_rcd.mode
+	var/old_delay_mod = drone_rcd.delay_mod
+	drone_rcd.mode = RCD_DECONSTRUCT
+	drone_rcd.delay_mod = 0
+
+	// Hand tools: a hand RCD gets nothing, even in the owner's hands
+	var/obj/item/construction/rcd/loaded/hand_rcd = allocate(/obj/item/construction/rcd/loaded, get_turf(owner))
+	hand_rcd.mode = RCD_DECONSTRUCT
+	hand_rcd.delay_mod = 0
+	TEST_ASSERT(!length(wall.rcd_vals(owner, hand_rcd)), "A hand RCD could take a service room wall apart")
+	TEST_ASSERT(!length(floor.rcd_vals(owner, hand_rcd)), "A hand RCD could lift a service room floor")
+	hand_rcd.rcd_create(wall, owner)
+	hand_rcd.rcd_create(floor, owner)
+	TEST_ASSERT(istype(locate(wall_x, wall_y, site_z), /turf/closed/indestructible), "A hand RCD took a service room wall apart")
+	TEST_ASSERT(istype(locate(floor_x, floor_y, site_z), /turf/open/indestructible), "A hand RCD lifted a service room floor")
+
+	// A visitor at the console gets nothing either
+	TEST_ASSERT(!length(wall.rcd_vals(visitor, drone_rcd)), "A visitor at the construction console could take a service room wall apart")
+	drone_rcd.rcd_create(wall, visitor)
+	TEST_ASSERT(istype(locate(wall_x, wall_y, site_z), /turf/closed/indestructible), "A visitor at the construction console took a service room wall apart")
+
+	// The drone leaves an indestructible wall outside the service rooms alone
+	var/turf/lone_spot = locate(home.build_bounds[1] + 1, home.build_bounds[2] + 1, site_z)
+	TEST_ASSERT(console.can_build_at(lone_spot) && !home.upgrade_at_turf(lone_spot), "No free build region tile for the lone wall")
+	var/lone_type = lone_spot.type
+	var/lone_baseturfs = lone_spot.baseturfs
+	var/turf/lone_wall = lone_spot.ChangeTurf(/turf/closed/indestructible)
+	TEST_ASSERT(!length(lone_wall.rcd_vals(owner, drone_rcd)), "The drone could take apart an indestructible wall outside the service rooms")
+	lone_wall.ChangeTurf(lone_type, lone_baseturfs)
+
+	// Fixtures: the drone neither lifts a fixture's floor nor takes the fixture apart
+	var/turf/table_tile = get_turf(table)
+	TEST_ASSERT(!length(table_tile.rcd_vals(owner, drone_rcd)), "The drone could lift the floor under a room fixture")
+	drone_rcd.rcd_create(table, owner)
+	TEST_ASSERT(!QDELETED(table) && table.loc == table_tile, "The drone took a room fixture apart")
+	TEST_ASSERT(istype(table_tile, /turf/open/indestructible), "The drone lifted the floor under a room fixture")
+
+	// The owner's drone takes a floor down to plating that the drone's own tools build on again
+	TEST_ASSERT(length(floor.rcd_vals(owner, drone_rcd)), "The drone cannot lift a service room floor")
+	drone_rcd.rcd_create(floor, owner)
+	var/turf/stripped_floor = locate(floor_x, floor_y, site_z)
+	TEST_ASSERT_EQUAL(stripped_floor.type, /turf/open/floor/plating, "The drone did not take a service room floor down to plating")
+	TEST_ASSERT_EQUAL(get_area(stripped_floor), home.outpost_area, "A stripped floor left the outpost area")
+	var/list/below = islist(stripped_floor.baseturfs) ? stripped_floor.baseturfs : list(stripped_floor.baseturfs)
+	for(var/layer in below)
+		TEST_ASSERT(!ispath(layer, /turf/closed/indestructible) && !ispath(layer, /turf/open/indestructible), "A stripped floor kept an indestructible layer underneath: [layer]")
+	TEST_ASSERT(drone_rcd.can_refloor(stripped_floor, /turf/open/floor/mineral/titanium), "The drone cannot lay a new floor on a stripped service room tile")
+
+	// And a wall
+	TEST_ASSERT(length(wall.rcd_vals(owner, drone_rcd)), "The drone cannot take a service room wall apart")
+	drone_rcd.rcd_create(wall, owner)
+	var/turf/stripped_wall = locate(wall_x, wall_y, site_z)
+	TEST_ASSERT_EQUAL(stripped_wall.type, /turf/open/floor/plating, "The drone did not take a service room wall down to plating")
+	// Close the gap the way the drone's wall tool does, before the room's air finds it
+	stripped_wall = stripped_wall.place_on_top(/turf/closed/wall)
+	TEST_ASSERT(istype(stripped_wall, /turf/closed/wall), "A stripped service room wall could not be rebuilt")
+	TEST_ASSERT_EQUAL(silo.materials.total_amount(), silo_before, "Taking a service room apart paid out materials")
+
+	// The fixtures stay outpost property
+	TEST_ASSERT(HAS_TRAIT(terminal, "outpost_property") && (terminal.resistance_flags & INDESTRUCTIBLE), "The room's computer lost its protection")
+	TEST_ASSERT(HAS_TRAIT(table, "outpost_property") && (table.resistance_flags & INDESTRUCTIBLE), "The room's table lost its protection")
+
+	// A visitor's RCD builds nothing on the plating left behind
+	hand_rcd.mode = RCD_TURF
+	hand_rcd.rcd_design_path = /turf/open/floor/plating/rcd
+	TEST_ASSERT_EQUAL(hand_rcd.rcd_create(stripped_floor, visitor), ITEM_INTERACT_BLOCKING, "A visitor's RCD was not refused in a service room")
+	var/turf/after_visitor = locate(floor_x, floor_y, site_z)
+	TEST_ASSERT_EQUAL(after_visitor.type, /turf/open/floor/plating, "A visitor's RCD built on a stripped service room tile")
+
+	drone_rcd.mode = old_mode
+	drone_rcd.delay_mod = old_delay_mod
+	settle_room_air(room_turfs)

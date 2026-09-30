@@ -54,6 +54,7 @@ GLOBAL_LIST_INIT(outpost_storage_refused, typecacheof(list(
 	desc = "Thirteen rental lockers."
 	price = OUTPOST_STORAGE_COST
 	template_type = /datum/map_template/outpost_upgrade/storage
+	area_type = /area/voidcrew/player_outpost/service_room/storage
 	/// Weakrefs to the room's lockers, in number order
 	var/list/datum/weakref/lockers
 

@@ -112,9 +112,7 @@
 	panel.manage_outpost(home, operator, "rebuild_rush", list("ref" = REF(job)))
 	TEST_ASSERT(job.rushed && job.state == "building", "Finish Now did not skip the survey")
 	wait_for_hull(job)
-	TEST_ASSERT_EQUAL(job.status_line(), "Awaiting captain", "An absent owner was not awaited")
-	panel.manage_outpost(home, operator, "rebuild_hand_over", list("ref" = REF(job)))
-	TEST_ASSERT(QDELETED(job), "Hand Over Now did not finish the job")
+	TEST_ASSERT(QDELETED(job), "The finished hull was not handed over at once")
 	var/obj/structure/overmap/ship/rebuilt = bay.ship
 	TEST_ASSERT_NOTNULL(rebuilt, "The rebuilt hull did not take the bay")
 	test_ships += rebuilt
@@ -131,7 +129,7 @@
 			sleep(2)
 	TEST_ASSERT(!drones_left, "Drones did not go home after the build")
 
-	// An original still in service is left alone: the rebuild is an extra copy. Stop removes it.
+	// An original still in service is left alone: the rebuild is an extra copy.
 	rebuilt.abandoned = FALSE
 	rebuilt.ship_account.account_balance = 777
 	var/datum/ship_checkpoint/copy_source = panel.save_free_checkpoint(home, operator, rebuilt, "copyowner")
@@ -142,11 +140,26 @@
 	TEST_ASSERT_NULL(job.original_ref, "A copy rebuild took over the ship in service")
 	job.rush()
 	wait_for_hull(job)
+	TEST_ASSERT(QDELETED(job), "The finished copy was not handed over at once")
 	TEST_ASSERT(!rebuilt.retired_by_checkpoint && rebuilt.ship_account.account_balance == 777, "A copy rebuild retired or charged the original")
-	panel.manage_outpost(home, operator, "rebuild_stop", list("ref" = REF(job)))
-	TEST_ASSERT(QDELETED(job) && bay.is_available(), "Stop did not remove the finished hull")
-	TEST_ASSERT(!length(home.checkpoints), "Stop returned a checkpoint the build had used")
+	var/obj/structure/overmap/ship/copy = bay.ship
+	TEST_ASSERT(copy && copy != rebuilt, "The finished copy did not take the bay")
+	test_ships += copy
+	TEST_ASSERT(!length(home.checkpoints), "The copy rebuild did not use up its checkpoint")
 	TEST_ASSERT_NULL(rebuilt.checkpoint_ref?.resolve(), "The original kept a link to a used checkpoint")
+	TEST_ASSERT(panel.remove_docked_ship(home, operator, bay, copy), "The copy could not be removed from the bay: [panel.error]")
+	TEST_ASSERT(bay.is_available(), "Removing the copy did not free the bay")
+
+	// Stop before the first piece: the bay is freed and the checkpoint kept.
+	var/datum/ship_checkpoint/stop_source = panel.save_free_checkpoint(home, operator, rebuilt, "copyowner")
+	TEST_ASSERT_NOTNULL(stop_source, "Could not save the ship to test Stop: [panel.error]")
+	TEST_ASSERT(panel.admin_rebuild(home, operator, stop_source), "The rebuild to stop did not start: [panel.error]")
+	job = home.checkpoint_jobs[1]
+	TEST_ASSERT(!job.committed, "The rebuild placed a piece before it could be stopped")
+	panel.manage_outpost(home, operator, "rebuild_stop", list("ref" = REF(job)))
+	TEST_ASSERT(QDELETED(job) && bay.is_available(), "Stop did not end the build and free the bay")
+	TEST_ASSERT(!QDELETED(stop_source) && !stop_source.busy, "Stop before the first piece lost the checkpoint")
+	qdel(stop_source)
 
 	// One click: save the docked ship, delete it and rebuild it for its owner.
 	dock_in_bay(home, rebuilt)

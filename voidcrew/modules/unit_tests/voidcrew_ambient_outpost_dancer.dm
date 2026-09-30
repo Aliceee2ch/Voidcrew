@@ -5,9 +5,9 @@
  * tile, mid-dance, raised by the platform with her place against the pole on top; her dance keeps
  * her there and her moves end where they began; knocked off she lets go at once and climbs back;
  * someone else on the pole keeps her off it; and ending the dance (a break, a shootout, death) steps
- * her back down beside it with her offsets reset. A shootout sends her running for cover, a fight by
- * the kingpin's seat sends her straight out by the lift, and she is killable like any other ambient
- * outpost NPC. She wears a bikini, no uniform.
+ * her back down beside it with her offsets reset. A shootout sends her running for cover, any other
+ * fight sends her into hiding clear of it, and either way she goes back to her pole once it is over.
+ * She is killable like any other ambient outpost NPC. She wears a bikini, no uniform.
  * SSambient_npcs does nothing on its own in tests (`ambient_auto`); see voidcrew_ambient_core.dm for
  * the harness (ambient_test_outpost(), pa_tile()) and voidcrew_ambient_outposts.dm for the same
  * pattern used on PA's other outpost NPCs.
@@ -137,26 +137,46 @@
 	dancer.activity_step(1)
 	TEST_ASSERT(dancer.crouching, "The dancer taking cover from a shootout is not down")
 
-	// It's over: back to what she was doing
+	// It's over: straight back up on her pole
 	dancer.shootout_over()
 	TEST_ASSERT(!istype(dancer.activity, /datum/ambient_activity/take_cover), "The dancer stayed in cover once the shootout was over")
+	dancer.next_activity()
+	TEST_ASSERT(istype(dancer.activity, /datum/ambient_activity/dance_pole), "The dancer did not go back to her pole after the shootout")
+	// Out of the way of the next dancer
+	dancer.end_activity()
+	dancer.forceMove(pa_tile(4, 1))
 
-	// A fight right by the kingpin's seat, no shootout: she runs straight out by the lift, without ducking first
+	// A fight right by the kingpin's seat, no shootout: she gets clear of it and stays at the outpost
 	allocate(/obj/effect/landmark/bounty_kingpin/seat, pa_tile(0, 0))
 	var/mob/living/carbon/human/consistent/brawler = allocate(/mob/living/carbon/human/consistent, pa_tile(2, 1))
 	var/mob/living/basic/ambient_npc/outpost/dancer/second = pa_npc(/mob/living/basic/ambient_npc/outpost/dancer, pa_tile(1, 1), place)
 	second.react_violence(brawler)
-	var/datum/ambient_activity/leave/running = second.activity
-	TEST_ASSERT(istype(running), "A fight by the kingpin's seat did not send the dancer running")
-	TEST_ASSERT(!second.crouching, "The dancer ducked instead of running from a fight by the kingpin")
-	TEST_ASSERT_EQUAL(running.spot, pa_tile(4, 4), "The dancer is not running for the lift")
+	var/datum/ambient_activity/dancer_hide/hiding = second.activity
+	TEST_ASSERT(istype(hiding), "A fight by the kingpin's seat did not send the dancer into hiding")
+	TEST_ASSERT(!hiding.spot || get_dist(hiding.spot, brawler) > get_dist(pa_tile(1, 1), brawler), "The dancer hid closer to the fight than she was")
+	if(hiding.spot)
+		second.forceMove(hiding.spot)
+	second.activity_step(1)
+	TEST_ASSERT(second.crouching, "The hiding dancer is not keeping her head down")
 
-	// A fight well clear of the kingpin: she ducks and leaves like any other patron (base react_violence)
-	var/mob/living/basic/ambient_npc/outpost/dancer/third = pa_npc(/mob/living/basic/ambient_npc/outpost/dancer, pa_tile(4, 4), place)
+	// More fighting keeps her down; once it has been quiet a while she goes back to her pole
+	hiding.calm_at = world.time - 1
+	second.react_violence(brawler)
+	TEST_ASSERT(hiding.calm_at > world.time, "More fighting did not keep the dancer hidden")
+	TEST_ASSERT_EQUAL(second.activity_step(1), 0, "The dancer came out while it was still going on") // AMBIENT_STEP_CONTINUE
+	hiding.calm_at = world.time
+	TEST_ASSERT_EQUAL(second.activity_step(1), 2, "The dancer stayed hidden once it was quiet") // AMBIENT_STEP_DONE
+	second.end_activity()
+	second.next_activity()
+	TEST_ASSERT(istype(second.activity, /datum/ambient_activity/dance_pole), "The dancer did not go back to her pole once it was quiet")
+	second.end_activity()
+	second.forceMove(pa_tile(4, 2))
+
+	// Hit herself, well clear of the kingpin: she hides too, and never leaves
+	var/mob/living/basic/ambient_npc/outpost/dancer/third = pa_npc(/mob/living/basic/ambient_npc/outpost/dancer, pa_tile(3, 4), place)
 	var/mob/living/carbon/human/consistent/other_brawler = allocate(/mob/living/carbon/human/consistent, pa_tile(4, 4))
-	third.react_violence(other_brawler)
-	TEST_ASSERT(istype(third.activity, /datum/ambient_activity/leave), "A fight away from the kingpin did not send the dancer off like the other patrons")
-	TEST_ASSERT(third.crouching, "A fight away from the kingpin did not make the dancer duck like the other patrons")
+	third.react_attacked(other_brawler)
+	TEST_ASSERT(istype(third.activity, /datum/ambient_activity/dancer_hide), "A hit did not send the dancer into hiding")
 
 /// The dancer is killable like any other ambient outpost NPC and drops a little cash once; killed on the pole she falls off it; she wears a bikini
 /datum/unit_test/voidcrew_ambient_outpost_dancer_death

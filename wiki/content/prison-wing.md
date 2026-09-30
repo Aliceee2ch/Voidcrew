@@ -31,7 +31,7 @@ Fines the outpost bank can't cover become debt. Nobody new arrives while the ban
 
 ## Looking after prisoners
 
-Prisoners take food and clean uniforms from the serving hatches or from your hand. They never pick things up off the floor or a table.
+Prisoners eat any food they can get to in the wing: on a serving hatch, a table, the floor or in their cell, or from your hand. Clean uniforms only come from the serving hatches or your hand.
 
 - The **Sustenance Vendor** in the office sells soggy tofu, candy corn, moldy bread and ice cups to members of the wing, billed to the outpost bank per item. Tofu and candy corn fill a prisoner like a ration; the moldy bread is poor food. It restocks itself slowly.
 - The office has eight prison uniforms in the locker. Uniforms get dirty. Hand a prisoner a cleaner one and they change and give you the old one, or leave clean uniforms on a hatch. Wash dirty ones in the office washing machine.
@@ -43,7 +43,7 @@ Pay depends on how well each prisoner is looked after and on the conditions. Whe
 
 ## Trouble
 
-Unhappy prisoners argue, fight, threaten staff and climb over the hatches. If the yard stays unhappy it riots: the lights strobe red and every rioter pulls a shiv. Shiv stabs and cuts can bleed, and armour helps. A riot nobody deals with turns into a breakout. A prisoner who gets out of the yard doesn't stop at the office: an open entrance lets them out into the rest of the outpost, and a shut one gets broken down. A prisoner who stays loose for five minutes gets away, and the outpost is fined. You are told who is still loose and where after two minutes, and a guard on duty (or the wing, with none) calls it out when one is about to get away. A caught runner's time stops while they're cuffed.
+Unhappy prisoners argue, fight, threaten staff and climb over the hatches. If the yard stays unhappy it riots: the lights strobe red and every rioter pulls a shiv. Shiv stabs and cuts can bleed, and armour helps. The riot is over once every rioter is cuffed, knocked out or bolted in a cell. A riot nobody deals with turns into a breakout. A prisoner who gets out of the yard doesn't stop at the office: an open entrance lets them out into the rest of the outpost, and a shut one gets broken down. A prisoner who stays loose for five minutes gets away, and the outpost is fined. You are told who is still loose and where after two minutes, and a guard on duty (or the wing, with none) calls it out when one is about to get away. A caught runner's time stops while they're cuffed.
 
 Nobody comes for the dead. A body left in the cell block upsets the other prisoners and keeps its cell empty until someone carries it out: to a morgue, out an airlock, anywhere outside the cell block. A death isn't fined, but prisoners take it hard when staff kill one of them.
 

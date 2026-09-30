@@ -78,14 +78,6 @@
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/voidcrew/player_outpost/prison)
-"lR" = (
-/obj/machinery/door/airlock/security/prison_staff{
-	name = "Prison Wing"
-	},
-/obj/structure/fans/tiny,
-/obj/structure/cable,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost/prison)
 "mS" = (
 /obj/machinery/button/outpost_prison_bolt/directional/north{
 	cell_number = 3
@@ -196,6 +188,13 @@
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/voidcrew/player_outpost/prison)
+"zS" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost/prison)
 "Aj" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
@@ -214,6 +213,11 @@
 	dir = 1
 	},
 /turf/open/floor/iron/cafeteria,
+/area/voidcrew/player_outpost/prison)
+"Ba" = (
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost/prison)
 "Bb" = (
 /obj/structure/chair/stool{
@@ -311,6 +315,14 @@
 "Lx" = (
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost/prison)
+"LT" = (
+/obj/machinery/door/airlock/security/prison_staff{
+	name = "Prison Wing"
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost/prison)
 "MX" = (
 /obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 1
@@ -372,11 +384,6 @@
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost/prison)
-"Re" = (
-/obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost/prison)
 "RG" = (
 /obj/structure/chair/stool{
 	dir = 2
@@ -433,13 +440,6 @@
 	dir = 2
 	},
 /turf/open/floor/iron/dark/textured_large,
-/area/voidcrew/player_outpost/prison)
-"Xa" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/obj/structure/cable,
-/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost/prison)
 "Xv" = (
 /obj/effect/turf_decal/lunar_sand/plating,
@@ -670,8 +670,8 @@ Dl
 Qr
 Ii
 Qr
-Xa
-lR
+zS
+LT
 "}
 (10,1,1) = {"
 pF
@@ -688,7 +688,7 @@ QQ
 Qr
 Qr
 Ii
-Re
+Ba
 pF
 "}
 (11,1,1) = {"

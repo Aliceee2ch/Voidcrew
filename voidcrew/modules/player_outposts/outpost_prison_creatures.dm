@@ -145,6 +145,14 @@
 	var/footstep_kind = FOOTSTEP_MOB_SHOE
 	var/footstep_volume = 0.5
 	var/footstep_range = -8
+	/// The target it is chasing now, the closest it has gotten to it, where it last stood, and when it last
+	/// got anywhere: to notice it is stuck (track_reach())
+	var/datum/weakref/chase_target_ref
+	var/chase_best_distance = 0
+	var/turf/chase_last_turf
+	var/chase_progress_time = 0
+	/// Targets it has given up on reaching -> world.time it may try them again (find_light(), choose_target())
+	var/list/unreachable_until
 
 /mob/living/basic/outpost_experiment/Initialize(mapload, datum/outpost_prison/owner, mob/living/basic/outpost_prisoner/subject)
 	if(subject)
@@ -171,6 +179,9 @@
 
 /mob/living/basic/outpost_experiment/Destroy()
 	prison = null
+	chase_target_ref = null
+	chase_last_turf = null
+	unreachable_until = null
 	return ..()
 
 /// Puts on its look, from the prisoner's outfit
@@ -306,7 +317,9 @@
 		return FALSE
 	if(is_outpost_prisoner(victim))
 		var/mob/living/basic/outpost_prisoner/prisoner = victim
-		return prisoner.phase == PRISONER_PRESENT && may_hit_prisoner(prisoner)
+		if(prisoner.phase != PRISONER_PRESENT || !may_hit_prisoner(prisoner))
+			return FALSE
+		return !blocked_by_cell(prisoner)
 	return ishuman(victim) || issilicon(victim) || !isnull(victim.mind)
 
 /// Whether it hits this prisoner
@@ -325,14 +338,14 @@
 /mob/living/basic/outpost_experiment/proc/choose_target()
 	var/datum/component/experiment_damage_ledger/ledger = GetComponent(/datum/component/experiment_damage_ledger)
 	var/mob/living/attacker = ledger?.recent_player()
-	if(attacker && can_target(attacker) && get_dist(src, attacker) <= 9 && can_see(src, attacker, 9))
+	if(attacker && can_target(attacker) && get_dist(src, attacker) <= 9 && can_see(src, attacker, 9) && !target_unreachable(attacker))
 		return attacker
 	if(prison && !prison.crew_home())
 		return null
 	var/mob/living/best
 	var/best_score = INFINITY
 	for(var/mob/living/candidate in range(7, src))
-		if(!can_target(candidate) || !can_see(src, candidate, 7))
+		if(!can_target(candidate) || !can_see(src, candidate, 7) || target_unreachable(candidate))
 			continue
 		var/score = get_dist(src, candidate) + target_penalty(candidate)
 		if(score < best_score)
@@ -351,6 +364,87 @@
 	else
 		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
 	return null
+
+// ----- reach -----
+
+/// Whether nothing shut stops it: the hulk smashes through walls and doors, so a bolted cell or a target it can't get to never is out of its reach
+/mob/living/basic/outpost_experiment/proc/smashes_through()
+	return FALSE
+
+/// Whether it is mid-jaunt or otherwise between motives right now, and should not be judged on progress
+/mob/living/basic/outpost_experiment/proc/chasing_paused()
+	return FALSE
+
+/// Whether a bolted cell keeps `prisoner` away from it: shut and locked, and it is not inside with them
+/mob/living/basic/outpost_experiment/proc/blocked_by_cell(mob/living/basic/outpost_prisoner/prisoner)
+	if(smashes_through())
+		return FALSE
+	var/datum/outpost_prison_cell/holding = prison?.cell_at(get_turf(prisoner))
+	return holding && holding.is_bolted() && !holding.contains(src)
+
+/**
+ * Notes whether it is getting anywhere with `controller`'s current target: closer, beside it (Adjacent(),
+ * which a shut window or door fails even at a tile's distance), or at least on the move, so a target
+ * that runs is chased rather than given up on. OUTPOST_EXPERIMENT_STUCK_TIME standing still and apart
+ * writes the target off as unreachable for OUTPOST_EXPERIMENT_UNREACHABLE_TIME; find_light() and
+ * choose_target() skip anything on that list. Distance and Adjacent() only: no pathfinding call.
+ */
+/mob/living/basic/outpost_experiment/proc/track_reach(datum/ai_controller/controller)
+	if(smashes_through() || chasing_paused())
+		return
+	var/atom/movable/target = controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET]
+	if(QDELETED(target))
+		chase_target_ref = null
+		return
+	if(chase_target_ref?.resolve() != target)
+		chase_target_ref = WEAKREF(target)
+		chase_best_distance = get_dist(src, target)
+		chase_last_turf = loc
+		chase_progress_time = world.time
+		return
+	if(Adjacent(target) || loc != chase_last_turf)
+		chase_last_turf = loc
+		chase_progress_time = world.time
+		return
+	var/distance = get_dist(src, target)
+	if(distance < chase_best_distance)
+		chase_best_distance = distance
+		chase_progress_time = world.time
+		return
+	if(world.time - chase_progress_time < OUTPOST_EXPERIMENT_STUCK_TIME)
+		return
+	mark_unreachable(target)
+	chase_target_ref = null
+
+/// Whether it gave up on reaching `target` recently
+/mob/living/basic/outpost_experiment/proc/target_unreachable(atom/target)
+	if(!length(unreachable_until))
+		return FALSE
+	var/datum/weakref/ref = WEAKREF(target)
+	var/until = unreachable_until[ref]
+	if(!until)
+		return FALSE
+	if(until > world.time)
+		return TRUE
+	unreachable_until -= ref
+	return FALSE
+
+/// Writes `target` off for OUTPOST_EXPERIMENT_UNREACHABLE_TIME: something is stopping it getting there
+/mob/living/basic/outpost_experiment/proc/mark_unreachable(atom/target)
+	LAZYSET(unreachable_until, WEAKREF(target), world.time + OUTPOST_EXPERIMENT_UNREACHABLE_TIME)
+	prune_unreachable()
+
+/// Drops expired entries, then the oldest ones if it somehow grew past OUTPOST_EXPERIMENT_UNREACHABLE_MAX
+/mob/living/basic/outpost_experiment/proc/prune_unreachable()
+	for(var/datum/weakref/ref as anything in unreachable_until.Copy())
+		if(unreachable_until[ref] <= world.time)
+			unreachable_until -= ref
+	while(length(unreachable_until) > OUTPOST_EXPERIMENT_UNREACHABLE_MAX)
+		var/datum/weakref/oldest
+		for(var/datum/weakref/ref as anything in unreachable_until)
+			oldest = ref
+			break
+		unreachable_until -= oldest
 
 // ----- breaking things -----
 
@@ -416,6 +510,10 @@
 /// Only prisoners still standing: it knocks them flat and leaves them
 /mob/living/basic/outpost_experiment/hulk/may_hit_prisoner(mob/living/basic/outpost_prisoner/prisoner)
 	return !prisoner.can_be_dragged() && prisoner.beaten_left <= 0
+
+/// It tears through walls and forces doors, so a bolted cell and a blocked path never stop it
+/mob/living/basic/outpost_experiment/hulk/smashes_through()
+	return TRUE
 
 /mob/living/basic/outpost_experiment/hulk/ai_think(datum/ai_controller/controller)
 	. = ..()
@@ -1001,6 +1099,10 @@
 /mob/living/basic/outpost_experiment/nightmare/target_penalty(mob/living/target)
 	return is_outpost_prisoner(target) ? -3 : 0
 
+/// Mid-jaunt it is immobile by design, not stuck
+/mob/living/basic/outpost_experiment/nightmare/chasing_paused()
+	return jaunting
+
 /// Lights, during the opening
 /mob/living/basic/outpost_experiment/nightmare/can_target(atom/target)
 	if(istype(target, /obj/machinery/light))
@@ -1013,7 +1115,7 @@
 	var/obj/machinery/light/best
 	var/best_distance = INFINITY
 	for(var/obj/machinery/light/fixture in range(9, src))
-		if(!can_target(fixture) || !can_see(src, fixture, 9))
+		if(!can_target(fixture) || !can_see(src, fixture, 9) || target_unreachable(fixture))
 			continue
 		var/distance = get_dist(src, fixture)
 		if(distance < best_distance)
@@ -1255,6 +1357,7 @@
 	var/mob/living/basic/outpost_experiment/creature = controller.pawn
 	if(!istype(creature) || creature.subdued)
 		return SUBTREE_RETURN_FINISH_PLANNING
+	creature.track_reach(controller)
 	return creature.ai_think(controller)
 
 /// Only what the creature may break

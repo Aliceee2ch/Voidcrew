@@ -13,7 +13,7 @@
 	gas_connector = new(location)
 	gas_connector.dir = connected_machine.dir
 	gas_connector.airs[1].volume = gas_volume
-	// VOIDCREW EDIT ADDITION: in a shuttle move the machine carries its connector along (see
+	// VOIDCREW EDIT ADDITION START - in a shuttle move the machine carries its connector along (see
 	// moved_connected_machine()), so the move never lists the connector as cargo of its own.
 	// The landing's stowaway sweep then took it for something already lying on the berth and
 	// shoved it off the hull, and a docked cryo cell was left with no pipe connection.
@@ -58,7 +58,7 @@
 		COMSIG_MOVABLE_PRE_MOVE,
 		COMSIG_MACHINERY_DEFAULT_ROTATE_WRENCH,
 		COMSIG_OBJ_DECONSTRUCT,
-		COMSIG_QDELETING,
+		COMSIG_QDELETING, // VOIDCREW EDIT CHANGE - comma for the addition below
 		COMSIG_ATOM_AFTER_SHUTTLE_MOVE, // VOIDCREW EDIT ADDITION
 	))
 

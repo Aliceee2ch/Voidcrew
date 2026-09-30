@@ -19,18 +19,18 @@
  * they hammer at the staff doors, serving hatches and windows out of the cell block, smashing the
  * wing's fixtures on the side (outpost_prison_breakout.dm). Once through, out they go, and escape.
  * Prisoners who don't join sit it out in their cells. A rioter
- * who is stunned, beaten or cuffed drops the shiv, but riots on once up and free again: only a
- * cell they are shut in takes them out of it, and earns them a lockdown (outpost_prison_capture.dm).
- * The riot is over when no rioter is at large, every one shut in a cell or dead; then every
- * rioter calms, and the wing is subdued for PRISON_SUBDUED_TIME: no riots or fights, time for the
- * crew to clean up.
+ * who is stunned, beaten or cuffed drops the shiv, but riots on once up and free again. Shut in a
+ * cell they go for nothing, so the cell holds them, and they owe a lockdown (outpost_prison_capture.dm).
+ * The riot is over once every rioter is dealt with (riot_handled()): shut in a cell, cuffed, down,
+ * dead or gone; then every rioter calms, and the wing is subdued for PRISON_SUBDUED_TIME: no riots
+ * or fights, time for the crew to clean up.
  *
  * The riot's clock runs only while a member of the wing is home (crew_home()) and a rioter is
  * free, on their feet and uncuffed. Left PRISON_RIOT_BREAKOUT_TIME it turns into a breakout: every
  * rioter goes all out for the exits, and each has OUTPOST_PRISON_LOOSE_TIME seconds free before
- * they are gone for good. A riot nobody comes home to, or one held down but never locked up, is a
- * sit-in; after PRISON_RIOT_TRANSFER_TIME the corrections service transfers the rioters still at
- * large out, for a fee.
+ * they are gone for good. A riot nobody comes home to, or one whose last rioters gave up at a
+ * turret's warning, is a sit-in; after PRISON_RIOT_TRANSFER_TIME the corrections service transfers
+ * the rioters not yet in a cell out, for a fee.
  *
  * The cell block (outpost_prison_containment.dm) is everything prisoners can reach from the cells
  * without passing a staff door or a serving hatch. A prisoner outside it on their own feet, or
@@ -673,7 +673,8 @@
 
 /**
  * A rioter not yet in custody: present, alive, rioting and not shut in a cell (is_confined(), so a
- * door bolted open does not count). Down or cuffed, they are still at large.
+ * door bolted open does not count). Down or cuffed, they are still at large, though the riot may
+ * count them dealt with (riot_handled()).
  */
 /mob/living/basic/outpost_prisoner/proc/riot_at_large()
 	return phase == PRISONER_PRESENT && stat != DEAD && is_rioting() && !is_confined()
@@ -681,6 +682,19 @@
 /// A rioter at large and free to act: on their feet, uncuffed, and not given up at a turret's warning (outpost_prison_security.dm)
 /mob/living/basic/outpost_prisoner/proc/riot_free()
 	return riot_at_large() && stat == CONSCIOUS && !can_be_dragged() && !surrendered_to_turret()
+
+/**
+ * Whether the riot counts them dealt with: shut in a cell, dead, calmed or loose (not rioting),
+ * leaving, deleted or nowhere at all; cuffed, wherever they are; or down for real, out cold or
+ * unable to act (in crit, stamina crit, collapsed or stunned). A knockdown they are straight back
+ * up from is not enough. The riot is over once every rioter is (riot_tick()).
+ */
+/mob/living/basic/outpost_prisoner/proc/riot_handled()
+	if(QDELETED(src) || isnull(get_turf(src)))
+		return TRUE
+	if(!riot_at_large() || cuffs)
+		return TRUE
+	return stat != CONSCIOUS || HAS_TRAIT(src, TRAIT_INCAPACITATED)
 
 /**
  * Whether they can join a riot now. Not from a cell they are shut in: a riot that nobody can take
@@ -791,24 +805,24 @@
 			qdel(hide)
 
 /**
- * The riot's clocks. It is over once no rioter is at large: every one shut in a cell or dead.
- * The breakout clock runs only while the crew is home and at least one rioter is free (on their
- * feet and uncuffed); otherwise the sit-in clock runs, and ends in a transfer of the rioters
- * still at large. So a riot held down but never locked up does not last forever.
+ * The riot's clocks. It is over once every rioter is dealt with (riot_handled()): shut in a cell,
+ * cuffed, down, dead or gone, in any mix. The breakout clock runs only while the crew is home and
+ * at least one rioter is free (on their feet and uncuffed); otherwise the sit-in clock runs, and
+ * ends in a transfer of the rioters not yet in a cell.
  */
 /datum/outpost_prison/proc/riot_tick(seconds)
 	if(!riot_active)
 		return
 	riot_windup_left = max(0, riot_windup_left - seconds)
-	var/at_large = 0
+	var/unhandled = 0
 	var/free = 0
 	for(var/mob/living/basic/outpost_prisoner/prisoner in prisoners)
-		if(!prisoner.riot_at_large())
+		if(prisoner.riot_handled())
 			continue
-		at_large++
+		unhandled++
 		if(prisoner.riot_free())
 			free++
-	if(!at_large)
+	if(!unhandled)
 		end_riot()
 		return
 	if(crew_home() && free)
@@ -831,9 +845,9 @@
 		play_alarm()
 
 /**
- * No rioter is left at large: every rioter, shut in a cell or anywhere else, calms to
+ * Every rioter is dealt with: every rioter, shut in a cell or anywhere else, calms to
  * PRISONER_RIOT_CALM_MOOD, the spikes clear and the wing is subdued for PRISON_SUBDUED_TIME.
- * Lockdown they owe stands (outpost_prison_capture.dm).
+ * Lockdown they owe stands (outpost_prison_capture.dm), and so do cuffs.
  */
 /datum/outpost_prison/proc/end_riot()
 	if(!riot_active)
@@ -947,17 +961,18 @@
 	return null
 
 /**
- * What a rioter goes for: nothing during the wind-up, once they gave up at a turret's warning, or
- * once out of the cell block (they have escaped; check_escapes() sees to it). Then a turret they
- * defied, staff they can get to (unless two rioters are on them already), an open hatch to climb, a
- * gap out of the cell block to walk through (escape_spot()), the way out they were already
- * breaking, the fixture they were smashing for a few more blows, or a new target
- * (pick_smash_target(), outpost_prison_breakout.dm). Turret warnings are in outpost_prison_security.dm.
+ * What a rioter goes for: nothing during the wind-up, once they gave up at a turret's warning, while
+ * shut in a cell (or they would smash the cell's own window and walk out), or once out of the cell
+ * block (they have escaped; check_escapes() sees to it). Then a turret they defied, staff they can
+ * get to (unless two rioters are on them already), an open hatch to climb, a gap out of the cell
+ * block to walk through (escape_spot()), the way out they were already breaking, the fixture they
+ * were smashing for a few more blows, or a new target (pick_smash_target(),
+ * outpost_prison_breakout.dm). Turret warnings are in outpost_prison_security.dm.
  */
 /mob/living/basic/outpost_prisoner/proc/riot_target()
 	if(!prison)
 		return null
-	if(prison.riot_windup_left > 0 || surrendered_to_turret())
+	if(prison.riot_windup_left > 0 || surrendered_to_turret() || is_confined())
 		riot_victim_ref = null
 		return null
 	if(length(prison.cell_block) && !prison.in_cell_block(src))

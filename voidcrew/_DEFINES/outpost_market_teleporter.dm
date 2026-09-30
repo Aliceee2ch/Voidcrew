@@ -14,8 +14,6 @@
 #define OUTPOST_NETWORK_TRAVELLER_COOLDOWN (2 MINUTES)
 /// Per traveller, after walking off a charging pad or calling the trip off
 #define OUTPOST_NETWORK_CANCEL_COOLDOWN (15 SECONDS)
-/// No trips this long after a fight
-#define OUTPOST_NETWORK_COMBAT_LOCK (60 SECONDS)
 /// Arrival policies of a player outpost's pad
 #define OUTPOST_NETWORK_ARRIVALS_OPEN "open"
 #define OUTPOST_NETWORK_ARRIVALS_MEMBERS "members"

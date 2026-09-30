@@ -68,9 +68,9 @@
 		TEST_ASSERT_EQUAL(min(numbers), 1, "The lockers are not numbered from 1 at [rotation] degrees")
 		TEST_ASSERT_EQUAL(max(numbers), 13, "The lockers are not numbered to 13 at [rotation] degrees")
 
-		// The room joined the outpost's area, and everything fixed in it is anchored.
+		// The room joined its own area, and everything fixed in it is anchored.
 		for(var/turf/tile as anything in footprint)
-			TEST_ASSERT_EQUAL(tile.loc, home.outpost_area, "Tile [tile.x],[tile.y] is not in the outpost's area at [rotation] degrees")
+			TEST_ASSERT_EQUAL(tile.loc, room.installed_area, "Tile [tile.x],[tile.y] is not in the room's own area at [rotation] degrees")
 			for(var/obj/structure/fixture in tile)
 				TEST_ASSERT(fixture.anchored, "[fixture] at [tile.x],[tile.y] is not anchored at [rotation] degrees")
 			if(isclosedturf(tile))

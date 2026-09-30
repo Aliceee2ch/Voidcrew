@@ -1,14 +1,14 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "aa" = (
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ab" = (
 /obj/machinery/light/directional/north,
 /obj/effect/turf_decal/siding/wood{
 	dir = 1
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ac" = (
 /obj/structure/table/reinforced,
 /obj/item/paper_bin{
@@ -21,7 +21,7 @@
 	},
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ad" = (
 /obj/effect/turf_decal/tile/green/opposingcorners{
 	dir = 2
@@ -30,7 +30,7 @@
 	dir = 4
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ae" = (
 /obj/structure/chair/sofa/bench{
 	dir = 8
@@ -43,14 +43,14 @@
 	dir = 4
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "af" = (
 /obj/machinery/light/directional/north,
 /obj/effect/turf_decal/trimline/neutral/filled/line{
 	dir = 1
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ag" = (
 /obj/structure/table/wood,
 /obj/item/flashlight/lamp/green{
@@ -66,7 +66,7 @@
 	dir = 10
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ah" = (
 /obj/structure/table/wood,
 /obj/item/paper_bin{
@@ -81,7 +81,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ai" = (
 /obj/item/kirbyplants/organic/plant22,
 /obj/structure/sign/poster/official/soft_cap_pop_art/directional/north,
@@ -92,14 +92,14 @@
 	dir = 9
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aj" = (
 /obj/structure/filingcabinet,
 /obj/effect/turf_decal/siding/wood{
 	dir = 9
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ak" = (
 /obj/structure/rack,
 /obj/item/folder/yellow{
@@ -115,7 +115,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "al" = (
 /obj/machinery/light/directional/north,
 /obj/effect/turf_decal/tile/green/opposingcorners{
@@ -128,19 +128,19 @@
 	dir = 4
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "am" = (
 /obj/effect/turf_decal/trimline/neutral/filled/line{
 	dir = 2
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "an" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 4
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ao" = (
 /obj/structure/table/wood/fancy/black,
 /obj/item/folder/white{
@@ -155,7 +155,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ap" = (
 /obj/structure/closet/crate/wooden,
 /obj/machinery/light/directional/north,
@@ -164,13 +164,13 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aq" = (
 /obj/machinery/computer/outpost_shop_register{
 	dir = 2
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ar" = (
 /obj/structure/table/reinforced,
 /obj/item/flashlight/lamp{
@@ -179,12 +179,12 @@
 	},
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "as" = (
 /obj/structure/table/reinforced,
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "at" = (
 /obj/structure/table/reinforced,
 /obj/item/flashlight/lamp{
@@ -193,7 +193,7 @@
 	},
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "au" = (
 /obj/item/kirbyplants/organic/plant22,
 /obj/structure/sign/warning/no_smoking/circle/directional/north,
@@ -204,7 +204,7 @@
 	dir = 5
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "av" = (
 /obj/structure/chair/office{
 	dir = 2
@@ -213,10 +213,10 @@
 	dir = 8
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aw" = (
 /turf/open/indestructible/carpet/green,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ax" = (
 /obj/effect/turf_decal/tile/green/opposingcorners{
 	dir = 2
@@ -225,7 +225,7 @@
 	dir = 8
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ay" = (
 /obj/structure/table/wood/fancy/black,
 /obj/item/paper{
@@ -240,13 +240,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
-"az" = (
-/obj/effect/turf_decal/trimline/neutral/filled/line{
-	dir = 2
-	},
-/turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aA" = (
 /obj/structure/chair/sofa/bench/left{
 	dir = 4
@@ -259,7 +253,7 @@
 	dir = 8
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aB" = (
 /obj/structure/table/wood/fancy/black,
 /obj/item/flashlight/lamp/green{
@@ -270,7 +264,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aC" = (
 /obj/structure/chair/sofa/bench/right{
 	dir = 8
@@ -283,7 +277,7 @@
 	dir = 4
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aD" = (
 /obj/effect/turf_decal/tile/green/opposingcorners{
 	dir = 2
@@ -292,7 +286,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aE" = (
 /obj/structure/table/wood/fancy/black,
 /obj/item/flashlight/lamp/green{
@@ -303,14 +297,14 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aF" = (
 /obj/structure/sign/poster/official/cleanliness/directional/east,
 /obj/effect/turf_decal/trimline/neutral/filled/line{
 	dir = 4
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aG" = (
 /obj/structure/table/wood/fancy/black,
 /obj/item/kirbyplants/organic/plant21{
@@ -320,14 +314,14 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aH" = (
 /obj/machinery/door/airlock/outpost/service/staff,
 /obj/effect/mapping_helpers/airlock/unres{
 	dir = 1
 	},
 /turf/open/indestructible/dark/smooth_large,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aI" = (
 /obj/machinery/outpost_shop_stock,
 /obj/machinery/digital_clock/directional/north,
@@ -336,7 +330,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aJ" = (
 /obj/structure/chair/office/light{
 	dir = 2
@@ -345,7 +339,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aK" = (
 /obj/structure/table/reinforced,
 /obj/item/clipboard{
@@ -354,14 +348,14 @@
 	},
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aL" = (
 /obj/item/kirbyplants/organic/plant21,
 /obj/effect/turf_decal/trimline/neutral/filled/line{
 	dir = 1
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aM" = (
 /obj/structure/table/wood/fancy/black,
 /obj/item/paper{
@@ -376,16 +370,16 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aN" = (
 /turf/closed/indestructible/reinforced/titanium/nodiagonal,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aO" = (
 /obj/effect/turf_decal/tile/green/opposingcorners{
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aP" = (
 /obj/structure/rack,
 /obj/item/folder/white{
@@ -401,7 +395,7 @@
 	dir = 5
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aQ" = (
 /obj/structure/rack,
 /obj/item/paper_bin{
@@ -416,7 +410,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aR" = (
 /obj/structure/closet/crate/cardboard,
 /obj/effect/turf_decal/bot,
@@ -424,14 +418,14 @@
 	dir = 6
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aS" = (
 /obj/item/kirbyplants/organic/plant10,
 /obj/effect/turf_decal/siding/wood{
 	dir = 5
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aT" = (
 /obj/structure/closet/crate/cardboard,
 /obj/effect/turf_decal/bot,
@@ -439,7 +433,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/small,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aU" = (
 /obj/structure/noticeboard/directional/north,
 /obj/effect/turf_decal/tile/green/opposingcorners{
@@ -449,7 +443,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aV" = (
 /obj/structure/table/wood/fancy/black,
 /obj/item/folder/blue{
@@ -464,7 +458,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aW" = (
 /obj/machinery/light/directional/north,
 /obj/effect/turf_decal/tile/green/opposingcorners{
@@ -477,16 +471,16 @@
 	dir = 8
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aX" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 6
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aY" = (
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aZ" = (
 /obj/structure/chair/sofa/bench{
 	dir = 4
@@ -499,14 +493,19 @@
 	dir = 8
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "bI" = (
 /obj/structure/flora/bush/flowers_pp/style_random,
 /obj/structure/railing/unbreakable{
 	dir = 1
 	},
 /turf/open/indestructible/grass,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
+"cj" = (
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/carpet/green,
+/area/voidcrew/player_outpost/service_room/shop)
 "dn" = (
 /obj/effect/turf_decal/tile/green/opposingcorners{
 	dir = 2
@@ -515,7 +514,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "vI" = (
 /obj/structure/chair/sofa/bench/left{
 	dir = 8
@@ -528,18 +527,22 @@
 	dir = 4
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "zo" = (
 /obj/structure/flora/bush/large/style_random,
 /obj/structure/railing/unbreakable{
 	dir = 1
 	},
 /turf/open/indestructible/grass,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "BF" = (
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
+"Dz" = (
+/obj/structure/cable/outpost,
+/turf/open/indestructible/carpet/green,
+/area/voidcrew/player_outpost/service_room/shop)
 "Qc" = (
 /obj/item/kirbyplants/organic/plant21,
 /obj/effect/turf_decal/tile/green/opposingcorners{
@@ -555,7 +558,7 @@
 	dir = 8
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Qm" = (
 /obj/item/kirbyplants/organic/plant21,
 /obj/effect/turf_decal/tile/green/opposingcorners{
@@ -571,7 +574,7 @@
 	dir = 4
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Ro" = (
 /obj/structure/chair/sofa/bench/right{
 	dir = 4
@@ -584,14 +587,23 @@
 	dir = 8
 	},
 /turf/open/indestructible/white,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Xa" = (
 /obj/structure/flora/bush/flowers_yw/style_random,
 /obj/structure/railing/unbreakable{
 	dir = 1
 	},
 /turf/open/indestructible/grass,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
+"Xq" = (
+/obj/machinery/door/airlock/outpost/service,
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/obj/structure/cable/outpost,
+/turf/open/indestructible/dark/smooth_large,
+/area/voidcrew/player_outpost/service_room/shop)
 "Xy" = (
 /obj/machinery/door/airlock/outpost/service,
 /obj/structure/fans/tiny,
@@ -599,14 +611,14 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/smooth_large,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "XW" = (
 /obj/structure/flora/bush/ferny/style_random,
 /obj/structure/railing/unbreakable{
 	dir = 1
 	},
 /turf/open/indestructible/grass,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 
 (1,1,1) = {"
 aN
@@ -664,7 +676,7 @@ BF
 aN
 ak
 aa
-az
+am
 ar
 aw
 ao
@@ -690,13 +702,13 @@ aN
 aN
 aL
 aa
-az
+am
 ac
 aw
 aw
 aw
 aw
-aw
+cj
 aN
 "}
 (8,1,1) = {"
@@ -709,14 +721,14 @@ aw
 aw
 aw
 aw
-aw
-Xy
+Dz
+Xq
 "}
 (9,1,1) = {"
 aN
 aL
 aa
-az
+am
 aK
 aw
 aw
@@ -742,7 +754,7 @@ aN
 aN
 aQ
 aa
-az
+am
 at
 aw
 aV
@@ -755,7 +767,7 @@ BF
 aN
 aT
 aa
-az
+am
 aN
 aW
 aB
@@ -768,7 +780,7 @@ BF
 aN
 af
 aa
-az
+am
 aH
 aD
 aO

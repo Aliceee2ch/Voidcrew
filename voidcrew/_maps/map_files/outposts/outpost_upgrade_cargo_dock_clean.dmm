@@ -421,24 +421,32 @@
 	},
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/cargo_dock)
-"jK" = (
+"Ef" = (
 /obj/effect/turf_decal/trimline/brown/filled/line{
 	dir = 4
 	},
-/obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable,
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/cargo_dock)
-"rs" = (
+"EE" = (
 /obj/effect/turf_decal/arrows{
 	dir = 1
 	},
-/obj/structure/cable,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron,
 /area/voidcrew/player_outpost/cargo_dock)
 "Fw" = (
 /obj/structure/sign/departments/cargo,
 /turf/closed/wall,
+/area/voidcrew/player_outpost/cargo_dock)
+"Mz" = (
+/obj/machinery/door/airlock/mining/glass{
+	name = "Cargo Dock"
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/cargo_dock)
 "QP" = (
 /obj/structure/sign/poster/official/random/directional/south,
@@ -446,14 +454,6 @@
 	dir = 2
 	},
 /turf/open/floor/iron,
-/area/voidcrew/player_outpost/cargo_dock)
-"Vt" = (
-/obj/machinery/door/airlock/mining/glass{
-	name = "Cargo Dock"
-	},
-/obj/structure/fans/tiny,
-/obj/structure/cable,
-/turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/cargo_dock)
 "XM" = (
 /obj/item/kirbyplants/organic/plant21,
@@ -622,8 +622,8 @@ aX
 aX
 aX
 aX
-rs
-Vt
+EE
+Mz
 "}
 (10,1,1) = {"
 aH
@@ -640,7 +640,7 @@ al
 al
 al
 al
-jK
+Ef
 aH
 "}
 (11,1,1) = {"

@@ -1,7 +1,7 @@
 /**
  * Capture: members dragging downed or cuffed prisoners back through the staff doors, cuffs and
- * what they cost, riots that end only with every rioter shut in a cell, and the lockdown a
- * captured rioter owes.
+ * what they cost, riots that end once every rioter is cuffed, down, shut in a cell or gone, and
+ * the lockdown a rioter shut in a cell owes.
  *
  * Voidcrew defines are not visible from test files, so tuning values appear as literals with the
  * define named beside them. Prisons are driven with tick() with their own processing stopped;
@@ -298,7 +298,7 @@
 	TEST_ASSERT_EQUAL(deleted_cuffs.loc, deleted_spot, "A deleted prisoner's cuffs went with them")
 	settle_prison_air(home)
 
-// ===== RIOTS END IN CELLS =====
+// ===== RIOTS END WHEN EVERY RIOTER IS DEALT WITH =====
 
 /datum/unit_test/voidcrew_outpost_prison_riot_capture
 	parent_type = /datum/unit_test/voidcrew_outpost_management
@@ -316,94 +316,98 @@
 	TEST_ASSERT(first.is_rioting() && second.is_rioting() && !bystander.is_rioting(), "The wrong prisoners joined the riot")
 	prison.tick(5)
 
-	// Both rioters down: still rioters and at large, the riot goes on, the breakout clock waits
-	// and the sit-in clock runs instead. Their shivs drop and their mood stands.
+	// Down, a rioter is still a rioter at large, but held where they lie: not free, and dealt with
+	// as far as the riot goes. Their shiv drops and their mood stands. With another free, the riot
+	// goes on, and so does its breakout clock.
 	var/first_mood = first.mood
 	first.adjustStaminaLoss(200)
-	second.adjustStaminaLoss(200)
 	TEST_ASSERT_EQUAL(first.trouble, "riot", "A stunned rioter stopped rioting")
 	TEST_ASSERT(!first.has_shiv() && (locate(/obj/item/knife/shiv) in first.loc), "A stunned rioter did not drop their shiv")
 	TEST_ASSERT(abs(first.mood - first_mood) < 0.01, "Stunning a rioter moved their mood to [first.mood]")
 	TEST_ASSERT(first.riot_at_large() && !first.riot_free(), "A downed rioter is not at large, or is free")
+	TEST_ASSERT(first.riot_handled(), "A downed rioter does not count as held")
 	var/elapsed = prison.riot_elapsed
-	var/absent = prison.riot_absent
 	prison.tick(10)
-	TEST_ASSERT(prison.riot_active, "Putting every rioter down ended the riot")
-	TEST_ASSERT_EQUAL(prison.riot_elapsed, elapsed, "The breakout clock ran with every rioter down")
-	TEST_ASSERT_EQUAL(prison.riot_absent, absent + 10, "The sit-in clock did not run with every rioter held down")
+	TEST_ASSERT(prison.riot_active, "The riot ended with a rioter free")
+	TEST_ASSERT_EQUAL(prison.riot_elapsed, elapsed + 10, "The breakout clock waited with a rioter free")
 	// Up and free again, a rioter riots on, and snatches back the shiv at their feet.
 	first.setStaminaLoss(0)
-	TEST_ASSERT(first.riot_free(), "A rioter back on their feet is not free")
+	TEST_ASSERT(first.riot_free() && !first.riot_handled(), "A rioter back on their feet is not free")
 	TEST_ASSERT(first.has_shiv(), "A rioter back on their feet left their shiv on the floor")
-	prison.tick(10)
-	TEST_ASSERT_EQUAL(prison.riot_elapsed, elapsed + 10, "The breakout clock waited with a rioter free")
 
-	// Cuffed, a rioter is still a rioter at large, but not free.
+	// Cuffed, a rioter is still a rioter at large, but not free: held.
 	first.adjustStaminaLoss(200)
 	TEST_ASSERT(first.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The downed rioter could not be cuffed")
 	first.setStaminaLoss(0)
 	TEST_ASSERT_EQUAL(first.trouble, "riot", "A cuffed rioter stopped rioting")
 	TEST_ASSERT(first.riot_at_large() && !first.riot_free(), "A cuffed rioter on their feet is not at large, or is free")
+	TEST_ASSERT(first.riot_handled(), "A cuffed rioter does not count as held")
 	TEST_ASSERT(!first.has_shiv(), "A cuffed rioter picked their shiv back up")
 
+	// Someone who joins once the riot is on counts like the rest.
+	bystander.start_rioting(FALSE)
 	// Shut in a cell, a rioter is in custody and owes four minutes of lockdown
-	// (PRISON_RIOT_LOCKDOWN_TIME, a second of it served), still rioting until the riot ends.
+	// (PRISON_RIOT_LOCKDOWN_TIME, a second of it served), still rioting until the riot ends, and
+	// going for nothing in there.
 	second.forceMove(second.cell.arrival_turf())
 	capture_bolt(prison, second.cell)
 	prison.tick(1)
 	TEST_ASSERT(!second.riot_at_large(), "A rioter bolted in a cell is still at large")
 	TEST_ASSERT_EQUAL(second.trouble, "riot", "A rioter shut in a cell stopped rioting while the riot is on")
 	TEST_ASSERT_EQUAL(second.lockdown_left, 239, "A rioter shut in a cell owes [second.lockdown_left] s of lockdown, not 239")
-	TEST_ASSERT(prison.riot_active, "The riot ended with a cuffed rioter in the yard")
-	// The last one shut in: the riot is over, every rioter calms to 50 (PRISONER_RIOT_CALM_MOOD)
-	// and the wing is subdued (PRISON_SUBDUED_TIME).
-	first.forceMove(first.cell.arrival_turf())
-	capture_bolt(prison, first.cell)
+	TEST_ASSERT_NULL(second.riot_target(), "A rioter bolted in a cell went for [second.riot_target()]")
+	TEST_ASSERT(prison.riot_active, "The riot ended with a latecomer free in the yard")
+	// The last free rioter knocked down: one cuffed in the yard, one shut in, one down, and the riot
+	// is over. Every rioter calms to 50 (PRISONER_RIOT_CALM_MOOD) and the wing is subdued
+	// (PRISON_SUBDUED_TIME). Only the one shut in owes lockdown; the cuffs stay on.
+	bystander.adjustStaminaLoss(200)
 	prison.tick(1)
-	TEST_ASSERT(!prison.riot_active, "The riot went on with every rioter shut in a cell")
-	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second))
+	TEST_ASSERT(!prison.riot_active, "The riot went on with every rioter cuffed, down or shut in a cell")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second, bystander))
 		TEST_ASSERT_NULL(rioter.trouble, "[rioter] kept rioting after the riot")
 		TEST_ASSERT(abs(rioter.mood - 50) < 1, "[rioter] calmed to [rioter.mood], not 50")
-		TEST_ASSERT(rioter.lockdown_left > 0, "[rioter] owes no lockdown after the riot")
+	TEST_ASSERT(second.lockdown_left > 0, "The rioter shut in a cell owes no lockdown after the riot")
+	TEST_ASSERT_EQUAL(first.lockdown_left, 0, "The rioter cuffed in the yard owes lockdown")
+	TEST_ASSERT(first.cuffs, "The end of the riot took the cuffs off")
 	TEST_ASSERT_EQUAL(prison.subdued_left, 360, "The end of the riot subdued the wing for [prison.subdued_left] s, not 360")
 	TEST_ASSERT(!prison.incident_open, "The incident outlived the riot")
 
-	// Held down but never locked up, a riot runs the sit-in clock, crew home or not, and after ten
-	// minutes (PRISON_RIOT_TRANSFER_TIME) the rioters still at large are transferred, 750 cr each
-	// (OUTPOST_PRISON_TRANSFER_FEE). Those already shut in stay.
+	// With nobody home a riot is a sit-in, and after ten minutes (PRISON_RIOT_TRANSFER_TIME) the
+	// rioters not yet in a cell are transferred, 750 cr each (OUTPOST_PRISON_TRANSFER_FEE). Those
+	// already shut in stay.
 	prison.admin_calm()
 	prison.set_subdued(0)
 	first.remove_cuffs()
-	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second))
-		capture_bolt(prison, rioter.cell, FALSE)
+	bystander.setStaminaLoss(0)
+	capture_bolt(prison, second.cell, FALSE)
 	first.forceMove(prison_spot(home, 8, 8))
 	second.forceMove(prison_spot(home, 10, 8))
 	prison.refresh_reach()
 	var/datum/bank_account/treasury = trouble_fund(home, 5000)
 	var/paid_before = prison.paid_total
 	set_moods(list(first, second), 20)
-	TEST_ASSERT(prison.start_riot("test"), "The held-down riot did not start")
+	TEST_ASSERT(prison.start_riot("test"), "The sit-in did not start")
+	TEST_ASSERT(first.is_rioting() && second.is_rioting() && !bystander.is_rioting(), "The wrong prisoners joined the sit-in")
 	prison.tick(5)
-	first.adjustStaminaLoss(200)
-	TEST_ASSERT(first.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The rioter to hold could not be cuffed")
-	first.setStaminaLoss(0)
+	prison.crew_home_override = FALSE
 	second.adjustStaminaLoss(200)
 	second.forceMove(second.cell.arrival_turf())
 	capture_bolt(prison, second.cell)
 	second.setStaminaLoss(0)
 	prison.tick(1)
 	elapsed = prison.riot_elapsed
-	absent = prison.riot_absent
+	var/absent = prison.riot_absent
 	prison.tick(600 - absent - 1)
-	TEST_ASSERT(prison.riot_active, "The held-down riot was transferred early")
-	TEST_ASSERT_EQUAL(prison.riot_elapsed, elapsed, "The breakout clock ran with nobody free")
+	TEST_ASSERT(prison.riot_active, "The sit-in was transferred early")
+	TEST_ASSERT_EQUAL(prison.riot_elapsed, elapsed, "The breakout clock ran with nobody home")
 	prison.tick(1)
-	TEST_ASSERT(!prison.riot_active, "Ten minutes held down but never locked up did not end the riot")
-	TEST_ASSERT_EQUAL(first.phase, "leaving", "The rioter held in the yard was not transferred") // PRISONER_LEAVING
+	TEST_ASSERT(!prison.riot_active, "Ten minutes of sit-in did not end the riot")
+	TEST_ASSERT_EQUAL(first.phase, "leaving", "The rioter in the yard was not transferred") // PRISONER_LEAVING
 	TEST_ASSERT_EQUAL(second.phase, "present", "The rioter shut in a cell was transferred")
 	TEST_ASSERT_NULL(second.trouble, "The rioter shut in a cell kept rioting after the transfer")
 	var/stipends = prison.paid_total - paid_before
 	TEST_ASSERT_EQUAL(treasury.account_balance, 5000 - 750 + stipends, "One transfer took [5000 + stipends - treasury.account_balance], not 750")
+	prison.crew_home_override = TRUE
 	prison.set_subdued(0)
 
 	// A dead rioter is out of it: with nobody else at large, the riot is over.
@@ -419,6 +423,114 @@
 	doomed.death()
 	prison.tick(1)
 	TEST_ASSERT(!prison.riot_active, "The riot went on with its only rioter dead")
+	settle_prison_air(home)
+
+// ===== EVERY WAY A RIOT ENDS =====
+
+/**
+ * However the crew mixes them, a riot is over once every rioter is dealt with (riot_handled()):
+ * cuffed, even outside the cells or in one left unbolted; bolted into any cell, their own or not;
+ * or gone, deleted mid-riot.
+ */
+/datum/unit_test/voidcrew_outpost_prison_riot_end
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/// Starts a riot of every prisoner in `rioters` and runs it past its wind-up (PRISON_RIOT_WINDUP). Returns TRUE if they all joined.
+/datum/unit_test/voidcrew_outpost_prison_riot_end/proc/riot_of(datum/outpost_prison/prison, list/rioters)
+	prison.set_subdued(0)
+	set_moods(rioters, 20)
+	if(!prison.start_riot("test"))
+		return FALSE
+	prison.tick(5)
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in rioters)
+		if(!rioter.is_rioting())
+			return FALSE
+	return TRUE
+
+/datum/unit_test/voidcrew_outpost_prison_riot_end/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = trouble_test_claim("riotendowner")
+	TEST_ASSERT_NOTNULL(home, "The riot end test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	prison.crew_home_override = TRUE
+	var/mob/living/basic/outpost_prisoner/first = trouble_prisoner(prison, prison_spot(home, 8, 8), "grumpy")
+	var/mob/living/basic/outpost_prisoner/second = trouble_prisoner(prison, prison_spot(home, 10, 8), "grumpy")
+	var/mob/living/basic/outpost_prisoner/third = trouble_prisoner(prison, prison_spot(home, 12, 8), "grumpy")
+	var/list/rioters = list(first, second, third)
+
+	// Every rioter cuffed, two in the yard and one in their own cell with the door left unbolted:
+	// the riot is over, nobody owes lockdown, and the cuffs stay on.
+	TEST_ASSERT(riot_of(prison, rioters), "The first riot did not start with all three")
+	third.forceMove(third.cell.arrival_turf())
+	prison.refresh_reach()
+	TEST_ASSERT(!third.is_confined(), "A rioter behind an unbolted cell door counts as shut in")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second))
+		TEST_ASSERT(rioter.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "[rioter] could not be cuffed")
+	prison.tick(1)
+	TEST_ASSERT(prison.riot_active, "The riot ended with a rioter free in an unbolted cell")
+	TEST_ASSERT(third.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "The rioter in the unbolted cell could not be cuffed")
+	prison.tick(1)
+	TEST_ASSERT(!prison.riot_active, "The riot went on with every rioter cuffed")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in rioters)
+		TEST_ASSERT_NULL(rioter.trouble, "[rioter] kept rioting after the riot")
+		TEST_ASSERT(rioter.cuffs, "The end of the riot took [rioter]'s cuffs off")
+		TEST_ASSERT_EQUAL(rioter.lockdown_left, 0, "[rioter] was never shut in a cell but owes lockdown")
+	TEST_ASSERT(!prison.incident_open, "The incident outlived the cuffed riot")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in rioters)
+		rioter.remove_cuffs()
+	third.forceMove(prison_spot(home, 12, 8))
+	prison.refresh_reach()
+
+	// Every rioter bolted into a cell, two of them together in one that is neither's: the riot is
+	// over, and each owes lockdown. Shut in, a rioter goes for nothing, not even the cell's window.
+	var/datum/outpost_prison_cell/spare
+	for(var/datum/outpost_prison_cell/cell as anything in prison.cells)
+		if(!cell.occupant)
+			spare = cell
+			break
+	TEST_ASSERT_NOTNULL(spare, "The test wing has no empty cell")
+	TEST_ASSERT(riot_of(prison, rioters), "The second riot did not start with all three")
+	first.forceMove(spare.arrival_turf())
+	second.forceMove(spare.arrival_turf())
+	capture_bolt(prison, spare)
+	prison.tick(1)
+	TEST_ASSERT(prison.riot_active, "The riot ended with a rioter free in the yard")
+	TEST_ASSERT(first.is_confined() && second.is_confined(), "Two rioters bolted into a spare cell are not shut in")
+	TEST_ASSERT_NULL(first.riot_target(), "A rioter bolted in a cell went for [first.riot_target()]")
+	third.forceMove(third.cell.arrival_turf())
+	capture_bolt(prison, third.cell)
+	prison.tick(1)
+	TEST_ASSERT(!prison.riot_active, "The riot went on with every rioter bolted in a cell")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in rioters)
+		TEST_ASSERT_NULL(rioter.trouble, "[rioter] kept rioting after the riot")
+		TEST_ASSERT(rioter.lockdown_left > 0, "[rioter] was shut in a cell and owes no lockdown")
+	prison.admin_calm()
+	capture_bolt(prison, spare, FALSE)
+	capture_bolt(prison, third.cell, FALSE)
+	first.forceMove(prison_spot(home, 8, 8))
+	second.forceMove(prison_spot(home, 10, 8))
+	third.forceMove(prison_spot(home, 12, 8))
+	prison.refresh_reach()
+
+	// A rioter deleted mid-riot drops out of the count: with the others cuffed, the riot is over.
+	// Knocked off their feet for a moment, the last one still counts.
+	TEST_ASSERT(riot_of(prison, rioters), "The third riot did not start with all three")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second))
+		TEST_ASSERT(rioter.apply_cuffs(allocate(/obj/item/restraints/handcuffs)), "[rioter] could not be cuffed")
+	prison.tick(1)
+	TEST_ASSERT(prison.riot_active, "The riot ended with a rioter free in the yard")
+	third.Knockdown(2 SECONDS)
+	TEST_ASSERT(!third.riot_handled(), "A rioter only knocked down counts as dealt with")
+	prison.tick(1)
+	TEST_ASSERT(prison.riot_active, "A knockdown of the last free rioter ended the riot")
+	third.SetKnockdown(0)
+	qdel(third)
+	TEST_ASSERT(!(third in prison.prisoners), "A deleted rioter stayed on the roster")
+	TEST_ASSERT(third.riot_handled(), "A deleted rioter still counts toward the riot")
+	prison.tick(1)
+	TEST_ASSERT(!prison.riot_active, "The riot went on after its last free rioter was deleted")
+	TEST_ASSERT(!prison.incident_open, "The incident outlived the riot")
+	for(var/mob/living/basic/outpost_prisoner/rioter as anything in list(first, second))
+		rioter.remove_cuffs()
 	settle_prison_air(home)
 
 // ===== LOCKDOWN =====
@@ -478,6 +590,14 @@
 				button = candidate
 	TEST_ASSERT_NOTNULL(button, "Cell [cell.number] has no bolt button")
 	TEST_ASSERT(findtext(jointext(button.examine(warden), " "), "[inmate.real_name] is on lockdown"), "The cell's bolt button does not show the lockdown")
+
+	// Out through a hole with their cell still bolted, nobody let them out: the grace waits, no riot
+	var/turf/served_from = inmate.loc
+	inmate.forceMove(prison_spot(home, 10, 8))
+	prison.tick(40)
+	TEST_ASSERT(!prison.riot_active, "A prisoner out through a hole in their bolted cell started a riot")
+	TEST_ASSERT_EQUAL(inmate.lockdown_out, 0, "The grace ran while their cell was still bolted")
+	inmate.forceMove(served_from)
 
 	// Let out early: out of the cell on their feet and uncuffed, the lockdown stops counting. Cuffed
 	// or down the grace waits; after 30 seconds (PRISON_LOCKDOWN_GRACE) on their feet they riot

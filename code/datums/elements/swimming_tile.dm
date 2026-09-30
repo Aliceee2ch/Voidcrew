@@ -41,7 +41,7 @@
 	SIGNAL_HANDLER
 	if (!istype(swimmer))
 		return
-	// VOIDCREW EDIT: override - Attach() and the entered signal can both reach someone already in
+	// VOIDCREW EDIT START - override: Attach() and the entered signal can both reach someone already in
 	// the water when a ship's pool turf is rebuilt as the hull moves.
 	RegisterSignal(swimmer, SIGNAL_ADDTRAIT(TRAIT_IMMERSED), PROC_REF(dip_in), override = TRUE)
 	// VOIDCREW EDIT END

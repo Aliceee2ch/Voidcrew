@@ -94,11 +94,12 @@
 /// A build that stops advancing for this long is finished with the pieces it has.
 #define CHECKPOINT_BUILD_STALL_TIME (1 MINUTES)
 /// How long a finished hull waits for its captain before being left claimable.
-#define CHECKPOINT_BUILD_CAPTAIN_WAIT (10 MINUTES)
 
 // ===== OUTPOST UPGRADES (see outpost_upgrades.dm) =====
 /// A placed upgrade needs a tile within this many tiles (Chebyshev) of outpost ground
 #define OUTPOST_UPGRADE_MAX_GAP 8
+/// The longest floor path the feeder lays cable along to join a room to the grid (outpost_room_power.dm)
+#define OUTPOST_ROOM_FEEDER_MAX 32
 /// How long a placement-map survey is reused before it is taken again
 #define OUTPOST_UPGRADE_SURVEY_LIFETIME (30 SECONDS)
 

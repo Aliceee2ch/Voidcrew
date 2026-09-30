@@ -31,6 +31,7 @@
 	desc = "Eight cloning vats and a wardrobe."
 	price = OUTPOST_CLONING_BAY_COST
 	template_type = /datum/map_template/outpost_upgrade/cloning_bay
+	area_type = /area/voidcrew/player_outpost/service_room/cloning_bay
 	/// The room's vats, found at install
 	var/list/datum/weakref/vat_refs
 

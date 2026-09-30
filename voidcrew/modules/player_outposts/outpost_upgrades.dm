@@ -592,6 +592,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		blueprint.placed_offer = offer
 	blueprint.collect_snaps(footprint_turfs)
 	blueprint.on_installed(user)
+	join_rooms_to_grid() // a corridor may already reach this room's door; the wing/dock/room joins right away
 	var/list/entrance = footprint["entrance"]
 	playsound(entrance[CEILING(length(entrance) / 2, 1)], 'sound/machines/ding.ogg', 60, TRUE)
 	log_game("PLAYER OUTPOST: [key_name(user)] placed the [blueprint.name] upgrade at '[name]' ([bottom_left.x],[bottom_left.y],[bottom_left.z], rotated [rotation])")
@@ -966,6 +967,13 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 				assets["[preview].png"] = file("[OUTPOST_PREVIEW_DIR][preview].png")
 			else
 				log_asset("outpost_upgrade_previews: missing preview image [preview].png for [upgrade.id]")
+	// The ship bay is sold in the same list as the rooms
+	for(var/map_type in outpost_style_maps(/datum/map_template/outpost_hangar/ship_bay))
+		var/preview = outpost_map_preview_name(map_type)
+		if(fexists("[OUTPOST_PREVIEW_DIR][preview].png"))
+			assets["[preview].png"] = file("[OUTPOST_PREVIEW_DIR][preview].png")
+		else
+			log_asset("outpost_upgrade_previews: missing preview image [preview].png for the ship bay")
 	return ..()
 
 /datum/player_outpost_management_ui
@@ -1022,8 +1030,12 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 	// The survey can be tens of kilobytes: static data only, and only while a map is open. The key
 	// is always sent, because tgui merges static data into the old state and would keep a stale one.
 	var/show_survey = wants_upgrade_survey && !QDELETED(outpost) && !outpost.upgrade_surveying
+	var/datum/map_template/bay_template = outpost_ship_bay_template(style)
 	return list(
 		"upgrade_catalog" = catalog,
+		"ship_bay_preview" = outpost_ship_bay_preview(style),
+		"ship_bay_width" = bay_template?.width || 0,
+		"ship_bay_height" = bay_template?.height || 0,
 		"upgrade_survey" = show_survey ? outpost.upgrade_survey : null,
 		"upgrade_snaps" = show_survey ? upgrade_snap_payload() : null,
 	)

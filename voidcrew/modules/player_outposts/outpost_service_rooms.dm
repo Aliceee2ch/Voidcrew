@@ -4,9 +4,9 @@
  * Prefab rooms that sell a service to visitors (cloning bay, shop, medical lab, storage). They are
  * outpost upgrades (outpost_upgrades.dm) with three differences from the cargo dock:
  *
- * * The room joins the outpost's own area before its template loads, so every machine
- *   initializes on the outpost's power. Room maps use /area/template_noop and carry no APC
- *   and no light switch; an outage stops the services with the rest of the outpost.
+ * * The room gets its own area and its own APC, wired to its exterior door
+ *   (outpost_room_power.dm). Room maps carry no light switch, and an outage in one room stays in
+ *   that room until it joins the habitat's grid.
  * * Everything fixed in the room (machines and structures, never items or mobs) becomes
  *   outpost property. Walls and floors are indestructible turfs in the map itself; only the
  *   outpost's construction drone takes them apart (outpost_drone_may_strip()).
@@ -19,38 +19,14 @@
 
 /// Abstract: no id, so it never enters the catalog.
 /datum/outpost_upgrade/service
-	area_type = /area/voidcrew/player_outpost
+	area_type = /area/voidcrew/player_outpost/service_room
 	entrance_side = SOUTH
-	/// Turf -> the area it had before prepare_ground() moved it into the outpost area
-	var/list/prepared_areas
 	/// The room's service airlocks, found at install
 	var/list/datum/weakref/doors
 
 /datum/outpost_upgrade/service/Destroy()
 	doors = null
-	prepared_areas = null
 	return ..()
-
-/// Moves the footprint into the outpost's area before the room loads (see the file comment)
-/datum/outpost_upgrade/service/prepare_ground(list/footprint_turfs)
-	var/area/home_area = outpost?.outpost_area
-	if(!home_area)
-		return
-	prepared_areas = list()
-	for(var/turf/tile as anything in footprint_turfs)
-		var/area/old_area = get_area(tile)
-		if(old_area == home_area)
-			continue
-		prepared_areas[tile] = old_area
-		tile.change_area(old_area, home_area)
-
-/// Puts the footprint back in its old areas after a load that built nothing
-/datum/outpost_upgrade/service/release_ground(list/footprint_turfs)
-	for(var/turf/tile as anything in prepared_areas)
-		var/area/old_area = prepared_areas[tile]
-		if(old_area && !QDELETED(old_area))
-			tile.change_area(get_area(tile), old_area)
-	prepared_areas = null
 
 /datum/outpost_upgrade/service/on_installed(mob/user)
 	protect_fixtures()
@@ -83,6 +59,10 @@
 /datum/outpost_upgrade/service/proc/protect_fixture(obj/fixture)
 	// The element refuses anything else, and a refused AddElement crashes
 	if(QDELETED(fixture) || (!ismachinery(fixture) && !isstructure(fixture)))
+		return
+	// Outpost cable protects itself (outpost_room_power.dm): the element would block the owner's
+	// own wirecutters too, and stop the drone stripping floors over it.
+	if(istype(fixture, /obj/structure/cable))
 		return
 	fixture.AddElement(/datum/element/outpost_property)
 	fixture.flags_1 |= PREVENT_CONTENTS_EXPLOSION_1
@@ -358,6 +338,13 @@
 	if(!outpost_service_build_allowed(user, src))
 		balloon_alert(user, "outpost property!")
 		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/// Visitors cannot tap a room's power run by laying their own cable on a stripped or plating tile (abuse review)
+/obj/item/stack/cable_coil/place_turf(turf/T, mob/user, dirnew)
+	if(!outpost_service_build_allowed(user, T))
+		balloon_alert(user, "outpost property!")
+		return
 	return ..()
 
 /// Whether `thing` stands inside an installed service room of a player outpost

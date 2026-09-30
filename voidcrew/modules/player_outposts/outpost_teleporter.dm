@@ -31,6 +31,7 @@
 	desc = "A teleporter pad on the outpost network."
 	price = OUTPOST_TELEPORTER_COST
 	template_type = /datum/map_template/outpost_upgrade/teleporter
+	area_type = /area/voidcrew/player_outpost/service_room/teleporter
 	doors_stay_public = TRUE
 	/// Who may arrive by pad: OUTPOST_NETWORK_ARRIVALS_*
 	var/arrival_policy = OUTPOST_NETWORK_ARRIVALS_OPEN

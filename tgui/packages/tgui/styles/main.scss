@@ -25,6 +25,7 @@
 @include meta.load-css('./interfaces/HellishRunes.scss');
 @include meta.load-css('./interfaces/HotKeysHelp.scss');
 @include meta.load-css('./interfaces/Hypertorus.scss');
+// VOIDCREW EDIT REMOVAL - HelmComputer, HelmPlane and ShipCombatConsole styles ship via the bulk voidcrew_tgui/styles/main.scss include below.
 @include meta.load-css('./interfaces/IntegratedCircuit.scss');
 @include meta.load-css('./interfaces/LibraryAdmin.scss');
 @include meta.load-css('./interfaces/LibraryComputer.scss');
@@ -34,6 +35,7 @@
 @include meta.load-css('./interfaces/NtosNotepad.scss');
 @include meta.load-css('./interfaces/NuclearBomb.scss');
 @include meta.load-css('./interfaces/Orbit.scss');
+// VOIDCREW EDIT REMOVAL - OutpostManagement and OutpostPrison styles ship via the bulk voidcrew_tgui/styles/main.scss include below.
 @include meta.load-css('./interfaces/OreSilo.scss');
 @include meta.load-css('./interfaces/Paper.scss');
 @include meta.load-css('./interfaces/PreferencesMenu.scss');

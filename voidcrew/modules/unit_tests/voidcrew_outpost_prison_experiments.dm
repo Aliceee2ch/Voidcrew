@@ -961,3 +961,73 @@
 	TEST_ASSERT_EQUAL(ledger.player_damage, 10, "A prisoner's blow counted as the crew's")
 	TEST_ASSERT_EQUAL(ledger.other_damage, 0, "A prisoner's blow counted against the crew's share")
 	TEST_ASSERT_EQUAL(ledger.player_share(), 1, "The crew's share fell to [ledger.player_share()] after a prisoner's blow")
+
+// ===== REACH =====
+
+/**
+ * A prisoner locked in a bolted cell an experiment creature is not in is off-limits, and a target it
+ * makes no progress toward for a while is written off so it picks something else: find_light() and
+ * choose_target() both skip it. The hulk smashes through, so neither rule slows it down.
+ */
+/datum/unit_test/voidcrew_outpost_prison_experiment_reach
+	parent_type = /datum/unit_test/voidcrew_outpost_management
+
+/datum/unit_test/voidcrew_outpost_prison_experiment_reach/Run()
+	var/obj/structure/overmap/dynamic/player_outpost/home = experiment_test_claim("reachowner")
+	TEST_ASSERT_NOTNULL(home, "The reach test prison did not load")
+	var/datum/outpost_prison/prison = test_prison(home)
+	var/turf/yard = prison_spot(home, 8, 8)
+	var/mob/living/basic/outpost_experiment/nightmare/nightmare = allocate(/mob/living/basic/outpost_experiment/nightmare, prison_spot(home, 9, 8), prison, null)
+
+	// A prisoner locked in a bolted cell the nightmare is not in is off-limits; the same door unbolted is not.
+	var/mob/living/basic/outpost_prisoner/locked = test_prisoner(prison, yard)
+	TEST_ASSERT_NOTNULL(locked.cell, "The locked prisoner was not booked into a cell")
+	locked.forceMove(locked.cell.arrival_turf())
+	var/mob/living/basic/outpost_prisoner/open_prisoner = test_prisoner(prison, yard)
+	TEST_ASSERT(nightmare.can_target(locked), "The nightmare ignored a prisoner in an unbolted cell")
+	TEST_ASSERT(prison.toggle_cell_bolts(locked.cell.number, null), "The test cell would not bolt")
+	TEST_ASSERT(locked.cell.is_bolted(), "The test cell did not report itself bolted")
+	TEST_ASSERT(!nightmare.can_target(locked), "The nightmare went after a prisoner locked in a bolted cell")
+	TEST_ASSERT(nightmare.can_target(open_prisoner), "A bolted cell elsewhere stopped the nightmare targeting someone in the open")
+
+	// Standing in the cell with them, its own occupant is fair game again.
+	var/turf/outside = get_turf(nightmare)
+	nightmare.forceMove(locked.cell.arrival_turf())
+	TEST_ASSERT(nightmare.can_target(locked), "The nightmare in the cell still could not reach its own occupant")
+	nightmare.forceMove(outside)
+
+	// The hulk smashes in regardless of the bolt.
+	var/mob/living/basic/outpost_experiment/hulk/hulk = allocate(/mob/living/basic/outpost_experiment/hulk, prison_spot(home, 11, 8), prison, null)
+	TEST_ASSERT(hulk.can_target(locked), "A bolted cell kept the hulk out")
+	qdel(hulk)
+
+	// A target it makes no progress toward for a while is written off, and another is picked instead.
+	var/mob/living/basic/outpost_prisoner/stuck_prisoner = test_prisoner(prison, prison_spot(home, 10, 10))
+	var/datum/ai_controller/brain = nightmare.ai_controller
+	brain.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, stuck_prisoner)
+	nightmare.track_reach(brain)
+	TEST_ASSERT(!nightmare.target_unreachable(stuck_prisoner), "A target was written off before it had any chance to be reached")
+	nightmare.chase_progress_time -= 5 SECONDS // OUTPOST_EXPERIMENT_STUCK_TIME is 4 seconds
+	nightmare.track_reach(brain)
+	TEST_ASSERT(nightmare.target_unreachable(stuck_prisoner), "A target that never got any closer was not written off")
+	TEST_ASSERT_EQUAL(nightmare.choose_target(), open_prisoner, "choose_target() still offered a target written off as unreachable")
+
+	// find_light() skips the same list, so lights behind glass do not trap it forever.
+	var/obj/machinery/light/near_light = allocate(/obj/machinery/light, prison_spot(home, 10, 8))
+	var/obj/machinery/light/far_light = allocate(/obj/machinery/light, prison_spot(home, 12, 8))
+	TEST_ASSERT_EQUAL(nightmare.find_light(), near_light, "find_light() did not prefer the nearer light")
+	nightmare.mark_unreachable(near_light)
+	TEST_ASSERT_EQUAL(nightmare.find_light(), far_light, "find_light() still offered a light written off as unreachable")
+	qdel(near_light)
+	qdel(far_light)
+
+	// The hulk smashes through, so it never writes a target off as unreachable either.
+	var/mob/living/basic/outpost_experiment/hulk/patient_hulk = allocate(/mob/living/basic/outpost_experiment/hulk, prison_spot(home, 11, 8), prison, null)
+	var/datum/ai_controller/hulk_brain = patient_hulk.ai_controller
+	hulk_brain.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, stuck_prisoner)
+	patient_hulk.track_reach(hulk_brain)
+	patient_hulk.chase_progress_time -= 5 SECONDS
+	patient_hulk.track_reach(hulk_brain)
+	TEST_ASSERT(!patient_hulk.target_unreachable(stuck_prisoner), "The hulk wrote a target off as unreachable")
+	qdel(patient_hulk)
+	settle_prison_air(home)

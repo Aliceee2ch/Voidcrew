@@ -344,7 +344,7 @@
 #include "../../../voidcrew/modules/unit_tests/voidcrew_combat_metrics.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_construction_refunds.dm"
 #include "../../../voidcrew/modules/unit_tests/voidcrew_combat_camera_breaches.dm" // VOIDCREW EDIT ADDITION
-#include "voidcrew_construction_automation.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_construction_automation.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_pandora_links.dm"
 #include "voidcrew_repair_robotics.dm"
 #include "voidcrew_cordon_teleport.dm"

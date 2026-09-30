@@ -129,6 +129,7 @@
 	TEST_ASSERT(!builder.complete_decoration_job(tile_job, spot(3, 3), engineer), "Tile placer rebuilt an existing floor")
 	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/iron), iron_before, "Duplicate tile placement spent material")
 	qdel(tile_job)
+	test_tile_replacement()
 	test_damage_repairs()
 
 	// Decal duplicate detection reads the actual turf, not a per-console history cache.
@@ -151,6 +152,7 @@
 	test_decal_removal(paint_job)
 	qdel(paint_job)
 	test_free_piping()
+	test_drone_clicks()
 	test_queue_supply_and_failure()
 
 /datum/unit_test/voidcrew_construction_automation/proc/test_decal_removal(datum/ship_construction_job/paint_job)
@@ -279,27 +281,360 @@
 	rpd.mode = 1 // BUILD_MODE is private to RPD.dm; leave the pipes unwrenched.
 	rpd.multi_layer = TRUE
 	rpd.pipe_layers = (1 << 1) | (1 << 2)
-	var/datum/action/innate/construction/ship/rpd_build/build = allocate(/datum/action/innate/construction/ship/rpd_build, builder)
-	var/datum/action/innate/construction/ship/rpd_destroy/remove = allocate(/datum/action/innate/construction/ship/rpd_destroy, builder)
-	build.Grant(engineer)
-	remove.Grant(engineer)
 	rcd.silo_link = FALSE
 	var/iron_before = materials.get_material_amount(/datum/material/iron)
-	build.Activate()
+	builder.drone_place_pipe(engineer, target_turf)
 	var/list/pipes = list()
 	for(var/obj/item/pipe/pipe in target_turf)
 		pipes += pipe
 	TEST_ASSERT_EQUAL(length(pipes), 2, "Free piping did not build both layers without a silo")
-	remove.Activate()
-	remove.Activate()
+	builder.drone_remove_pipe(engineer, target_turf)
+	builder.drone_remove_pipe(engineer, target_turf)
 	TEST_ASSERT_NULL(locate(/obj/item/pipe) in target_turf, "Free pipe removal required a silo link")
 	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/iron), iron_before, "Free pipe placement or removal changed stored iron")
 	rcd.silo_link = TRUE
-	build.Activate()
-	remove.Activate()
-	remove.Activate()
+	builder.drone_place_pipe(engineer, target_turf)
+	builder.drone_remove_pipe(engineer, target_turf)
+	builder.drone_remove_pipe(engineer, target_turf)
 	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/iron), iron_before, "Removing free pipes generated silo iron")
 	engineer.remote_control = null
+
+/// Clicks reach tiles around the drone, right-click removes, and modified clicks keep their meaning.
+/datum/unit_test/voidcrew_construction_automation/proc/test_drone_clicks()
+	var/mob/eye/camera/remote/base_construction/ship/eye = allocate(/mob/eye/camera/remote/base_construction/ship, spot(1, 1), builder)
+	var/mob/living/carbon/human/other = allocate(/mob/living/carbon/human/consistent)
+	builder.eyeobj = eye
+	builder.current_user = engineer
+	engineer.remote_control = eye
+	builder.internal_rpd = builder.internal_rpd || new(builder)
+	var/obj/item/pipe_dispenser/internal/rpd = builder.internal_rpd
+	rpd.atmos_build_speed = 0
+	rpd.mode = 1 // BUILD_MODE is private to RPD.dm; leave the pipes unwrenched.
+	rpd.multi_layer = FALSE
+	// The RPD builds every selected layer; test_free_piping leaves two selected. One pipe per click here.
+	rpd.pipe_layers = (1 << 2)
+	builder.selected_tool = "pipe" // SHIP_DRONE_TOOL_PIPE: fork defines occur later than the test includes
+	// Earlier steps left these tiles in unknown states: use bare plating, and put back what was there.
+	// The last eight are the wall-mount layout of test_wall_mount_choice().
+	var/list/spots_used = list(spot(4, 0), spot(5, 1), spot(4, 1), spot(3, 1), spot(3, 2), spot(3, 3), spot(1, 3), spot(2, 3), spot(3, 4), spot(1, 4), spot(2, 4), spot(1, 5), spot(2, 5), spot(3, 5))
+	var/list/original_types = list()
+	for(var/turf/used as anything in spots_used)
+		original_types[used] = used.type
+		if(!isfloorturf(used))
+			used.ChangeTurf(/turf/open/floor/plating)
+	var/turf/drone_turf = spot(1, 1)
+	var/turf/click_turf = spot(4, 0)
+
+	// Left-click builds on the clicked tile, not under the drone. The piping test above left a click cooldown.
+	engineer.next_move = 0
+	TEST_ASSERT(builder.InterceptClickOn(engineer, "[LEFT_CLICK]=1", click_turf), "A click within reach was not taken")
+	TEST_ASSERT_NOTNULL(locate(/obj/item/pipe) in click_turf, "Clicking a tile did not build on it")
+	TEST_ASSERT_NULL(locate(/obj/item/pipe) in drone_turf, "Clicking a tile built under the drone")
+
+	// Out of reach is consumed but does nothing.
+	engineer.next_move = 0
+	TEST_ASSERT(builder.InterceptClickOn(engineer, "[LEFT_CLICK]=1", spot(5, 1)), "A click out of reach fell through to the operator")
+	TEST_ASSERT_NULL(locate(/obj/item/pipe) in spot(5, 1), "Built four tiles from the drone")
+
+	// Right-click removes.
+	engineer.next_move = 0
+	TEST_ASSERT(builder.InterceptClickOn(engineer, "[RIGHT_CLICK]=1", click_turf), "A right-click within reach was not taken")
+	TEST_ASSERT_NULL(locate(/obj/item/pipe) in click_turf, "Right-click did not remove the pipe")
+
+	// Modified clicks and other people keep their usual meaning.
+	engineer.next_move = 0
+	TEST_ASSERT(!builder.InterceptClickOn(engineer, "[LEFT_CLICK]=1;[SHIFT_CLICK]=1", click_turf), "A shift-click was taken")
+	TEST_ASSERT(!builder.InterceptClickOn(other, "[LEFT_CLICK]=1", click_turf), "Someone else's click was taken")
+
+	// Wall mounting: a clicked wall is fitted on its face toward the drone.
+	spot(3, 1).ChangeTurf(/turf/closed/wall)
+	eye.abstract_move(spot(3, 3))
+	var/list/mount = builder.drone_wall_mount(spot(3, 1))
+	TEST_ASSERT_NOTNULL(mount, "No mounting side found for a wall north of it")
+	TEST_ASSERT_EQUAL(mount[1], spot(3, 2), "Wall fixture went on the wrong tile")
+	TEST_ASSERT_EQUAL(mount[2], SOUTH, "Wall fixture hung on the wrong wall")
+	eye.abstract_move(spot(5, 1))
+	mount = builder.drone_wall_mount(spot(3, 1))
+	TEST_ASSERT_NOTNULL(mount, "No mounting side found for a wall to the west")
+	TEST_ASSERT_EQUAL(mount[1], spot(4, 1), "Wall fixture from the east went on the wrong tile")
+	TEST_ASSERT_EQUAL(mount[2], WEST, "Wall fixture from the east hung on the wrong wall")
+	// An open tile uses the wall the drone faces.
+	eye.abstract_move(spot(3, 3))
+	eye.setDir(SOUTH)
+	mount = builder.drone_wall_mount(spot(3, 2))
+	TEST_ASSERT_NOTNULL(mount, "An open tile beside a wall found no mounting side")
+	TEST_ASSERT_EQUAL(mount[1], spot(3, 2), "Open tile mount moved to another tile")
+	TEST_ASSERT_EQUAL(mount[2], SOUTH, "Open tile mount ignored the drone's facing")
+	eye.setDir(NORTH)
+	TEST_ASSERT_NULL(builder.drone_wall_mount(spot(3, 2)), "Mounted on a wall the drone was not facing")
+
+	// Where on the tile the operator clicked, and a chosen wall, decide where a fixture hangs.
+	test_wall_mount_choice()
+	test_light_settings(other)
+	test_light_placement()
+
+	for(var/turf/used as anything in spots_used)
+		var/original_type = original_types[used]
+		var/turf/current = locate(used.x, used.y, used.z)
+		if(current.type != original_type)
+			current.ChangeTurf(original_type)
+	builder.eyeobj = null
+	builder.current_user = null
+	engineer.remote_control = null
+	engineer.click_intercept = null
+
+/// Laying a tile on a floor the tile tool can lift replaces it: the old tile is refunded and the new one charged.
+/datum/unit_test/voidcrew_construction_automation/proc/test_tile_replacement()
+	var/obj/item/construction/rtd/internal/rtd = builder.internal_rtd
+	var/datum/tile_info/base_design = rtd.selected_design
+	var/datum/tile_info/dark_design = GLOB.floor_designs["Decorated"]["Dark Colored"][1]["datum"]
+	var/original_direction = rtd.selected_direction
+	var/turf/target = spot(3, 3)
+	var/original_type = target.type
+	var/original_dir = target.dir
+	var/list/stock = list()
+	for(var/material in list(/datum/material/iron, /datum/material/titanium))
+		stock[material] = materials.get_material_amount(material)
+	check_tile_replacement(rtd, base_design, dark_design)
+	// Put back what the checks changed, whether or not they finished.
+	rtd.selected_design = base_design
+	rtd.selected_direction = original_direction
+	target = spot(3, 3)
+	if(target.type != original_type)
+		target = target.ChangeTurf(original_type)
+	target.setDir(original_dir)
+	for(var/material in stock)
+		var/difference = stock[material] - materials.get_material_amount(material)
+		if(difference > 0)
+			materials.insert_amount_mat(difference, material)
+		else if(difference < 0)
+			materials.use_amount_mat(-difference, material)
+
+/datum/unit_test/voidcrew_construction_automation/proc/check_tile_replacement(obj/item/construction/rtd/internal/rtd, datum/tile_info/base_design, datum/tile_info/dark_design)
+	TEST_ASSERT_NOTNULL(base_design, "The RTD had no tile design selected")
+	TEST_ASSERT_NOTNULL(dark_design, "The dark tile design was never built")
+	TEST_ASSERT(isfloorturf(spot(3, 3)) && !istype(spot(3, 3), /turf/open/floor/plating), "The replacement test needs a finished floor to start from")
+	// Another tile over a finished floor replaces it, and the refund covers the new tile.
+	if(!replace_tile(dark_design, SOUTH))
+		return
+	// The same tile facing another way is a different floor.
+	if(!replace_tile(dark_design, NORTH))
+		return
+	// A silo that cannot pay leaves the old floor alone.
+	var/iron_stock = materials.get_material_amount(/datum/material/iron)
+	materials.use_amount_mat(iron_stock, /datum/material/iron)
+	rtd.selected_design = base_design
+	rtd.selected_direction = SOUTH
+	var/datum/ship_construction_job/broke_job = builder.capture_construction_job(spot(3, 3), engineer, "floor", "tile")
+	var/laid = builder.complete_decoration_job(broke_job, spot(3, 3), engineer)
+	materials.insert_amount_mat(iron_stock, /datum/material/iron)
+	qdel(broke_job)
+	TEST_ASSERT(!laid, "Tile placer replaced a floor it could not pay for")
+	TEST_ASSERT_EQUAL(spot(3, 3).type, dark_design.turf_type, "A failed replacement changed the floor")
+	TEST_ASSERT_EQUAL(spot(3, 3).dir, NORTH, "A failed replacement turned the floor")
+	// A floor that refunds something other than iron: the refund is of the old floor's own kind.
+	var/turf/plating = spot(3, 3).ChangeTurf(/turf/open/floor/plating)
+	plating.place_on_top(/turf/open/floor/mineral/titanium)
+	TEST_ASSERT(istype(spot(3, 3), /turf/open/floor/mineral/titanium), "Could not lay a titanium floor for the refund check")
+	replace_tile(base_design, SOUTH)
+
+/// Lays `design` facing `direction` over the floor at (3, 3) the way the drone does, and checks the swap and what it cost.
+/// Returns TRUE when every check passed.
+/datum/unit_test/voidcrew_construction_automation/proc/replace_tile(datum/tile_info/design, direction)
+	var/turf/target = spot(3, 3)
+	var/obj/item/construction/rtd/internal/rtd = builder.internal_rtd
+	rtd.selected_design = design
+	rtd.selected_direction = direction
+	var/list/refund = rcd.get_deconstruction_materials(target) || list()
+	var/tile_iron = 100 // SHIP_RTD_TILE_IRON: fork defines occur later than the test includes
+	var/iron_expected = materials.get_material_amount(/datum/material/iron) - tile_iron + (refund[/datum/material/iron] || 0)
+	var/titanium_expected = materials.get_material_amount(/datum/material/titanium) + (refund[/datum/material/titanium] || 0)
+	var/datum/ship_construction_job/job = builder.capture_construction_job(target, engineer, "floor", "tile")
+	TEST_ASSERT(builder.construction_job_needed(job, target), "A different tile was not wanted over a finished floor")
+	TEST_ASSERT(builder.complete_decoration_job(job, target, engineer), "Tile placer did not replace the floor")
+	var/turf/replaced = spot(3, 3)
+	TEST_ASSERT_EQUAL(replaced.type, design.turf_type, "The replacement is not the selected tile")
+	TEST_ASSERT_EQUAL(replaced.dir, direction, "The replacement does not face the selected way")
+	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/iron), iron_expected, "Replacing a floor charged the wrong iron")
+	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/titanium), titanium_expected, "Replacing a floor refunded the wrong titanium")
+	// The same job again finds the floor as it should be: nothing to do, nothing to pay.
+	TEST_ASSERT(!builder.construction_job_needed(job, replaced), "An identical floor was still wanted")
+	TEST_ASSERT(!builder.complete_decoration_job(job, replaced, engineer), "Tile placer replaced an identical floor")
+	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/iron), iron_expected, "Skipping an identical floor spent iron")
+	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/titanium), titanium_expected, "Skipping an identical floor moved titanium")
+	qdel(job)
+	return TRUE
+
+/// Walls at (1, 4), (1, 5) and (2, 5) of the block x 1..3, y 3..5, everything else open floor. The open tile (2, 4) has a wall to
+/// its north and west, and the wall at (2, 5) has open faces south and east.
+/datum/unit_test/voidcrew_construction_automation/proc/test_wall_mount_choice()
+	for(var/list/wall_at as anything in list(list(1, 4), list(1, 5), list(2, 5)))
+		spot(wall_at[1], wall_at[2]).ChangeTurf(/turf/closed/wall)
+	var/turf/open_tile = spot(2, 4)
+	var/turf/north_wall = spot(2, 5)
+	var/turf/east_open = spot(3, 5)
+
+	// An open tile with walls on two sides: the click picks the nearer wall, and only walls count.
+	var/list/mount = builder.drone_wall_mount(open_tile, list(3, 16))
+	TEST_ASSERT_NOTNULL(mount, "A click beside a wall found no mounting side")
+	TEST_ASSERT_EQUAL(mount[1], open_tile, "An open tile mount moved to another tile")
+	TEST_ASSERT_EQUAL(mount[2], WEST, "A click near the west wall did not pick it")
+	mount = builder.drone_wall_mount(open_tile, list(16, 29))
+	TEST_ASSERT_EQUAL(mount?[2], NORTH, "A click near the north wall did not pick it")
+	mount = builder.drone_wall_mount(open_tile, list(30, 16))
+	TEST_ASSERT_EQUAL(mount?[2], NORTH, "A click near a bare edge picked no wall")
+	mount = builder.drone_wall_mount(open_tile, list(16, 16))
+	TEST_ASSERT_EQUAL(mount?[2], NORTH, "A tied click did not go to the first direction")
+
+	// A wall with two open faces: the click picks the face, and the fixture goes beyond it facing back at the wall.
+	mount = builder.drone_wall_mount(north_wall, list(16, 3))
+	TEST_ASSERT_NOTNULL(mount, "A click near a wall face found no mounting side")
+	TEST_ASSERT_EQUAL(mount[1], open_tile, "A click near the south face put the fixture on the wrong tile")
+	TEST_ASSERT_EQUAL(mount[2], NORTH, "A click near the south face hung the fixture on the wrong wall")
+	mount = builder.drone_wall_mount(north_wall, list(29, 16))
+	TEST_ASSERT_NOTNULL(mount, "A click near the east face found no mounting side")
+	TEST_ASSERT_EQUAL(mount[1], east_open, "A click near the east face put the fixture on the wrong tile")
+	TEST_ASSERT_EQUAL(mount[2], WEST, "A click near the east face hung the fixture on the wrong wall")
+	// A click in the middle of that wall ties between its faces: the face toward the drone wins.
+	var/turf/drone_was = get_turf(builder.eyeobj)
+	builder.eyeobj.abstract_move(east_open)
+	mount = builder.drone_wall_mount(north_wall, list(16, 16))
+	TEST_ASSERT_EQUAL(mount?[1], east_open, "A tied click on a wall ignored the drone to its east")
+	builder.eyeobj.abstract_move(spot(2, 3))
+	mount = builder.drone_wall_mount(north_wall, list(16, 16))
+	TEST_ASSERT_EQUAL(mount?[1], open_tile, "A tied click on a wall ignored the drone to its south")
+	builder.eyeobj.abstract_move(drone_was)
+
+	// A chosen wall on an open tile: the wall must be there, and the choice beats the click.
+	mount = builder.drone_wall_mount(open_tile, null, NORTH)
+	TEST_ASSERT_EQUAL(mount?[1], open_tile, "A chosen wall moved the fixture to another tile")
+	TEST_ASSERT_EQUAL(mount?[2], NORTH, "The chosen north wall was not used")
+	mount = builder.drone_wall_mount(open_tile, null, WEST)
+	TEST_ASSERT_EQUAL(mount?[2], WEST, "The chosen west wall was not used")
+	mount = builder.drone_wall_mount(open_tile, list(3, 16), NORTH)
+	TEST_ASSERT_EQUAL(mount?[2], NORTH, "The click overrode the chosen wall")
+	TEST_ASSERT_NULL(builder.drone_wall_mount(open_tile, null, EAST), "Hung a fixture on a wall that is not there (east)")
+	TEST_ASSERT_NULL(builder.drone_wall_mount(open_tile, list(3, 16), SOUTH), "Hung a fixture on a wall that is not there (south)")
+
+	// A chosen wall on a clicked wall: the tile on the other side, facing the chosen way.
+	mount = builder.drone_wall_mount(north_wall, null, NORTH)
+	TEST_ASSERT_EQUAL(mount?[1], open_tile, "A chosen north wall put the fixture on the wrong tile")
+	TEST_ASSERT_EQUAL(mount?[2], NORTH, "A chosen north wall was not kept")
+	mount = builder.drone_wall_mount(north_wall, null, WEST)
+	TEST_ASSERT_EQUAL(mount?[1], east_open, "A chosen west wall put the fixture on the wrong tile")
+	TEST_ASSERT_EQUAL(mount?[2], WEST, "A chosen west wall was not kept")
+	TEST_ASSERT_NULL(builder.drone_wall_mount(north_wall, null, EAST), "Hung a fixture on the far side of a wall that has another wall there")
+
+	// The click position comes from the click's own coordinates, shifted by how the clicked object is drawn.
+	TEST_ASSERT_NULL(builder.drone_click_point(open_tile, list()), "A click without a position produced one")
+	var/list/point = builder.drone_click_point(open_tile, list(ICON_X = "12", ICON_Y = "20"))
+	TEST_ASSERT(islist(point) && point[1] == 12 && point[2] == 20, "A tile click did not report its own coordinates: [json_encode(point)]")
+	var/obj/item/screwdriver/marker = allocate(/obj/item/screwdriver, open_tile)
+	marker.pixel_x = 4
+	marker.pixel_y = -2
+	point = builder.drone_click_point(marker, list(ICON_X = "12", ICON_Y = "20"))
+	TEST_ASSERT(islist(point) && point[1] == 16 && point[2] == 18, "An object click did not add the object's offset: [json_encode(point)]")
+
+/// The Lights tab sets what the drone builds and which wall it hangs on; only the drone's operator may.
+/datum/unit_test/voidcrew_construction_automation/proc/test_light_settings(mob/living/carbon/human/other)
+	var/original_type = builder.light_build_type
+	var/original_dir = builder.light_build_dir
+	check_light_settings(other)
+	builder.light_build_type = original_type
+	builder.light_build_dir = original_dir
+
+/datum/unit_test/voidcrew_construction_automation/proc/check_light_settings(mob/living/carbon/human/other)
+	// SHIP_DRONE_LIGHT_*: fork defines occur later than the test includes.
+	TEST_ASSERT(builder.drone_tool_act("light_type", list("type" = "floor"), engineer), "Choosing a light type was not handled")
+	TEST_ASSERT_EQUAL(builder.light_build_type, "floor", "Choosing a light type did nothing")
+	builder.drone_tool_act("light_type", list("type" = "chandelier"), engineer)
+	TEST_ASSERT_EQUAL(builder.light_build_type, "floor", "An unknown light type was accepted")
+	builder.drone_tool_act("light_type", list("type" = "glow"), other)
+	TEST_ASSERT_EQUAL(builder.light_build_type, "floor", "Someone else changed the light type")
+	builder.drone_tool_act("light_dir", list("dir" = "west"), engineer)
+	TEST_ASSERT_EQUAL(builder.light_build_dir, WEST, "Choosing a wall did nothing")
+	builder.drone_tool_act("light_dir", list("dir" = "up"), engineer)
+	builder.drone_tool_act("light_dir", list("dir" = "northeast"), engineer)
+	TEST_ASSERT_EQUAL(builder.light_build_dir, WEST, "An unknown wall was accepted")
+	builder.drone_tool_act("light_dir", list("dir" = "east"), other)
+	TEST_ASSERT_EQUAL(builder.light_build_dir, WEST, "Someone else changed the wall")
+	builder.drone_tool_act("light_dir", list("dir" = "auto"), engineer)
+	TEST_ASSERT_EQUAL(builder.light_build_dir, NONE, "Choosing auto did not clear the wall")
+
+/// Lights built on the wall-mount layout of test_wall_mount_choice(), paid out of the RLD's own stock.
+/datum/unit_test/voidcrew_construction_automation/proc/test_light_placement()
+	var/obj/item/construction/rld/internal/rld = new(builder)
+	builder.internal_rld = rld
+	rld.ship_console = builder
+	rld.silo_mats = rld.AddComponent(/datum/component/remote_materials, FALSE, TRUE)
+	rld.silo_link = TRUE
+	var/datum/component/material_container/light_stock = rld.silo_mats.mat_container
+	var/original_type = builder.light_build_type
+	var/original_dir = builder.light_build_dir
+	if(light_stock)
+		light_stock.insert_amount_mat(1000, /datum/material/iron)
+		light_stock.insert_amount_mat(1000, /datum/material/glass)
+		check_light_placement(light_stock)
+	else
+		Fail("The test RLD has no material container")
+	builder.light_build_type = original_type
+	builder.light_build_dir = original_dir
+	for(var/obj/machinery/light/light in spot(2, 4))
+		qdel(light)
+	builder.internal_rld = null
+	qdel(rld)
+
+/datum/unit_test/voidcrew_construction_automation/proc/check_light_placement(datum/component/material_container/light_stock)
+	// SHIP_DRONE_LIGHT_* and SHIP_RLD_*_LIGHT_*: fork defines occur later than the test includes.
+	// A wall light costs 25 iron and 50 glass, a floor light 50 iron and 25 glass.
+	var/turf/open_tile = spot(2, 4)
+	var/turf/north_wall = spot(2, 5)
+	var/iron_before = light_stock.get_material_amount(/datum/material/iron)
+	var/glass_before = light_stock.get_material_amount(/datum/material/glass)
+
+	// A tube goes on the wall nearest the click.
+	builder.light_build_type = "tube"
+	builder.light_build_dir = NONE
+	TEST_ASSERT(builder.drone_place_light(engineer, open_tile, list(16, 30)), "Could not build a tube light")
+	var/obj/machinery/light/tube = locate() in open_tile
+	TEST_ASSERT_NOTNULL(tube, "The tube light was not built")
+	TEST_ASSERT_EQUAL(tube.type, /obj/machinery/light, "A tube was built as something else")
+	TEST_ASSERT_EQUAL(tube.dir, NORTH, "The tube did not hang on the nearest wall")
+	TEST_ASSERT_EQUAL(light_stock.get_material_amount(/datum/material/iron), iron_before - 25, "A wall light charged the wrong iron")
+	TEST_ASSERT_EQUAL(light_stock.get_material_amount(/datum/material/glass), glass_before - 50, "A wall light charged the wrong glass")
+	// One light to a wall.
+	TEST_ASSERT(!builder.drone_place_light(engineer, open_tile, list(16, 30)), "Built a second light on the same wall")
+	TEST_ASSERT(!builder.drone_place_light(engineer, north_wall, list(16, 3)), "Built a second light on the same wall from the wall's side")
+	TEST_ASSERT_EQUAL(light_stock.get_material_amount(/datum/material/iron), iron_before - 25, "A refused light was charged")
+
+	// A bulb goes on the chosen wall of the same tile.
+	builder.light_build_type = "bulb"
+	builder.light_build_dir = WEST
+	TEST_ASSERT(builder.drone_place_light(engineer, open_tile, null), "The tile's other wall could not take a light")
+	var/obj/machinery/light/small/bulb = locate() in open_tile
+	TEST_ASSERT_NOTNULL(bulb, "The bulb light was not built")
+	TEST_ASSERT_EQUAL(bulb.dir, WEST, "The bulb did not hang on the chosen wall")
+	TEST_ASSERT_EQUAL(tube.dir, NORTH, "Building a second light turned the first")
+	TEST_ASSERT_EQUAL(light_stock.get_material_amount(/datum/material/iron), iron_before - 50, "A bulb was charged differently from a tube (iron)")
+	TEST_ASSERT_EQUAL(light_stock.get_material_amount(/datum/material/glass), glass_before - 100, "A bulb was charged differently from a tube (glass)")
+
+	// A floor light does not care about the wall lights, and needs a floor.
+	builder.light_build_type = "floor"
+	builder.light_build_dir = NONE
+	TEST_ASSERT(builder.drone_place_light(engineer, open_tile, null), "A wall light blocked a floor light")
+	TEST_ASSERT_NOTNULL(locate(/obj/machinery/light/floor) in open_tile, "The floor light was not built")
+	TEST_ASSERT_EQUAL(light_stock.get_material_amount(/datum/material/iron), iron_before - 100, "A floor light charged the wrong iron")
+	TEST_ASSERT_EQUAL(light_stock.get_material_amount(/datum/material/glass), glass_before - 125, "A floor light charged the wrong glass")
+	TEST_ASSERT(!builder.drone_place_light(engineer, open_tile, null), "Built a second floor light on the same tile")
+	TEST_ASSERT(!builder.drone_place_light(engineer, north_wall, null), "Built a floor light on a wall")
+
+	// A bulb comes down for the same refund as a tube.
+	var/silo_iron = materials.get_material_amount(/datum/material/iron)
+	var/silo_glass = materials.get_material_amount(/datum/material/glass)
+	TEST_ASSERT(builder.drone_remove_light(engineer, open_tile, bulb), "Could not take the bulb down")
+	TEST_ASSERT(QDELETED(bulb), "The bulb was not removed")
+	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/iron), silo_iron + 25, "A bulb refunded the wrong iron")
+	TEST_ASSERT_EQUAL(materials.get_material_amount(/datum/material/glass), silo_glass + 50, "A bulb refunded the wrong glass")
 
 /datum/unit_test/voidcrew_construction_automation/proc/test_damage_repairs()
 	var/obj/structure/overmap/ship/integrity_dummy/hull = allocate(/obj/structure/overmap/ship/integrity_dummy)

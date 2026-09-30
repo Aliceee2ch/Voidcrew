@@ -400,7 +400,7 @@
 		if(!calm_for_pull())
 			pulledby?.stop_pulling()
 		if(is_rioting() && stat == CONSCIOUS)
-			// Up and free again: a rioter riots on until shut in a cell.
+			// Up and free again: a rioter riots on until the riot is over.
 			INVOKE_ASYNC(src, PROC_REF(back_to_rioting))
 		return
 	if(stat != DEAD && activity)

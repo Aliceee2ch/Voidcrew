@@ -21,7 +21,8 @@
  * again, joining a riot that is on or starting one, whatever the quiet after the last. The grace
  * gives staff time to open the door and treat them.
  *
- * A riot is over only once every rioter is shut in a cell or dead (outpost_prison_riot.dm).
+ * A riot is over once every rioter is shut in a cell, cuffed, down, dead or gone (riot_handled(),
+ * outpost_prison_riot.dm). Only the ones shut in a cell owe lockdown.
  */
 
 /// Trait source for the cuffs holding a prisoner still
@@ -38,6 +39,8 @@
 	var/lockdown_left = 0
 	/// Seconds out of a cell on their feet and uncuffed while they owe lockdown
 	var/lockdown_out = 0
+	/// The cell they last served lockdown in: out of it while it is still bolted, nobody let them out
+	var/datum/weakref/lockdown_cell_ref
 	/// They got out of the cell block during a riot; caught, they owe lockdown
 	var/escaped_rioting = FALSE
 
@@ -245,19 +248,26 @@
 /**
  * Advances a prisoner's lockdown by `seconds`. Shut in a cell it counts down, whatever the crew
  * does. Out of one on their feet and uncuffed for more than PRISON_LOCKDOWN_GRACE, they were let
- * out early. Down, cuffed or loose, the grace waits.
+ * out early. Down, cuffed or loose, the grace waits, and so does it while the cell they were serving
+ * in is still bolted: they got out through a hole, and nobody let them out.
  */
 /datum/outpost_prison/proc/lockdown_tick(mob/living/basic/outpost_prisoner/prisoner, seconds)
 	if(prisoner.lockdown_left <= 0)
 		prisoner.lockdown_out = 0
+		prisoner.lockdown_cell_ref = null
 		return
 	if(prisoner.is_confined())
 		prisoner.lockdown_out = 0
+		var/datum/outpost_prison_cell/serving = cell_at(get_turf(prisoner))
+		prisoner.lockdown_cell_ref = serving ? WEAKREF(serving) : null
 		prisoner.lockdown_left = max(0, prisoner.lockdown_left - seconds)
 		if(prisoner.lockdown_left <= 0)
 			lockdown_served(prisoner)
 		return
 	if(!trouble_enabled || prisoner.stat != CONSCIOUS || prisoner.can_be_dragged() || prisoner.trouble == PRISONER_TROUBLE_LOOSE)
+		return
+	var/datum/outpost_prison_cell/served_in = prisoner.lockdown_cell_ref?.resolve()
+	if(served_in?.is_bolted())
 		return
 	prisoner.lockdown_out += seconds
 	if(prisoner.lockdown_out > PRISON_LOCKDOWN_GRACE)
@@ -267,6 +277,7 @@
 /datum/outpost_prison/proc/lockdown_served(mob/living/basic/outpost_prisoner/prisoner)
 	prisoner.lockdown_left = 0
 	prisoner.lockdown_out = 0
+	prisoner.lockdown_cell_ref = null
 	add_log("[prisoner.real_name]'s lockdown is over.")
 	if(prisoner.stat == CONSCIOUS)
 		prisoner.say_context("lockdown_over")

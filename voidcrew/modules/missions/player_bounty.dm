@@ -278,6 +278,11 @@
 		pending_offers -= list(offer)
 		return "items no longer on pad"
 
+	// Nothing living goes this way: a bag with a bounty criminal in it is not an item (voidcrew/modules/bounties/bounty_turn_in.dm)
+	var/cargo_refusal = bounty_offer_refusal(items_on_pad)
+	if(cargo_refusal)
+		return cargo_refusal
+
 	// Get creator's pad for receiving items
 	var/obj/machinery/mission_pad/creator_pad = get_creator_pad()
 	var/turf/dest_turf = creator_pad ? get_turf(creator_pad) : null

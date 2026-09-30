@@ -39,7 +39,7 @@
  *   reach for their guns"), then first shots spread over half a second, at most two goons on one
  *   hunter in cover. He never leaves the sofa and fires a revolver after a visible 0.5 s aim. Goons
  *   stay within 7 tiles of the sofa, never shoot anyone who is down, and half of those left flee once
- *   he falls. The barkeep ducks, the turret ignores both sides, and hunters
+ *   he falls. The barkeep shouts, the turret ignores both sides, and hunters
  *   fighting his crew take no outpost property strikes (one marked hook in outpost.dm). His crew
  *   lives as long as he does.
  * - His body is P2's (/mob/living/basic/bounty_criminal), with or without a posting: downed at 25%,
@@ -1021,11 +1021,8 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 	var/list/crew_broken_spots = list()
 	/// Weakrefs to the tables the crew flipped this fight, the coffee table's too
 	var/list/crew_flipped = list()
-	/// Weakref to the barkeep who ducks
+	/// Weakref to the barkeep who shouts when the shooting starts
 	var/datum/weakref/crew_barkeep_ref
-	/// The barkeep is down behind the bar, and how he stood before
-	var/crew_barkeep_ducked = FALSE
-	var/matrix/crew_barkeep_transform
 	/// Weakref of a visitor -> world.time he last greeted them
 	var/list/crew_greeted = list()
 	/// world.time of the next goon idle action, his next idle line, the next calm second, his next walk home and his next warning about the tables
@@ -1683,7 +1680,7 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
  * The shootout starts, set off by `instigator` ("We're here for you" when `confronted`, else an
  * attack): the telegraph. For BOUNTY_KINGPIN_TELEGRAPH nobody in the crew fires: the goons reach
  * for their guns, the table goons flip their tables, he kicks the coffee table over and the
- * barkeep ducks. The instigator and their shipmates nearby are hunters now. It
+ * barkeep shouts. The instigator and their shipmates nearby are hunters now. It
  * puts nobody on the board. Nothing starts when the crew won't fight the instigator (L6) or nobody
  * can shoot. Doesn't sleep. Returns TRUE if it started.
  */
@@ -1773,33 +1770,19 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 		kingpin.visible_message(span_danger("[kingpin] kicks the table over!"), vision_distance = BOUNTY_KINGPIN_SIGHT)
 	return kicked
 
-/// The barkeep ducks
+/// The barkeep shouts from behind his counter
 /datum/bounty_kingpin_crew/proc/clear_room()
 	var/mob/living/basic/outpost_trader/barkeep = crew_barkeep_ref?.resolve()
-	if(!QDELETED(barkeep) && !crew_barkeep_ducked)
-		crew_barkeep_ducked = TRUE
-		crew_barkeep_transform = barkeep.transform
-		var/line = bounty_kingpin_line("room", "barkeep_duck")
-		if(line)
-			INVOKE_ASYNC(barkeep, TYPE_PROC_REF(/atom/movable, say), line)
-		barkeep.visible_message(span_notice("[barkeep] ducks down behind the bar."), vision_distance = BOUNTY_KINGPIN_SIGHT)
-		var/matrix/crouch = matrix(barkeep.transform)
-		crouch.Scale(1, 0.6)
-		crouch.Translate(0, -6)
-		animate(barkeep, transform = crouch, time = 0.3 SECONDS)
+	if(QDELETED(barkeep))
+		return
+	var/line = bounty_kingpin_line("room", "barkeep_duck")
+	if(line)
+		INVOKE_ASYNC(barkeep, TYPE_PROC_REF(/atom/movable, say), line)
 
-/**
- * The room goes back to how it was: every lounge table upright and whole (restore_tables()), the
- * barkeep up. `final` when the crew is done.
- */
+/// The room goes back to how it was: every lounge table upright and whole (restore_tables()). `final` when the crew is done.
 /datum/bounty_kingpin_crew/proc/restore_room(final = FALSE)
 	restore_tables(final)
 	crew_flipped.Cut()
-	var/mob/living/basic/outpost_trader/barkeep = crew_barkeep_ref?.resolve()
-	if(!QDELETED(barkeep) && crew_barkeep_ducked)
-		crew_barkeep_ducked = FALSE
-		animate(barkeep, transform = crew_barkeep_transform || matrix(), time = 0.5 SECONDS)
-	crew_barkeep_transform = null
 
 /// The draw is over: the fight. First shots spread over BOUNTY_KINGPIN_FIRST_SHOT_SPREAD, never before the draw ends.
 /datum/bounty_kingpin_crew/proc/begin_fight()

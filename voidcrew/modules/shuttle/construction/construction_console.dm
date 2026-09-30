@@ -219,8 +219,9 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 	// Use SILICON_OVERRIDE to bypass account check for ship construction
 	var/list/user_data = ID_DATA(user)
 	user_data[SILICON_OVERRIDE] = SILICON_OVERRIDE
-	silo_mats.use_materials(list(/datum/material/iron = SHIP_RCD_SILO_USE_AMOUNT), multiplier = amount, action = "build", name = "ship construction", user_data = user_data)
-	return TRUE
+	if(!amount)
+		return silo_mats.can_use_resource(user_data = user_data)
+	return silo_mats.use_materials(list(/datum/material/iron = SHIP_RCD_SILO_USE_AMOUNT), multiplier = amount, action = "build", name = "ship construction", user_data = user_data) > 0
 
 /// Override to bypass account check when checking resources
 /obj/item/construction/rcd/internal/ship/checkResource(amount, mob/user)
@@ -771,8 +772,7 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 	// Use SILICON_OVERRIDE to bypass account check
 	var/list/user_data = ID_DATA(user)
 	user_data[SILICON_OVERRIDE] = SILICON_OVERRIDE
-	silo_mats.use_materials(materials, action = "build", name = "ship tiling", user_data = user_data)
-	return TRUE
+	return silo_mats.use_materials(materials, action = "build", name = "ship tiling", user_data = user_data) > 0
 
 // ============================================
 // Ship Internal RPD - bypasses proximity checks
@@ -905,8 +905,7 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 	// Use SILICON_OVERRIDE to bypass account check
 	var/list/user_data = ID_DATA(user)
 	user_data[SILICON_OVERRIDE] = SILICON_OVERRIDE
-	silo_mats.use_materials(materials, action = "build", name = "ship lighting", user_data = user_data)
-	return TRUE
+	return silo_mats.use_materials(materials, action = "build", name = "ship lighting", user_data = user_data) > 0
 
 /// Check materials for wall light
 /obj/item/construction/rld/internal/proc/check_wall_light_materials(mob/user)
@@ -1317,13 +1316,17 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 /// forever even though the console next to it is drawing from the silo fine. Anything that creates
 /// or relinks a device goes through here.
 /obj/machinery/computer/camera_advanced/base_construction/ship/proc/link_internal_device(obj/item/device, datum/component/remote_materials/mats, obj/machinery/ore_silo/silo)
-	if(isnull(device) || isnull(mats) || QDELETED(silo) || !same_service_site(src, silo))
+	if(isnull(device) || isnull(mats) || QDELETED(silo) || !can_link_silo(silo))
 		return FALSE
 	if(mats.silo == silo)
 		return TRUE
 	mats.disconnect()
 	silo.connect_receptacle(mats, device)
 	return TRUE
+
+/// Shore-side consoles can authorize the current visiting ship separately.
+/obj/machinery/computer/camera_advanced/base_construction/ship/proc/can_link_silo(obj/machinery/ore_silo/silo)
+	return same_service_site(src, silo)
 
 /// The silo the console's RCD is currently drawing from, if any.
 /obj/machinery/computer/camera_advanced/base_construction/ship/proc/get_linked_silo()
@@ -1339,7 +1342,7 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 			balloon_alert(user, "silo link unavailable")
 			return ITEM_INTERACT_SUCCESS
 		var/obj/machinery/ore_silo/silo = M.buffer
-		if(!same_service_site(src, silo))
+		if(!can_link_silo(silo))
 			balloon_alert(user, "silo belongs to another site")
 			return TRUE
 		// Don't bail out when the RCD is already on this silo - relinking is how a player repairs
@@ -1584,15 +1587,41 @@ GLOBAL_LIST_INIT(ship_rcd_hull_designs, list(
 	if(!port)
 		return FALSE
 	var/area/deck_area = get_area(target)
-	if(is_in_shuttle_area(target))
+	var/inside_hull = is_in_shuttle_area(target)
+	if(inside_hull)
 		// A breach exposes the deck without immediately relinquishing the ship's area.
 		deck_area = port.underlying_areas_by_turf[target]
 	if(!istype(deck_area, /area/voidcrew/outpost_hangar))
+		return FALSE
+	// Standard berths are sized to the ship: breaches in its own footprint may be floored
+	// again, but only a ship bay has room to extend the hull.
+	if(!inside_hull && istype(deck_area, /area/voidcrew/outpost_hangar/berth) && !on_berth_pad(target))
 		return FALSE
 	for(var/obj/fixture in target)
 		if(HAS_TRAIT(fixture, TRAIT_OUTPOST_PROPERTY))
 			return FALSE
 	return TRUE
+
+/**
+ * Whether a turf lies on the ground the ship's current berth was built for. Deck the
+ * hull lost (a breach handed back to the hangar) stays repairable; anything past it is
+ * extension, which a standard berth has no room for.
+ */
+/obj/machinery/computer/camera_advanced/base_construction/ship/proc/on_berth_pad(turf/target)
+	var/obj/docking_port/stationary/berth_dock = get_docking_port()?.get_docked()
+	if(!berth_dock || !target || berth_dock.z != target.z)
+		return FALSE
+	var/list/coords = berth_dock.return_coords()
+	return target.x >= min(coords[1], coords[3]) && target.x <= max(coords[1], coords[3]) \
+		&& target.y >= min(coords[2], coords[4]) && target.y <= max(coords[2], coords[4])
+
+/// Why the hull cannot grow onto this turf, when the reason is standard berth parking.
+/obj/machinery/computer/camera_advanced/base_construction/ship/proc/get_expansion_denial(turf/target)
+	if(!target || is_in_shuttle_area(target))
+		return null
+	if(istype(get_area(target), /area/voidcrew/outpost_hangar/berth) && !on_berth_pad(target))
+		return OUTPOST_BERTH_CONSTRUCTION_DENIAL
+	return null
 
 /**
  * Checks if the drone can move to a destination turf

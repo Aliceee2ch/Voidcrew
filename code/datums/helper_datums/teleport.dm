@@ -312,4 +312,10 @@
 		return FALSE
 	// VOIDCREW EDIT END
 
+	// VOIDCREW EDIT ADDITION START - a player outpost's berths, ship bay, shipyard and ferry pen share
+	// its level but are reached only by the hangar lift (voidcrew/modules/player_outposts/outpost_level_layout.dm).
+	if(outpost_zone_teleport_refused(get_turf(teleported_atom), destination_turf, istype(original_destination) ? get_turf(original_destination) : null))
+		return FALSE
+	// VOIDCREW EDIT END
+
 	return TRUE

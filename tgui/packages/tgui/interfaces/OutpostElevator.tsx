@@ -38,7 +38,8 @@ export const OutpostElevator = (props) => {
             <NoticeBox info>
               <Icon name="location-dot" mr={1} />
               You are on:{' '}
-              {current_floor === 0 ? 'Concourse' : `Berth ${current_floor}`}
+              {floors.find((floor) => floor.id === current_floor)?.name ??
+                'Unknown floor'}
             </NoticeBox>
           </Stack.Item>
           <Stack.Item grow>

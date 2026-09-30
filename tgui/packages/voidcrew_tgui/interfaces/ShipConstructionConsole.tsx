@@ -35,6 +35,12 @@ interface PortData {
 }
 
 interface Data {
+  bay?: {
+    silo: string | null;
+    requested: BooleanLike;
+    available: BooleanLike;
+    outpost_materials: BooleanLike;
+  };
   repairUnlocked: BooleanLike;
   repairEnabled: BooleanLike;
   repairStatus: string;
@@ -133,7 +139,44 @@ export const ShipConstructionConsole = () => {
       theme={theme}
     >
       <Window.Content scrollable>
-        <Stack vertical fill>
+        <Stack vertical>
+          {!!data.bay && (
+            <Stack.Item>
+              <Section title="Bay materials">
+                <Box mb={1} style={{ overflowWrap: 'anywhere' }}>
+                  {data.bay.silo || 'No silo connected'}
+                </Box>
+                <Button
+                  selected={!!data.bay.silo && !data.bay.outpost_materials}
+                  disabled={!canOperate || isNotCrew}
+                  onClick={() => act('bay_ship_silo')}
+                >
+                  Use ship silo
+                </Button>
+                <Button
+                  selected={!!data.bay.outpost_materials}
+                  disabled={
+                    !canOperate ||
+                    isNotCrew ||
+                    (!!data.bay.requested && !data.bay.available)
+                  }
+                  onClick={() =>
+                    act(
+                      data.bay?.available
+                        ? 'bay_outpost_silo'
+                        : 'bay_request_silo',
+                    )
+                  }
+                >
+                  {data.bay.available
+                    ? 'Use outpost silo'
+                    : data.bay.requested
+                      ? 'Materials requested'
+                      : 'Request outpost materials'}
+                </Button>
+              </Section>
+            </Stack.Item>
+          )}
           {/* Operation Status Message */}
           {!!lastMessage && (
             <Stack.Item>
@@ -195,7 +238,7 @@ export const ShipConstructionConsole = () => {
           </Stack.Item>
 
           {/* Tab Content */}
-          <Stack.Item grow>
+          <Stack.Item>
             {activeTab === 'construction' && (
               <ConstructionTab
                 canOperate={canOperate}
@@ -261,7 +304,7 @@ const ConstructionTab = (props: ConstructionTabProps) => {
   } = props;
 
   return (
-    <Stack vertical fill>
+    <Stack vertical>
       {/* Ship Status - Consolidated section */}
       <Stack.Item>
         <Section title="Ship Status">
@@ -571,7 +614,7 @@ const RelocationTab = (props: RelocationTabProps) => {
   const canFixOverhang = portDoors.some((door) => !!door.clearsOverhang);
 
   return (
-    <Stack vertical fill>
+    <Stack vertical>
       {/* Hull built out past the port lands inside whatever the ship berths against */}
       {portOverhang > 0 && (
         <Stack.Item>
@@ -612,8 +655,8 @@ const RelocationTab = (props: RelocationTabProps) => {
       </Stack.Item>
 
       {/* Hull doors the port can be moved to */}
-      <Stack.Item grow>
-        <Section title="Available Hull Doors" fill scrollable>
+      <Stack.Item>
+        <Section title="Available Hull Doors">
           <Table>
             <Table.Row header>
               <Table.Cell>Door</Table.Cell>

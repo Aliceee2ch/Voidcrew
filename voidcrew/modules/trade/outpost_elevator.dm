@@ -81,7 +81,10 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/outpost_elevator, 32)
 /obj/machinery/outpost_elevator/examine(mob/user)
 	. = ..()
 	var/floor_id = get_current_floor()
-	if(floor_id > 0)
+	if(istype(berth, /datum/outpost_berth/ship_bay))
+		var/datum/outpost_berth/ship_bay/bay = berth
+		. += span_notice("The floor indicator reads: SHIP BAY [bay.bay_number].")
+	else if(floor_id > 0)
 		. += span_notice("The floor indicator reads: BERTH [floor_id].")
 	else if(floor_id == 0)
 		. += span_notice("The floor indicator reads: CONCOURSE.")
@@ -106,7 +109,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/outpost_elevator, 32)
 			"occupied" = length(outpost.lobby_alcove_turfs) > 0,
 			"your_ship" = FALSE,
 		))
-		for(var/i in 1 to OUTPOST_MAX_BERTHS)
+		for(var/i in 1 to outpost.berth_capacity())
 			// berths stays null on hosts that haven't berthed a ship yet
 			var/datum/outpost_berth/slot = LAZYACCESS(outpost.berths, i)
 			var/is_yours = FALSE
@@ -119,8 +122,16 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/outpost_elevator, 32)
 				"your_ship" = is_yours,
 			))
 		var/obj/structure/overmap/dynamic/player_outpost/home = astype(outpost)
-		if(home?.freight_berth)
-			floors += list(list("id" = OUTPOST_MAX_BERTHS + 1, "name" = "Freight Receiving", "occupied" = TRUE, "your_ship" = FALSE))
+		if(home?.ship_bay_installed)
+			for(var/i in 1 to length(home.bay_berths))
+				var/datum/outpost_berth/ship_bay/bay = home.bay_berths[i]
+				floors += list(list(
+					// Negative IDs are display-only vacancies, never visit destinations.
+					"id" = bay ? bay.berth_number : -i - 1,
+					"name" = "Ship Bay [i]: [bay ? (bay.ship?.name || bay.status_text()) : "preparing"]",
+					"occupied" = bay && length(bay.alcove_turfs) > 0,
+					"your_ship" = !!(bay?.ship?.ship_team in user?.mind?.ship_teams),
+				))
 	data["floors"] = floors
 	return data
 

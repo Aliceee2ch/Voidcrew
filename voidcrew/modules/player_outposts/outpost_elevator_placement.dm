@@ -154,6 +154,8 @@
 		return FALSE
 	if(locate(/obj/docking_port) in tile)
 		return FALSE
+	if(outpost.upgrade_at_turf(tile))
+		return FALSE
 	for(var/obj/machinery/computer/console in tile)
 		if(console == src || istype(console, /obj/machinery/computer/player_outpost_management))
 			return FALSE

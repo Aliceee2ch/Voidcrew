@@ -165,7 +165,10 @@
 	if(target.resistance_flags & INDESTRUCTIBLE)
 		return FALSE
 	if(job.kind == "tile")
-		return istype(target, /turf/open/floor/plating)
+		if(istype(target, /turf/open/floor/plating))
+			return TRUE
+		// A finished floor is replaced when it is another tile or faces another way; an identical one is left alone.
+		return drone_can_lift_floor(target) && (target.type != job.design_path || target.dir != construction_direction(job.build_dir))
 	if(job.kind == "decal")
 		return isfloorturf(target) && !construction_has_decal(target, job.decal_data, construction_direction(job.build_dir))
 	if(job.kind == "decal_remove")

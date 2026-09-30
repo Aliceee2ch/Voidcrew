@@ -33,7 +33,7 @@ A **Registry uplink** implant adds an **Outpost Management** action that works f
 
 You can delegate management (steward), bank withdrawals (treasurer), service prices (pricer) and construction (builder) separately, from the **People** tab. Your founding ship's crew automatically become residents with construction permission. Other residents need construction permission granted separately. When the console refuses something, it says why in chat.
 
-The **construction console** controls a building drone supplied by your local ore silo. Link the console to the silo with a multitool and deposit materials before building. You can also expand the habitat with ordinary tools.
+The **construction console** controls a building drone supplied by your local ore silo. Link the console to the silo with a multitool and deposit materials before building. You can also expand the habitat with ordinary tools. It works like a ship's construction drone (see [Ship Systems](ship-systems.md#changing-the-ship-itself)), and its **Tools** tab also places the hangar elevator.
 
 The construction console's **Door Access** tool sets who a door opens for: pick the tool, then click a door in the camera view for a choice of **Public**, **Members**, **Staff** or **Owner**, and which side always opens from within. A newly built door starts Public; the service rooms' own staff doors start Staff. Setting a door never locks you out of it from inside.
 

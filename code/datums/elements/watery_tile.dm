@@ -22,7 +22,7 @@
 /datum/element/watery_tile/proc/enter_water(atom/source, atom/movable/entered)
 	SIGNAL_HANDLER
 
-	// VOIDCREW EDIT: override - Attach() and the entered signal can both reach something already on
+	// VOIDCREW EDIT START - override: Attach() and the entered signal can both reach something already on
 	// the tile (a railing over a ship's pool whose water turf is rebuilt as the hull moves).
 	RegisterSignal(entered, SIGNAL_ADDTRAIT(TRAIT_IMMERSED), PROC_REF(dip_in), override = TRUE)
 	if(isliving(entered))

@@ -234,7 +234,7 @@
 	container.vis_flags &= ~VIS_INHERIT_PLANE
 	real_parent.vis_contents -= container
 
-	// VOIDCREW EDIT: a container deleted while on the stove has already dropped its reagents.
+	// VOIDCREW EDIT START - a container deleted while on the stove has already dropped its reagents.
 	if(container.reagents)
 		UnregisterSignal(container.reagents, COMSIG_REAGENTS_TEMP_CHANGE)
 	// VOIDCREW EDIT END

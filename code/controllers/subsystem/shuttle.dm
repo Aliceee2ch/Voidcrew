@@ -542,8 +542,10 @@ SUBSYSTEM_DEF(shuttle)
 		if(!istype(d) || QDELETED(d))
 			trade_blockade -= d
 	supply_blocked = trade_blockade.len
-	if(!supply) // VOIDCREW EDIT ADDITION - no station supply shuttle; a pirate ship's data siphon runs this when it is deleted
+	// VOIDCREW EDIT ADDITION START - no station supply shuttle; a pirate ship's data siphon runs this when it is deleted
+	if(!supply)
 		return
+	// VOIDCREW EDIT ADDITION END
 
 	if(supply_blocked && (supply.mode == SHUTTLE_IGNITING))
 		supply.mode = SHUTTLE_STRANDED

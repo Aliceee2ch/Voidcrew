@@ -282,6 +282,7 @@
 #include "serving_tray.dm"
 #include "shuttle_cling_lifecycle.dm"
 #include "../../../voidcrew/modules/unit_tests/shuttle_cling_rethrow.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/hyperspace_jetpack.dm" // VOIDCREW EDIT ADDITION
 #include "shuttle_load_ownership.dm"
 #include "simple_animal_freeze.dm"
 #include "siunit.dm"

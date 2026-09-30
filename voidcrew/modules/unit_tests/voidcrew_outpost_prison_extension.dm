@@ -626,4 +626,6 @@
 		TEST_ASSERT_EQUAL(prison.capacity, 10, "The [style] wing holds [prison.capacity] with two extensions")
 		prison.refresh_conditions()
 		TEST_ASSERT_EQUAL(prison.mess_load, 0, "The [style] extensions brought [prison.mess_load] mess onto the cell block")
+		for(var/problem in wing_upgrade.power_problems())
+			TEST_FAIL("The [style] wing: [problem]")
 		settle_prison_air(home)

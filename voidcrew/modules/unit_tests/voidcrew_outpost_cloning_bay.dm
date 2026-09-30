@@ -379,7 +379,7 @@
 			TEST_ASSERT(HAS_TRAIT(vat, "outpost_property"), "A room vat is not outpost property at [rotation] degrees")
 		var/list/footprint = room.room_turfs()
 		for(var/turf/tile as anything in footprint)
-			TEST_ASSERT_EQUAL(tile.loc, home.outpost_area, "Room tile [tile.x],[tile.y] is not in the outpost's area at [rotation] degrees")
+			TEST_ASSERT_EQUAL(tile.loc, room.installed_area, "Room tile [tile.x],[tile.y] is not in the room's own area at [rotation] degrees")
 		var/list/doors_out = upgrade_exterior_doors(footprint)
 		var/list/exterior = doors_out[1]
 		var/list/unfanned = doors_out[2]

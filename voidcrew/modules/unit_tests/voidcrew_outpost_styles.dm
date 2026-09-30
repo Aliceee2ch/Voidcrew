@@ -100,6 +100,14 @@
 		generator.set_anchored(TRUE)
 		TEST_ASSERT(generator.powernet && generator.powernet == smes.terminal.powernet, "The [label]'s generator does not feed the SMES once bolted down")
 		TEST_ASSERT(apc.terminal?.powernet && apc.terminal.powernet == smes.powernet, "The [label]'s SMES does not feed the APC")
+		// Every outer external airlock carries protected trunk cable on the SMES's net.
+		var/list/outer_airlocks = outpost_outer_airlocks(home)
+		TEST_ASSERT(length(outer_airlocks), "The [label] has no outer external airlock")
+		for(var/list/candidate as anything in outer_airlocks)
+			var/turf/door_turf = get_turf(candidate[1])
+			var/obj/structure/cable/outpost/trunk = locate() in door_turf
+			TEST_ASSERT_NOTNULL(trunk, "The [label] has no trunk cable under the outer airlock at [door_turf.x],[door_turf.y]")
+			TEST_ASSERT_EQUAL(trunk.powernet, smes.powernet, "The [label]'s trunk cable at [door_turf.x],[door_turf.y] is not on the SMES's net")
 
 /// Every upgrade room in every style works where it lands, in each of the four turns.
 /datum/unit_test/voidcrew_outpost_room_styles

@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "nanobead/empty_biomedical_north.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 5,
+   "png": "nanobead_empty_biomedical_north.png",
+   "src_md5": "9c4afee920c47343466d90057a1e9ea5",
+   "width": 4
+  }
+ },
+ "tile_px": 32
+}

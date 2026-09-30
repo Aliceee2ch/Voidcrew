@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/ai_core.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 1,
+   "png": "squab_ai_core.png",
+   "src_md5": "9fea30d72a3f554cc46827e2af547465",
+   "width": 3
+  }
+ },
+ "tile_px": 32
+}

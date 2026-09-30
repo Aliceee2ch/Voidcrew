@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/security_gear_room.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 3,
+   "png": "squab_security_gear_room.png",
+   "src_md5": "ca9ee9e91fa21c223e94678e5cac7c3e",
+   "width": 4
+  }
+ },
+ "tile_px": 32
+}

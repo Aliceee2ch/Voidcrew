@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/mecha_ripley.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 2,
+   "png": "squab_mecha_ripley.png",
+   "src_md5": "2f034cbdbe23a76bdcb65621990c84ca",
+   "width": 3
+  }
+ },
+ "tile_px": 32
+}

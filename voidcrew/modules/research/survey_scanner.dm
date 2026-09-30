@@ -143,6 +143,17 @@
 		eject_cell(user)
 		return
 
+	toggle_scanning()
+
+// Silicon clicks go to interact()/ui_interact(), which this machine doesn't have, so
+// AIs and cyborgs could never switch it on.
+/obj/machinery/survey_scanner/attack_ai(mob/user)
+	toggle_scanning()
+
+/obj/machinery/survey_scanner/attack_robot(mob/user)
+	attack_ai(user)
+
+/obj/machinery/survey_scanner/proc/toggle_scanning()
 	if(!is_operational)
 		return
 
@@ -209,6 +220,7 @@
 		existing_notes.attackby(new_notes, user)
 	else
 		try_put_in_hand(new_notes, user)
+	record_metric_notes(user, round(stored_points, 1)) // round metrics, voidcrew/modules/metrics/research_metrics.dm
 	stored_points = 0 //empty it now
 	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 
@@ -240,6 +252,7 @@
 	playsound(src, 'sound/machines/ding.ogg', 20)
 	site_scan_history[scan_key]++
 	stored_points += (research_gain * penalty)
+	tally_metric_scan(research_gain * penalty) // round metrics, voidcrew/modules/metrics/research_metrics.dm
 
 /**
  * The history key for wherever this scanner is standing.
@@ -299,6 +312,7 @@
 		site_scan_history[scan_key] = 1
 	next_scan = world.time //first scan lands on the next tick, so it visibly does something
 	enabled = TRUE
+	note_metric_operator() // round metrics, voidcrew/modules/metrics/research_metrics.dm
 	balloon_alert_to_viewers("begins to rumble...")
 	begin_processing()
 	update_appearance(UPDATE_ICON_STATE)
@@ -333,12 +347,12 @@
  * Design
  */
 /datum/design/board/survey_scanner
-	name = "Survey Scaner Machine Board"
+	name = "Survey Scanner Machine Board"
 	desc = "The Machine Circuit board for a Survey scanner which allows research generation through power."
 	id = "surveyscanner"
 	build_path = /obj/item/circuitboard/machine/survey_scanner
 	category = list(
-		RND_CATEGORY_COMPUTER + RND_SUBCATEGORY_COMPUTER_RESEARCH,
+		RND_CATEGORY_MACHINE + RND_SUBCATEGORY_MACHINE_RESEARCH,
 	)
 	departmental_flags = DEPARTMENT_BITFLAG_MEDICAL
 

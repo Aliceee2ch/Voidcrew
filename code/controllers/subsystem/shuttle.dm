@@ -542,6 +542,10 @@ SUBSYSTEM_DEF(shuttle)
 		if(!istype(d) || QDELETED(d))
 			trade_blockade -= d
 	supply_blocked = trade_blockade.len
+	// VOIDCREW EDIT ADDITION START - no station supply shuttle; a pirate ship's data siphon runs this when it is deleted
+	if(!supply)
+		return
+	// VOIDCREW EDIT ADDITION END
 
 	if(supply_blocked && (supply.mode == SHUTTLE_IGNITING))
 		supply.mode = SHUTTLE_STRANDED
@@ -673,6 +677,7 @@ SUBSYSTEM_DEF(shuttle)
 		z_size = 1, //if this is changed the turf uncontain code below has to be updated to support multiple zs
 		reservation_type = /datum/turf_reservation/transit,
 		turf_type_override = transit_path,
+		requester = "transit for [M.name] ([M.width]x[M.height] hull)", // VOIDCREW EDIT: z-mint attribution
 	)
 
 	if(!istype(proposal))
@@ -979,6 +984,7 @@ SUBSYSTEM_DEF(shuttle)
 		loading_template.height,
 		1,
 		reservation_type = /datum/turf_reservation/transit,
+		requester = "shuttle template preview '[loading_template.name]'", // VOIDCREW EDIT: z-mint attribution
 	)
 	if(!preview_reservation)
 		// VOIDCREW EDIT: a null here is usually request_turf_block_reservation() refusing

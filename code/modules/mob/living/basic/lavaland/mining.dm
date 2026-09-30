@@ -42,7 +42,7 @@
 	AddElement(/datum/element/relay_attackers)
 
 /mob/living/basic/mining/proc/add_ranged_armour(list/vulnerable_projectiles)
-	// VOIDCREW EDIT CHANGE - below_projectile_multiplier was 0.3, a 30% damage soak
+	// VOIDCREW EDIT CHANGE - mining QoL reduces projectile damage resistance from 70% to 25%.
 	AddElement(\
 		/datum/element/ranged_armour,\
 		minimum_projectile_force = 30,\

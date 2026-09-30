@@ -71,7 +71,7 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	// template_bottom_left) live on /obj/structure/overmap, see _overmap.dm.
 	/// Ships under trade embargo: ship -> world.time the embargo ends
 	var/list/embargoed_ships = list()
-	/// Minds that committed violence here: mind -> TRUE (turret targets, refused service)
+	/// Minds that committed violence here: mind -> world.time the mark lapses (turret targets, refused service)
 	var/list/aggressor_minds = list()
 	/// Warning strikes accrued before turrets engage: mind -> infraction count
 	var/list/aggressor_strikes = list()
@@ -177,7 +177,7 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 			log_mapping("TRADER OUTPOST: Template '[outpost_template.name]' has no dimensions, cannot load.")
 		else
 			// Ships use separate hangar reservations; this block is only the concourse.
-			reservation = SSmapping.request_turf_block_reservation(outpost_template.width, outpost_template.height, 1)
+			reservation = SSmapping.request_turf_block_reservation(outpost_template.width, outpost_template.height, 1, requester = "trader outpost '[name]' concourse")
 			if(reservation)
 				template_bottom_left = reservation.bottom_left_turfs[1]
 				if(outpost_template.load(template_bottom_left))
@@ -189,6 +189,9 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 		QDEL_NULL(reservation)
 		template_bottom_left = null
 	loaded = load_success
+	// Outside the try: a runtime there unwinds the whole load (outpost_network.dm)
+	if(loaded)
+		spawn_network_pad()
 	loading = FALSE
 	SEND_SIGNAL(src, COMSIG_VOIDCREW_SITE_LOAD_FINISHED, loaded)
 	return loaded
@@ -380,6 +383,8 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	// Open storefront UIs are looking at a stale catalog now; refresh them
 	for(var/mob/living/basic/outpost_trader/npc as anything in traders)
 		npc.shop_ui?.update_static_data_for_all_viewers()
+	// World population (voidcrew/modules/ambient_npcs): the dock workers unload it
+	SEND_SIGNAL(src, COMSIG_TRADER_OUTPOST_CONVOY)
 
 // ===== EMBARGO / AGGRESSION =====
 
@@ -414,19 +419,26 @@ GLOBAL_LIST_EMPTY(trader_outposts)
  * infractions only issue a warning; once the offender racks up
  * OUTPOST_AGGRESSION_STRIKES the outpost marks them and embargoes every ship
  * whose crew they belong to. Idempotent once marked, confirmed aggressors
- * short-circuit here.
+ * short-circuit here until the mark lapses.
  */
 /obj/structure/overmap/trader_outpost/register_aggression(mob/living/offender)
 	if(!istype(offender) || !offender.mind)
 		return
-	if(aggressor_minds[offender.mind])
+	if(bounty_kingpin_excuses_aggression(src, offender)) return // BOUNTY P9 (kingpin): no property strikes for hunters in his shootout; PvP still counts
+	// World population (voidcrew/modules/ambient_npcs): bystanders near the fight duck and leave
+	SEND_SIGNAL(src, COMSIG_TRADER_OUTPOST_VIOLENCE, offender)
+	if(is_marked_aggressor(offender.mind))
 		return
 
-	// One swing can arrive here down several routes, and holding the mouse down
-	// shouldn't spend the whole warning ladder in a tick.
+	// One swing can arrive here down several routes in the same tick; fold those
+	// together without letting a second real swing ride along for free.
 	var/last_strike = aggressor_strike_times[offender.mind]
 	if(last_strike && world.time < last_strike + OUTPOST_AGGRESSION_GRACE)
 		return
+	// Warnings go stale on the same clock as a mark: a scuffle hours ago should
+	// not turn today's first shove into the final strike.
+	if(last_strike && world.time >= last_strike + OUTPOST_AGGRESSION_MARK_DURATION)
+		aggressor_strikes -= offender.mind
 	aggressor_strike_times[offender.mind] = world.time
 
 	var/strikes = aggressor_strikes[offender.mind] + 1
@@ -441,13 +453,13 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 		return
 
 	// Final strike: mark them and embargo their crew's ships.
-	aggressor_minds[offender.mind] = TRUE
+	aggressor_minds[offender.mind] = world.time + OUTPOST_AGGRESSION_MARK_DURATION
 
 	for(var/datum/team/voidcrew/team as anything in offender.mind.ship_teams)
 		if(team.ship)
 			embargo_ship(team.ship)
 
-	to_chat(offender, span_userdanger("Outpost defense systems lock onto you. Your trade privileges have been revoked."))
+	to_chat(offender, span_userdanger("Outpost defense systems lock onto you. Your trade privileges have been revoked for [OUTPOST_AGGRESSION_MARK_DURATION / (1 MINUTES)] minutes."))
 	if(trader)
 		trader.speak_line(TRADER_LINE_AGGRESSION)
 
@@ -472,13 +484,29 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	return TRUE
 
 /**
+ * Whether this mind is currently marked as an aggressor. Lapsed marks are
+ * pruned lazily, along with the strike ladder that produced them, so someone
+ * coming back after serving their time starts from a clean record.
+ */
+/obj/structure/overmap/trader_outpost/proc/is_marked_aggressor(datum/mind/mind)
+	var/mark_ends = aggressor_minds[mind]
+	if(!mark_ends)
+		return FALSE
+	if(world.time >= mark_ends)
+		aggressor_minds -= mind
+		aggressor_strikes -= mind
+		aggressor_strike_times -= mind
+		return FALSE
+	return TRUE
+
+/**
  * Whether this user is refused service: personally marked as an aggressor,
  * or crew of an embargoed ship.
  */
 /obj/structure/overmap/trader_outpost/proc/is_user_barred(mob/user)
 	if(!user?.mind)
 		return FALSE
-	if(aggressor_minds[user.mind])
+	if(is_marked_aggressor(user.mind))
 		return TRUE
 	for(var/datum/team/voidcrew/team as anything in user.mind.ship_teams)
 		if(team.ship && is_ship_embargoed(team.ship))
@@ -486,8 +514,10 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	return FALSE
 
 /**
- * Whether this mob is a valid turret target: marked aggressors AND crew of
- * embargoed ships, an embargo means shot on sight, not just refused service.
+ * Whether the outpost has barred this mob from the sanctuary: marked aggressors
+ * AND crew of embargoed ships, an embargo means shot on sight, not just refused
+ * service. Per-mind, so it holds for a player in any body. The turrets layer
+ * their own on-sight rules (xenos, hostile wildlife) on top in valid_target().
  */
 /obj/structure/overmap/trader_outpost/proc/is_turret_target(mob/living/target)
 	return istype(target) && is_user_barred(target)
@@ -508,15 +538,8 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 			&& T.y >= bottom_left.y && T.y < bottom_left.y + outpost.outpost_template.height)
 			return outpost
 		for(var/datum/outpost_berth/berth as anything in outpost.berths)
-			var/turf/hangar_bottom_left = berth?.hangar_bottom_left
-			var/datum/turf_reservation/reservation = berth?.reservation
-			if(!hangar_bottom_left || !reservation || hangar_bottom_left.z != T.z)
-				continue
-			if(T.x < hangar_bottom_left.x || T.x >= hangar_bottom_left.x + reservation.width)
-				continue
-			if(T.y < hangar_bottom_left.y || T.y >= hangar_bottom_left.y + reservation.height)
-				continue
-			return outpost
+			if(berth?.contains_turf(T))
+				return outpost
 	return null
 
 // ===== ZONE VARIANTS =====

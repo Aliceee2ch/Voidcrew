@@ -189,24 +189,28 @@
  * refuse the mint (the level exists by the time it runs) but it makes every one of them
  * visible, and shouts about the ones that came from outside the gate.
  *
+ * Exactly ONE line per mint, always, with the caller's `mint_reason` in it. Round 79
+ * (2026-09-16) climbed from 10 to 24 levels and the log could name only the five minted
+ * past the warn_at threshold, none of them with a cause - the perf CSV's world_maxz
+ * column had to be cross-referenced against worldgen.log timestamps by hand to learn that
+ * a 63x55 outpost hangar berth had bought Transit/Reserved #5. Every caller now says why.
+ *
  * Kept cheap - it runs on every mint, including the boot-time ones.
  */
-/datum/controller/subsystem/mapping/proc/report_z_mint(name)
+/datum/controller/subsystem/mapping/proc/report_z_mint(name, mint_reason)
 	if(!config) // boot-time mints, before there is anything to compare against
 		return
 
 	var/ceiling = effective_z_ceiling()
+	log_mapping("SSmapping: minted z-level \"[name]\" as z[world.maxz] - [mint_reason || "no reason given (caller passed no mint_reason)"]. \
+		world.maxz now [world.maxz][ceiling > 0 ? " of [describe_z_ceiling(ceiling)]" : ""].")
+
 	if(ceiling > 0 && world.maxz > ceiling)
 		var/past_message = "SSmapping: z-level \"[name]\" was minted PAST the effective ceiling by a code path outside the capacity \
 			gate - world.maxz is now [world.maxz] against a ceiling of [describe_z_ceiling(ceiling)]. That is ~49 MB of address \
 			space this round can never get back. Whatever minted it needs to ask SSmapping.z_headroom() first."
 		log_mapping(past_message)
 		message_admins(past_message)
-		return
-
-	var/warn_at = CONFIG_GET(number/max_z_levels_warn_at)
-	if(warn_at > 0 && world.maxz >= warn_at)
-		log_mapping("SSmapping: minted z-level \"[name]\", world.maxz now [world.maxz][ceiling > 0 ? " of [ceiling]" : ""].")
 
 /**
  * TRUE if a turf block of this size could ever be reserved, on a completely empty
@@ -231,6 +235,10 @@
 	var/max_height = world.maxy - (SHUTTLE_TRANSIT_BORDER * 2) - 1
 	return width <= max_width && height <= max_height
 
+/datum/turf_reservation
+	/// Who asked for this block: request_turf_block_reservation()'s `requester` text, or null
+	var/requester
+
 /**
  * Deals out a zone band (ZONE_GREEN/YELLOW/RED) for the next roundstart planet.
  *
@@ -240,8 +248,8 @@
  * SSovermap.setup_planets() then places the planet on an overmap tile inside
  * that band, keeping the pre-generated content honest.
  *
- * Dynamic planets draw from the same pool when setup_planets() places them, so
- * the two supply models can't both crowd into the same ring.
+ * Dynamic planets account for these placements when balancing the remaining
+ * contacts by zone area in SSovermap.setup_planets().
  *
  * Bands are dealt from a reshuffled set of all three, so every round gets at
  * least one planet per band while the ordering stays random.

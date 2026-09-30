@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/extra_gear_bay.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 2,
+   "png": "squab_extra_gear_bay.png",
+   "src_md5": "c7d61f9def9284b99275ba802fa2d57a",
+   "width": 3
+  }
+ },
+ "tile_px": 32
+}

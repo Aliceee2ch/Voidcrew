@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/medical_director.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 2,
+   "png": "squab_medical_director.png",
+   "src_md5": "8ebbf057d0b00972e860282584584dbd",
+   "width": 3
+  }
+ },
+ "tile_px": 32
+}

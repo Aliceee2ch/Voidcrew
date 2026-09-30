@@ -3,7 +3,8 @@
  *
  * The economic-deterrent enforcement arm of a trader outpost: indestructible
  * lethal turrets that engage people who attacked outpost property or another
- * visitor, and the indestructible airlocks of the sanctuary interior.
+ * visitor (plus xenos and hostile wildlife, on sight), and the indestructible
+ * airlocks of the sanctuary interior.
  *
  * Aggression accrues warning strikes (see trader_outpost.register_aggression);
  * the early hits only issue a warning, and only once the offender crosses
@@ -26,9 +27,9 @@
 		return FALSE
 	return istype(get_area(location), /area/voidcrew/trader_outpost) || !isnull(get_trader_outpost_for_turf(location))
 
-/// Engine hazards transported into a market must stop before processing damage.
+/// Engine hazards transported into a market, or into a player outpost's service room, must stop before processing damage.
 /proc/neutralize_trader_outpost_hazard(atom/movable/hazard)
-	if(!is_trader_outpost_protected(hazard))
+	if(!is_trader_outpost_protected(hazard) && !is_outpost_service_tile(hazard))
 		return FALSE
 	log_game("OUTPOST PROTECTION: Neutralized [hazard] ([hazard.type]) at [AREACOORD(hazard)].")
 	qdel(hazard)
@@ -171,11 +172,62 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 /obj/machinery/porta_turret/outpost/emag_act(mob/user, obj/item/card/emag/emag_card)
 	return FALSE
 
-// Only marked aggressors are perps; everyone else shops in peace
-/obj/machinery/porta_turret/outpost/assess_perp(mob/living/carbon/human/perp)
-	if(outpost?.is_turret_target(perp))
-		return 10
-	return 0
+/**
+ * Is this something the turret is willing to shoot?
+ *
+ * Three kinds of target, checked in order:
+ * - Anyone the outpost has barred: marked aggressors and embargoed crews. Resolved
+ *   per-mind by the outpost, so it covers players riding a xeno or a spider just as
+ *   well as a human with a gun.
+ * - Xenomorphs, on sight. No warning strikes, no faction pass, player-driven or not;
+ *   a hive does not shop here.
+ * - Wild hostiles: NPC creatures whose own AI goes looking for a fight (carp, spiders,
+ *   boarding troopers, ...). Judged by is_hostile_creature(), so a shopper's corgi or a
+ *   pet carp is left alone. Anything with a player behind it is not a wild creature
+ *   and only becomes a target through the strike ladder above.
+ *
+ * Everything else shops in peace.
+ */
+/obj/machinery/porta_turret/outpost/proc/valid_target(mob/living/creature)
+	if(!istype(creature) || creature.stat == DEAD)
+		return FALSE
+	if(creature.invisibility > SEE_INVISIBLE_LIVING)
+		return FALSE
+	if(outpost?.is_turret_target(creature))
+		return TRUE
+	if(isalien(creature) || istype(creature, /mob/living/basic/alien)) // Player xenos and the NPC hive alike.
+		return TRUE
+	if(creature.client || creature.mind) // Player-driven, so the strike ladder decides, not the wildlife rule.
+		return FALSE
+	if(in_faction(creature)) // Traders, ambient outpost NPCs, bots and the other turrets.
+		return FALSE
+	if(HAS_TRAIT(creature, TRAIT_OUTPOST_RESIDENT)) // Whatever the outpost was built with.
+		return FALSE
+	return is_hostile_creature(creature)
+
+// The stock scan only ever asks assess_perp() about humans; with turret_flags NONE it
+// never so much as looks at an animal or a xeno. Run our own scan over every living
+// mob in range instead, plus the stock mech sweep so a marked aggressor cannot hide in
+// a ripley.
+/obj/machinery/porta_turret/outpost/process()
+	if(!on || (machine_stat & (NOPOWER|BROKEN)))
+		return PROCESS_KILL
+
+	var/list/targets = list()
+	for(var/mob/living/creature in view(scan_range, base))
+		if(valid_target(creature))
+			targets += creature
+
+	for(var/obj/vehicle/sealed/mecha/mech as anything in GLOB.mechas_list)
+		if(get_dist(mech, base) >= scan_range || !can_see(base, mech, scan_range))
+			continue
+		for(var/mob/living/occupant as anything in mech.occupants)
+			if(valid_target(occupant))
+				targets += mech
+				break
+
+	if(length(targets))
+		tryToShootAt(targets)
 
 // Shooting the turret itself is also aggression
 /obj/machinery/porta_turret/outpost/attacked_by(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
@@ -192,21 +244,20 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
  * # Outpost Defense Laser
  *
  * Fired only by outpost turrets. Phases harmlessly through bystanders and only
- * impacts valid turret targets (marked aggressors and embargoed crew) so
- * enforcement never catches innocent shoppers in the crossfire. Dense obstacles
- * (walls, structures) still stop it as normal.
+ * impacts valid turret targets (marked aggressors, embargoed crew, xenos and
+ * hostile wildlife) so enforcement never catches innocent shoppers in the
+ * crossfire. Dense obstacles (walls, structures) still stop it as normal.
  */
 /obj/projectile/beam/laser/outpost
 	name = "outpost defense laser"
 
 /obj/projectile/beam/laser/outpost/can_hit_target(atom/target, direct_target = FALSE, ignore_loc = FALSE, cross_failed = FALSE)
-	// Let bystanders through: skip any living mob that isn't a turret target. The aimed
-	// offender arrives as direct_target and any other barred mob in the path passes
-	// is_turret_target(), so both are still hit by the parent check. Aggression is
-	// per-mind, resolved via the firing turret's outpost, not by faction.
+	// Let bystanders through: skip any living mob the firing turret would not shoot at.
+	// The aimed offender arrives as direct_target and any other valid target in the
+	// path passes valid_target(), so both are still hit by the parent check.
 	if(isliving(target) && !direct_target)
 		var/obj/machinery/porta_turret/outpost/turret = firer
-		if(istype(turret) && !turret.outpost?.is_turret_target(target))
+		if(istype(turret) && !turret.valid_target(target))
 			return FALSE
 	return ..()
 
@@ -329,6 +380,15 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	var/obj/property = target
 	property.resistance_flags |= INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 	property.AddElement(/datum/element/empprotection, EMP_PROTECT_ALL)
+	// The RPD's unwrench upgrade and the construction console's Remove Pipe call wrench_act()
+	// directly, skipping the tool signal below; both still ask can_unwrench()
+	if(istype(target, /obj/machinery/atmospherics))
+		var/obj/machinery/atmospherics/atmos_part = target
+		atmos_part.can_unwrench = FALSE
+	// A seat dragged onto someone folds into a carried chair (chair.dm)
+	if(istype(target, /obj/structure/chair))
+		var/obj/structure/chair/seat = target
+		seat.item_chair = null
 
 	RegisterSignals(target, list(
 		COMSIG_ATOM_TOOL_ACT(TOOL_CROWBAR),
@@ -360,6 +420,12 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	RegisterSignal(target, COMSIG_ATOM_HULK_ATTACK, PROC_REF(on_hulk_attack))
 	RegisterSignal(target, COMSIG_ATOM_ATTACK_MECH, PROC_REF(on_mech_attack))
 
+/// A desk bell dragged onto someone turns into a held bell (desk_bell.dm). Outpost property stays put.
+/obj/structure/desk_bell/mouse_drop_dragged(atom/over_object, mob/user)
+	if(HAS_TRAIT(src, TRAIT_OUTPOST_PROPERTY))
+		return FALSE
+	return ..()
+
 /datum/element/outpost_property/Detach(datum/source, ...)
 	UnregisterSignal(source, list(
 		COMSIG_ATOM_TOOL_ACT(TOOL_CROWBAR),
@@ -390,10 +456,14 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 
 /**
  * A bluespace RPED skips the panel_open check in exchange_parts(), so blocking the
- * screwdriver doesn't keep the parts inside on its own.
+ * screwdriver doesn't keep the parts inside on its own. An RPD (pipe dispenser) clicked on
+ * a pipe or atmos machine unwrenches, repaints or reprograms it without any tool signal.
  */
 /datum/element/outpost_property/proc/block_part_replacer(obj/source, mob/living/user, obj/item/tool)
 	SIGNAL_HANDLER
+	if(istype(tool, /obj/item/pipe_dispenser))
+		source.balloon_alert(user, "outpost property!")
+		return ITEM_INTERACT_BLOCKING
 	if(!istype(tool, /obj/item/storage/part_replacer))
 		return NONE
 	source.balloon_alert(user, "casing is sealed!")

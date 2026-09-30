@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/mining_gear.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 3,
+   "png": "squab_mining_gear.png",
+   "src_md5": "a9628df1763bfff437ecaf14f9821c7d",
+   "width": 4
+  }
+ },
+ "tile_px": 32
+}

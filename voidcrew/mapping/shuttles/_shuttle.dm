@@ -51,6 +51,51 @@
 		if(!(part_class in part_requirements))
 			part_requirements[part_class] = 0
 
+/// How long a hull waits for its upgrade modules to finish reading before initializing anyway.
+#define SHIP_MODULE_READ_TIMEOUT (2 MINUTES)
+
+/**
+ * Initialize the hull only once every upgrade module inside it has been read.
+ *
+ * Module maps leave their atoms for this pass (see /datum/map_template/map_module/ship_upgrade),
+ * so hull and modules initialize together in one pass over the whole ship. Before this the hull
+ * initialized while its modules were still being read, which let hull pipes connect to module
+ * vents and pumps that had not run Initialize() (null nodes, "Nonexistent machinery gasmix"),
+ * let hull walls and tables smooth against module atoms whose smoothing groups were still
+ * unparsed ("bad index"), and let a module's own pass start on hull areas the hull was still
+ * working through ("initialized multiple times").
+ */
+/datum/map_template/shuttle/voidcrew/initTemplateBounds(list/bounds)
+	if(bounds)
+		wait_for_upgrade_modules(block(
+			bounds[MAP_MINX], bounds[MAP_MINY], bounds[MAP_MINZ],
+			bounds[MAP_MAXX], bounds[MAP_MAXY], bounds[MAP_MAXZ]
+		))
+	return ..()
+
+/// Sleeps until no /obj/modular_map_root is left on the given turfs. Each marker deletes itself
+/// once its module has been read.
+/datum/map_template/shuttle/voidcrew/proc/wait_for_upgrade_modules(list/turfs)
+	var/give_up_at = world.time + SHIP_MODULE_READ_TIMEOUT
+	while(TRUE)
+		var/obj/modular_map_root/pending
+		for(var/turf/place as anything in turfs)
+			pending = locate() in place
+			if(pending)
+				break
+		if(!pending)
+			return
+		if(world.time > give_up_at)
+			stack_trace("[name] gave up waiting for upgrade module '[pending.key]' at [AREACOORD(pending)]")
+			// The hull initializes without them now, so late modules must initialize themselves
+			for(var/turf/place as anything in turfs)
+				for(var/obj/modular_map_root/ship_upgrade/late in place)
+					late.defer_to_hull = FALSE
+			return
+		sleep(1)
+
+#undef SHIP_MODULE_READ_TIMEOUT
+
 /**
  * Upgrade modules load asynchronously - /obj/modular_map_root fires its map load from an
  * INVOKE_ASYNC while the hull is still being read, so a module's cables can be created after
@@ -124,29 +169,40 @@
 		if(!islist(job_definition))
 			continue
 
+		var/definition_error = ship_job_definition_error(job_definition)
+		if(definition_error)
+			stack_trace(definition_error)
+			continue
 		var/datum/outfit/job/job_outfit = job_definition["outfit"]
-		if(!job_outfit)
-			stack_trace("Job definition missing outfit: [json_encode(job_definition)]")
-			continue
-
-		var/job_path = initial(job_outfit.jobtype)
-		if(!job_path)
-			stack_trace("Job outfit [job_outfit] has no jobtype defined")
-			continue
+		var/role = job_definition["role"] || "crew"
+		var/job_path
+		switch(role)
+			if("ai")
+				job_path = /datum/job/ai
+			if("cyborg")
+				job_path = /datum/job/cyborg
+			else
+				job_path = initial(job_outfit.jobtype)
 
 		var/datum/job/job_slot = new job_path
 
 		job_slot.title = job_definition["name"] || "Unknown"
 		job_slot.officer = !!job_definition["officer"]
 		job_slot.outfit = job_outfit
-		job_slot.job_flags = JOB_CREW_MANIFEST|JOB_EQUIP_RANK|JOB_NEW_PLAYER_JOINABLE|JOB_CREW_MEMBER|JOB_ASSIGN_QUIRKS|JOB_CAN_BE_INTERN
+		job_slot.ship_role = role
+		job_slot.ship_borg_model = job_definition["borg_model"]
+		if(role == "crew")
+			job_slot.job_flags = JOB_CREW_MANIFEST|JOB_EQUIP_RANK|JOB_NEW_PLAYER_JOINABLE|JOB_CREW_MEMBER|JOB_ASSIGN_QUIRKS|JOB_CAN_BE_INTERN
+		else
+			job_slot.job_flags |= JOB_CREW_MEMBER
 		// A captain-tier job sits at the top of the ship's chain of command and answers to
 		// nobody. Null supervisors makes get_spawn_message_information() drop the "you answer
 		// directly to ..." line rather than pointing the officer at themselves.
 		// The title check covers definitions that never set the flag: get_captain_job() falls
 		// back to the first slot, so the first slot is captain-tier there too.
 		var/is_captain_tier = job_slot.officer || (supervisor_name && job_slot.title == supervisor_name)
-		job_slot.supervisors = is_captain_tier ? null : "\the [supervisor_name || "Captain"]"
+		if(role == "crew")
+			job_slot.supervisors = is_captain_tier ? null : "\the [supervisor_name || "Captain"]"
 		job_slot.job_category = job_definition["category"]
 
 		var/initial_slots = job_definition["slots"] || 1

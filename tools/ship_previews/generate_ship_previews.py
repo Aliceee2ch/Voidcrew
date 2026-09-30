@@ -3,7 +3,7 @@
 
 Scans hull DMMs for /obj/modular_map_root/ship_upgrade slot markers and module
 DMMs for their /obj/modular_map_connector anchor, renders everything to PNG via
-dmm-tools, and writes a manifest.json describing the compositing geometry.
+dmm-tools, and writes one metadata file per hull or module.
 
 dmm-tools' icon-smoothing pass implements the pre-2020 corner system, so
 anything using modern bitmask smoothing (walls, carpets, tables) renders as
@@ -19,7 +19,8 @@ nothing. We repair that here:
     is translucent so the grille stays visible)
 
 Outputs (commit these):
-    voidcrew/modules/ship_upgrades/previews/manifest.json
+    voidcrew/modules/ship_upgrades/previews/hulls/*.preview.json
+    voidcrew/modules/ship_upgrades/previews/modules/**/*.preview.json
     voidcrew/modules/ship_upgrades/previews/*.png
 
 Run from the repo root after editing modular hulls or modules:
@@ -92,8 +93,21 @@ SMOOTH_TURFS = {
     "/turf/closed/wall/mineral/titanium/dollhouse": ("voidcrew/icons/turf/walls/dollhouse_wall.dmi", "shuttle_wall", "shuttle_wall"),
     "/turf/closed/wall/mineral/plastitanium": ("icons/turf/walls/plastitanium_wall.dmi", "plastitanium_wall", "shuttle_wall"),
     "/turf/closed/wall/mineral/cult": ("icons/turf/walls/cult_wall.dmi", "cult_wall", "wall"),
-    "/turf/open/floor/carpet": ("icons/turf/floors/carpet.dmi", "carpet", "carpet"),
+    "/turf/closed/indestructible/reinforced": ("icons/turf/walls/reinforced_wall.dmi", "reinforced_wall", "wall"),
+    # Keeps the titanium lookalike from matching the reinforced prefix above
+    "/turf/closed/indestructible/reinforced/titanium": ("icons/turf/walls/shuttle_wall.dmi", "shuttle_wall", "shuttle_wall"),
+    # Outpost style walls (voidcrew/modules/player_outposts/outpost_style_turfs.dm)
+    "/turf/closed/indestructible/rusty": ("icons/turf/walls/rusty_wall.dmi", "rusty_wall", "wall"),
+    "/turf/closed/indestructible/reinforced/rusty": ("icons/turf/walls/rusty_reinforced_wall.dmi", "rusty_reinforced_wall", "wall"),
+    "/turf/closed/indestructible/iron": ("icons/turf/walls/iron_wall.dmi", "iron_wall", "wall"),
+    "/turf/closed/wall/rusted": ("icons/turf/walls/rusty_wall.dmi", "rusty_wall", "wall"),
+    "/turf/closed/wall/r_wall/rusted": ("icons/turf/walls/rusty_reinforced_wall.dmi", "rusty_reinforced_wall", "wall"),
 }
+# Carpets: each colour smooths only with itself (its own join group), stock and indestructible alike
+for _colour in ("", "black", "blue", "cyan", "green", "orange", "purple", "red", "royalblack", "royalblue"):
+    _state = f"carpet_{_colour}" if _colour else "carpet"
+    for _base in ("/turf/open/floor/carpet", "/turf/open/indestructible/carpet"):
+        SMOOTH_TURFS[f"{_base}/{_colour}" if _colour else _base] = (f"icons/turf/floors/{_state}.dmi", _state, _state)
 
 # Bitmask-smoothed objects drawn as an overlay on top of the render.
 # type path -> (dmi path, base_icon_state, join group)
@@ -321,21 +335,28 @@ class Dmi:
         return self.image.crop((x, y, x + self.icon_w, y + self.icon_h))
 
 
+def smooth_turf_entry(path: str):
+    """Longest-prefix SMOOTH_TURFS entry for a turf path, or None."""
+    best = None
+    best_len = -1
+    for prefix, entry in SMOOTH_TURFS.items():
+        if path_matches(path, prefix) and len(prefix) > best_len:
+            best = entry
+            best_len = len(prefix)
+    return best
+
+
 def smooth_turf_at(dmm: Dmm, x: int, y: int):
     """Longest-prefix SMOOTH_TURFS entry for the tile's turf, or None."""
     key = dmm.grid.get((x, y))
     if key is None:
         return None
-    best = None
-    best_len = -1
     for path in dmm.key_paths[key]:
-        if not path.startswith("/turf/"):
-            continue
-        for prefix, entry in SMOOTH_TURFS.items():
-            if path_matches(path, prefix) and len(prefix) > best_len:
-                best = entry
-                best_len = len(prefix)
-    return best
+        if path.startswith("/turf/"):
+            entry = smooth_turf_entry(path)
+            if entry:
+                return entry
+    return None
 
 
 def resolve_window_spawner(path: str) -> str:
@@ -376,7 +397,7 @@ def build_join_sets(dmm: Dmm) -> tuple[dict, set, dict]:
     """Precompute per-tile membership: one join set per turf group (wall families,
     carpet), copy-from-B tiles, and one join set per window group."""
     wall_join: set[tuple[int, int]] = set()
-    carpet: set[tuple[int, int]] = set()
+    carpets: dict[str, set[tuple[int, int]]] = {}
     copy_b: set[tuple[int, int]] = set()
     shuttle_parts: set[tuple[int, int]] = set()
     window_joins: dict[str, set[tuple[int, int]]] = {
@@ -389,8 +410,10 @@ def build_join_sets(dmm: Dmm) -> tuple[dict, set, dict]:
                 path_matches(path, p) for p in WALL_JOIN_EXCLUDE
             ):
                 wall_join.add(pos)
-            if path.startswith("/turf/") and path_matches(path, "/turf/open/floor/carpet"):
-                carpet.add(pos)
+            if path.startswith("/turf/"):
+                turf_entry = smooth_turf_entry(path)
+                if turf_entry and turf_entry[2].startswith("carpet"):
+                    carpets.setdefault(turf_entry[2], set()).add(pos)
             if any(path_matches(path, p) for p in COPY_B_PREFIXES):
                 copy_b.add(pos)
             if any(path_matches(path, p) for p in SHUTTLE_PARTS_PREFIXES):
@@ -405,8 +428,9 @@ def build_join_sets(dmm: Dmm) -> tuple[dict, set, dict]:
         "wall": wall_join,
         "shuttle_wall": wall_join | shuttle_parts,
         "pod_wall": wall_join | shuttle_parts | window_joins["window"],
-        "carpet": carpet,
     }
+    for group in {entry[2] for entry in SMOOTH_TURFS.values() if entry[2].startswith("carpet")}:
+        turf_joins[group] = carpets.get(group, set())
     return turf_joins, copy_b, window_joins
 
 
@@ -517,6 +541,71 @@ def module_geometry(dmm: Dmm) -> dict:
     return {"width": dmm.width, "height": dmm.height, "connector": [cx, cy]}
 
 
+def metadata_path(output: Path, group: str, key: str) -> Path:
+    if group == "modules":
+        if not key.endswith(".dmm"):
+            raise ValueError(f"Expected a module map filename: {key}")
+        key = key.removesuffix(".dmm")
+    parts = key.split("/")
+    if any(not part or part in (".", "..") or part != part.strip()
+           or part.endswith(".") or any(c in part for c in '<>:"\\|?*\0')
+           or any(ord(c) < 32 for c in part) for part in parts):
+        raise ValueError(f"Invalid preview metadata key: {key}")
+    path = output / group / (key + ".preview.json")
+    for parent in (path, *path.parents):
+        if parent == output:
+            break
+        if parent.is_symlink() or getattr(parent, "is_junction", lambda: False)():
+            raise ValueError(f"Preview metadata must not contain links: {parent}")
+    return path
+
+
+def preview_metadata_files(output: Path):
+    yield from output.glob("*.preview.json")
+
+    def collect(folder):
+        if folder.is_symlink() or getattr(folder, "is_junction", lambda: False)():
+            raise ValueError(f"Preview metadata must not contain links: {folder}")
+        if not folder.exists():
+            return
+        for path in folder.iterdir():
+            if path.is_dir() or path.is_symlink():
+                yield from collect(path)
+            elif path.name.endswith(".preview.json"):
+                yield path
+
+    for group in ("hulls", "modules"):
+        yield from collect(output / group)
+
+
+def write_preview_metadata(manifest: dict, output: Path) -> None:
+    """Keep unrelated hull/module changes in separate, deterministic files."""
+    files = {}
+    for group in ("hulls", "modules"):
+        for key, entry in manifest[group].items():
+            path = metadata_path(output, group, key)
+            document = {"tile_px": manifest["tile_px"], "hulls": {}, "modules": {}}
+            document[group][key] = entry
+            files[path] = (json.dumps(document, indent=1, sort_keys=True) + "\n").encode("utf-8")
+    if not files:
+        raise RuntimeError("No ship preview metadata generated")
+    output.mkdir(parents=True, exist_ok=True)
+    previous = list(preview_metadata_files(output))
+    for path, data in files.items():
+        if path.exists() and path.read_bytes() == data:
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
+            temporary.write(data)
+        os.replace(temporary.name, path)
+    # This namespace belongs to the generator. Retire deleted/renamed entries
+    # and the old combined index only after all current entries were written.
+    for path in previous:
+        if path not in files:
+            path.unlink()
+    (output / "manifest.json").unlink(missing_ok=True)
+
+
 def main() -> None:
     dmm_tools = find_dmm_tools()
     tmp_dir = Path(tempfile.mkdtemp(prefix="ship_previews_"))
@@ -598,10 +687,9 @@ def main() -> None:
         print(f"module {rel_file}: {entry['width']}x{entry['height']}"
               + (f", themed: {list(themes)}" if themes else ""))
 
-    manifest_path = OUTPUT_DIR / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
+    write_preview_metadata(manifest, OUTPUT_DIR)
     shutil.rmtree(tmp_dir, ignore_errors=True)
-    print(f"\nwrote {manifest_path.relative_to(REPO_ROOT)} "
+    print(f"\nwrote preview metadata in {OUTPUT_DIR.relative_to(REPO_ROOT)} "
           f"({len(manifest['hulls'])} hulls, {len(manifest['modules'])} modules)")
 
 

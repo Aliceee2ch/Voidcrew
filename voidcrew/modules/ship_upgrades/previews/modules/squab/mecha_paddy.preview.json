@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/mecha_paddy.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 2,
+   "png": "squab_mecha_paddy.png",
+   "src_md5": "8adf5774f9984303ccf586ce888ad9f5",
+   "width": 3
+  }
+ },
+ "tile_px": 32
+}

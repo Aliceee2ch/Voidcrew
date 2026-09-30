@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "nanobead/empty_services_north.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 6,
+   "png": "nanobead_empty_services_north.png",
+   "src_md5": "8d401b0e7a0ec79fd66721b4de973e37",
+   "width": 6
+  }
+ },
+ "tile_px": 32
+}

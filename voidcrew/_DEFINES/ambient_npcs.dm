@@ -74,8 +74,8 @@
 
 // ===== PLANETS AND FIELDS (2.4, 4.1) =====
 
-/// Most NPC sites rolled on one planet
-#define AMBIENT_PLANET_SITES_MAX 2
+/// Most NPC sites rolled on one planet: one, so a camp is something a crew stumbles on, not the norm
+#define AMBIENT_PLANET_SITES_MAX 1
 /// Most ambient NPCs alive on one planet at once (inside its fauna cap)
 #define AMBIENT_PLANET_NPCS_MAX 6
 /// Most NPC sites on one asteroid field

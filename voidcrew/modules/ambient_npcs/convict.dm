@@ -147,7 +147,7 @@ GLOBAL_LIST_EMPTY(ambient_convicts)
 		/datum/overmap/planet/wasteland,
 	)
 	bands = list(ZONE_YELLOW, ZONE_RED)
-	chance = 15
+	chance = 5
 	spot_room = 2
 
 // Spec 4.1: lava 10%, wasteland 20%, jungle and ice 15%; none past the cap
@@ -159,9 +159,9 @@ GLOBAL_LIST_EMPTY(ambient_convicts)
 		return 0
 	switch(record.planet_type)
 		if(/datum/overmap/planet/lava)
-			return 10
+			return 4
 		if(/datum/overmap/planet/wasteland)
-			return 20
+			return 7
 
 /datum/ambient_site_kind/convict/realize(datum/ambient_place/site/site)
 	if(site.data["taken"] || site.state == AMBIENT_SITE_SPENT)

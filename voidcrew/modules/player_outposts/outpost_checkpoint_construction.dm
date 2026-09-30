@@ -89,7 +89,6 @@
 	var/list/obj/effect/checkpoint_build_drone/drones = list()
 	var/next_phase_at = 0
 	var/last_progress_at = 0
-	var/captain_wait_until = 0
 	var/last_reported_percent = -1
 	var/error
 	/// Tests place visits directly instead of waiting for drones.
@@ -759,12 +758,8 @@
 	rushed = TRUE
 	return TRUE
 
-/// Admin testing: stops waiting for the captain. Hands over to them if they are here,
-/// otherwise leaves the hull claimable, exactly as an expired wait does.
+/// Hands a finished hull over if it has not been already. It normally goes the moment it is finished.
 /datum/checkpoint_construction/proc/hand_over_now()
-	if(state != CHECKPOINT_BUILD_COMMISSIONING)
-		return FALSE
-	captain_wait_until = world.time
 	return try_commission()
 
 // ===== PLACEMENT =====
@@ -1084,10 +1079,9 @@
 
 /datum/checkpoint_construction/proc/begin_commissioning()
 	state = CHECKPOINT_BUILD_COMMISSIONING
-	captain_wait_until = world.time + CHECKPOINT_BUILD_CAPTAIN_WAIT
 	// Every visit has run; nothing more is needed from the hidden copy.
 	discard_source()
-	// The drones go home and the floodlights go off now, whenever the captain turns up.
+	// The drones go home and the floodlights go off now; the ship is handed over straight after.
 	clear_site_effects()
 	restore_room_lighting()
 	update_bay_status()
@@ -1100,14 +1094,36 @@
 		return null
 	return candidate
 
-/// Waits a bounded time for the captain, then hands the finished hull over.
+/// The saving captain's mind wherever they are: in a body, dead, ghosted or logged out. Null when nobody holds their key.
+/datum/checkpoint_construction/proc/captain_mind()
+	var/mob/living/captain = find_captain()
+	if(captain)
+		return captain.mind
+	var/mob/somewhere = get_mob_by_ckey(captain_ckey)
+	return somewhere?.mind
+
+/// Hands the finished hull over at once: to its captain wherever they are, or claimable at its helm when nobody holds their key.
 /datum/checkpoint_construction/proc/try_commission()
 	if(state != CHECKPOINT_BUILD_COMMISSIONING)
 		return FALSE
-	var/mob/living/captain = find_captain()
-	if(!captain && world.time < captain_wait_until)
+	return commission(find_captain())
+
+/// Makes `command` the finished ship's captain, and gives their body, if they have one, the ship's management button
+/datum/checkpoint_construction/proc/enlist_captain(datum/mind/command)
+	if(!command || !vessel?.ship_team)
 		return FALSE
-	return commission(captain)
+	var/mob/living/body = command.current
+	if(isliving(body) && body.mind == command)
+		vessel.enlist_crewmember(body)
+		grant_captain_management(body, vessel)
+	else
+		vessel.ship_team.add_member(command)
+		if(!(command.name in vessel.manifest))
+			vessel.manifest += command.name
+		if(captain_ckey)
+			vessel.password_cleared_ckeys[captain_ckey] = TRUE
+	vessel.claimed_captain = command
+	return TRUE
 
 /// Ownership exists only from here: nobody can join, claim or fly an unfinished hull.
 /datum/checkpoint_construction/proc/commission(mob/living/captain)
@@ -1148,15 +1164,13 @@
 			helm.attempt_ship_connection()
 		for(var/obj/machinery/power/shuttle_engine/ship/fueled/thruster in room)
 			thruster.set_heater()
-	if(captain && vessel.enlist_crewmember(captain))
-		vessel.claimed_captain = captain.mind
-		grant_captain_management(captain, vessel)
+	if(enlist_captain(captain?.mind || captain_mind()))
 		if(held_balance > 0)
 			vessel.ship_account.adjust_money(held_balance, "Recovered ship account")
 			held_balance = 0
 	else
-		// Nobody answered for it: the finished hull can be claimed at its helm, but the
-		// old ship's money goes back to the captain rather than to whoever claims it.
+		// Nobody holds the captain's key: the finished hull can be claimed at its helm, but
+		// the old ship's money goes back to the captain rather than to whoever claims it.
 		vessel.abandon_ship(crash = FALSE)
 		return_held_balance(null)
 	if(!bay.complete_rebuild(vessel, src))
@@ -1415,7 +1429,7 @@
 		if(CHECKPOINT_BUILD_BUILDING)
 			return "Stage [min(stage, CHECKPOINT_STAGE_COUNT)]/[CHECKPOINT_STAGE_COUNT]: [stage_name()]"
 		if(CHECKPOINT_BUILD_COMMISSIONING)
-			return find_captain() ? "Commissioning" : "Awaiting captain"
+			return "Commissioning"
 		if(CHECKPOINT_BUILD_COMPLETE)
 			return "Complete"
 	return error || "Stopped"

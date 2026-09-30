@@ -38,6 +38,12 @@ SUBSYSTEM_DEF(ambient_npcs)
 	var/list/field_sites = list()
 	/// Sites an admin made by hand
 	var/list/admin_sites = list()
+	/// Milliseconds the NPCs' AI spent planning and acting since the last fire (note_ai_cost())
+	var/ai_cost_ms = 0
+	/// When ai_cost_ms was last folded into ai_cost_average
+	var/ai_cost_since = 0
+	/// The NPCs' AI time in milliseconds per second, smoothed across fires, for the MC tab
+	var/ai_cost_average = 0
 	/// Shared /datum/ambient_site_kind instances, built on first use
 	var/list/site_kinds
 	/// Shared /datum/ambient_outpost_role instances, built on first use
@@ -53,6 +59,7 @@ SUBSYSTEM_DEF(ambient_npcs)
 #endif
 
 /datum/controller/subsystem/ambient_npcs/fire(resumed)
+	fold_ai_cost()
 	if(!ambient_auto)
 		return
 	hook_weather()
@@ -76,8 +83,26 @@ SUBSYSTEM_DEF(ambient_npcs)
 		outpost_npcs += length(place.npcs)
 		if(place.occupied)
 			occupied++
-	msg = "NPC:[length(GLOB.ambient_npcs)]|O:[occupied]/[length(outposts)] ([outpost_npcs])|P:[length(planets)]|F:[length(field_sites)]"
+	msg = "NPC:[length(GLOB.ambient_npcs)]|O:[occupied]/[length(outposts)] ([outpost_npcs])|P:[length(planets)]|F:[length(field_sites)]|AI:[round(ai_cost_average, 0.01)]ms/s"
 	return ..()
+
+/**
+ * Adds the time since `start` (a TICK_USAGE_REAL reading) to the NPCs' AI cost. Their planning and
+ * acting runs on tg's shared AI subsystems, so it would otherwise be lost in those lines of the MC tab.
+ */
+/datum/controller/subsystem/ambient_npcs/proc/note_ai_cost(start)
+	var/spent = TICK_USAGE_TO_MS(start)
+	// Anything that slept spans ticks and reads as nonsense
+	if(spent > 0 && spent < 100)
+		ai_cost_ms += spent
+
+/// Folds the AI time since the last fire into the smoothed milliseconds per second
+/datum/controller/subsystem/ambient_npcs/proc/fold_ai_cost()
+	var/seconds = (world.time - ai_cost_since) / (1 SECONDS)
+	if(ai_cost_since && seconds > 0)
+		ai_cost_average = MC_AVERAGE(ai_cost_average, ai_cost_ms / seconds)
+	ai_cost_ms = 0
+	ai_cost_since = world.time
 
 // =========================================================================
 // KINDS AND ROLES

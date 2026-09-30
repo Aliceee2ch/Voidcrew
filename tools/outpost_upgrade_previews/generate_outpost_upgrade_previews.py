@@ -2,7 +2,7 @@
 """Generate preview assets for the outpost upgrades catalog and the founding catalog.
 
 Renders every voidcrew/_maps/map_files/outposts/outpost_upgrade_*.dmm (one per
-room and outpost style) and every founder-selectable player_outpost_shell_*.dmm
+room and outpost style), every outpost_ship_bay_*.dmm, and every founder-selectable player_outpost_shell_*.dmm
 with the ship preview renderer (tools/ship_previews), including its smoothing
 repairs, and writes one PNG and one metadata file per map.
 
@@ -37,16 +37,28 @@ from generate_ship_previews import Dmm, find_dmm_tools, render, source_md5  # no
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MAPS_DIR = REPO_ROOT / "voidcrew" / "_maps" / "map_files" / "outposts"
 OUTPUT_DIR = REPO_ROOT / "voidcrew" / "modules" / "player_outposts" / "previews"
-MAP_GLOBS = ("outpost_upgrade_*.dmm", "player_outpost_shell_*.dmm")
+MAP_GLOBS = ("outpost_upgrade_*.dmm", "outpost_ship_bay_*.dmm", "player_outpost_shell_*.dmm")
 # Maps founders never see need no picture
 SKIPPED: set[str] = set()
+# A picture bigger than this is cut to a 256-colour palette: it looks the same and is about a fifth of the size
+PALETTE_ABOVE_BYTES = 1_000_000
 
 
 def map_stem(name: str) -> str:
     stem = name.removesuffix(".dmm")
-    if stem.startswith(("outpost_upgrade_", "player_outpost_shell_")):
+    if stem.startswith(("outpost_upgrade_", "outpost_ship_bay_", "player_outpost_shell_")):
         return stem
     return f"outpost_upgrade_{stem}"
+
+
+def shrink(png: Path) -> None:
+    if png.stat().st_size <= PALETTE_ABOVE_BYTES:
+        return
+    from PIL import Image
+
+    with Image.open(png) as image:
+        reduced = image.convert("RGBA").quantize(256, method=Image.Quantize.FASTOCTREE)
+    reduced.save(png, "PNG", optimize=True)
 
 
 def main() -> None:
@@ -71,6 +83,7 @@ def main() -> None:
             dmm = Dmm(dmm_path)
             png_name = f"{dmm_path.stem}.png"
             render(dmm_tools, dmm_path, OUTPUT_DIR / png_name, tmp_dir, dmm)
+            shrink(OUTPUT_DIR / png_name)
             metadata = {
                 "png": png_name,
                 "width": dmm.width,
@@ -87,7 +100,7 @@ def main() -> None:
     if args.maps:
         return
     stems = {path.stem for path in all_maps}
-    for stale in [*OUTPUT_DIR.glob("outpost_upgrade_*.preview.json"), *OUTPUT_DIR.glob("player_outpost_shell_*.preview.json")]:
+    for stale in [path for pattern in MAP_GLOBS for path in OUTPUT_DIR.glob(pattern.replace(".dmm", ".preview.json"))]:
         stem = stale.name.removesuffix(".preview.json")
         if stem not in stems:
             stale.unlink()

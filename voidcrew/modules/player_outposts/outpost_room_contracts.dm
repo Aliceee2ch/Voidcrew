@@ -30,11 +30,10 @@
 	for(var/turf/tile as anything in inside)
 		if(!istype(tile, /turf/open/indestructible) && !istype(tile, /turf/closed/indestructible))
 			. += "a destructible [tile.type] at [tile.x],[tile.y]"
-		if(tile.loc != outpost.outpost_area)
-			. += "[tile.x],[tile.y] is outside the outpost's area"
 		for(var/obj/thing in tile)
-			if(istype(thing, /obj/machinery/power/apc) || istype(thing, /obj/machinery/light_switch) || istype(thing, /obj/structure/cable))
+			if(istype(thing, /obj/machinery/light_switch))
 				. += "a [thing.type] at [tile.x],[tile.y]"
+	. += power_problems()
 	var/list/routes = exit_routes()
 	if(length(routes) != 1)
 		. += "[length(routes)] ways out of the room, not 1"
@@ -169,16 +168,14 @@
 	if(!pad)
 		. += "no network pad"
 		return
-	if(pad.network_host() != outpost || !pad.arrival_turf)
+	if(pad.network_host() != outpost || pad.arrival_turf != get_turf(pad))
 		. += "the pad is not linked"
 		return
-	if(pad.arrival_turf == get_turf(pad) || get_dist(pad, pad.arrival_turf) > 2)
-		. += "the arrival spot is not beside the pad"
 	if(!pad.pad_step_off_turf())
 		. += "the pad has no free tile beside it"
 	var/list/visitor = visitor_reach()
-	if(!visitor[get_turf(pad)] || !visitor[pad.arrival_turf])
-		. += "a visitor cannot walk to the pad and from the arrival spot"
+	if(!visitor[get_turf(pad)])
+		. += "a visitor cannot walk to the pad"
 
 /datum/outpost_upgrade/service/medical_lab/contract_problems()
 	. = ..()
@@ -297,5 +294,10 @@
 	var/atom/obstruction = pad.pad_obstruction()
 	if(obstruction)
 		. += "[obstruction] stands on the landing pad"
-	if(!installed_area?.apc)
-		. += "the dock has no APC"
+	. += power_problems()
+
+/datum/outpost_upgrade/prison/contract_problems()
+	. = ..()
+	if(!installed)
+		return
+	. += power_problems()

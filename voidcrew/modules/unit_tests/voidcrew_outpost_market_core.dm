@@ -1,11 +1,14 @@
 /**
  * Outpost marketplace core: prices, the pricer role, membership, the one charge proc, the playtest
  * billing toggle, service rooms (area, protection, power, doors) and service doors. Door settings
- * themselves are tested in voidcrew_outpost_door_access.dm.
+ * themselves are tested in voidcrew_outpost_door_access.dm. Room power itself (the APC, the wire,
+ * joining the grid) is tested in voidcrew_outpost_room_power.dm.
  *
  * Voidcrew defines are not visible from test files, so prices, keys and messages appear as literals.
  * The test room (outpost_service_room_test.dmm) is 5x5: a public door at (3,1) facing south, a staff
- * door at (5,3) facing east, a window at (1,3), a table at (2,4) and a computer at (4,4).
+ * door at (5,3) facing east, a window at (1,3), a table at (2,4) and a computer at (4,4). It has its
+ * own area (a /area/voidcrew/player_outpost/service_room instance), an APC at (2,2) and cable to
+ * both exterior doors.
  */
 
 // ===== FIXTURES =====
@@ -431,14 +434,17 @@
 		placed += room
 		if(length(GLOB.unit_test_mapping_logs) > mapping_log_count)
 			TEST_FAIL("Placing the test room at [rotation] degrees logged mapping errors: [jointext(GLOB.unit_test_mapping_logs.Copy(mapping_log_count + 1), "; ")]")
-		TEST_ASSERT_EQUAL(room.installed_area, home.outpost_area, "The room did not record the outpost area at [rotation] degrees")
+		TEST_ASSERT(room.installed_area && room.installed_area != home.outpost_area, "The room did not get an area of its own at [rotation] degrees")
+		TEST_ASSERT(istype(room.installed_area, /area/voidcrew/player_outpost/service_room), "The room's area is not a service room area at [rotation] degrees")
 		var/list/room_turfs = room.room_turfs()
 		TEST_ASSERT_EQUAL(length(room_turfs), 25, "The room's footprint is the wrong size at [rotation] degrees")
 		var/list/inside = list()
 		for(var/turf/tile as anything in room_turfs)
 			inside[tile] = TRUE
-			TEST_ASSERT_EQUAL(get_area(tile), home.outpost_area, "[tile.x],[tile.y] is not in the outpost area at [rotation] degrees")
+			TEST_ASSERT_EQUAL(get_area(tile), room.installed_area, "[tile.x],[tile.y] is not in the room's own area at [rotation] degrees")
 			for(var/obj/fixture in tile)
+				if(istype(fixture, /obj/structure/cable))
+					continue
 				if(!ismachinery(fixture) && !isstructure(fixture))
 					continue
 				TEST_ASSERT(HAS_TRAIT(fixture, "outpost_property"), "[fixture] ([fixture.type]) is not outpost property at [rotation] degrees")
@@ -460,7 +466,9 @@
 	var/list/owned = home.outpost_owned_turfs()
 	TEST_ASSERT_EQUAL(length(owned), length(unique_list(owned)), "The outpost's owned turfs list a tile twice")
 
-	// Power: the room's machine runs on the outpost area and follows its equipment channel.
+	// Power: the room's machine runs on its own area and follows its own equipment channel. An
+	// outage in the habitat stays in the habitat (voidcrew_outpost_room_power.dm covers the APC
+	// and the wire that join a room to the habitat's grid).
 	var/datum/outpost_upgrade/service/unit_test/first_room = placed[1]
 	var/obj/machinery/computer/terminal
 	for(var/turf/tile as anything in first_room.room_turfs())
@@ -468,16 +476,28 @@
 		if(terminal)
 			break
 	TEST_ASSERT_NOTNULL(terminal, "The test room has no computer")
+	var/area/room_area = first_room.installed_area
+	TEST_ASSERT_NOTNULL(room_area, "The test room has no area of its own")
+	var/old_room_equip = room_area.power_equip
+	room_area.power_equip = TRUE
+	room_area.power_change()
+	TEST_ASSERT(!(terminal.machine_stat & NOPOWER), "The room's machine is unpowered while its own area has equipment power")
+	room_area.power_equip = FALSE
+	room_area.power_change()
+	TEST_ASSERT(terminal.machine_stat & NOPOWER, "The room's machine kept power with its own area's equipment channel off")
+
+	// The habitat's own outage never touches an installed room's own area.
+	room_area.power_equip = TRUE
+	room_area.power_change()
 	var/area/home_area = home.outpost_area
-	var/old_equip = home_area.power_equip
-	home_area.power_equip = TRUE
-	home_area.power_change()
-	TEST_ASSERT(!(terminal.machine_stat & NOPOWER), "The room's machine is unpowered while the outpost has equipment power")
+	var/old_home_equip = home_area.power_equip
 	home_area.power_equip = FALSE
 	home_area.power_change()
-	TEST_ASSERT(terminal.machine_stat & NOPOWER, "The room's machine kept power with the outpost's equipment channel off")
-	home_area.power_equip = old_equip
+	TEST_ASSERT(!(terminal.machine_stat & NOPOWER), "The room's machine lost power when the habitat's equipment channel went off")
+	home_area.power_equip = old_home_equip
 	home_area.power_change()
+	room_area.power_equip = old_room_equip
+	room_area.power_change()
 
 	// The console's Services tab and its actions.
 	var/datum/player_outpost_management_ui/management_test/panel = upgrade_test_panel(home, owner)
@@ -679,7 +699,7 @@
 	drone_rcd.rcd_create(floor, owner)
 	var/turf/stripped_floor = locate(floor_x, floor_y, site_z)
 	TEST_ASSERT_EQUAL(stripped_floor.type, /turf/open/floor/plating, "The drone did not take a service room floor down to plating")
-	TEST_ASSERT_EQUAL(get_area(stripped_floor), home.outpost_area, "A stripped floor left the outpost area")
+	TEST_ASSERT_EQUAL(get_area(stripped_floor), room.installed_area, "A stripped floor left the room's own area")
 	var/list/below = islist(stripped_floor.baseturfs) ? stripped_floor.baseturfs : list(stripped_floor.baseturfs)
 	for(var/layer in below)
 		TEST_ASSERT(!ispath(layer, /turf/closed/indestructible) && !ispath(layer, /turf/open/indestructible), "A stripped floor kept an indestructible layer underneath: [layer]")

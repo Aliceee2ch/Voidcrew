@@ -330,18 +330,20 @@
 	TEST_ASSERT_EQUAL(kind.chance_on(elsewhere), 0, "A site kind rolls on a planet type it does not list")
 	TEST_ASSERT_EQUAL(kind.chance_on(record), 100, "A site kind does not roll on its own planet type")
 
-	// Rolling: at most two sites, however many kinds come up
+	// Rolling: at most one site, however many kinds come up
 	SSambient_npcs.roll_planet_sites(record, list(kind, kind, kind, kind))
 	TEST_ASSERT(record.rolled, "A rolled planet does not know it was rolled")
-	TEST_ASSERT_EQUAL(length(record.sites), 2, "A planet rolled [length(record.sites)] sites, not the cap of 2") // AMBIENT_PLANET_SITES_MAX
+	TEST_ASSERT_EQUAL(length(record.sites), 1, "A planet rolled [length(record.sites)] sites, not the cap of 1") // AMBIENT_PLANET_SITES_MAX
 	QDEL_LIST(record.sites)
 
-	// ...and at most six NPCs: a second four-NPC site does not fit
-	kind.min_npcs = 4
-	kind.max_npcs = 4
+	// ...and at most six NPCs: an eight-NPC site gets six
+	kind.min_npcs = 8
+	kind.max_npcs = 8
 	record.rolled = FALSE
-	SSambient_npcs.roll_planet_sites(record, list(kind, kind))
-	TEST_ASSERT_EQUAL(length(record.sites), 1, "A planet rolled sites for more than six NPCs") // AMBIENT_PLANET_NPCS_MAX
+	SSambient_npcs.roll_planet_sites(record, list(kind))
+	TEST_ASSERT_EQUAL(length(record.sites), 1, "A planet did not roll its site")
+	var/datum/ambient_place/site/big_site = record.sites[1]
+	TEST_ASSERT_EQUAL(big_site.npc_total, 6, "A site holds [big_site.npc_total] NPCs, over the planet's six") // AMBIENT_PLANET_NPCS_MAX
 	QDEL_LIST(record.sites)
 	kind.min_npcs = 2
 	kind.max_npcs = 2

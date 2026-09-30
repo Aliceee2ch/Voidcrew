@@ -212,9 +212,9 @@
 	var/datum/ambient_planet/record = allocate(/datum/ambient_planet)
 	record.band = 1 // ZONE_GREEN
 	record.planet_type = /datum/overmap/planet/beach
-	TEST_ASSERT_EQUAL(kind.chance_on(record), 20, "A crashed pod's chance on an oceanic planet is wrong")
+	TEST_ASSERT_EQUAL(kind.chance_on(record), 7, "A crashed pod's chance on an oceanic planet is wrong")
 	record.planet_type = /datum/overmap/planet/jungle
-	TEST_ASSERT_EQUAL(kind.chance_on(record), 15, "A crashed pod's chance on a jungle planet is wrong")
+	TEST_ASSERT_EQUAL(kind.chance_on(record), 5, "A crashed pod's chance on a jungle planet is wrong")
 	record.planet_type = /datum/overmap/planet/asteroid
 	TEST_ASSERT_EQUAL(kind.chance_on(record), 0, "A crashed pod can roll on an asteroid")
 	record.planet_type = /datum/overmap/planet/jungle
@@ -360,9 +360,9 @@
 	var/datum/ambient_planet/record = allocate(/datum/ambient_planet)
 	record.band = 2 // ZONE_YELLOW
 	record.planet_type = /datum/overmap/planet/lava
-	TEST_ASSERT_EQUAL(kind.chance_on(record), 10, "A convict's chance on a lava planet is wrong")
+	TEST_ASSERT_EQUAL(kind.chance_on(record), 4, "A convict's chance on a lava planet is wrong")
 	record.planet_type = /datum/overmap/planet/wasteland
-	TEST_ASSERT_EQUAL(kind.chance_on(record), 20, "A convict's chance on a wasteland is wrong")
+	TEST_ASSERT_EQUAL(kind.chance_on(record), 7, "A convict's chance on a wasteland is wrong")
 	record.planet_type = /datum/overmap/planet/jungle
 	TEST_ASSERT_EQUAL(kind.chance_on(record), 15, "A convict's chance on a jungle planet is wrong")
 	record.band = 1 // ZONE_GREEN

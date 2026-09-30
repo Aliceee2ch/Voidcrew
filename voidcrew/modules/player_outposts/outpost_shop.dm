@@ -26,6 +26,7 @@
 	desc = "A shop front with a counter and a register, and a stock room."
 	price = OUTPOST_SHOP_COST
 	template_type = /datum/map_template/outpost_upgrade/shop
+	area_type = /area/voidcrew/player_outpost/service_room/shop
 	/// Closed shops sell nothing, to anyone
 	var/is_open = TRUE
 	var/datum/weakref/stock_ref

@@ -29,7 +29,7 @@
 		/datum/overmap/planet/ice,
 		/datum/overmap/planet/wasteland,
 	)
-	chance = 15
+	chance = 5
 	spot_room = 2
 	npc_type = /mob/living/basic/ambient_npc/stray/stranded
 
@@ -37,7 +37,7 @@
 /datum/ambient_site_kind/stranded/chance_on(datum/ambient_planet/record)
 	. = ..()
 	if(. && record.planet_type == /datum/overmap/planet/beach)
-		return 20
+		return 7
 
 /datum/ambient_site_kind/stranded/realize(datum/ambient_place/site/site)
 	if(site.data["taken"] || !site.npcs_missing())

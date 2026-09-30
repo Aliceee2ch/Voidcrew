@@ -453,6 +453,9 @@
 		placeholders[i] = allocate(/datum/outpost_berth, home, i, null)
 	home.berths = placeholders
 	TEST_ASSERT(home.evicted_crew_ashore(ship), "Crew ashore with nobody aboard was not recognised")
+	// The berth strip template is made once per world, and making it yields. Make it now, so the
+	// eviction's async relocation below finds no berth and books its retry before the checks.
+	get_outpost_berth_strip()
 	TEST_ASSERT_NULL(home.request_bay_eviction(owner, bay), "The owner could not evict a ship with crew ashore")
 	home.enforce_bay_eviction(WEAKREF(ship))
 	TEST_ASSERT_EQUAL(ship.state, "idle", "An empty hull was launched while its crew was ashore")

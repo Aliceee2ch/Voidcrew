@@ -19,7 +19,6 @@
 		var/list/entry = job.rebuild_ui_data()
 		entry["owner"] = job.captain_ckey
 		entry["can_rush"] = !job.manual && (job.state == CHECKPOINT_BUILD_MARKING || (job.state == CHECKPOINT_BUILD_BUILDING && !job.rushed))
-		entry["can_hand_over"] = job.state == CHECKPOINT_BUILD_COMMISSIONING
 		jobs += list(entry)
 	var/obj/structure/overmap/ship/docked = docked_bay_ship(home)
 	return list(
@@ -91,7 +90,7 @@
 			record(user, home, "delete [snapshot.captain_ckey]'s checkpoint of [snapshot.ship_name]")
 			qdel(snapshot)
 			return
-		if("rebuild_rush", "rebuild_hand_over", "rebuild_stop")
+		if("rebuild_rush", "rebuild_stop")
 			var/datum/checkpoint_construction/job = locate(params["ref"]) in home.checkpoint_jobs
 			if(!job)
 				error = "That build is no longer running."
@@ -100,10 +99,6 @@
 				if("rebuild_rush")
 					if(job.rush())
 						record(user, home, "rush the reconstruction of [job.ship_name]")
-				if("rebuild_hand_over")
-					var/name = job.ship_name
-					if(job.hand_over_now())
-						record(user, home, "hand over the rebuilt [name] without waiting")
 				if("rebuild_stop")
 					if(!confirm(home, user, "Stop building [job.ship_name]? Placed pieces are removed. A checkpoint or payment already used by this build is not returned.") || QDELETED(job))
 						return

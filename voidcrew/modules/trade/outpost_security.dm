@@ -67,7 +67,6 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 			COMSIG_ATOM_ATTACK_BASIC_MOB,
 			COMSIG_ATOM_ATTACK_ANIMAL,
 		), PROC_REF(on_outpost_pvp_npc_attack))
-	RegisterSignal(living_mob, COMSIG_HUMAN_GOT_PUNCHED, PROC_REF(on_outpost_pvp_punched))
 	RegisterSignal(living_mob, COMSIG_PROJECTILE_PREHIT, PROC_REF(on_outpost_pvp_projectile))
 	RegisterSignal(living_mob, COMSIG_ATOM_PREHITBY, PROC_REF(on_outpost_pvp_thrown_item))
 	RegisterSignal(living_mob, COMSIG_ATOM_HULK_ATTACK, PROC_REF(on_outpost_pvp_hulk_attack))
@@ -88,34 +87,21 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	SIGNAL_HANDLER
 	if(weapon.force)
 		register_pvp_aggression(victim, offender)
-		// MARKET P8: the outpost network's combat lock counts only hits that hurt (outpost_network.dm)
-		if(weapon.damtype != STAMINA)
-			stamp_outpost_network_combat(victim, offender)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_unarmed_attack(mob/living/victim, mob/living/offender, list/modifiers)
 	SIGNAL_HANDLER
 	if(offender.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK))
 		register_pvp_aggression(victim, offender)
-	// The outpost network's combat lock waits for a punch that lands (on_outpost_pvp_punched()).
-	// This signal fires before the hit roll, so a miss or a shove would lock the victim for free.
-
-/// A punch that landed and hurt: the outpost network's combat lock (outpost_network.dm)
-/datum/outpost_pvp_enforcement/proc/on_outpost_pvp_punched(mob/living/victim, mob/living/offender, damage, attack_type)
-	SIGNAL_HANDLER
-	if(damage > 0 && attack_type != STAMINA)
-		stamp_outpost_network_combat(victim, offender)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_npc_attack(mob/living/victim, mob/living/offender)
 	SIGNAL_HANDLER
 	if(offender.melee_damage_upper > 0)
 		register_pvp_aggression(victim, offender)
-		stamp_outpost_network_combat(victim, offender) // MARKET P8 (outpost_network.dm)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_projectile(mob/living/victim, obj/projectile/hitting_projectile)
 	SIGNAL_HANDLER
 	if(hitting_projectile.is_hostile_projectile() && isliving(hitting_projectile.firer))
 		register_pvp_aggression(victim, hitting_projectile.firer)
-		stamp_outpost_network_combat(victim, hitting_projectile.firer) // MARKET P8 (outpost_network.dm)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_thrown_item(mob/living/victim, atom/movable/hitting_atom, datum/thrownthing/throwingdatum)
 	SIGNAL_HANDLER
@@ -125,17 +111,14 @@ GLOBAL_DATUM_INIT(outpost_pvp_enforcement, /datum/outpost_pvp_enforcement, new)
 	var/mob/living/offender = throwingdatum?.get_thrower()
 	if(thrown_item.throwforce && istype(offender))
 		register_pvp_aggression(victim, offender)
-		stamp_outpost_network_combat(victim, offender) // MARKET P8 (outpost_network.dm)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_hulk_attack(mob/living/victim, mob/living/offender)
 	SIGNAL_HANDLER
 	register_pvp_aggression(victim, offender)
-	stamp_outpost_network_combat(victim, offender) // MARKET P8 (outpost_network.dm)
 
 /datum/outpost_pvp_enforcement/proc/on_outpost_pvp_mech_attack(mob/living/victim, obj/vehicle/sealed/mecha/mecha_attacker, mob/living/pilot)
 	SIGNAL_HANDLER
 	register_pvp_aggression(victim, pilot)
-	stamp_outpost_network_combat(victim, pilot) // MARKET P8 (outpost_network.dm)
 
 /obj/machinery/porta_turret/outpost
 	name = "outpost defense turret"

@@ -1,137 +1,29 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
-"a" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged4";
-	alpha = 190
+"am" = (
+/obj/effect/decal/cleanable/crayon{
+	icon_state = "electricdanger";
+	paint_colour = "#E8C23A";
+	name = "painted warning";
+	desc = "A high voltage mark, painted by hand."
 	},
-/obj/effect/decal/cleanable/ash,
-/obj/structure/railing{
-	dir = 4
+/turf/closed/indestructible/reinforced/rusty,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"au" = (
+/obj/effect/turf_decal/bot,
+/obj/effect/decal/cleanable/cobweb,
+/obj/structure/showcase{
+	name = "capacitor bank";
+	desc = "A salvaged capacitor bank, wired straight into the pad.";
+	icon = 'icons/obj/machines/engine/other.dmi';
+	icon_state = "smes";
+	color = "#CFC2AA"
 	},
-/turf/open/indestructible{
-	name = "grated deck";
-	icon = 'icons/turf/floors/catwalk_plating.dmi';
-	icon_state = "combined_example"
-	},
-/area/template_noop)
-"b" = (
-/turf/closed/indestructible/reinforced,
-/area/template_noop)
-"c" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor3";
-	color = "#2A2622";
-	alpha = 170
-	},
-/obj/effect/decal/cleanable/dirt,
-/obj/structure/chair/office{
-	dir = 8
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"d" = (
-/obj/item/cigbutt{
-	pixel_x = -4;
-	pixel_y = 7
-	},
-/turf/open/indestructible/carpet/red,
-/area/template_noop)
-"e" = (
-/obj/effect/spawner/structure/window/reinforced,
-/turf/open/indestructible/plating,
-/area/template_noop)
-"f" = (
-/turf/closed/indestructible/rusty,
-/area/template_noop)
-"g" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 110
-	},
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "floorscorched1";
-	alpha = 120
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/turf/open/indestructible/plating,
-/area/template_noop)
-"h" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor5";
-	color = "#2A2622";
-	alpha = 140
-	},
-/obj/item/cigbutt{
-	pixel_x = 6;
-	pixel_y = -8
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"i" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible{
-	name = "grated deck";
-	icon = 'icons/turf/floors/catwalk_plating.dmi';
-	icon_state = "combined_example"
-	},
-/area/template_noop)
-"j" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "floorscorched1";
-	alpha = 120
-	},
-/obj/effect/decal/cleanable/ash,
-/obj/structure/barrel/flaming,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"k" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/noticeboard/directional/north,
-/obj/item/cigbutt{
-	pixel_x = 8;
-	pixel_y = -9
-	},
-/obj/item/paper{
-	name = "note";
-	default_raw_text = "Whoever keeps leaving cups on the deck: stop."
-	},
-/obj/item/paper{
-	name = "note";
-	default_raw_text = "Deck repainted. Again."
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"l" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged4";
-	alpha = 200
-	},
-/obj/structure/railing{
-	dir = 8
-	},
-/turf/open/indestructible{
-	name = "grated deck";
-	icon = 'icons/turf/floors/catwalk_plating.dmi';
-	icon_state = "combined_example"
-	},
-/area/template_noop)
-"n" = (
-/obj/effect/decal/cleanable/dirt,
-/turf/open/indestructible/dark/textured,
-/area/template_noop)
-"o" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"aA" = (
+/turf/closed/indestructible/reinforced,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"aF" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/structure/showcase{
@@ -141,26 +33,47 @@
 	icon_state = "controller"
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
-"p" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/dark/textured,
-/area/template_noop)
-"q" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"aR" = (
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
-"r" = (
-/obj/effect/turf_decal/siding/wood{
+/area/voidcrew/player_outpost/service_room/teleporter)
+"aS" = (
+/obj/effect/turf_decal/stripes/line{
 	dir = 1
 	},
-/obj/structure/chair/sofa/bench/right{
-	dir = 8
+/obj/effect/decal/cleanable/dirt,
+/obj/machinery/light/small/directional/west,
+/turf/open/indestructible/plating,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"jn" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
 	},
-/obj/machinery/light/small/directional/east,
-/turf/open/indestructible/wood,
-/area/template_noop)
-"s" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor6";
+	color = "#2A2622";
+	alpha = 140
+	},
+/obj/structure/sign/poster/contraband/random/directional/east,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"kU" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "floorscorched1";
+	alpha = 200
+	},
+/obj/machinery/light/warm/directional/north,
+/turf/open/indestructible{
+	name = "grated deck";
+	icon = 'icons/turf/floors/catwalk_plating.dmi';
+	icon_state = "combined_example"
+	},
+/area/voidcrew/player_outpost/service_room/teleporter)
+"lg" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/sign/warning/no_smoking/circle/directional/east,
 /obj/item/trash/can{
@@ -176,15 +89,112 @@
 	pixel_y = -10
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
-"t" = (
-/obj/effect/turf_decal/arrows{
-	dir = 2
+/area/voidcrew/player_outpost/service_room/teleporter)
+"lo" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 8
+	},
+/obj/item/kirbyplants/organic/plant22,
+/obj/structure/sign/poster/official/corporate_perks_vacation/directional/south,
+/turf/open/indestructible/wood,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"ng" = (
+/obj/item/cigbutt{
+	pixel_x = -4;
+	pixel_y = 7
+	},
+/turf/open/indestructible/carpet/red,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"oe" = (
+/obj/effect/turf_decal/weather/dirt{
+	dir = 10
+	},
+/obj/structure/barrel,
+/turf/open/indestructible/plating/rusty,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"pj" = (
+/obj/effect/turf_decal/box,
+/obj/effect/landmark/outpost_network_arrival,
+/turf/open/indestructible/light{
+	name = "arrival light";
+	icon_state = "light_on-3";
+	light_color = "#FFB050";
+	light_range = 2
+	},
+/area/voidcrew/player_outpost/service_room/teleporter)
+"pp" = (
+/obj/effect/turf_decal/siding/wood{
+	dir = 1
+	},
+/obj/structure/chair/sofa/bench/right{
+	dir = 8
+	},
+/obj/machinery/light/small/directional/east,
+/turf/open/indestructible/wood,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"rm" = (
+/obj/effect/turf_decal/stripes/full,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/sign/warning/electric_shock/directional/north,
+/turf/open/indestructible/plating,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"tM" = (
+/obj/effect/turf_decal/weather/dirt{
+	dir = 8
+	},
+/obj/structure/sign/clock/directional/west,
+/obj/item/paper/crumpled{
+	pixel_x = 4;
+	pixel_y = -6
+	},
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"uf" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor3";
+	color = "#2A2622";
+	alpha = 170
 	},
 /obj/effect/decal/cleanable/dirt,
+/obj/structure/chair/office{
+	dir = 8
+	},
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"uK" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/chair/comfy/brown{
+	dir = 4
+	},
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"xI" = (
+/turf/open/indestructible/carpet/red,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"AT" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged1";
+	alpha = 170
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/structure/railing{
+	dir = 4
+	},
+/turf/open/indestructible{
+	name = "grated deck";
+	icon = 'icons/turf/floors/catwalk_plating.dmi';
+	icon_state = "combined_example"
+	},
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Fw" = (
+/obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
-"v" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"FH" = (
 /obj/structure/table/wood,
 /obj/item/flashlight/lamp/green{
 	pixel_x = -7;
@@ -203,15 +213,29 @@
 	pixel_y = -3
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
-"w" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"FN" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/noticeboard/directional/north,
+/obj/item/cigbutt{
+	pixel_x = 8;
+	pixel_y = -9
+	},
+/obj/item/paper{
+	name = "note";
+	default_raw_text = "Whoever keeps leaving cups on the deck: stop."
+	},
+/obj/item/paper{
+	name = "note";
+	default_raw_text = "Deck repainted. Again."
+	},
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Gp" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
-	icon_state = "floorscorched2";
-	alpha = 190
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
+	icon_state = "damaged2";
+	alpha = 170
 	},
 /obj/structure/railing{
 	dir = 8
@@ -221,8 +245,21 @@
 	icon = 'icons/turf/floors/catwalk_plating.dmi';
 	icon_state = "combined_example"
 	},
-/area/template_noop)
-"x" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"GV" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor5";
+	color = "#2A2622";
+	alpha = 140
+	},
+/obj/item/cigbutt{
+	pixel_x = 6;
+	pixel_y = -8
+	},
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Hk" = (
 /obj/machinery/door/airlock/outpost/service/maintenance{
 	name = "telepad"
 	},
@@ -230,29 +267,10 @@
 /obj/effect/mapping_helpers/airlock/unres{
 	dir = 1
 	},
+/obj/structure/cable/outpost,
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
-"y" = (
-/obj/effect/turf_decal/box,
-/obj/effect/landmark/outpost_network_arrival,
-/turf/open/indestructible/light{
-	name = "arrival light";
-	icon_state = "light_on-3";
-	light_color = "#FFB050";
-	light_range = 2
-	},
-/area/template_noop)
-"z" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/chair/comfy/brown{
-	dir = 4
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"B" = (
-/turf/open/indestructible/carpet/red,
-/area/template_noop)
-"C" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"HS" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 2
 	},
@@ -260,29 +278,66 @@
 	dir = 8
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
-"D" = (
-/obj/effect/turf_decal/stripes/full,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"JU" = (
+/obj/effect/decal/cleanable/dirt,
 /obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/sign/warning/electric_shock/directional/north,
-/turf/open/indestructible/plating,
-/area/template_noop)
-"E" = (
+/obj/structure/cable/outpost,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"JZ" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/item/trash/can{
+	pixel_x = -6;
+	pixel_y = -3
+	},
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Kb" = (
+/obj/effect/turf_decal/arrows{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Lj" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/item/trash/chips{
+	pixel_x = 5;
+	pixel_y = 6
+	},
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"LJ" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
 	icon_state = "rust_default";
-	alpha = 90
+	alpha = 110
 	},
 /obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor6";
-	color = "#2A2622";
-	alpha = 140
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "floorscorched1";
+	alpha = 120
 	},
-/obj/structure/sign/poster/contraband/random/directional/east,
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"G" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/indestructible/plating,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"ML" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/turf/open/indestructible{
+	name = "grated deck";
+	icon = 'icons/turf/floors/catwalk_plating.dmi';
+	icon_state = "combined_example"
+	},
+/area/voidcrew/player_outpost/service_room/teleporter)
+"NY" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 4
 	},
@@ -304,79 +359,8 @@
 	pixel_y = -7
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
-"H" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "floorscorched1";
-	alpha = 200
-	},
-/obj/machinery/light/warm/directional/north,
-/turf/open/indestructible{
-	name = "grated deck";
-	icon = 'icons/turf/floors/catwalk_plating.dmi';
-	icon_state = "combined_example"
-	},
-/area/template_noop)
-"I" = (
-/obj/effect/turf_decal/arrows{
-	dir = 1
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/indestructible/dark/textured,
-/area/template_noop)
-"J" = (
-/obj/effect/turf_decal/stripes/full,
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "floorscorched2";
-	alpha = 110
-	},
-/turf/open/indestructible/plating,
-/area/template_noop)
-"K" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/machinery/light/small/directional/south,
-/obj/item/trash/can{
-	pixel_x = -6;
-	pixel_y = -3
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"L" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged1";
-	alpha = 170
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/obj/structure/railing{
-	dir = 4
-	},
-/turf/open/indestructible{
-	name = "grated deck";
-	icon = 'icons/turf/floors/catwalk_plating.dmi';
-	icon_state = "combined_example"
-	},
-/area/template_noop)
-"M" = (
-/obj/effect/turf_decal{
-	icon = 'icons/turf/damaged.dmi';
-	icon_state = "damaged2";
-	alpha = 170
-	},
-/obj/structure/railing{
-	dir = 8
-	},
-/turf/open/indestructible{
-	name = "grated deck";
-	icon = 'icons/turf/floors/catwalk_plating.dmi';
-	icon_state = "combined_example"
-	},
-/area/template_noop)
-"N" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Oq" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
 	icon_state = "damaged3";
@@ -391,77 +375,85 @@
 	icon = 'icons/turf/floors/catwalk_plating.dmi';
 	icon_state = "combined_example"
 	},
-/area/template_noop)
-"O" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/obj/effect/decal/cleanable/dirt,
-/obj/machinery/light/small/directional/west,
-/turf/open/indestructible/plating,
-/area/template_noop)
-"P" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/item/trash/chips{
-	pixel_x = 5;
-	pixel_y = 6
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"Q" = (
-/obj/effect/turf_decal/weather/dirt{
-	dir = 8
-	},
-/obj/structure/sign/clock/directional/west,
-/obj/item/paper/crumpled{
-	pixel_x = 4;
-	pixel_y = -6
-	},
-/turf/open/indestructible/grimy,
-/area/template_noop)
-"T" = (
-/obj/effect/turf_decal/weather/dirt{
-	dir = 10
-	},
-/obj/structure/barrel,
-/turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"U" = (
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Ow" = (
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /obj/item/kirbyplants/organic/plant21,
 /turf/open/indestructible/grimy,
-/area/template_noop)
-"V" = (
-/obj/effect/turf_decal/bot,
-/obj/effect/decal/cleanable/cobweb,
-/obj/structure/showcase{
-	name = "capacitor bank";
-	desc = "A salvaged capacitor bank, wired straight into the pad.";
-	icon = 'icons/obj/machines/engine/other.dmi';
-	icon_state = "smes";
-	color = "#CFC2AA"
-	},
-/turf/open/indestructible/plating/rusty,
-/area/template_noop)
-"W" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "floor1";
-	color = "#2A2622";
-	alpha = 190
-	},
-/obj/structure/barrel,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Pk" = (
+/obj/effect/spawner/structure/window/reinforced,
 /turf/open/indestructible/plating,
-/area/template_noop)
-"X" = (
-/obj/effect/turf_decal/siding/wood{
+/area/voidcrew/player_outpost/service_room/teleporter)
+"PX" = (
+/turf/closed/indestructible/rusty,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Qf" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged4";
+	alpha = 200
+	},
+/obj/structure/railing{
 	dir = 8
 	},
-/obj/item/kirbyplants/organic/plant22,
-/obj/structure/sign/poster/official/corporate_perks_vacation/directional/south,
-/turf/open/indestructible/wood,
-/area/template_noop)
-"Y" = (
+/turf/open/indestructible{
+	name = "grated deck";
+	icon = 'icons/turf/floors/catwalk_plating.dmi';
+	icon_state = "combined_example"
+	},
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Qv" = (
+/obj/effect/turf_decal/arrows{
+	dir = 1
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"RC" = (
+/obj/effect/turf_decal/stripes/full,
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "floorscorched2";
+	alpha = 110
+	},
+/turf/open/indestructible/plating,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Sc" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "floorscorched2";
+	alpha = 190
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/structure/railing{
+	dir = 8
+	},
+/turf/open/indestructible{
+	name = "grated deck";
+	icon = 'icons/turf/floors/catwalk_plating.dmi';
+	icon_state = "combined_example"
+	},
+/area/voidcrew/player_outpost/service_room/teleporter)
+"SR" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "damaged4";
+	alpha = 190
+	},
+/obj/effect/decal/cleanable/ash,
+/obj/structure/railing{
+	dir = 4
+	},
+/turf/open/indestructible{
+	name = "grated deck";
+	icon = 'icons/turf/floors/catwalk_plating.dmi';
+	icon_state = "combined_example"
+	},
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Tg" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
 	icon_state = "damaged5";
@@ -473,104 +465,116 @@
 	icon = 'icons/turf/floors/catwalk_plating.dmi';
 	icon_state = "combined_example"
 	},
-/area/template_noop)
-"Z" = (
-/obj/effect/decal/cleanable/crayon{
-	icon_state = "electricdanger";
-	paint_colour = "#E8C23A";
-	name = "painted warning";
-	desc = "A high voltage mark, painted by hand."
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Vb" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "floor1";
+	color = "#2A2622";
+	alpha = 190
 	},
-/turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/obj/structure/barrel,
+/obj/machinery/light/small/directional/south,
+/turf/open/indestructible/plating,
+/area/voidcrew/player_outpost/service_room/teleporter)
+"Yp" = (
+/obj/effect/turf_decal{
+	icon = 'icons/turf/damaged.dmi';
+	icon_state = "floorscorched1";
+	alpha = 120
+	},
+/obj/effect/decal/cleanable/ash,
+/obj/structure/barrel/flaming,
+/turf/open/indestructible/plating/rusty,
+/area/voidcrew/player_outpost/service_room/teleporter)
 
 (1,1,1) = {"
-q
-q
-Z
-q
-b
-q
-q
-q
+aR
+aR
+am
+aR
+aA
+aR
+aR
+aR
 "}
 (2,1,1) = {"
-q
-V
-o
-O
-Q
-z
-T
-q
+aR
+au
+aF
+aS
+tM
+uK
+oe
+aR
 "}
 (3,1,1) = {"
-f
-D
-J
-g
-P
-v
-W
-e
+PX
+rm
+RC
+LJ
+Lj
+FH
+Vb
+Pk
 "}
 (4,1,1) = {"
-q
-M
-l
-w
-h
-c
-K
-q
+aR
+Gp
+Qf
+Sc
+GV
+uf
+JZ
+aR
 "}
 (5,1,1) = {"
-q
-H
-Y
-i
-n
-I
-p
-x
+aR
+kU
+Tg
+ML
+Fw
+Qv
+JU
+Hk
 "}
 (6,1,1) = {"
-q
-N
-a
-L
-B
-B
-X
-q
+aR
+Oq
+SR
+AT
+xI
+xI
+lo
+aR
 "}
 (7,1,1) = {"
-b
-k
-y
-t
-d
-B
-G
-e
+aA
+FN
+pj
+Kb
+ng
+xI
+NY
+Pk
 "}
 (8,1,1) = {"
-q
-U
-E
-s
-r
-C
-j
-f
+aR
+Ow
+jn
+lg
+pp
+HS
+Yp
+PX
 "}
 (9,1,1) = {"
-q
-q
-f
-q
-q
-q
-q
-q
+aR
+aR
+PX
+aR
+aR
+aR
+aR
+aR
 "}

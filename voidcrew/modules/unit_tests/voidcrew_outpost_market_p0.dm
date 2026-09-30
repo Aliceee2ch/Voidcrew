@@ -133,11 +133,23 @@
 	tear.start_disaster()
 	TEST_ASSERT(QDELETED(tear), "A reality tear in a service room was not neutralized")
 
-	// F-03: the exit reads vacuum, then blocked, then clear
+	// F-03: an exit onto space is open; a wall is blocked; then clear
 	outside = outside.ChangeTurf(/turf/open/space/basic)
-	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit to vacuum", "An exit onto space was not reported")
+	TEST_ASSERT_NULL(blueprint.exit_denial(), "An exit onto space was reported: [blueprint.exit_denial()]")
 	outside = outside.ChangeTurf(/turf/closed/wall)
 	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "A wall against the door was not reported")
+	// With the door walled off, an opening the owner makes in the room's own wall is a way out
+	var/turf/wall_gap = locate(corner.x, corner.y + 1, corner.z)
+	var/turf/beyond_gap = get_step(wall_gap, WEST)
+	var/wall_type = wall_gap.type
+	var/beyond_type = beyond_gap.type
+	beyond_gap = beyond_gap.ChangeTurf(/turf/open/floor/iron)
+	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "A closed room wall counted as a way out")
+	wall_gap = wall_gap.ChangeTurf(/turf/open/floor/iron)
+	TEST_ASSERT_NULL(blueprint.exit_denial(), "An opening in the room's wall was not a way out: [blueprint.exit_denial()]")
+	wall_gap.ChangeTurf(wall_type)
+	beyond_gap.ChangeTurf(beyond_type)
+	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "A rebuilt room wall still counted as a way out")
 	outside = outside.ChangeTurf(/turf/open/floor/iron)
 	// A wall turned to floor averages its neighbours' air (vacuum here); give the corridor station air
 	var/turf/open/corridor = outside

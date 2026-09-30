@@ -221,6 +221,13 @@
 #define OUTPOST_FLY_STAMINA 100
 
 // ----- Trait sources and timings shared by the experiment files -----
+/// Seconds a creature may chase its current target with no progress (not closer, not adjacent)
+/// before it writes the target off as unreachable. Cheap: distance only, no pathfinding.
+#define OUTPOST_EXPERIMENT_STUCK_TIME (4 SECONDS)
+/// How long a target written off stays off find_light()'s and choose_target()'s lists
+#define OUTPOST_EXPERIMENT_UNREACHABLE_TIME (30 SECONDS)
+/// Most targets a creature keeps written off at once, oldest dropped first
+#define OUTPOST_EXPERIMENT_UNREACHABLE_MAX 16
 /// Trait source for the damage ledger's TRAIT_OUTPOST_EXPERIMENT
 #define OUTPOST_EXPERIMENT_LEDGER_TRAIT "outpost_experiment_ledger"
 /// Trait source for a creature Kessler is taking away

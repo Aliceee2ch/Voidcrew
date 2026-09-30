@@ -20,10 +20,10 @@
  * fight, a shootout, death, fading) stops any spin and steps her down to a free tile beside it.
  *
  * Now and then she takes a short break at the bar or a nearby seat. If the kingpin's crew starts
- * shooting she screams and runs for the lounge's refuge, and comes back once it is calm
- * (take_cover, shootout_over()). A fight right by his seat, she screams and runs out by the lift
- * (leave); a replacement comes off the lift later. Any other fight at the outpost, she ducks and
- * leaves like the other patrons (the base reaction).
+ * shooting she screams and runs for the lounge's refuge (take_cover, shootout_over()). Any other
+ * fight at the outpost, or a hit on her, she runs a few steps clear of it and keeps her head down
+ * (dancer_hide), screaming if it is by his seat or at her. Either way she stays at the outpost, and
+ * once it has been quiet a while she goes straight back up on her pole (back_to_pole).
  *
  * She wears a bikini and performer's boots. The bikini is an underwear accessory set on the dummy
  * her look is built on (outpost_npc_looks.dm), so it is drawn on her body and cached per outfit
@@ -41,6 +41,12 @@
 #define DANCE_CLIMB_TRIES 5
 /// How near the kingpin's seat counts as "near him" for her scream-and-run reaction
 #define DANCER_KINGPIN_ALARM_RADIUS 3
+/// How long it has to stay quiet before she comes out of hiding and goes back to her pole
+#define DANCER_CALM_TIME (30 SECONDS)
+/// The longest she stays hidden from one fight
+#define DANCER_HIDE_MAX (5 MINUTES)
+/// How far from where she was she runs to get clear of a fight
+#define DANCER_HIDE_RANGE 5
 
 // =========================================================================
 // OUTFIT
@@ -88,9 +94,15 @@
 		/datum/ambient_activity/dance_pole = 6,
 		/datum/ambient_activity/sit = 1,
 	)
+	/// Set when trouble sends her off the pole: the first thing she does once it is over is climb back on
+	var/back_to_pole = FALSE
 
-/// Dances at the pole, with the odd break at the bar or a nearby seat
+/// Dances at the pole, with the odd break at the bar or a nearby seat. Straight back to the pole after trouble.
 /mob/living/basic/ambient_npc/outpost/dancer/pick_activity()
+	if(back_to_pole)
+		back_to_pole = FALSE
+		if(start_activity(new /datum/ambient_activity/dance_pole(src)))
+			return activity
 	var/list/bar = ambient_outpost_bar(place)
 	var/atom/bar_spot = length(bar) ? bar[1] : null
 	return pick_anchored(routine, bar_spot, list(/datum/ambient_activity/sit))
@@ -121,22 +133,75 @@
 			return FALSE
 	return leash_ok(tile)
 
-/// A fight right by the kingpin: she screams and runs out by the lift, no ducking. Anything else, she ducks and leaves like the others (base react_violence).
+/// A fight at the outpost: she gets clear of it and keeps her head down until it has been quiet a while, screaming if it is right by the kingpin. She never leaves over it.
 /mob/living/basic/ambient_npc/outpost/dancer/react_violence(mob/living/offender)
-	if(!ambient_in_kingpin_lounge(offender, DANCER_KINGPIN_ALARM_RADIUS))
-		return ..()
-	// Already running, or keeping her head down in a shootout: she stays where she is
-	if(stat != CONSCIOUS || fading || istype(activity, /datum/ambient_activity/leave) || istype(activity, /datum/ambient_activity/take_cover) || !reaction_ready("violence"))
+	if(stat != CONSCIOUS || fading || istype(activity, /datum/ambient_activity/leave) || istype(activity, /datum/ambient_activity/take_cover))
 		return
-	if(start_activity(new /datum/ambient_activity/leave(src)))
+	// Already hiding: it is still going on
+	if(still_hiding())
+		return
+	if(!reaction_ready("violence"))
+		return
+	if(!hide_from(offender))
+		return
+	if(ambient_in_kingpin_lounge(offender, DANCER_KINGPIN_ALARM_RADIUS))
+		scream()
+	else if(prob(50))
+		speak_context(AMBIENT_LINE_VIOLENCE, offender, force = TRUE)
+
+/// Hit herself: she screams and gets clear, and goes back to her pole once it is quiet
+/mob/living/basic/ambient_npc/outpost/dancer/react_attacked(atom/attacker)
+	if(stat != CONSCIOUS || fading || istype(activity, /datum/ambient_activity/leave))
+		return
+	if(still_hiding())
+		return
+	if(!reaction_ready("attacked"))
+		return
+	if(hide_from(attacker))
 		scream()
 
-/// The kingpin's crew is shooting: she screams and runs for cover, and comes back once it is calm (shootout_over(), inherited)
+/// The kingpin's crew is shooting: she screams and runs for cover, and goes back to her pole once it is over (shootout_over(), inherited)
 /mob/living/basic/ambient_npc/outpost/dancer/react_shootout(turf/refuge)
 	if(stat != CONSCIOUS || fading || istype(activity, /datum/ambient_activity/leave) || istype(activity, /datum/ambient_activity/take_cover))
 		return
 	if(start_activity(new /datum/ambient_activity/take_cover(src, refuge)))
+		back_to_pole = TRUE
 		scream()
+
+/// Starts her hiding from `threat`. TRUE if she is.
+/mob/living/basic/ambient_npc/outpost/dancer/proc/hide_from(atom/threat)
+	if(!start_activity(new /datum/ambient_activity/dancer_hide(src, threat)))
+		return FALSE
+	back_to_pole = TRUE
+	return TRUE
+
+/// If she is hiding, more trouble means it is not quiet yet, so she stays hidden longer. TRUE if she is hiding.
+/mob/living/basic/ambient_npc/outpost/dancer/proc/still_hiding()
+	var/datum/ambient_activity/dancer_hide/hiding = activity
+	if(!istype(hiding))
+		return FALSE
+	hiding.calm_at = world.time + DANCER_CALM_TIME
+	return TRUE
+
+/// A free tile within DANCER_HIDE_RANGE of her, further from `threat` than she is and as far as she can find; null to stay put
+/mob/living/basic/ambient_npc/outpost/dancer/proc/hiding_spot(atom/threat, list/avoid)
+	var/turf/here = get_turf(src)
+	var/turf/danger = get_turf(threat)
+	if(!here || !danger || danger.z != here.z)
+		return null
+	var/datum/ambient_place/outpost/outpost_place = istype(place, /datum/ambient_place/outpost) ? place : null
+	var/turf/best
+	var/best_distance = get_dist(danger, here)
+	for(var/turf/tile as anything in RANGE_TURFS(DANCER_HIDE_RANGE, here))
+		var/distance = get_dist(danger, tile)
+		if(distance <= best_distance || !standable(tile, avoid, TRUE))
+			continue
+		// Somebody is on it or heading there
+		if(outpost_place && outpost_place.crowd_count(tile, src) == INFINITY)
+			continue
+		best = tile
+		best_distance = distance
+	return best
 
 /// A woman's scream. Never sleeps.
 /mob/living/basic/ambient_npc/outpost/dancer/proc/scream()
@@ -149,6 +214,42 @@
 	)
 	manual_emote("screams!")
 	playsound(src, pick(screams), 50, TRUE)
+
+/**
+ * Keeping clear of a fight: she runs a few steps away from it and crouches, until nothing has
+ * happened for DANCER_CALM_TIME (every fight or hit she hears of meanwhile starts that over) and
+ * no shootout is on. Then she goes back up on her pole (dancer/back_to_pole).
+ */
+/datum/ambient_activity/dancer_hide
+	name = "hiding"
+	priority = AMBIENT_PRIORITY_REACTION
+	duration_low = DANCER_HIDE_MAX
+	duration_high = DANCER_HIDE_MAX
+	/// world.time it will have been quiet long enough to come out
+	var/calm_at = 0
+
+/datum/ambient_activity/dancer_hide/setup()
+	var/mob/living/basic/ambient_npc/outpost/dancer/dancer = doer
+	if(!istype(dancer))
+		return FALSE
+	set_duration()
+	calm_at = world.time + DANCER_CALM_TIME
+	go_to(dancer.hiding_spot(anchor(), failed_spots))
+	return TRUE
+
+/datum/ambient_activity/dancer_hide/arrive()
+	doer.crouch()
+
+/datum/ambient_activity/dancer_hide/act(seconds)
+	var/datum/ambient_place/outpost/outpost_place = doer.place
+	// Nobody comes out while the kingpin's crew is still shooting
+	if(istype(outpost_place) && outpost_place.shootout_refuge)
+		return AMBIENT_STEP_CONTINUE
+	return world.time >= calm_at ? AMBIENT_STEP_DONE : AMBIENT_STEP_CONTINUE
+
+/datum/ambient_activity/dancer_hide/shift_times(delay)
+	. = ..()
+	calm_at = ambient_shifted(calm_at, delay)
 
 // =========================================================================
 // THE DANCE
@@ -408,3 +509,6 @@
 #undef DANCE_POLE_HUG
 #undef DANCE_CLIMB_TRIES
 #undef DANCER_KINGPIN_ALARM_RADIUS
+#undef DANCER_CALM_TIME
+#undef DANCER_HIDE_MAX
+#undef DANCER_HIDE_RANGE

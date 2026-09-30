@@ -63,12 +63,16 @@
 		return outpost.arrival_turf
 	return get_turf(src)
 
-// "Inside" = already adopted into the outpost's powered area. Building on
-// anything else routes through the expansion branch of the build actions
-// (expand_shuttle_to_turf on !was_in_shuttle), which adopts the new turf into
-// the area so it gets APC power coverage and gravity.
+// "Inside" = already adopted into the outpost's powered area, or an installed service room's own
+// area: it was outpost_area before its room joined it (outpost_room_power.dm), and the drone should
+// keep treating it as inside the same way. Building on anything else routes through the expansion
+// branch of the build actions (expand_shuttle_to_turf on !was_in_shuttle), which adopts the new turf
+// into the area so it gets APC power coverage and gravity.
 /obj/machinery/computer/camera_advanced/base_construction/ship/outpost/is_in_shuttle_area(turf/T)
-	return outpost?.outpost_area && (get_area(T) == outpost.outpost_area)
+	if(outpost?.outpost_area && (get_area(T) == outpost.outpost_area))
+		return TRUE
+	var/datum/outpost_upgrade/service/room = outpost?.upgrade_at_turf(T)
+	return istype(room) && room.installed && (get_area(T) == room.installed_area)
 
 /obj/machinery/computer/camera_advanced/base_construction/ship/outpost/is_adjacent_to_shuttle(turf/T)
 	return FALSE
@@ -142,6 +146,10 @@
 	if(!istype(room) || !room.installed)
 		return FALSE
 	for(var/obj/fixture in target)
+		// Outpost cable is protected but never a fixture (outpost_room_power.dm): the drone strips
+		// the floor or wall under it, and the cable is left showing on the plating.
+		if(istype(fixture, /obj/structure/cable))
+			continue
 		if((ismachinery(fixture) || isstructure(fixture)) && ((fixture.resistance_flags & INDESTRUCTIBLE) || HAS_TRAIT(fixture, TRAIT_OUTPOST_PROPERTY)))
 			return FALSE
 	return TRUE

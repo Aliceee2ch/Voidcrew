@@ -82,7 +82,6 @@ type CheckpointAdminData = {
     status: string;
     progress: number;
     can_rush: BooleanLike;
-    can_hand_over: BooleanLike;
   }[];
 };
 
@@ -1051,13 +1050,6 @@ const CheckpointTools = ({
             onClick={() => act('rebuild_rush', { ref: rebuild.ref })}
           >
             Finish Now
-          </Button>
-          <Button
-            icon="handshake"
-            disabled={busy || !rebuild.can_hand_over}
-            onClick={() => act('rebuild_hand_over', { ref: rebuild.ref })}
-          >
-            Hand Over Now
           </Button>
           <Button
             icon="stop"

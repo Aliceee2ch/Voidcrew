@@ -21,7 +21,8 @@
  * again, joining a riot that is on or starting one, whatever the quiet after the last. The grace
  * gives staff time to open the door and treat them.
  *
- * A riot is over only once every rioter is shut in a cell or dead (outpost_prison_riot.dm).
+ * A riot is over once every rioter is shut in a cell, cuffed, down, dead or gone (riot_handled(),
+ * outpost_prison_riot.dm). Only the ones shut in a cell owe lockdown.
  */
 
 /// Trait source for the cuffs holding a prisoner still

@@ -215,7 +215,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 /obj/structure/overmap/dynamic/player_outpost/proc/notify_owner(message, title = "OUTPOST")
 	var/obj/structure/overmap/ship/owner_ship = get_owner_ship()
 	if(owner_ship)
-		owner_ship.ship_notify("[name]: [message]", title, SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 30)
+		owner_ship.ship_notify("[name]: [message]", title, SHIP_NOTIFY_NOTICE, 'voidcrew/sound/notify.ogg', 30, anywhere = TRUE)
 
 // ===== COMBAT TARGET API (see /obj/structure/overmap base hooks) =====
 
@@ -239,7 +239,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	// The owner hears about it wherever they are
 	var/obj/structure/overmap/ship/owner_ship = get_owner_ship()
 	if(owner_ship && !(mapzone && (owner_ship.docked == src)))
-		owner_ship.ship_notify("[name]: [message]", category, alert_level, sound_file, volume)
+		owner_ship.ship_notify("[name]: [message]", category, alert_level, sound_file, volume, anywhere = TRUE)
 
 /obj/structure/overmap/dynamic/player_outpost/is_combat_targetable()
 	return raidable

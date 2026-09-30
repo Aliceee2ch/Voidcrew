@@ -1012,6 +1012,17 @@
 	TEST_ASSERT(nightmare.target_unreachable(stuck_prisoner), "A target that never got any closer was not written off")
 	TEST_ASSERT_EQUAL(nightmare.choose_target(), open_prisoner, "choose_target() still offered a target written off as unreachable")
 
+	// On the move, it is chasing: a target that keeps its distance is not written off
+	var/turf/was_at = nightmare.loc
+	brain.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, open_prisoner)
+	nightmare.track_reach(brain)
+	nightmare.chase_progress_time -= 5 SECONDS
+	nightmare.forceMove(get_step_away(nightmare, open_prisoner) || get_step(nightmare, NORTH))
+	nightmare.track_reach(brain)
+	TEST_ASSERT(!nightmare.target_unreachable(open_prisoner), "A target it was following was written off")
+	nightmare.forceMove(was_at)
+	brain.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
+
 	// find_light() skips the same list, so lights behind glass do not trap it forever.
 	var/obj/machinery/light/near_light = allocate(/obj/machinery/light, prison_spot(home, 10, 8))
 	var/obj/machinery/light/far_light = allocate(/obj/machinery/light, prison_spot(home, 12, 8))

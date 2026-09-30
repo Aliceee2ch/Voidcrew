@@ -145,9 +145,11 @@
 	var/footstep_kind = FOOTSTEP_MOB_SHOE
 	var/footstep_volume = 0.5
 	var/footstep_range = -8
-	/// The target it is chasing now, the closest it has gotten to it, and when: to notice it is stuck (track_reach())
+	/// The target it is chasing now, the closest it has gotten to it, where it last stood, and when it last
+	/// got anywhere: to notice it is stuck (track_reach())
 	var/datum/weakref/chase_target_ref
 	var/chase_best_distance = 0
+	var/turf/chase_last_turf
 	var/chase_progress_time = 0
 	/// Targets it has given up on reaching -> world.time it may try them again (find_light(), choose_target())
 	var/list/unreachable_until
@@ -178,6 +180,7 @@
 /mob/living/basic/outpost_experiment/Destroy()
 	prison = null
 	chase_target_ref = null
+	chase_last_turf = null
 	unreachable_until = null
 	return ..()
 
@@ -335,7 +338,7 @@
 /mob/living/basic/outpost_experiment/proc/choose_target()
 	var/datum/component/experiment_damage_ledger/ledger = GetComponent(/datum/component/experiment_damage_ledger)
 	var/mob/living/attacker = ledger?.recent_player()
-	if(attacker && can_target(attacker) && get_dist(src, attacker) <= 9 && can_see(src, attacker, 9))
+	if(attacker && can_target(attacker) && get_dist(src, attacker) <= 9 && can_see(src, attacker, 9) && !target_unreachable(attacker))
 		return attacker
 	if(prison && !prison.crew_home())
 		return null
@@ -380,9 +383,10 @@
 	return holding && holding.is_bolted() && !holding.contains(src)
 
 /**
- * Notes whether it is closing on `controller`'s current target: gotten closer, or beside it (Adjacent(),
- * which a shut window or door fails even at a tile's distance). OUTPOST_EXPERIMENT_STUCK_TIME with
- * neither writes the target off as unreachable for OUTPOST_EXPERIMENT_UNREACHABLE_TIME; find_light() and
+ * Notes whether it is getting anywhere with `controller`'s current target: closer, beside it (Adjacent(),
+ * which a shut window or door fails even at a tile's distance), or at least on the move, so a target
+ * that runs is chased rather than given up on. OUTPOST_EXPERIMENT_STUCK_TIME standing still and apart
+ * writes the target off as unreachable for OUTPOST_EXPERIMENT_UNREACHABLE_TIME; find_light() and
  * choose_target() skip anything on that list. Distance and Adjacent() only: no pathfinding call.
  */
 /mob/living/basic/outpost_experiment/proc/track_reach(datum/ai_controller/controller)
@@ -395,9 +399,11 @@
 	if(chase_target_ref?.resolve() != target)
 		chase_target_ref = WEAKREF(target)
 		chase_best_distance = get_dist(src, target)
+		chase_last_turf = loc
 		chase_progress_time = world.time
 		return
-	if(Adjacent(target))
+	if(Adjacent(target) || loc != chase_last_turf)
+		chase_last_turf = loc
 		chase_progress_time = world.time
 		return
 	var/distance = get_dist(src, target)

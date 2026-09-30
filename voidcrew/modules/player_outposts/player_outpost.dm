@@ -422,6 +422,7 @@ GLOBAL_LIST_EMPTY(player_outposts)
 	if(old_area == outpost_area || !istype(old_area, /area/space))
 		return
 	target.change_area(old_area, outpost_area)
+	queue_room_power_join()
 
 /**
  * Safety-net sweep over the build region: anything constructed by hand (no

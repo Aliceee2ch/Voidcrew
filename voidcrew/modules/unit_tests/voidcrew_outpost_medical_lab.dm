@@ -99,7 +99,7 @@
 		if(!lab)
 			return
 		var/obj/structure/overmap/dynamic/player_outpost/home = lab.outpost
-		TEST_ASSERT_EQUAL(lab.installed_area, home.outpost_area, "The lab did not join the outpost area at [rotation]")
+		TEST_ASSERT(lab.installed_area && lab.installed_area != home.outpost_area, "The lab did not get an area of its own at [rotation]")
 		TEST_ASSERT_NOTNULL(medlab_find(lab, /obj/machinery/outpost_autosurgeon), "No slab at [rotation]")
 		TEST_ASSERT_NOTNULL(medlab_find(lab, /obj/machinery/computer/outpost_medlab_terminal), "No pass terminal at [rotation]")
 		TEST_ASSERT_EQUAL(length(medlab_find_all(lab, /obj/machinery/sleeper/outpost/medical_lab)), 2, "Wrong sleeper count at [rotation]")
@@ -113,6 +113,8 @@
 			TEST_ASSERT(door.unres_sides & inward, "The lab door's open side does not point inside at [rotation]")
 			TEST_ASSERT_NULL(door.id_tag, "The lab door has an id_tag at [rotation]")
 		for(var/obj/fixture as anything in medlab_find_all(lab, /obj/machinery) + medlab_find_all(lab, /obj/structure))
+			if(istype(fixture, /obj/structure/cable))
+				continue
 			TEST_ASSERT(HAS_TRAIT(fixture, "outpost_property"), "[fixture] is not outpost property at [rotation]")
 			if(isstructure(fixture))
 				TEST_ASSERT(fixture.anchored, "[fixture] is not anchored at [rotation]")

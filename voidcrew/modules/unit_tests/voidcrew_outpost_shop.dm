@@ -78,7 +78,7 @@
 		var/list/footprint = shop.room_turfs()
 		room_turfs += footprint
 		for(var/turf/tile as anything in footprint)
-			TEST_ASSERT_EQUAL(tile.loc, home.outpost_area, "Shop tile [tile.x],[tile.y] is not in the outpost area at [rotation] degrees")
+			TEST_ASSERT_EQUAL(tile.loc, shop.installed_area, "Shop tile [tile.x],[tile.y] is not in the room's own area at [rotation] degrees")
 
 		// The fixtures stand where the map puts them and the room knows them
 		var/obj/machinery/outpost_shop_stock/stock = shop.get_stock()

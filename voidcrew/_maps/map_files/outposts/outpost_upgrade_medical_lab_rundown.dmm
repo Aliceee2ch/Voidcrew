@@ -7,7 +7,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ab" = (
 /obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 4
@@ -26,23 +26,23 @@
 	pixel_y = -4
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ac" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/cryo_cell/outpost_lab{
 	dir = 1
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ad" = (
 /turf/closed/indestructible/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ae" = (
 /obj/machinery/cryo_cell/outpost_lab{
 	dir = 1
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "af" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -51,13 +51,13 @@
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ag" = (
 /obj/structure/chair/comfy/beige{
 	dir = 4
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ah" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 1
@@ -67,7 +67,7 @@
 	pixel_y = -6
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ai" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -75,28 +75,28 @@
 	alpha = 140
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aj" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 2
 	},
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ak" = (
 /obj/structure/filingcabinet,
 /obj/item/folder/white,
 /obj/item/folder/white,
 /obj/structure/sign/poster/official/help_others/directional/north,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "al" = (
 /turf/open/indestructible/grimy{
 	color = "#C6B9A6"
 	},
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "am" = (
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "an" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -106,11 +106,11 @@
 	},
 /obj/structure/sink/directional/south,
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ao" = (
 /obj/structure/sign/warning/cold_temp/directional/north,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ap" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -120,11 +120,11 @@
 	},
 /obj/structure/fluff/shower_drain,
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aq" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ar" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/turf_decal{
@@ -138,7 +138,7 @@
 	},
 /obj/machinery/portable_atmospherics/canister/outpost_lab_drain,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "as" = (
 /obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 4
@@ -148,7 +148,7 @@
 	},
 /obj/machinery/light/small/directional/east,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "at" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -162,13 +162,13 @@
 	alpha = 120
 	},
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "au" = (
 /obj/machinery/atmospherics/pipe/smart/manifold/general/hidden{
 	dir = 8
 	},
 /turf/closed/indestructible/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "av" = (
 /obj/effect/turf_decal/bot,
 /obj/machinery/atmospherics/components/unary/portables_connector{
@@ -176,7 +176,7 @@
 	},
 /obj/machinery/portable_atmospherics/canister/anesthetic_mix/outpost_lab,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aw" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/decal/cleanable/cobweb,
@@ -184,7 +184,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ax" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -195,17 +195,17 @@
 	dir = 4
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "ay" = (
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "az" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/atmospherics/pipe/smart/simple/general/visible{
 	dir = 5
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aA" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -214,19 +214,19 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/general/visible,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aB" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/structure/sign/poster/official/cleanliness/directional/west,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aC" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 2
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aD" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/item/cigbutt{
@@ -234,7 +234,7 @@
 	pixel_y = 3
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aE" = (
 /obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 4
@@ -243,7 +243,7 @@
 	dir = 8
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aF" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -253,13 +253,13 @@
 /turf/open/indestructible/grimy{
 	color = "#C6B9A6"
 	},
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aG" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy{
 	color = "#B8AE9E"
 	},
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aH" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -270,33 +270,33 @@
 	dir = 10
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aI" = (
 /obj/machinery/atmospherics/components/trinary/filter/atmos/co2/outpost_lab{
 	dir = 8
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aJ" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/sign/poster/official/wtf_is_co2/directional/north,
 /obj/machinery/light/small/directional/east,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aK" = (
 /obj/item/cigbutt{
 	pixel_x = 4;
 	pixel_y = -5
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aL" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aM" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -307,18 +307,18 @@
 /obj/machinery/outpost_autosurgeon,
 /obj/machinery/light/cold/no_nightlight/directional/north,
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aN" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/structure/sign/poster/contraband/interdyne_gene_clinics/directional/east,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aO" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aP" = (
 /obj/structure/table,
 /obj/item/paper{
@@ -337,7 +337,7 @@
 	},
 /obj/machinery/light/small/directional/north,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aQ" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 5
@@ -347,16 +347,16 @@
 	pixel_y = -8
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aR" = (
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aS" = (
 /obj/machinery/atmospherics/pipe/smart/manifold/general/hidden{
 	dir = 1
 	},
 /turf/closed/indestructible/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aT" = (
 /obj/machinery/door/airlock/outpost/service/staff/maintenance{
 	name = "plant room"
@@ -365,13 +365,13 @@
 	dir = 1
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aU" = (
 /obj/machinery/atmospherics/pipe/smart/simple/general/hidden{
 	dir = 9
 	},
 /turf/closed/indestructible/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aV" = (
 /obj/effect/turf_decal/tile/red/half/contrasted{
 	dir = 4
@@ -388,7 +388,7 @@
 	},
 /obj/structure/sign/eyechart/directional/north,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aW" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -397,17 +397,17 @@
 	alpha = 110
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aX" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aY" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 6
 	},
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "aZ" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 4
@@ -416,7 +416,18 @@
 	dir = 2
 	},
 /turf/open/indestructible/freezer,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
+"eT" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/medical_lab)
+"ih" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "mf" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -425,7 +436,7 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "op" = (
 /obj/effect/decal/cleanable/crayon{
 	icon_state = "med";
@@ -435,14 +446,14 @@
 	desc = "A red cross, painted by hand beside the door."
 	},
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "pu" = (
 /obj/item/kirbyplants{
 	icon_state = "plant-10"
 	},
 /obj/machinery/light/small/directional/east,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "tT" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/item/kirbyplants{
@@ -450,12 +461,12 @@
 	icon_state = "plant-25"
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "vd" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/closet/crate/bin,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "vA" = (
 /obj/structure/chair/sofa/bench/left{
 	dir = 1
@@ -470,14 +481,14 @@
 	default_raw_text = "The slab is not a bed. Stop sleeping on the slab."
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "EV" = (
 /obj/machinery/computer/outpost_medlab_terminal{
 	dir = 1
 	},
 /obj/machinery/digital_clock/directional/south,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "Ln" = (
 /obj/structure/chair/comfy/brown{
 	dir = 1
@@ -488,7 +499,7 @@
 	pixel_y = -9
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "Mv" = (
 /obj/structure/table,
 /obj/item/paper_bin{
@@ -504,14 +515,14 @@
 	pixel_y = -2
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "MQ" = (
 /obj/structure/chair/sofa/bench/right{
 	dir = 1
 	},
 /obj/machinery/light/warm/dim/directional/south,
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "Nu" = (
 /obj/structure/table,
 /obj/structure/sign/poster/contraband/smoke/directional/south,
@@ -530,13 +541,13 @@
 	pixel_y = -2
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "Vp" = (
 /obj/structure/chair/office/light{
 	dir = 2
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "WR" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 4
@@ -559,7 +570,7 @@
 	pixel_y = -2
 	},
 /turf/open/indestructible/wood,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
 "Xl" = (
 /obj/machinery/door/airlock/outpost/service/maintenance{
 	name = "clinic"
@@ -569,7 +580,18 @@
 	dir = 1
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/medical_lab)
+"ZW" = (
+/obj/machinery/door/airlock/outpost/service/maintenance{
+	name = "clinic"
+	},
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/obj/structure/cable/outpost,
+/turf/open/indestructible/plating,
+/area/voidcrew/player_outpost/service_room/medical_lab)
 
 (1,1,1) = {"
 am
@@ -651,8 +673,8 @@ aj
 al
 aD
 ay
-aq
 vd
+eT
 op
 "}
 (8,1,1) = {"
@@ -664,8 +686,8 @@ af
 aF
 af
 mf
-aq
-Xl
+ih
+ZW
 "}
 (9,1,1) = {"
 am

@@ -9,6 +9,9 @@
 		TEST_ASSERT(site, "The [shell_type] derelict did not build")
 		var/datum/outpost_upgrade/prison/wing = site.outpost_upgrades["prison"]
 		TEST_ASSERT(wing?.installed, "The prison wing was not installed for [shell_type]")
+		var/datum/powernet/wing_net = wing.room_apc()?.terminal?.powernet
+		TEST_ASSERT_NOTNULL(wing_net, "The joined prison wing has no powernet for [shell_type]")
+		TEST_ASSERT_EQUAL(wing_net, site.outpost_area.apc?.terminal?.powernet, "The joined prison wing's APC did not join the habitat grid for [shell_type]")
 		var/obj/machinery/door/airlock/external/door = site.derelict_prison_airlock?.resolve()
 		TEST_ASSERT(istype(door), "The joined prison airlock did not resolve for [shell_type]")
 		TEST_ASSERT_EQUAL(get_area(door), site.outpost_area, "The joined prison airlock is not in the outpost area for [shell_type]")
@@ -66,6 +69,10 @@
 	generator.set_anchored(TRUE)
 	TEST_ASSERT(generator.powernet, "The generator has no powernet once anchored")
 	TEST_ASSERT_EQUAL(generator.powernet, site.outpost_area.apc.terminal.powernet, "The generator's powernet does not match the outpost APC's grid")
+
+	// Once the habitat is fuelled and running again, the joined prison wing powers up with it too.
+	var/datum/outpost_upgrade/prison/wing = site.outpost_upgrades["prison"]
+	TEST_ASSERT_EQUAL(wing.room_apc()?.terminal?.powernet, generator.powernet, "The prison wing's APC net does not match the habitat's once refuelled")
 
 /datum/unit_test/voidcrew_derelict_berth_dark
 	parent_type = /datum/unit_test/voidcrew_derelict

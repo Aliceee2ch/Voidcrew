@@ -6,7 +6,7 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ab" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -14,7 +14,7 @@
 	alpha = 90
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ac" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -25,7 +25,7 @@
 /obj/machinery/vending/clothing/outpost,
 /obj/effect/decal/cleanable/cobweb,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ad" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/footprints.dmi';
@@ -35,7 +35,7 @@
 	alpha = 120
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ae" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
@@ -46,7 +46,7 @@
 	},
 /obj/structure/mirror/directional/west,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "af" = (
 /obj/structure/chair/sofa/bench/right{
 	dir = 1
@@ -56,7 +56,7 @@
 	pixel_y = -10
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ag" = (
 /obj/effect/turf_decal/stripes/corner{
 	dir = 8
@@ -69,14 +69,14 @@
 	alpha = 130
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ah" = (
 /obj/item/reagent_containers/cup/glass/sillycup{
 	pixel_x = -6;
 	pixel_y = -3
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ai" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/turf_decal{
@@ -92,19 +92,19 @@
 	},
 /obj/machinery/cloning_vat/outpost,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aj" = (
 /obj/item/kirbyplants/organic/plant21,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ak" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "al" = (
 /obj/structure/chair/sofa/bench/left{
 	dir = 1
@@ -112,7 +112,7 @@
 /obj/structure/sign/poster/contraband/interdyne_gene_clinics/directional/west,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "am" = (
 /obj/structure/table/wood,
 /obj/item/toy/cards/deck{
@@ -128,7 +128,7 @@
 	pixel_y = 8
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "an" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/turf_decal{
@@ -145,13 +145,13 @@
 	},
 /obj/machinery/cloning_vat/outpost,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ao" = (
 /obj/structure/chair/sofa/bench/right{
 	dir = 4
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ap" = (
 /obj/effect/turf_decal{
 	icon = 'icons/obj/pipes_n_cables/simple.dmi';
@@ -171,7 +171,7 @@
 	},
 /obj/structure/sign/poster/official/random/directional/north,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aq" = (
 /obj/structure/chair/sofa/bench{
 	dir = 4
@@ -181,7 +181,7 @@
 	pixel_y = 4
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ar" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
@@ -196,7 +196,7 @@
 	dir = 8
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "as" = (
 /obj/effect/turf_decal{
 	icon = 'icons/obj/pipes_n_cables/simple.dmi';
@@ -212,11 +212,11 @@
 	},
 /obj/machinery/light/small/directional/east,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "at" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "au" = (
 /obj/structure/table/wood,
 /obj/item/trash/can{
@@ -240,7 +240,7 @@
 	pixel_y = 9
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "av" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
@@ -250,14 +250,14 @@
 	dir = 8
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aw" = (
 /obj/effect/turf_decal/trimline/yellow/line{
 	dir = 4;
 	alpha = 130
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ax" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/turf_decal{
@@ -273,10 +273,10 @@
 	},
 /obj/machinery/cloning_vat/outpost,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "ay" = (
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "az" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -292,7 +292,7 @@
 	alpha = 120
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aA" = (
 /obj/structure/table/wood,
 /obj/item/flashlight/lamp{
@@ -308,7 +308,7 @@
 	pixel_y = 4
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aB" = (
 /obj/machinery/digital_clock/directional/west,
 /obj/item/cigbutt{
@@ -316,11 +316,11 @@
 	pixel_y = 8
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aC" = (
 /obj/machinery/light/warm/directional/west,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aD" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
@@ -335,29 +335,29 @@
 	dir = 2
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aE" = (
 /obj/structure/chair/sofa/right/brown{
 	dir = 1
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aF" = (
 /obj/structure/chair/comfy/brown{
 	dir = 8
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aG" = (
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aH" = (
 /obj/structure/chair/sofa/bench/left{
 	dir = 4
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aI" = (
 /obj/structure/chair/sofa/bench{
 	dir = 1
@@ -371,7 +371,7 @@
 	pixel_y = -9
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aJ" = (
 /obj/effect/turf_decal{
 	icon = 'icons/obj/pipes_n_cables/simple.dmi';
@@ -387,14 +387,14 @@
 	alpha = 110
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aK" = (
 /obj/structure/chair/comfy/brown{
 	dir = 4
 	},
 /obj/structure/sign/poster/official/tactical_game_cards/directional/west,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aL" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/turf_decal{
@@ -411,7 +411,7 @@
 	},
 /obj/machinery/cloning_vat/outpost,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aM" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
@@ -427,20 +427,20 @@
 	dir = 2
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aN" = (
 /obj/effect/turf_decal/trimline/yellow/line{
 	dir = 8;
 	alpha = 130
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aO" = (
 /obj/structure/chair/sofa/middle/brown{
 	dir = 1
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aP" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
@@ -450,7 +450,7 @@
 	dir = 2
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aQ" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -466,7 +466,7 @@
 	pixel_y = 5
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aR" = (
 /obj/effect/turf_decal{
 	icon = 'icons/obj/pipes_n_cables/simple.dmi';
@@ -483,7 +483,7 @@
 	},
 /obj/structure/sign/warning/biohazard/directional/east,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aS" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/turf_decal{
@@ -506,7 +506,7 @@
 /obj/structure/sign/departments/genetics/directional/north,
 /obj/machinery/light/warm/dim/directional/north,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aT" = (
 /obj/effect/turf_decal{
 	icon = 'icons/obj/pipes_n_cables/simple.dmi';
@@ -517,16 +517,16 @@
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/mirror/directional/east,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aU" = (
 /turf/closed/indestructible/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aV" = (
 /obj/structure/chair/sofa/left/brown{
 	dir = 1
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aW" = (
 /obj/effect/turf_decal{
 	icon = 'icons/obj/pipes_n_cables/simple.dmi';
@@ -538,7 +538,7 @@
 /obj/machinery/vending/clothing/outpost,
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aX" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
@@ -554,7 +554,7 @@
 	dir = 8
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aY" = (
 /obj/effect/turf_decal{
 	icon = 'icons/obj/pipes_n_cables/simple.dmi';
@@ -570,7 +570,7 @@
 	},
 /obj/machinery/light/small/directional/north,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "aZ" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -580,7 +580,7 @@
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "cT" = (
 /obj/effect/turf_decal/trimline/yellow/line{
 	dir = 4;
@@ -591,7 +591,7 @@
 	pixel_y = -8
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "dC" = (
 /obj/structure/sign/warning/no_smoking/circle/directional/south,
 /obj/item/cigbutt{
@@ -603,7 +603,7 @@
 	pixel_y = -10
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "eg" = (
 /obj/machinery/door/airlock/outpost/service/maintenance{
 	name = "vat room"
@@ -613,7 +613,7 @@
 	dir = 1
 	},
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "eq" = (
 /obj/machinery/light/small/dim/directional/south,
 /obj/item/cigbutt{
@@ -621,7 +621,7 @@
 	pixel_y = 6
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "fd" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/footprints.dmi';
@@ -632,7 +632,7 @@
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "lh" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
@@ -646,7 +646,14 @@
 	alpha = 120
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
+"lY" = (
+/obj/item/kirbyplants/organic/plant22,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "mp" = (
 /obj/item/paper{
 	name = "faded notice";
@@ -655,7 +662,7 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "pE" = (
 /obj/effect/turf_decal{
 	icon = 'icons/turf/damaged.dmi';
@@ -671,7 +678,7 @@
 	alpha = 100
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "rU" = (
 /obj/structure/sign/poster/contraband/random/directional/south,
 /obj/item/cigbutt{
@@ -680,7 +687,7 @@
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "sR" = (
 /obj/structure/closet/crate/bin,
 /obj/item/trash/chips{
@@ -689,7 +696,7 @@
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "tD" = (
 /obj/structure/table,
 /obj/item/reagent_containers/cup/glass/sillycup{
@@ -705,11 +712,16 @@
 	pixel_y = -5
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
+"vW" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "xn" = (
 /obj/effect/spawner/structure/window/reinforced/tinted,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "xP" = (
 /obj/item/paper{
 	name = "faded notice"
@@ -720,28 +732,34 @@
 /obj/structure/noticeboard/directional/south,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "yj" = (
 /obj/structure/sign/departments/genetics,
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "BR" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
+"IF" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "Nb" = (
 /obj/item/kirbyplants/organic/plant22,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "NF" = (
 /obj/item/kirbyplants/random/dead,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "Us" = (
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 "Vo" = (
 /obj/item/cigbutt{
 	pixel_x = 7;
@@ -749,7 +767,26 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/cloning_bay)
+"WO" = (
+/obj/machinery/door/airlock/outpost/service/maintenance{
+	name = "vat room"
+	},
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/obj/structure/cable/outpost,
+/turf/open/indestructible/dark/textured,
+/area/voidcrew/player_outpost/service_room/cloning_bay)
+"YB" = (
+/obj/effect/turf_decal/trimline/yellow/line{
+	dir = 8;
+	alpha = 130
+	},
+/obj/item/kirbyplants/organic/plant22,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/cloning_bay)
 
 (1,1,1) = {"
 aG
@@ -825,8 +862,8 @@ aN
 aN
 aN
 aN
-aN
-Nb
+YB
+IF
 yj
 "}
 (7,1,1) = {"
@@ -839,8 +876,8 @@ az
 ad
 pE
 at
-BR
-eg
+vW
+WO
 "}
 (8,1,1) = {"
 aG

@@ -99,6 +99,8 @@
 // ===== OUTPOST UPGRADES (see outpost_upgrades.dm) =====
 /// A placed upgrade needs a tile within this many tiles (Chebyshev) of outpost ground
 #define OUTPOST_UPGRADE_MAX_GAP 8
+/// The longest floor path the feeder lays cable along to join a room to the grid (outpost_room_power.dm)
+#define OUTPOST_ROOM_FEEDER_MAX 32
 /// How long a placement-map survey is reused before it is taken again
 #define OUTPOST_UPGRADE_SURVEY_LIFETIME (30 SECONDS)
 

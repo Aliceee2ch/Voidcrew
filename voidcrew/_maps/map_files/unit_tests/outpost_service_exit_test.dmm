@@ -15,32 +15,71 @@
 "f" = (
 /turf/open/indestructible,
 /area/template_noop)
+"u" = (
+/obj/machinery/door/airlock/outpost/service{
+	id_tag = "p0_exit_test"
+	},
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/turf/open/indestructible,
+/area/voidcrew/player_outpost/service_room)
 "w" = (
 /turf/closed/indestructible/reinforced,
 /area/template_noop)
+"y" = (
+/obj/structure/closet,
+/obj/machinery/power/apc/outpost/directional/west,
+/obj/structure/cable/outpost,
+/turf/open/indestructible,
+/area/voidcrew/player_outpost/service_room)
+"H" = (
+/obj/structure/closet,
+/turf/open/indestructible,
+/area/voidcrew/player_outpost/service_room)
+"O" = (
+/turf/open/indestructible,
+/area/voidcrew/player_outpost/service_room)
+"Q" = (
+/turf/closed/indestructible/reinforced,
+/area/voidcrew/player_outpost/service_room)
+"U" = (
+/obj/machinery/door/airlock/outpost/service{
+	id_tag = "p0_exit_test"
+	},
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/obj/structure/cable/outpost,
+/turf/open/indestructible,
+/area/voidcrew/player_outpost/service_room)
+"Z" = (
+/obj/structure/cable/outpost,
+/turf/open/indestructible,
+/area/voidcrew/player_outpost/service_room)
 
 (1,1,1) = {"
-w
-w
-w
+Q
+Q
+Q
 "}
 (2,1,1) = {"
-w
-c
-w
+Q
+y
+Q
 "}
 (3,1,1) = {"
-w
-f
-d
+Q
+Z
+U
 "}
 (4,1,1) = {"
-w
-f
-w
+Q
+O
+Q
 "}
 (5,1,1) = {"
-w
-w
-w
+Q
+Q
+Q
 "}

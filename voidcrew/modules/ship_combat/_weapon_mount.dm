@@ -201,7 +201,7 @@
 	if(!target)
 		return null
 
-	// Get target footprint bounds (ships: shuttle rect; outposts: build region)
+	// Get target footprint bounds (the ship's shuttle rect)
 	var/min_x = target.x
 	var/max_x = target.x
 	var/min_y = target.y
@@ -244,7 +244,7 @@
 			spawn_x = min_x - spawn_dist
 			spawn_y = target.y
 
-	// A player outpost can occupy the whole z-level, so shots enter at the map edge.
+	// Keep the spawn point on the map.
 	return locate(clamp(spawn_x, 1, world.maxx), clamp(spawn_y, 1, world.maxy), target.z)
 
 /// Finds the best approach direction for a missile to reach a target

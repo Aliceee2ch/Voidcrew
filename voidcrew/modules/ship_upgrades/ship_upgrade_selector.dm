@@ -333,12 +333,20 @@
  * generated manifest. Returns null when no preview art exists for this ship.
  */
 /datum/ship_upgrade_selector/proc/build_preview_data()
+	return build_ship_preview_data(template)
+
+/// build_preview_data() for any hull. The outpost shipyard console uses it too.
+/proc/build_ship_preview_data(datum/map_template/shuttle/voidcrew/template)
+	if(!template)
+		return null
 	var/list/manifest = get_ship_preview_manifest()
 	var/list/manifest_hulls = manifest["hulls"]
 	var/list/manifest_modules = manifest["modules"]
 	if(!length(manifest_hulls))
 		return null
 
+	var/list/available_themes = get_themes_for_ship(template.type)
+	var/list/available_modules = get_modules_for_ship(template.type)
 	var/list/theme_hulls = list()
 	for(var/theme_id in available_themes)
 		var/datum/ship_theme/theme = available_themes[theme_id]

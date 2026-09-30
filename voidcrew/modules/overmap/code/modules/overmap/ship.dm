@@ -209,8 +209,9 @@
 	var/list/datum/mission/active_missions = list()
 	/// Maximum number of active missions (captain can adjust)
 	var/max_missions = DEFAULT_MAX_ACTIVE_MISSIONS
-	/// World time of the last manual mission refresh (rate-limited)
-	var/last_mission_refresh = 0
+	/// World time of the last manual mission refresh (rate-limited). Starts a whole cooldown back, so a
+	/// ship that never refreshed can, rather than waiting out the first minutes after the server boots.
+	var/last_mission_refresh = -MISSION_REFRESH_COOLDOWN
 
 	var/pending_dock = FALSE
 	var/pending_dock_timer
@@ -1380,6 +1381,9 @@
  * * claimer - The mob claiming the ship
  */
 /obj/structure/overmap/ship/proc/claim_abandoned_ship(mob/living/claimer)
+	if(retired_by_checkpoint || checkpoint_rebuilding)
+		to_chat(claimer, span_warning("This ship is retired or being rebuilt from a checkpoint."))
+		return FALSE
 	if(!abandoned)
 		return FALSE
 	if(!claimer?.mind)
@@ -1902,12 +1906,15 @@
   * * user - Mob that started the action
   * * object - Overmap object to act on
   */
-/obj/structure/overmap/ship/proc/overmap_object_act(mob/user, obj/structure/overmap/object, obj/structure/overmap/ship/optional_partner)
+/obj/structure/overmap/ship/proc/overmap_object_act(mob/user, obj/structure/overmap/object, obj/structure/overmap/ship/optional_partner, dock_variant)
 	if(!is_still() || state != OVERMAP_SHIP_FLYING)
 		to_chat(user, "<span class='warning'>Ship must be still to interact!</span>")
 		return
 
-	INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap, ship_act), user, src, optional_partner)
+	if(istype(object, /obj/structure/overmap/dynamic/player_outpost))
+		INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap/dynamic/player_outpost, ship_act), user, src, optional_partner, dock_variant)
+	else
+		INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap, ship_act), user, src, optional_partner)
 
 // ===== INTERDICTION PROCS =====
 
@@ -2633,6 +2640,8 @@
 				// Start undock cooldown
 				COOLDOWN_START(src, undock_cooldown, UNDOCK_COOLDOWN_TIME)
 				SEND_SIGNAL(src, COMSIG_VOIDCREW_SHIP_DOCKED)
+				if(crash_dock_pending) // finish_crash_land() is waiting for this dock
+					on_crash_dock_complete()
 				// The counterpart to the "complete_dock UNDOCKING" line further down, whose
 				// absence is why a round-4 strand could not be diagnosed from the logs at all:
 				// 168 undock lines and not one for docking. The attempt count is the useful

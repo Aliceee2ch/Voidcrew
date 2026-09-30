@@ -83,7 +83,7 @@ type NearbyShip = {
   identified: BooleanLike;
   shields: number;
   shields_max: number;
-  /** A real hull percent now, for ships and outposts both. */
+  /** A real hull percent. */
   integrity: number;
   integrity_max: number;
   distance: number;
@@ -95,8 +95,6 @@ type NearbyShip = {
   dx: number;
   /** Overmap tiles, target minus us. North positive. */
   dy: number;
-  /** A raidable player outpost rather than a vessel. */
-  is_outpost: BooleanLike;
 };
 
 type Launcher = {
@@ -1491,23 +1489,12 @@ const ScopeContact = (props: { mark: ScopeMark }) => {
       {/* Invisible hit area, the glyphs are a punishing click target bare. */}
       <circle r={15} fill="transparent" />
 
-      {ship.is_outpost ? (
-        // An outpost holds still and holds ground: a hollow diamond, nothing
-        // like the pointer a vessel gets.
-        <path
-          d="M0,-7 L7,0 L0,7 L-7,0 Z"
-          fill="none"
-          stroke={colour}
-          strokeWidth={1.6}
-        />
-      ) : (
-        <path
-          d="M0,-7 L6,6 L0,2.5 L-6,6 Z"
-          fill="none"
-          stroke={colour}
-          strokeWidth={1.6}
-        />
-      )}
+      <path
+        d="M0,-7 L6,6 L0,2.5 L-6,6 Z"
+        fill="none"
+        stroke={colour}
+        strokeWidth={1.6}
+      />
 
       <text
         y={17}
@@ -1824,21 +1811,12 @@ const ContactsTab = () => {
             >
               <span className="Tac__rowGlyph">
                 <svg viewBox="-8 -8 16 16" aria-hidden="true">
-                  {ship.is_outpost ? (
-                    <path
-                      d="M0,-6 L6,0 L0,6 L-6,0 Z"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    />
-                  ) : (
-                    <path
-                      d="M0,-6 L5,5 L0,2 L-5,5 Z"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    />
-                  )}
+                  <path
+                    d="M0,-6 L5,5 L0,2 L-5,5 Z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  />
                 </svg>
               </span>
               <span className="Tac__rowName">{ship.name}</span>

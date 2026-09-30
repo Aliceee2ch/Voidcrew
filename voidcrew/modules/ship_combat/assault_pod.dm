@@ -43,8 +43,8 @@
  *
  * Rides the missile framework so it inherits everything that already knows how
  * to cross a reservation: hyperspace traits, the move loop, shield wall
- * interception, outpost shield envelopes. What it does on arrival is entirely
- * different - it cuts a doorway instead of making a crater.
+ * interception. What it does on arrival is entirely different - it cuts a
+ * doorway instead of making a crater.
  */
 /obj/effect/ship_missile/assault_pod
 	name = "assault pod"
@@ -109,10 +109,6 @@
 
 /obj/effect/ship_missile/assault_pod/impact()
 	if(exploded)
-		return
-
-	// Outpost shield envelopes stop pods exactly like they stop ordnance
-	if(try_outpost_shield_intercept(get_turf(src)))
 		return
 
 	var/turf/impact_turf = get_turf(src)
@@ -691,9 +687,8 @@
 
 // ========== FIRING ==========
 
-/// Whether the tube can launch. Pass the console's locked target so the
-/// yellow-zone siege exception can be evaluated the same way missiles do it.
-/obj/machinery/ship_combat/pod_launcher/proc/can_fire(obj/structure/overmap/locked_target = null)
+/// Whether the tube can launch
+/obj/machinery/ship_combat/pod_launcher/proc/can_fire()
 	if(machine_stat & (BROKEN|NOPOWER))
 		return FALSE
 	if(!anchored)
@@ -712,27 +707,9 @@
 		return FALSE
 	if(!is_on_exterior())
 		return FALSE
-	if(!SSovermap_zones.weapons_allowed_at(src) && !is_siege_shot_allowed(locked_target))
+	if(!SSovermap_zones.weapons_allowed_at(src))
 		return FALSE
 	return TRUE
-
-/// Boarding a raidable player outpost is allowed outside the red zone, on the
-/// same terms as a siege missile. See missile_launcher.dm for the reasoning.
-/obj/machinery/ship_combat/pod_launcher/proc/is_siege_shot_allowed(obj/structure/overmap/locked_target)
-#ifdef PLAYER_OUTPOST_YELLOW_SIEGE_ENABLED
-	if(!istype(locked_target, /obj/structure/overmap/dynamic/player_outpost))
-		return FALSE
-	var/obj/structure/overmap/dynamic/player_outpost/outpost = locked_target
-	if(!outpost.raidable)
-		return FALSE
-	var/obj/structure/overmap/ship/our_ship = get_ship_from_atom(src)
-	if(!our_ship)
-		return FALSE
-	var/zone_type = SSovermap_zones.get_zone_type(get_turf(our_ship))
-	return zone_type == ZONE_YELLOW || zone_type == ZONE_RED
-#else
-	return FALSE
-#endif
 
 /**
  * Throws the loaded pod at the target turf.
@@ -742,7 +719,7 @@
  * object in flight once the visual has cleared the screen.
  */
 /obj/machinery/ship_combat/pod_launcher/proc/fire(turf/target, obj/structure/overmap/target_ship, obj/structure/overmap/ship/source_ship, mob/user, approach_dir = null)
-	if(!can_fire(target_ship))
+	if(!can_fire())
 		return FALSE
 
 	if(!target)
@@ -833,7 +810,7 @@
 	update_appearance()
 
 /// Returns status info for the combat console UI
-/obj/machinery/ship_combat/pod_launcher/proc/get_status(obj/structure/overmap/locked_target = null)
+/obj/machinery/ship_combat/pod_launcher/proc/get_status()
 	var/on_ext = is_on_exterior()
 	var/riders = loaded_pod ? length(loaded_pod.get_riders()) : 0
 	return list(
@@ -843,7 +820,7 @@
 		"pod_name" = loaded_pod ? loaded_pod.name : null,
 		"occupants" = riders,
 		"sealed" = (loaded_pod && !loaded_pod.opened) ? 1 : 0,
-		"ready" = can_fire(locked_target),
+		"ready" = can_fire(),
 		"on_exterior" = on_ext,
 		"enabled" = on_ext && anchored && !(machine_stat & (BROKEN|NOPOWER)),
 	)

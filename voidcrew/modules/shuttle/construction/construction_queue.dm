@@ -197,6 +197,7 @@
 		intent = "floor"
 	var/obj/item/construction/rcd/internal/ship/rcd = internal_rcd
 	var/added = 0
+	var/expansion_denial
 	var/low = size == 3 ? -1 : 0
 	// Center first, then the surrounding ring: expansion proceeds out from existing hull.
 	var/list/targets = list(center)
@@ -213,6 +214,7 @@
 			break
 		// Adjacency is rechecked on completion, after earlier tiles have expanded the hull.
 		if(!is_in_shuttle_area(target) && (!is_valid_expansion_area(target) || !rcd.can_build_floor(target)))
+			expansion_denial ||= get_expansion_denial(target)
 			continue
 		var/datum/ship_construction_job/job = capture_construction_job(target, user, intent, tool_kind)
 		if(construction_claims[job.coordinate_key()] || !construction_job_needed(job, target))
@@ -221,7 +223,7 @@
 		construction_queue += job
 		construction_claims[job.coordinate_key()] = job
 		added++
-	queue_status = added ? "Queued [added] tile[added == 1 ? "" : "s"]." : "No new tiles to queue (or queue full)."
+	queue_status = added ? "Queued [added] tile[added == 1 ? "" : "s"]." : (expansion_denial || "No new tiles to queue (or queue full).")
 	if(!length(construction_queue))
 		QDEL_NULL(queue_origin)
 	start_construction_queue()

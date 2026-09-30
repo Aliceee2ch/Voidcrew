@@ -2999,7 +2999,6 @@
 /turf/open/floor/carpet/neon/simple/red/nodots,
 /area/voidcrew/trader_outpost)
 "My" = (
-/obj/structure/chair/comfy/carp,
 /mob/living/basic/outpost_trader,
 /turf/open/floor/carpet/neon/simple/red/nodots,
 /area/voidcrew/trader_outpost)

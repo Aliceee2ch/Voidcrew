@@ -2,7 +2,7 @@
 "aa" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ab" = (
 /obj/effect/decal/cleanable/crayon{
 	icon_state = "credit";
@@ -11,11 +11,11 @@
 	desc = "A credit mark in flaking yellow paint."
 	},
 /turf/closed/indestructible/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ac" = (
 /obj/machinery/light/warm/directional/west,
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ad" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -25,14 +25,14 @@
 /obj/structure/barrel,
 /obj/structure/sign/poster/ripped/directional/east,
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ae" = (
 /obj/machinery/door/airlock/outpost/service/staff/maintenance,
 /obj/effect/mapping_helpers/airlock/unres{
 	dir = 1
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "af" = (
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /obj/structure/table/wood,
@@ -50,7 +50,7 @@
 	pixel_y = 3
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ag" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 2
@@ -59,21 +59,21 @@
 	dir = 2
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ah" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/chair/stool{
 	dir = 8
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ai" = (
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aj" = (
 /obj/structure/safe,
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ak" = (
 /obj/structure/table/reinforced,
 /obj/structure/window/reinforced/spawner/directional/south,
@@ -90,15 +90,15 @@
 	pixel_y = 8
 	},
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "al" = (
 /obj/machinery/light/small/directional/north,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "am" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "an" = (
 /obj/effect/turf_decal/bot,
 /obj/structure/rack,
@@ -111,24 +111,24 @@
 	pixel_y = 1
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ao" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/decal/cleanable/cobweb,
 /obj/structure/closet/crate/bin,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ap" = (
 /obj/structure/fluff/paper/stack{
 	dir = 1
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aq" = (
 /obj/effect/turf_decal/delivery,
 /obj/machinery/outpost_shop_stock,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ar" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -138,7 +138,7 @@
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /obj/structure/closet/crate/wooden,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "as" = (
 /obj/structure/table/wood,
 /obj/item/flashlight/lamp/green{
@@ -155,14 +155,14 @@
 	},
 /obj/structure/sign/calendar/directional/north,
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "at" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "au" = (
 /obj/structure/table/reinforced,
 /obj/structure/window/reinforced/spawner/directional/south,
@@ -171,10 +171,10 @@
 	pixel_y = 6
 	},
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "av" = (
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aw" = (
 /obj/structure/rack,
 /obj/structure/showcase{
@@ -185,7 +185,7 @@
 	pixel_y = 4
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ax" = (
 /obj/structure/table/reinforced,
 /obj/structure/window/reinforced/spawner/directional/south,
@@ -202,7 +202,7 @@
 	pixel_y = 4
 	},
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ay" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
@@ -210,22 +210,22 @@
 /obj/effect/decal/cleanable/dirt,
 /obj/machinery/light/small/directional/west,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "az" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 2
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aA" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aB" = (
 /obj/effect/turf_decal/bot,
 /obj/structure/closet/crate/cardboard,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aC" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 2
@@ -234,16 +234,16 @@
 /obj/structure/closet/crate/cardboard,
 /obj/structure/sign/poster/contraband/random/directional/west,
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aD" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 8
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aE" = (
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aF" = (
 /obj/structure/showcase{
 	icon = 'icons/obj/machines/music.dmi';
@@ -254,7 +254,7 @@
 /obj/structure/sign/poster/contraband/random/directional/north,
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aG" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -275,7 +275,7 @@
 	pixel_y = -4
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aH" = (
 /obj/machinery/computer/outpost_shop_register{
 	dir = 2
@@ -285,14 +285,14 @@
 	pixel_y = 10
 	},
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aI" = (
 /turf/closed/indestructible/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aJ" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aK" = (
 /obj/structure/rack,
 /obj/structure/showcase{
@@ -303,20 +303,14 @@
 	pixel_y = 4
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aL" = (
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
-"aM" = (
-/obj/effect/turf_decal/siding/wood{
-	dir = 2
-	},
-/turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aN" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aO" = (
 /obj/structure/table/reinforced,
 /obj/structure/window/reinforced/spawner/directional/south,
@@ -325,7 +319,7 @@
 	pixel_y = 5
 	},
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aP" = (
 /obj/structure/sign/warning/no_smoking/directional/north,
 /obj/item/cigbutt{
@@ -333,14 +327,14 @@
 	pixel_y = -4
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aQ" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 2
 	},
 /obj/item/kirbyplants/organic/plant10,
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aR" = (
 /obj/structure/showcase/katana{
 	name = "display katana";
@@ -348,7 +342,7 @@
 	pixel_x = 11
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aS" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -359,17 +353,17 @@
 	dir = 1
 	},
 /turf/open/indestructible/plating/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aT" = (
 /obj/structure/chair/office{
 	dir = 1
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aU" = (
 /obj/machinery/light/warm/directional/east,
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aV" = (
 /obj/effect/decal/cleanable/cobweb,
 /obj/structure/showcase{
@@ -379,13 +373,13 @@
 	desc = "A wood-cased television. Only static comes through."
 	},
 /turf/open/indestructible/wood/parquet,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aW" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
 	},
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aX" = (
 /obj/structure/table/reinforced,
 /obj/structure/window/reinforced/spawner/directional/south,
@@ -399,20 +393,20 @@
 	pixel_y = 8
 	},
 /turf/open/indestructible/dark/textured,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aY" = (
 /obj/effect/turf_decal/bot,
 /obj/effect/decal/cleanable/cobweb,
 /obj/structure/rack,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "aZ" = (
 /obj/item/paper/crumpled{
 	pixel_x = 6;
 	pixel_y = -5
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "be" = (
 /obj/structure/table/wood,
 /obj/structure/showcase{
@@ -424,11 +418,11 @@
 	pixel_y = 6
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "cN" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ef" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/item/cigbutt{
@@ -436,20 +430,25 @@
 	pixel_y = 6
 	},
 /turf/open/indestructible/carpet/red,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "eS" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
+"gq" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/carpet/red,
+/area/voidcrew/player_outpost/service_room/shop)
 "lb" = (
 /obj/machinery/light/warm/directional/south,
 /obj/effect/decal/cleanable/dirt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "mO" = (
 /obj/item/kirbyplants/organic/plant21,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ng" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -457,7 +456,7 @@
 	alpha = 90
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "rW" = (
 /obj/structure/chair/sofa/bench/left{
 	dir = 4
@@ -472,7 +471,7 @@
 	},
 /obj/structure/noticeboard/directional/west,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "sr" = (
 /obj/structure/table/wood,
 /obj/structure/showcase{
@@ -488,7 +487,7 @@
 	pixel_y = -5
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "vF" = (
 /obj/structure/table/wood,
 /obj/structure/showcase{
@@ -504,7 +503,7 @@
 	pixel_y = -4
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "xm" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/rust_overlay.dmi';
@@ -513,11 +512,11 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "yk" = (
 /obj/structure/sign/clock/directional/south,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "zm" = (
 /obj/machinery/door/airlock/outpost/service/wood,
 /obj/structure/fans/tiny,
@@ -525,12 +524,12 @@
 	dir = 1
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Aa" = (
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /obj/item/kirbyplants/random/dead,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "BG" = (
 /obj/effect/decal/cleanable/crayon{
 	icon_state = "shop";
@@ -539,7 +538,7 @@
 	desc = "Hand-painted letters, flaking at the edges."
 	},
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Ce" = (
 /obj/effect/decal/cleanable/crayon{
 	icon_state = "trade";
@@ -548,16 +547,25 @@
 	desc = "Hand-painted letters, flaking at the edges."
 	},
 /turf/closed/indestructible/reinforced/rusty,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "ES" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/spawner/random/trash/cigbutt,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
+"Fc" = (
+/obj/machinery/door/airlock/outpost/service/wood,
+/obj/structure/fans/tiny,
+/obj/effect/mapping_helpers/airlock/unres{
+	dir = 1
+	},
+/obj/structure/cable/outpost,
+/turf/open/indestructible/grimy,
+/area/voidcrew/player_outpost/service_room/shop)
 "Fm" = (
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/indestructible/plating,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "FT" = (
 /obj/structure/chair/sofa/bench/right{
 	dir = 4
@@ -567,14 +575,20 @@
 	pixel_y = -8
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
+"Is" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/indestructible/carpet/red,
+/area/voidcrew/player_outpost/service_room/shop)
 "Kd" = (
 /obj/machinery/light/warm/directional/east,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Ky" = (
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Nv" = (
 /obj/structure/table/wood,
 /obj/item/newspaper{
@@ -591,7 +605,7 @@
 	},
 /obj/structure/sign/poster/contraband/random/directional/west,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "RV" = (
 /obj/structure/table/wood,
 /obj/structure/showcase{
@@ -608,7 +622,7 @@
 	pixel_y = 1
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "Uu" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/item/cigbutt/cigarbutt{
@@ -616,7 +630,7 @@
 	pixel_y = -7
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "UO" = (
 /obj/structure/showcase{
 	icon = 'icons/obj/machines/computer.dmi';
@@ -627,7 +641,7 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 "VJ" = (
 /obj/effect/decal/cleanable/blood/oil,
 /obj/structure/sign/poster/official/random/directional/east,
@@ -639,7 +653,7 @@
 	desc = "A dented quad bike. The tag on the handlebars reads NOT FOR SALE."
 	},
 /turf/open/indestructible/grimy,
-/area/template_noop)
+/area/voidcrew/player_outpost/service_room/shop)
 
 (1,1,1) = {"
 ai
@@ -742,7 +756,7 @@ ax
 aL
 aa
 aL
-cN
+Is
 BG
 "}
 (9,1,1) = {"
@@ -750,13 +764,13 @@ ai
 aj
 ap
 av
-aM
+az
 aH
 aa
 aL
 aL
-cN
-zm
+gq
+Fc
 "}
 (10,1,1) = {"
 ai

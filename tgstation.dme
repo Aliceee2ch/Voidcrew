@@ -7404,6 +7404,7 @@
 #include "voidcrew\modules\player_outposts\outpost_relay.dm"
 #include "voidcrew\modules\player_outposts\outpost_residents.dm"
 #include "voidcrew\modules\player_outposts\outpost_room_contracts.dm"
+#include "voidcrew\modules\player_outposts\outpost_room_power.dm"
 #include "voidcrew\modules\player_outposts\outpost_autosurgeon.dm"
 #include "voidcrew\modules\player_outposts\outpost_cloning_bay.dm"
 #include "voidcrew\modules\player_outposts\outpost_dock_fees.dm"

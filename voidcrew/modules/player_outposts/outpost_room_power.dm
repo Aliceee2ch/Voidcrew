@@ -77,6 +77,11 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/power/apc/outpost, APC_PIXEL_OFFSET)
 /obj/structure/cable/outpost
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 
+/obj/structure/cable/outpost/Initialize(mapload)
+	. = ..()
+	// Spared like every other outpost fixture; a singularity must not pull a room off the grid
+	ADD_TRAIT(src, TRAIT_SINGULARITY_IMMUNE, OUTPOST_SERVICE_TRAIT)
+
 /// Whether `user` may cut this cable
 /obj/structure/cable/outpost/proc/outpost_cut_allowed(mob/user)
 	if(isAdminGhostAI(user))
@@ -262,7 +267,8 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/power/apc/outpost, APC_PIXEL_OFFSET)
 	if(own_area && outpost)
 		for(var/upgrade_key in outpost.outpost_upgrades)
 			var/datum/outpost_upgrade/other = outpost.outpost_upgrades[upgrade_key]
-			if(other != src && other?.installed && other.installed_area == installed_area)
+			// A prison extension joins the wing's area on purpose (outpost_prison_extension.dm)
+			if(other != src && other?.installed && !other.snap_group && other.installed_area == installed_area)
 				own_area = FALSE
 				break
 	if(!own_area)

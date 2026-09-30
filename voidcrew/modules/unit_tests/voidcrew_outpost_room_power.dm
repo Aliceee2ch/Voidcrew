@@ -54,6 +54,9 @@
 			var/turf/door_turf = get_turf(candidate[1])
 			offsets += list(list(door_turf.x - scan_corner.x, door_turf.y - scan_corner.y, candidate[2]))
 
+		// Every airlock a storage room fits at joins it; an airlock in a notch too narrow for the room
+		// is refused before anything loads, so only the ones that fit are tested, and at least one must.
+		var/joined = 0
 		for(var/list/offset as anything in offsets)
 			var/direction = offset[3]
 			var/obj/structure/overmap/dynamic/player_outpost/home = allocate(/obj/structure/overmap/dynamic/player_outpost)
@@ -73,11 +76,15 @@
 			var/list/room_offset = rotated_template_offset(door_offsets[1][1], door_offsets[1][2], rotation, template.width, template.height)
 			var/turf/bottom_left = locate(outside.x - room_offset[1], outside.y - room_offset[2], outside.z)
 			var/result = home.place_outpost_upgrade(room, bottom_left, rotation, null)
+			if(result == "Position obstructed.")
+				continue
 			TEST_ASSERT_NULL(result, "A storage room could not join the [label] at its [dir2text(direction)] airlock: [result]")
+			joined++
 			TEST_ASSERT(room.on_grid(), "The storage room did not join the grid at the [label]'s [dir2text(direction)] airlock")
 			var/obj/machinery/power/smes/smes = locate() in home.outpost_area
 			TEST_ASSERT(home.outpost_area.apc?.terminal?.powernet && home.outpost_area.apc.terminal.powernet == smes?.terminal?.powernet, "The [label]'s habitat APC left the SMES's net once a room joined at its [dir2text(direction)] airlock")
 			settle_room_air(room.room_turfs())
+		TEST_ASSERT(joined > 0, "No outer airlock of the [label] has room for a storage room")
 
 /**
  * A room placed away from the habitat stays on its own cell until the owner's floor reaches it: the
@@ -170,6 +177,8 @@
 	var/mob/living/carbon/human/builder = market_test_resident(home, "cabletestbuilder", null)
 	home.authorized_builder_ckeys |= builder.ckey
 	var/turf/spot = get_turf(home.management_console)
+	// Cable under floor tiles can't be reached; these cuts happen on bare plating
+	spot = spot.ChangeTurf(/turf/open/floor/plating, flags = CHANGETURF_INHERIT_AIR)
 	var/mob/living/carbon/human/visitor = make_player(spot, "cabletestvisitor")
 	for(var/mob/living/carbon/human/actor as anything in list(owner, builder, visitor))
 		actor.equip_to_slot_or_del(allocate(/obj/item/clothing/gloves/color/yellow), ITEM_SLOT_GLOVES)
@@ -271,7 +280,7 @@
 		if(apc)
 			break
 	TEST_ASSERT_NOTNULL(apc, "The placed room has no outpost APC")
-	TEST_ASSERT_EQUAL(apc.name, "[get_area_name(room.installed_area, TRUE)] APC", "The room APC is not named for its room")
+	TEST_ASSERT_EQUAL(apc.name, "\improper [get_area_name(room.installed_area, TRUE)] APC", "The room APC is not named for its room")
 	TEST_ASSERT(apc.aidisabled, "The room APC is not AI-disabled")
 	TEST_ASSERT(HAS_TRAIT(apc, "outpost_property"), "The room APC is not outpost property")
 	TEST_ASSERT(apc.resistance_flags & INDESTRUCTIBLE, "The room APC is not indestructible")

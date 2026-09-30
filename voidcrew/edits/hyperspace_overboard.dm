@@ -316,7 +316,7 @@
  * sector, then the loaded planets and ruins any ship can fly to. Never the ship they just
  * came off - the point of falling out is that you are no longer aboard.
  */
-/proc/find_overboard_landing(atom/movable/castaway, obj/docking_port/mobile/origin)
+/proc/find_overboard_landing(atom/movable/castaway, obj/docking_port/mobile/origin, zone_type)
 	var/list/crewed_hulls = list()
 	var/list/quiet_hulls = list()
 	for(var/obj/structure/overmap/ship/ship as anything in SSovermap.simulated_ships)
@@ -326,6 +326,9 @@
 		// NPC hulls are not a rescue. Nobody aboard one is going to open an airlock for a
 		// castaway, and it flies off with them still stuck to the outside of it.
 		if(istype(ship, /obj/structure/overmap/ship/npc))
+			continue
+		// Never out of the zone they fell in: hyperspace is not a free zone crossing.
+		if(!isnull(zone_type) && get_teleport_zone_type(ship) != zone_type)
 			continue
 		if(hull_has_living_players(hull))
 			crewed_hulls += hull
@@ -339,6 +342,8 @@
 			if(isnull(footprint) || isnull(footprint.low_x) || !footprint.z_value)
 				continue
 			if(QDELETED(footprint.owner))
+				continue
+			if(!isnull(zone_type) && get_teleport_zone_type(footprint.owner) != zone_type)
 				continue
 			if(footprint.has_living_players())
 				crewed_sites += footprint
@@ -428,8 +433,21 @@
 	// neither of those is a fall from orbit.
 	var/obj/docking_port/mobile/origin = hyperspace_hull_near(get_turf(dumpee), SHUTTLE_TRANSIT_BORDER, require_hyperspace = FALSE)
 
-	var/turf/destination = find_overboard_landing(dumpee, origin)
+	// The zone they are being thrown out of: the hull's overmap tile for an overboard, the
+	// ground they stand on for an anomaly or cordon throw. Landings are kept inside it.
+	var/obj/docking_port/mobile/voidcrew/origin_port = origin
+	var/zone_type
+	if(istype(origin_port) && origin_port.current_ship)
+		zone_type = get_teleport_zone_type(origin_port.current_ship)
+	else
+		zone_type = get_teleport_zone_type(dumpee)
+
+	var/turf/destination = find_overboard_landing(dumpee, origin, zone_type)
 	if(!destination)
+		// Nowhere in their own zone: leave them where they are rather than let upstream's
+		// random throw carry them into another one.
+		if(!origin && !isnull(zone_type))
+			return TRUE
 		return FALSE
 
 	dumpee.pulledby?.stop_pulling()

@@ -591,6 +591,14 @@
 	TEST_ASSERT_NOTNULL(button, "Cell [cell.number] has no bolt button")
 	TEST_ASSERT(findtext(jointext(button.examine(warden), " "), "[inmate.real_name] is on lockdown"), "The cell's bolt button does not show the lockdown")
 
+	// Out through a hole with their cell still bolted, nobody let them out: the grace waits, no riot
+	var/turf/served_from = inmate.loc
+	inmate.forceMove(prison_spot(home, 10, 8))
+	prison.tick(40)
+	TEST_ASSERT(!prison.riot_active, "A prisoner out through a hole in their bolted cell started a riot")
+	TEST_ASSERT_EQUAL(inmate.lockdown_out, 0, "The grace ran while their cell was still bolted")
+	inmate.forceMove(served_from)
+
 	// Let out early: out of the cell on their feet and uncuffed, the lockdown stops counting. Cuffed
 	// or down the grace waits; after 30 seconds (PRISON_LOCKDOWN_GRACE) on their feet they riot
 	// again, even in the quiet after the last riot.

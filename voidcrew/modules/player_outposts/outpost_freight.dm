@@ -316,6 +316,7 @@
 	for(var/datum/export/export as anything in report.total_amount)
 		var/value = report.total_value[export]
 		home.treasury.adjust_money(value, "Export to cargo registry: [report.total_amount[export]] [export.unit_name]")
+		home.record_income(OUTPOST_INCOME_EXPORTS, "Exports: [report.total_amount[export]] [export.unit_name]", value)
 		record_transaction("sell", export.unit_name || "goods", report.total_amount[export], value)
 		SSeconomy.export_total += value
 	metric_cargo_exports(report, home.treasury, home)

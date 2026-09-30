@@ -21,6 +21,8 @@
 	var/list/service_ledger = list()
 	/// Service key -> list("total", "count") of what it has earned
 	var/list/service_totals = list()
+	/// list(world.time, amount) for every payment and refund in the last OUTPOST_INCOME_WINDOW, oldest first
+	var/list/recent_income = list()
 	/// Ckey -> world.time of their last price change
 	var/list/price_set_times = list()
 	/// Admin testing aid: this ckey is billed as a visitor, never a member. Set only by the manipulator.
@@ -200,6 +202,7 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 		service_totals[service_key] = totals
 	totals["total"] += amount
 	totals["count"] += 1
+	note_recent_income(amount)
 	log_econ("[amount] cr paid to [name] ([treasury.account_holder]) for [label] by [payer_name] ([account_holder])")
 	return TRUE
 
@@ -214,8 +217,56 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 	var/list/totals = service_totals[service_key]
 	if(totals)
 		totals["total"] -= amount
+	note_recent_income(-amount)
 	log_econ("[amount] cr refunded by [name] ([treasury.account_holder]) for [label] to [account.account_holder]")
 	return TRUE
+
+/// Income already in the treasury that nobody was charged for (the prison wing's pay, cargo exports): into the ledger and the takings
+/obj/structure/overmap/dynamic/player_outpost/proc/record_income(source_key, label, amount)
+	if(!isnum(amount) || amount <= 0)
+		return
+	add_service_ledger(source_key, label, null, null, amount)
+	var/list/totals = service_totals[source_key]
+	if(!totals)
+		totals = list("total" = 0, "count" = 0)
+		service_totals[source_key] = totals
+	totals["total"] += amount
+	totals["count"] += 1
+	note_recent_income(amount)
+
+/// Remembers `amount` (negative for a refund) for the takings' last hour
+/obj/structure/overmap/dynamic/player_outpost/proc/note_recent_income(amount)
+	recent_income += list(list(world.time, amount))
+	prune_recent_income()
+
+/// Forgets income older than OUTPOST_INCOME_WINDOW
+/obj/structure/overmap/dynamic/player_outpost/proc/prune_recent_income()
+	var/cutoff = world.time - OUTPOST_INCOME_WINDOW
+	var/stale = 0
+	for(var/list/entry as anything in recent_income)
+		if(entry[1] >= cutoff)
+			break
+		stale++
+	if(stale)
+		recent_income.Cut(1, stale + 1)
+
+/// Credits taken in the last OUTPOST_INCOME_WINDOW, refunds taken off
+/obj/structure/overmap/dynamic/player_outpost/proc/recent_income_total()
+	prune_recent_income()
+	. = 0
+	for(var/list/entry as anything in recent_income)
+		. += entry[2]
+
+/// What the takings call a source that has no price row
+/proc/outpost_income_source_label(source_key)
+	switch(source_key)
+		if(OUTPOST_SERVICE_SHOP)
+			return "Shop sales"
+		if(OUTPOST_INCOME_PRISON)
+			return "Prison wing"
+		if(OUTPOST_INCOME_EXPORTS)
+			return "Exports"
+	return source_key
 
 /// Appends a line to the income ledger, dropping the oldest past OUTPOST_SERVICE_LEDGER_MAX
 /obj/structure/overmap/dynamic/player_outpost/proc/add_service_ledger(service_key, label, payer_name, account_holder, amount)
@@ -402,10 +453,10 @@ GLOBAL_LIST_INIT(outpost_price_table, list(
 			var/list/price_row = GLOB.outpost_price_table[service_key]
 			totals += list(list(
 				"service" = service_key,
-				"label" = price_row ? price_row["label"] : (service_key == OUTPOST_SERVICE_SHOP ? "Shop sales" : service_key),
+				"label" = price_row ? price_row["label"] : outpost_income_source_label(service_key),
 				"total" = total["total"],
 			))
-	return list("prices" = prices, "ledger" = ledger, "totals" = totals)
+	return list("prices" = prices, "ledger" = ledger, "totals" = totals, "last_hour" = can_view_income ? recent_income_total() : null)
 
 /// The ship crews the owner's character belongs to. Everyone on them is a member here.
 /obj/structure/overmap/dynamic/player_outpost/proc/owner_crew_ui_data()

@@ -91,6 +91,8 @@ type Pricing = {
   prices?: PriceRow[];
   ledger?: LedgerEntry[] | null;
   totals?: ServiceTotal[] | null;
+  /** Credits taken in the last hour, refunds off; null without income access */
+  last_hour?: number | null;
 };
 type ShopDetail = {
   kind: 'shop';
@@ -2329,9 +2331,17 @@ function PricingTab({ data, act }: Props) {
       {takings ? (
         <div className="Outpost__col">
           <Frame title="Takings" icon="coins" fill>
+            {typeof pricing.last_hour === 'number' ? (
+              <div className="Outpost__total">
+                <span>Last hour</span>
+                <span className="Outpost__mono">
+                  {credits(pricing.last_hour)}
+                </span>
+              </div>
+            ) : null}
             {totals.length > 0 ? (
               <>
-                <Section title="By service" />
+                <Section title="By source" />
                 {totals.map((entry) => (
                   <div className="Outpost__row" key={entry.service}>
                     <span className="Outpost__plain">

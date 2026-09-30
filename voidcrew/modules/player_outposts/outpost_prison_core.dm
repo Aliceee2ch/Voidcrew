@@ -38,6 +38,8 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 
 /// How often prisoners whose AI is asleep help themselves to supplies, in seconds
 #define PRISON_SUPPLY_REFRESH_SECONDS 5
+/// How long the wing's list of loose food is trusted before it is looked for again
+#define PRISON_LOOSE_FOOD_REFRESH (3 SECONDS)
 /// The largest a cell's inside can be, in tiles
 #define PRISON_CELL_MAX_TILES 16
 
@@ -52,6 +54,9 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	var/capacity = OUTPOST_PRISON_CAPACITY
 	/// Every tile of the wing's footprint and its extensions', each once, the wing's own first; see wing_turfs()
 	var/list/turf/wing_block_cache
+	/// Weakrefs to food lying loose in the wing off the hatches, and when that list goes stale; see loose_food()
+	var/list/datum/weakref/loose_food_refs
+	var/loose_food_stale_at = 0
 	/// Warden console log, newest first: list(list("time", "text"))
 	var/list/entries = list()
 	/// Seconds since prisoners whose AI is asleep last helped themselves to supplies
@@ -433,9 +438,9 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	return added
 
 /**
- * The nearest thing on a serving hatch in the prisoner's reach that they want: food, or a cleaner
- * uniform when `want_uniform` is set. Supplies anywhere else (the floor, a mess table, a cell) are
- * left alone, and so is anything another prisoner is already fetching.
+ * The nearest thing in the prisoner's reach that they want: food anywhere in the wing (a serving
+ * hatch, a table, a cell, the floor), or a cleaner uniform off a serving hatch when `want_uniform`
+ * is set. Anything another prisoner is already fetching is left alone.
  */
 /datum/outpost_prison/proc/find_supply(mob/living/basic/outpost_prisoner/prisoner, want_uniform = FALSE)
 	if(!prisoner.reachable)
@@ -455,7 +460,33 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 			if(distance < best_distance)
 				best = thing
 				best_distance = distance
+	if(want_uniform)
+		return best
+	for(var/obj/item/food/meal as anything in loose_food())
+		if(!prisoner.reachable?[meal.loc] || claimed_by_other(meal, prisoner) || reserved_supply(meal, prisoner))
+			continue
+		var/distance = get_dist(prisoner, meal)
+		if(distance < best_distance)
+			best = meal
+			best_distance = distance
 	return best
+
+/// Food lying loose on the wing's tiles, off the serving hatches (find_supply() looks at those itself). Looked for again at most every PRISON_LOOSE_FOOD_REFRESH.
+/datum/outpost_prison/proc/loose_food()
+	if(isnull(loose_food_refs) || world.time >= loose_food_stale_at)
+		loose_food_stale_at = world.time + PRISON_LOOSE_FOOD_REFRESH
+		loose_food_refs = list()
+		for(var/turf/tile as anything in wing_turfs())
+			if(locate(/obj/structure/table/reinforced/prison_hatch) in tile)
+				continue
+			for(var/obj/item/food/meal in tile)
+				loose_food_refs += WEAKREF(meal)
+	. = list()
+	for(var/datum/weakref/ref as anything in loose_food_refs)
+		var/obj/item/food/meal = ref.resolve()
+		// Still lying in the wing: not eaten, picked up or carried out since
+		if(!QDELETED(meal) && isturf(meal.loc) && meal.loc.loc == wing)
+			. += meal
 
 /**
  * Staff put something on a serving hatch. Prisoners who want it leave whatever they were idling
@@ -866,4 +897,5 @@ GLOBAL_LIST_EMPTY(outpost_prisons)
 	return length(turfs) ? turfs[1] : null
 
 #undef PRISON_SUPPLY_REFRESH_SECONDS
+#undef PRISON_LOOSE_FOOD_REFRESH
 #undef PRISON_CELL_MAX_TILES

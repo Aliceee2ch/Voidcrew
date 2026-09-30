@@ -31,7 +31,7 @@ Fines the outpost bank can't cover become debt. Nobody new arrives while the ban
 
 ## Looking after prisoners
 
-Prisoners take food and clean uniforms from the serving hatches or from your hand. They never pick things up off the floor or a table.
+Prisoners eat any food they can get to in the wing: on a serving hatch, a table, the floor or in their cell, or from your hand. Clean uniforms only come from the serving hatches or your hand.
 
 - The **Sustenance Vendor** in the office sells soggy tofu, candy corn, moldy bread and ice cups to members of the wing, billed to the outpost bank per item. Tofu and candy corn fill a prisoner like a ration; the moldy bread is poor food. It restocks itself slowly.
 - The office has eight prison uniforms in the locker. Uniforms get dirty. Hand a prisoner a cleaner one and they change and give you the old one, or leave clean uniforms on a hatch. Wash dirty ones in the office washing machine.

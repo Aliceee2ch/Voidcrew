@@ -592,6 +592,7 @@ GLOBAL_LIST_INIT(outpost_upgrade_catalog, init_outpost_upgrade_catalog())
 		blueprint.placed_offer = offer
 	blueprint.collect_snaps(footprint_turfs)
 	blueprint.on_installed(user)
+	join_rooms_to_grid() // a corridor may already reach this room's door; the wing/dock/room joins right away
 	var/list/entrance = footprint["entrance"]
 	playsound(entrance[CEILING(length(entrance) / 2, 1)], 'sound/machines/ding.ogg', 60, TRUE)
 	log_game("PLAYER OUTPOST: [key_name(user)] placed the [blueprint.name] upgrade at '[name]' ([bottom_left.x],[bottom_left.y],[bottom_left.z], rotated [rotation])")

@@ -30,11 +30,10 @@
 	for(var/turf/tile as anything in inside)
 		if(!istype(tile, /turf/open/indestructible) && !istype(tile, /turf/closed/indestructible))
 			. += "a destructible [tile.type] at [tile.x],[tile.y]"
-		if(tile.loc != outpost.outpost_area)
-			. += "[tile.x],[tile.y] is outside the outpost's area"
 		for(var/obj/thing in tile)
-			if(istype(thing, /obj/machinery/power/apc) || istype(thing, /obj/machinery/light_switch) || istype(thing, /obj/structure/cable))
+			if(istype(thing, /obj/machinery/light_switch))
 				. += "a [thing.type] at [tile.x],[tile.y]"
+	. += power_problems()
 	var/list/routes = exit_routes()
 	if(length(routes) != 1)
 		. += "[length(routes)] ways out of the room, not 1"
@@ -297,5 +296,10 @@
 	var/atom/obstruction = pad.pad_obstruction()
 	if(obstruction)
 		. += "[obstruction] stands on the landing pad"
-	if(!installed_area?.apc)
-		. += "the dock has no APC"
+	. += power_problems()
+
+/datum/outpost_upgrade/prison/contract_problems()
+	. = ..()
+	if(!installed)
+		return
+	. += power_problems()

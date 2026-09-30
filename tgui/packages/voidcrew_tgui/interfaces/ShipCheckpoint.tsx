@@ -15,7 +15,7 @@ import {
   type PreviewData,
   ShipPreview,
   type UpgradeSlot,
-} from '../../tgui/interfaces/ShipUpgradeSelector';
+} from './ShipUpgradeSelector';
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
 

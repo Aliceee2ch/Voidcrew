@@ -15,17 +15,6 @@
 	},
 /turf/open/floor/wood,
 /area/voidcrew/player_outpost)
-"ac" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/obj/effect/decal/cleanable/dirt,
-/obj/machinery/light/small/red/dim/directional/south,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "ad" = (
 /obj/effect/landmark/outpost_elevator_alcove,
 /obj/effect/turf_decal/stripes/line{
@@ -35,14 +24,6 @@
 /area/voidcrew/player_outpost)
 "ae" = (
 /turf/open/floor/iron/grimy,
-/area/voidcrew/player_outpost)
-"af" = (
-/obj/machinery/door/airlock/external,
-/obj/effect/mapping_helpers/airlock/cyclelink_helper{
-	dir = 1
-	},
-/obj/structure/fans/tiny,
-/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "ag" = (
 /obj/structure/table/wood,
@@ -114,17 +95,6 @@
 	dir = 4
 	},
 /turf/open/floor/iron/dark/textured_large,
-/area/voidcrew/player_outpost)
-"aq" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/obj/effect/decal/cleanable/dirt,
-/obj/machinery/light/small/red/dim/directional/north,
-/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "ar" = (
 /obj/effect/landmark/outpost_elevator_alcove,
@@ -198,13 +168,6 @@
 	},
 /turf/open/floor/iron/dark/textured_large,
 /area/voidcrew/player_outpost)
-"aG" = (
-/obj/machinery/door/airlock/wood{
-	name = "Bunkhouse"
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "aH" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -226,14 +189,6 @@
 	pixel_y = -2
 	},
 /turf/open/floor/iron/dark,
-/area/voidcrew/player_outpost)
-"aJ" = (
-/obj/machinery/door/airlock/external,
-/obj/effect/mapping_helpers/airlock/cyclelink_helper{
-	dir = 2
-	},
-/obj/structure/fans/tiny,
-/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "aK" = (
 /turf/closed/wall/r_wall/rusted,
@@ -275,21 +230,6 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/carpet,
 /area/voidcrew/player_outpost)
-"aR" = (
-/obj/machinery/door/airlock/grunge{
-	name = "Service Bay"
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rusted,
-/area/voidcrew/player_outpost)
-"aS" = (
-/obj/machinery/door/airlock/external,
-/obj/effect/mapping_helpers/airlock/cyclelink_helper{
-	dir = 4
-	},
-/obj/structure/fans/tiny,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "aT" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/cafeteria,
@@ -322,25 +262,6 @@
 /obj/effect/landmark/outpost_elevator_alcove,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/iron/dark/textured_large,
-/area/voidcrew/player_outpost)
-"aY" = (
-/obj/machinery/door/airlock/external,
-/obj/effect/mapping_helpers/airlock/cyclelink_helper{
-	dir = 8
-	},
-/obj/structure/fans/tiny,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
-"aZ" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 4
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/machinery/light/small/red/dim/directional/east,
-/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "bj" = (
 /obj/effect/turf_decal{
@@ -413,6 +334,15 @@
 /obj/structure/filingcabinet,
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
+"cH" = (
+/obj/machinery/door/airlock/external,
+/obj/effect/mapping_helpers/airlock/cyclelink_helper{
+	dir = 1
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "cP" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
 	dir = 8
@@ -464,13 +394,6 @@
 	pixel_y = -6
 	},
 /turf/open/floor/carpet/black,
-/area/voidcrew/player_outpost)
-"dP" = (
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "dY" = (
 /obj/effect/decal/cleanable/dirt,
@@ -552,10 +475,19 @@
 	},
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
+"fM" = (
+/obj/structure/cable/outpost,
+/turf/open/floor/carpet/red,
+/area/voidcrew/player_outpost)
 "fS" = (
 /obj/machinery/light/small/directional/east,
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"fW" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "gd" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
@@ -589,22 +521,26 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
+"gz" = (
+/obj/machinery/power/terminal{
+	dir = 1
+	},
+/obj/structure/cable/outpost,
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "gN" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
 	},
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
-"gQ" = (
-/obj/structure/noticeboard/directional/north{
-	name = "roster"
-	},
-/obj/item/paper{
-	name = "bunk roster";
-	default_raw_text = "Bunks are first come, first served. Strip your sheet when you leave. Boots off the beds."
-	},
+"gO" = (
+/obj/structure/cable/outpost,
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "gV" = (
 /obj/structure/table/reinforced,
@@ -648,12 +584,9 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
-"ho" = (
-/obj/machinery/power/apc/auto_name/directional/east,
-/obj/structure/cable,
-/obj/effect/turf_decal/stripes/line{
-	dir = 4
-	},
+"hx" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "hH" = (
@@ -666,15 +599,9 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
-"hK" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/structure/barrel,
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/iron/dark/textured,
+"il" = (
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "iB" = (
 /turf/open/floor/carpet/black,
@@ -690,6 +617,11 @@
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /turf/open/floor/wood/large,
+/area/voidcrew/player_outpost)
+"iQ" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "iX" = (
 /obj/structure/chair/stool{
@@ -723,6 +655,25 @@
 "jf" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/decal/cleanable/dirt/dust,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"jg" = (
+/obj/machinery/door/airlock/wood{
+	name = "Bunkhouse"
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
+"jE" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/structure/barrel,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "jI" = (
@@ -838,15 +789,6 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
-"lt" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 2
-	},
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/turf/open/floor/plating/rusted,
-/area/voidcrew/player_outpost)
 "lN" = (
 /obj/structure/table/wood,
 /obj/item/reagent_containers/cup/glass/drinkingglass{
@@ -870,12 +812,13 @@
 /obj/effect/decal/cleanable/ash,
 /turf/open/floor/wood/large,
 /area/voidcrew/player_outpost)
-"md" = (
+"mf" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
 	},
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "mg" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -923,6 +866,13 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
+"mZ" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/closet/crate,
+/obj/effect/turf_decal/bot,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "nc" = (
 /obj/structure/chair/wood{
 	dir = 4
@@ -967,10 +917,26 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
+"nA" = (
+/obj/machinery/door/airlock/engineering{
+	name = "Power Room"
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "nC" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 2
 	},
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"nM" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "nN" = (
@@ -1099,10 +1065,26 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/wood,
 /area/voidcrew/player_outpost)
+"pX" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "qj" = (
 /obj/structure/closet/crate,
 /obj/effect/turf_decal/bot,
 /turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"qn" = (
+/obj/machinery/door/airlock/grunge{
+	name = "Service Bay"
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "qo" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -1149,6 +1131,15 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
+"rt" = (
+/obj/machinery/door/airlock/external,
+/obj/effect/mapping_helpers/airlock/cyclelink_helper{
+	dir = 8
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "rv" = (
 /turf/open/floor/carpet,
 /area/voidcrew/player_outpost)
@@ -1186,6 +1177,16 @@
 /obj/machinery/light/warm/directional/east,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/iron/grimy,
+/area/voidcrew/player_outpost)
+"rX" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/obj/structure/cable/outpost,
+/turf/open/floor/plating/rusted,
 /area/voidcrew/player_outpost)
 "sb" = (
 /obj/structure/chair/wood/wings{
@@ -1236,6 +1237,33 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
+"sV" = (
+/obj/structure/sign/warning/electric_shock/directional/south,
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"sZ" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/machinery/light/small/red/dim/directional/north,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating/rusted,
+/area/voidcrew/player_outpost)
+"ta" = (
+/obj/machinery/door/airlock/external,
+/obj/effect/mapping_helpers/airlock/cyclelink_helper{
+	dir = 4
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "tf" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/effect/turf_decal{
@@ -1278,19 +1306,23 @@
 	},
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
-"tM" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/machinery/power/port_gen/pacman,
-/obj/structure/cable,
-/obj/effect/turf_decal/bot,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "tV" = (
 /obj/machinery/door/airlock/maintenance{
 	name = "Washroom"
 	},
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/freezer,
+/area/voidcrew/player_outpost)
+"tY" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "uD" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -1338,6 +1370,14 @@
 /obj/machinery/computer/security/telescreen/entertainment/directional/south,
 /turf/open/floor/carpet,
 /area/voidcrew/player_outpost)
+"vS" = (
+/obj/machinery/power/apc/auto_name/directional/east,
+/obj/structure/cable/outpost,
+/obj/effect/turf_decal/stripes/line{
+	dir = 4
+	},
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "we" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal{
@@ -1346,6 +1386,14 @@
 	alpha = 90
 	},
 /turf/open/floor/plating,
+/area/voidcrew/player_outpost)
+"wq" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "wx" = (
 /obj/effect/turf_decal{
@@ -1415,31 +1463,6 @@
 	},
 /turf/open/floor/wood,
 /area/voidcrew/player_outpost)
-"xS" = (
-/obj/structure/chair/sofa/bench/solo{
-	dir = 4
-	},
-/obj/item/cigbutt{
-	pixel_x = -7;
-	pixel_y = -8
-	},
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
-"yd" = (
-/obj/structure/extinguisher_cabinet/directional/west,
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
-"yl" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
 "yC" = (
 /obj/item/trash/can{
 	pixel_x = -6;
@@ -1474,16 +1497,11 @@
 /obj/effect/turf_decal/bot,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
-"zJ" = (
-/obj/machinery/light/warm/directional/south,
+"zZ" = (
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
-"zN" = (
-/obj/effect/turf_decal/stripes/line{
-	dir = 8
-	},
-/obj/effect/decal/cleanable/dirt,
+/obj/structure/closet/crate,
+/obj/effect/turf_decal/bot,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "Ad" = (
@@ -1515,6 +1533,18 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
+"Ao" = (
+/obj/structure/noticeboard/directional/north{
+	name = "roster"
+	},
+/obj/item/paper{
+	name = "bunk roster";
+	default_raw_text = "Bunks are first come, first served. Strip your sheet when you leave. Boots off the beds."
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "AE" = (
 /obj/structure/frame/machine,
 /obj/effect/turf_decal{
@@ -1532,6 +1562,11 @@
 	},
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/wood,
+/area/voidcrew/player_outpost)
+"AM" = (
+/obj/structure/sign/poster/official/random/directional/north,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "AO" = (
 /obj/structure/rack,
@@ -1587,6 +1622,12 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/freezer,
 /area/voidcrew/player_outpost)
+"BR" = (
+/obj/machinery/power/smes/ship,
+/obj/structure/cable/outpost,
+/obj/effect/turf_decal/delivery,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "BW" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
 	dir = 2
@@ -1603,6 +1644,16 @@
 /obj/effect/spawner/random/maintenance,
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
+"CH" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 150
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "CO" = (
 /obj/structure/closet,
 /obj/effect/decal/cleanable/dirt/dust,
@@ -1613,15 +1664,16 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/carpet/red,
 /area/voidcrew/player_outpost)
+"Dk" = (
+/obj/structure/closet/cardboard,
+/obj/effect/decal/cleanable/cobweb,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
 "Do" = (
 /obj/machinery/light/small/directional/west,
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/plating/rusted,
-/area/voidcrew/player_outpost)
-"Dq" = (
-/obj/machinery/light/small/directional/north,
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "Dy" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
@@ -1662,16 +1714,6 @@
 	pixel_y = -9
 	},
 /turf/open/floor/wood,
-/area/voidcrew/player_outpost)
-"DK" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 150
-	},
-/obj/machinery/light/warm/directional/east,
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "DQ" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -1828,6 +1870,18 @@
 /obj/structure/sign/poster/official/random/directional/south,
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
+"Gm" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 4
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 8
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/machinery/light/small/red/dim/directional/east,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating/rusted,
+/area/voidcrew/player_outpost)
 "Gp" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/item/newspaper{
@@ -1873,24 +1927,12 @@
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /turf/open/floor/iron/freezer,
 /area/voidcrew/player_outpost)
-"GR" = (
-/obj/structure/sign/poster/official/random/directional/north,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "GU" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/chair/wood{
 	dir = 2
 	},
 /turf/open/floor/carpet/red,
-/area/voidcrew/player_outpost)
-"GY" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 90
-	},
-/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "Ha" = (
 /obj/effect/decal/cleanable/dirt,
@@ -1963,21 +2005,6 @@
 	dir = 2
 	},
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
-"Ia" = (
-/obj/structure/noticeboard/directional/north{
-	name = "notice board"
-	},
-/obj/item/paper{
-	name = "notice of sale";
-	default_raw_text = "<b>COLONIAL REGISTRY - NOTICE OF SALE</b><br>This property, formerly a hauler station, is sold as it stands. Fixtures, wiring and plumbing are included. The Registry accepts no liability for any of them."
-	},
-/obj/item/paper{
-	name = "sign here";
-	default_raw_text = "Visitors sign in at the dispatch window. Wipe your boots."
-	},
-/obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "Ie" = (
@@ -2073,6 +2100,18 @@
 	},
 /turf/open/floor/carpet/red,
 /area/voidcrew/player_outpost)
+"IN" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/machinery/power/port_gen/pacman,
+/obj/structure/cable/outpost,
+/obj/effect/turf_decal/bot,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost)
+"IO" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/carpet/red,
+/area/voidcrew/player_outpost)
 "IY" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/carpet/red,
@@ -2114,14 +2153,9 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
-"JD" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 150
-	},
+"Jw" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "JE" = (
@@ -2200,26 +2234,9 @@
 "KM" = (
 /turf/open/floor/iron/cafeteria,
 /area/voidcrew/player_outpost)
-"KP" = (
-/obj/machinery/door/airlock/engineering{
-	name = "Power Room"
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "KS" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/plating/rusted,
-/area/voidcrew/player_outpost)
-"KW" = (
-/obj/structure/cable,
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating/rusted,
-/area/voidcrew/player_outpost)
-"KY" = (
-/obj/structure/sign/warning/electric_shock/directional/south,
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "Le" = (
 /obj/effect/turf_decal{
@@ -2278,6 +2295,15 @@
 /obj/effect/decal/cleanable/cobweb,
 /obj/effect/turf_decal/bot,
 /turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"LN" = (
+/obj/machinery/door/airlock/external,
+/obj/effect/mapping_helpers/airlock/cyclelink_helper{
+	dir = 2
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "LP" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
@@ -2363,6 +2389,13 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
+"MH" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/item/kirbyplants/random/dead,
+/obj/effect/decal/cleanable/cobweb,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "MW" = (
 /obj/structure/chair/sofa/corp/right{
 	dir = 8
@@ -2370,10 +2403,15 @@
 /obj/machinery/light/warm/dim/directional/east,
 /turf/open/floor/wood,
 /area/voidcrew/player_outpost)
-"MX" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/structure/closet/crate,
-/obj/effect/turf_decal/bot,
+"MZ" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 150
+	},
+/obj/machinery/light/warm/directional/east,
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "Ng" = (
@@ -2401,11 +2439,27 @@
 	},
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
+"Nn" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 150
+	},
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "NG" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
 	},
 /turf/open/floor/iron/dark/smooth_large,
+/area/voidcrew/player_outpost)
+"NJ" = (
+/obj/machinery/light/small/directional/north,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "NR" = (
 /obj/effect/decal/cleanable/dirt,
@@ -2443,12 +2497,6 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
-"Ox" = (
-/obj/effect/turf_decal/delivery/white,
-/obj/effect/decal/cleanable/dirt,
-/obj/effect/decal/cleanable/dirt/dust,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
 "OB" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
 	dir = 2
@@ -2466,6 +2514,22 @@
 /obj/structure/sign/poster/official/random/directional/south,
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/plating,
+/area/voidcrew/player_outpost)
+"OP" = (
+/obj/structure/noticeboard/directional/north{
+	name = "notice board"
+	},
+/obj/item/paper{
+	name = "notice of sale";
+	default_raw_text = "<b>COLONIAL REGISTRY - NOTICE OF SALE</b><br>This property, formerly a hauler station, is sold as it stands. Fixtures, wiring and plumbing are included. The Registry accepts no liability for any of them."
+	},
+/obj/item/paper{
+	name = "sign here";
+	default_raw_text = "Visitors sign in at the dispatch window. Wipe your boots."
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "OV" = (
 /obj/structure/chair/wood{
@@ -2507,6 +2571,12 @@
 	},
 /obj/structure/rack,
 /turf/open/floor/plating,
+/area/voidcrew/player_outpost)
+"PA" = (
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "PM" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -2585,6 +2655,17 @@
 	},
 /turf/open/floor/carpet,
 /area/voidcrew/player_outpost)
+"Rk" = (
+/obj/structure/chair/sofa/bench/solo{
+	dir = 4
+	},
+/obj/item/cigbutt{
+	pixel_x = -7;
+	pixel_y = -8
+	},
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "RJ" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
 	dir = 8
@@ -2601,6 +2682,13 @@
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
 	},
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"RS" = (
+/obj/effect/turf_decal/delivery/white,
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "RT" = (
@@ -2640,6 +2728,17 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/dark/smooth_large,
 /area/voidcrew/player_outpost)
+"Sy" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 150
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "SA" = (
 /obj/structure/sink/directional/east,
 /obj/structure/mirror/directional/west,
@@ -2653,6 +2752,18 @@
 "Tb" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/freezer,
+/area/voidcrew/player_outpost)
+"Tf" = (
+/obj/effect/turf_decal/stripes/line{
+	dir = 1
+	},
+/obj/effect/turf_decal/stripes/line{
+	dir = 2
+	},
+/obj/effect/decal/cleanable/dirt,
+/obj/machinery/light/small/red/dim/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "Tk" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -2690,22 +2801,6 @@
 /obj/effect/decal/cleanable/dirt/dust,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
-"TW" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/item/kirbyplants/random/dead,
-/obj/effect/decal/cleanable/cobweb,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
-"TX" = (
-/obj/machinery/power/terminal{
-	dir = 1
-	},
-/obj/structure/cable,
-/obj/effect/turf_decal/stripes/line{
-	dir = 1
-	},
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "TY" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/tile/brown/half/contrasted{
@@ -2723,13 +2818,14 @@
 /obj/effect/decal/cleanable/cobweb/cobweb2,
 /turf/open/floor/iron/grimy,
 /area/voidcrew/player_outpost)
+"Uq" = (
+/obj/machinery/light/warm/directional/south,
+/obj/effect/decal/cleanable/dirt,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "Ur" = (
 /obj/effect/decal/cleanable/dirt,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
-"Uu" = (
-/obj/structure/closet/cardboard,
-/obj/effect/decal/cleanable/cobweb,
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost)
 "UA" = (
@@ -2817,6 +2913,10 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
+"Vh" = (
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
 "Vj" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
 	dir = 4
@@ -2852,10 +2952,6 @@
 	},
 /turf/open/floor/iron/cafeteria,
 /area/voidcrew/player_outpost)
-"VB" = (
-/obj/structure/cable,
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost)
 "VC" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/mapping_helpers/broken_floor,
@@ -2868,15 +2964,6 @@
 	alpha = 150
 	},
 /turf/open/floor/plating,
-/area/voidcrew/player_outpost)
-"Wb" = (
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 150
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "Wu" = (
 /obj/effect/decal/cleanable/dirt/dust,
@@ -2982,11 +3069,11 @@
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/wood,
 /area/voidcrew/player_outpost)
-"XC" = (
-/obj/machinery/power/smes/ship,
-/obj/structure/cable,
-/obj/effect/turf_decal/delivery,
-/turf/open/floor/plating,
+"XD" = (
+/obj/structure/extinguisher_cabinet/directional/west,
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "XM" = (
 /obj/structure/chair/sofa/corp/left{
@@ -3038,15 +3125,6 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
-"YL" = (
-/obj/effect/decal/cleanable/dirt/dust,
-/obj/effect/turf_decal{
-	icon = 'icons/effects/rust_overlay.dmi';
-	icon_state = "rust_default";
-	alpha = 150
-	},
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost)
 "YP" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/effect/turf_decal/tile/brown/half/contrasted{
@@ -3056,6 +3134,15 @@
 	pixel_x = -5;
 	pixel_y = 7
 	},
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost)
+"YQ" = (
+/obj/effect/turf_decal{
+	icon = 'icons/effects/rust_overlay.dmi';
+	icon_state = "rust_default";
+	alpha = 90
+	},
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost)
 "YW" = (
@@ -3140,7 +3227,7 @@ at
 at
 at
 aK
-aS
+ta
 aK
 at
 at
@@ -3172,7 +3259,7 @@ at
 at
 at
 aK
-aq
+sZ
 aK
 at
 at
@@ -3204,7 +3291,7 @@ aK
 ay
 aK
 aK
-aY
+rt
 aK
 aK
 at
@@ -3235,8 +3322,8 @@ Qj
 ax
 Qj
 aD
-Uu
-md
+Dk
+pX
 aB
 aK
 at
@@ -3267,7 +3354,7 @@ Qh
 ax
 iE
 aD
-Dq
+NJ
 LC
 Al
 aK
@@ -3299,7 +3386,7 @@ qN
 kj
 ax
 aD
-Ur
+fW
 Ur
 yO
 aK
@@ -3331,7 +3418,7 @@ dK
 iB
 FJ
 vj
-Ur
+fW
 NR
 om
 aK
@@ -3363,7 +3450,7 @@ iX
 iB
 Xl
 aD
-Eq
+hx
 Ur
 ZG
 aK
@@ -3395,7 +3482,7 @@ kj
 kj
 ax
 aD
-GR
+AM
 KS
 YW
 aK
@@ -3427,7 +3514,7 @@ Kz
 ax
 Io
 aE
-Dq
+NJ
 Ur
 rd
 aK
@@ -3459,7 +3546,7 @@ aD
 aD
 aD
 aD
-gQ
+Ao
 Ur
 Xm
 aK
@@ -3491,7 +3578,7 @@ SA
 bY
 Zj
 aD
-aB
+il
 NR
 hH
 ay
@@ -3523,7 +3610,7 @@ Tb
 TG
 Tb
 tV
-Ur
+fW
 yC
 Oq
 aK
@@ -3555,7 +3642,7 @@ eS
 Tb
 ts
 UI
-Ur
+fW
 KS
 qJ
 aK
@@ -3587,7 +3674,7 @@ Eu
 qG
 Tb
 aD
-Ur
+fW
 Ur
 kO
 aK
@@ -3619,7 +3706,7 @@ aD
 aD
 aD
 aD
-aG
+jg
 aD
 aK
 aK
@@ -3649,9 +3736,9 @@ kd
 cP
 vC
 aD
-TW
-xS
-Qm
+MH
+Rk
+Jw
 aK
 at
 at
@@ -3681,7 +3768,7 @@ Qm
 ak
 Qm
 aD
-Ia
+OP
 Qm
 LG
 aK
@@ -3710,10 +3797,10 @@ HT
 HT
 IY
 IY
-HT
-jf
-Qm
-Qm
+fM
+PA
+Jw
+Jw
 UM
 Qm
 aK
@@ -3742,15 +3829,15 @@ IY
 HT
 IY
 Fr
-IY
-Qm
-UM
-jf
-Qm
-Ox
-aJ
-aZ
-af
+IO
+Jw
+iQ
+PA
+Jw
+RS
+LN
+Gm
+cH
 at
 at
 at
@@ -3774,7 +3861,7 @@ HT
 IY
 HT
 IY
-HT
+fM
 UM
 Qm
 UM
@@ -3806,7 +3893,7 @@ ak
 Qm
 ak
 Ur
-Qm
+Jw
 ak
 aD
 ne
@@ -3838,7 +3925,7 @@ df
 DQ
 qz
 LP
-jf
+PA
 TY
 aD
 MG
@@ -3870,7 +3957,7 @@ aD
 aD
 aD
 aD
-aR
+qn
 aD
 aD
 aD
@@ -3902,9 +3989,9 @@ Ha
 aD
 LI
 ak
-yl
-hK
-yd
+tY
+jE
+XD
 UH
 mg
 ak
@@ -3936,12 +4023,12 @@ sT
 ZW
 Qm
 rE
-zN
-dP
-dP
-zN
-lt
-Qm
+mf
+nM
+nM
+mf
+rX
+Jw
 Ur
 Eq
 Ur
@@ -3973,7 +4060,7 @@ UX
 Gv
 ls
 HZ
-UM
+iQ
 aB
 Jd
 aB
@@ -4005,7 +4092,7 @@ Gv
 ak
 wx
 sN
-ak
+Vh
 Ur
 Jd
 aB
@@ -4037,7 +4124,7 @@ AE
 Ie
 Gv
 sN
-UM
+iQ
 Eq
 Eq
 Ur
@@ -4069,7 +4156,7 @@ Gv
 Gv
 ef
 nC
-Qm
+Jw
 KS
 KS
 Ii
@@ -4101,7 +4188,7 @@ UP
 nN
 Qm
 HZ
-ak
+Vh
 aD
 aD
 aD
@@ -4133,7 +4220,7 @@ WR
 WR
 gN
 RL
-zJ
+Uq
 aD
 ok
 Er
@@ -4165,12 +4252,12 @@ ak
 ak
 Qm
 Qm
-Qm
-KP
-Wb
-aB
-Ur
-tM
+Jw
+nA
+CH
+il
+fW
+IN
 aB
 Wv
 ay
@@ -4197,12 +4284,12 @@ NG
 Qd
 Qm
 qj
-YL
+Nn
 aD
 Ur
 pH
 KS
-VB
+il
 Ur
 OM
 aK
@@ -4229,12 +4316,12 @@ Sw
 JX
 UM
 Tr
-KY
+sV
 aD
 HE
-XC
-TX
-KW
+BR
+gz
+gO
 hl
 Nm
 aK
@@ -4261,11 +4348,11 @@ HR
 Mx
 ak
 ak
-Tr
+zZ
 aD
 HF
-VB
-KW
+il
+gO
 Ur
 Eq
 pz
@@ -4289,15 +4376,15 @@ Ae
 Le
 UM
 YC
-JD
-EI
-GY
-DK
-MX
+Sy
+wq
+YQ
+MZ
+mZ
 aD
 Gw
 Ur
-ho
+vS
 Bn
 Qa
 ZE
@@ -4321,7 +4408,7 @@ aK
 aK
 aK
 aK
-aS
+ta
 aK
 aK
 aK
@@ -4353,7 +4440,7 @@ at
 at
 at
 aK
-ac
+Tf
 aK
 at
 at
@@ -4385,7 +4472,7 @@ at
 at
 at
 aK
-aY
+rt
 aK
 at
 at

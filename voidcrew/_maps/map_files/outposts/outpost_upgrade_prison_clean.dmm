@@ -5,10 +5,6 @@
 	},
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
-"ab" = (
-/obj/structure/cable,
-/turf/open/floor/iron/dark,
-/area/voidcrew/player_outpost/prison)
 "ac" = (
 /obj/structure/reagent_dispensers/water_cooler,
 /turf/open/floor/iron,
@@ -142,11 +138,6 @@
 /obj/structure/table,
 /obj/item/storage/dice,
 /turf/open/floor/iron/cafeteria,
-/area/voidcrew/player_outpost/prison)
-"aA" = (
-/obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable,
-/turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 "aB" = (
 /obj/structure/closet{
@@ -298,12 +289,21 @@
 	},
 /turf/closed/wall,
 /area/voidcrew/player_outpost/prison)
-"XT" = (
+"pS" = (
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark,
+/area/voidcrew/player_outpost/prison)
+"HA" = (
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark,
+/area/voidcrew/player_outpost/prison)
+"VG" = (
 /obj/machinery/door/airlock/security/prison_staff{
 	name = "Prison Wing"
 	},
 /obj/structure/fans/tiny,
-/obj/structure/cable,
+/obj/structure/cable/outpost,
 /turf/open/floor/iron/dark,
 /area/voidcrew/player_outpost/prison)
 
@@ -466,8 +466,8 @@ aG
 ak
 ak
 ak
-ab
-XT
+pS
+VG
 "}
 (10,1,1) = {"
 aO
@@ -484,7 +484,7 @@ ai
 ak
 ak
 ak
-aA
+HA
 aO
 "}
 (11,1,1) = {"

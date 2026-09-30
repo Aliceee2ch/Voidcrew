@@ -112,9 +112,7 @@
 	panel.manage_outpost(home, operator, "rebuild_rush", list("ref" = REF(job)))
 	TEST_ASSERT(job.rushed && job.state == "building", "Finish Now did not skip the survey")
 	wait_for_hull(job)
-	TEST_ASSERT_EQUAL(job.status_line(), "Awaiting captain", "An absent owner was not awaited")
-	panel.manage_outpost(home, operator, "rebuild_hand_over", list("ref" = REF(job)))
-	TEST_ASSERT(QDELETED(job), "Hand Over Now did not finish the job")
+	TEST_ASSERT(QDELETED(job), "The finished hull was not handed over at once")
 	var/obj/structure/overmap/ship/rebuilt = bay.ship
 	TEST_ASSERT_NOTNULL(rebuilt, "The rebuilt hull did not take the bay")
 	test_ships += rebuilt

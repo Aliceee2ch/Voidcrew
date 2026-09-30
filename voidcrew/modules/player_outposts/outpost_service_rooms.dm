@@ -153,13 +153,31 @@
 	return routes
 
 /**
- * Why nobody could walk out of the room right now, or null when some exterior door opens. "Exit
- * blocked": every door is walled off, inside or out, by a wall or something fixed that nobody can
- * move. Clutter a player can wrench or break away never counts. The cloning chooser and the
- * teleporter's destination list show it as a warning; the teleporter also refuses arrivals on it.
+ * One list(inside, outside) per opening the owner has made in the room's own walls: an open tile
+ * of the room's area on the edge of its footprint, and the tile beyond it. Doors are exit_routes().
+ */
+/datum/outpost_upgrade/service/proc/wall_gap_routes()
+	var/list/routes = list()
+	if(!footprint_bounds || !installed_area)
+		return routes
+	for(var/turf/edge as anything in room_turfs())
+		if(edge.loc != installed_area || isclosedturf(edge))
+			continue
+		for(var/direction in GLOB.cardinals)
+			var/turf/beyond = get_step(edge, direction)
+			if(beyond && !contains_turf(beyond))
+				routes += list(list(edge, beyond))
+	return routes
+
+/**
+ * Why nobody could walk out of the room right now, or null when some exterior door or opened wall
+ * lets them. "Exit blocked": every way out is walled off, inside or out, by a wall or something
+ * fixed that nobody can move. Clutter a player can wrench or break away never counts. The cloning
+ * chooser and the teleporter's destination list show it as a warning; the teleporter also refuses
+ * arrivals on it.
  */
 /datum/outpost_upgrade/service/proc/exit_denial()
-	for(var/list/route as anything in exit_routes())
+	for(var/list/route as anything in exit_routes() + wall_gap_routes())
 		var/turf/inside = route[1]
 		var/turf/exit = route[2]
 		if(outpost_exit_blocked(exit) || (inside && outpost_exit_blocked(inside)))

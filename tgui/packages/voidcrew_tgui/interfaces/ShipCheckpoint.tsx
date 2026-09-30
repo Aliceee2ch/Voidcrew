@@ -11,13 +11,13 @@ import {
   Tabs,
 } from 'tgui-core/components';
 import type { BooleanLike } from 'tgui-core/react';
-import { useBackend } from '../backend';
-import { Window } from '../layouts';
 import {
   type PreviewData,
   ShipPreview,
   type UpgradeSlot,
-} from './ShipUpgradeSelector';
+} from '../../tgui/interfaces/ShipUpgradeSelector';
+import { useBackend } from '../backend';
+import { Window } from '../layouts';
 
 type ShopTheme = {
   id: string;
@@ -156,9 +156,7 @@ const CheckpointsTab = () => {
   return (
     <>
       <Section title="Checkpoint">
-        {data.blueprints.length === 0 && (
-          <Box color="label">None saved.</Box>
-        )}
+        {data.blueprints.length === 0 && <Box color="label">None saved.</Box>}
         {data.blueprints.map((checkpoint) => (
           <Stack key={checkpoint.ref} align="center" mb={1}>
             <Stack.Item grow bold style={{ overflowWrap: 'anywhere' }}>
@@ -168,7 +166,9 @@ const CheckpointsTab = () => {
               <Button
                 icon="ship"
                 disabled={!!data.working || !!checkpoint.denial}
-                tooltip={checkpoint.denial || 'Prepaid. Drones rebuild it here.'}
+                tooltip={
+                  checkpoint.denial || 'Prepaid. Drones rebuild it here.'
+                }
                 onClick={() => act('rebuild', { ref: checkpoint.ref })}
               >
                 Rebuild

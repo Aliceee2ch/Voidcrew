@@ -430,29 +430,9 @@
 /obj/machinery/light/small/red/directional/west,
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost/cargo_dock)
-"aY" = (
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost/cargo_dock)
 "aZ" = (
 /obj/structure/sign/poster/contraband/random,
 /turf/closed/wall/rusted,
-/area/voidcrew/player_outpost/cargo_dock)
-"bv" = (
-/obj/machinery/power/apc/auto_name/directional/south,
-/obj/structure/cable,
-/turf/open/floor/iron/dark/textured,
-/area/voidcrew/player_outpost/cargo_dock)
-"bw" = (
-/obj/structure/cable,
-/obj/effect/turf_decal{
-	icon = 'icons/effects/blood.dmi';
-	icon_state = "trails_1";
-	dir = 1;
-	color = "#2A2622";
-	alpha = 120
-	},
-/obj/effect/decal/cleanable/dirt,
-/turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost/cargo_dock)
 "bN" = (
 /obj/effect/turf_decal{
@@ -558,6 +538,11 @@
 	},
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost/cargo_dock)
+"pu" = (
+/obj/machinery/power/apc/outpost/directional/south,
+/obj/structure/cable/outpost,
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost/cargo_dock)
 "rB" = (
 /obj/effect/turf_decal{
 	icon = 'icons/effects/blood.dmi';
@@ -591,6 +576,18 @@
 	icon_state = "rust_default";
 	alpha = 120
 	},
+/turf/open/floor/iron/dark/textured,
+/area/voidcrew/player_outpost/cargo_dock)
+"uy" = (
+/obj/structure/cable/outpost,
+/obj/effect/turf_decal{
+	icon = 'icons/effects/blood.dmi';
+	icon_state = "trails_1";
+	dir = 1;
+	color = "#2A2622";
+	alpha = 120
+	},
+/obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/dark/textured,
 /area/voidcrew/player_outpost/cargo_dock)
 "xB" = (
@@ -722,6 +719,14 @@
 	},
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost/cargo_dock)
+"Fc" = (
+/obj/machinery/door/airlock/mining/glass{
+	name = "Cargo Dock"
+	},
+/obj/structure/fans/tiny,
+/obj/structure/cable/outpost,
+/turf/open/floor/plating,
+/area/voidcrew/player_outpost/cargo_dock)
 "GG" = (
 /obj/structure/chair/stool{
 	dir = 2;
@@ -804,14 +809,6 @@
 	name = "cardboard box";
 	desc = "A cardboard box, soft with damp."
 	},
-/turf/open/floor/plating,
-/area/voidcrew/player_outpost/cargo_dock)
-"KG" = (
-/obj/machinery/door/airlock/mining/glass{
-	name = "Cargo Dock"
-	},
-/obj/structure/fans/tiny,
-/obj/structure/cable,
 /turf/open/floor/plating,
 /area/voidcrew/player_outpost/cargo_dock)
 "Mi" = (
@@ -970,7 +967,7 @@ ab
 ab
 ab
 ai
-aY
+aK
 ho
 kW
 sn
@@ -999,8 +996,8 @@ aR
 aR
 aR
 aR
-aY
-aY
+aK
+aK
 aW
 JT
 SF
@@ -1016,7 +1013,7 @@ aR
 aR
 ad
 aK
-aY
+aK
 af
 Nh
 aJ
@@ -1053,8 +1050,8 @@ aC
 an
 QW
 ir
-bw
-KG
+uy
+Fc
 "}
 (10,1,1) = {"
 aq
@@ -1064,12 +1061,12 @@ aR
 aR
 aR
 aR
-aY
+aK
 aM
 HD
 de
 ad
-bv
+pu
 aq
 "}
 (11,1,1) = {"
@@ -1095,8 +1092,8 @@ aR
 aR
 aR
 aR
-aY
-aY
+aK
+aK
 ah
 BE
 fv
@@ -1108,14 +1105,14 @@ aq
 aZ
 ad
 aR
-aY
+aK
 aR
 aR
 aR
 aK
 aj
 EL
-aY
+aK
 Zm
 pm
 aP
@@ -1125,7 +1122,7 @@ aq
 ad
 ad
 aK
-aY
+aK
 aR
 aR
 aR
@@ -1147,7 +1144,7 @@ av
 aQ
 ae
 zA
-aY
+aK
 Ep
 dF
 aq
@@ -1162,9 +1159,9 @@ aF
 an
 an
 aJ
-aY
+aK
 SF
-aY
+aK
 Vl
 aq
 "}

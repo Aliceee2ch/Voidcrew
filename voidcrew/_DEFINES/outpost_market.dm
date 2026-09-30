@@ -9,6 +9,11 @@
 #define OUTPOST_PRICE_TELEPORT_ARRIVAL "teleport_arrival"
 /// Ledger service key for shop sales, which are priced per item rather than from the table
 #define OUTPOST_SERVICE_SHOP "shop"
+/// Takings that are not a charge on anyone (record_income()): the prison wing's pay, and cargo exports
+#define OUTPOST_INCOME_PRISON "prison"
+#define OUTPOST_INCOME_EXPORTS "exports"
+/// How far back the takings' "last hour" looks
+#define OUTPOST_INCOME_WINDOW (60 MINUTES)
 
 /// Income ledger lines kept per outpost; the treasury's own history keeps 20
 #define OUTPOST_SERVICE_LEDGER_MAX 50

@@ -66,22 +66,22 @@
 	var/list/expected = list(
 		/datum/ambient_site_kind/planet = list(),
 		/datum/ambient_site_kind/planet/miner = list(
-			/datum/overmap/planet/jungle = 25,
-			/datum/overmap/planet/lava = 40,
-			/datum/overmap/planet/beach = 15,
-			/datum/overmap/planet/ice = 40,
-			/datum/overmap/planet/wasteland = 35,
+			/datum/overmap/planet/jungle = 8,
+			/datum/overmap/planet/lava = 12,
+			/datum/overmap/planet/beach = 5,
+			/datum/overmap/planet/ice = 12,
+			/datum/overmap/planet/wasteland = 12,
 		),
-		/datum/ambient_site_kind/planet/cannibal = list(/datum/overmap/planet/jungle = 35),
-		/datum/ambient_site_kind/planet/tribal = list(/datum/overmap/planet/jungle = 60),
-		/datum/ambient_site_kind/planet/lava_fisher = list(/datum/overmap/planet/lava = 50),
-		/datum/ambient_site_kind/planet/boat_fisher = list(/datum/overmap/planet/beach = 60),
+		/datum/ambient_site_kind/planet/cannibal = list(/datum/overmap/planet/jungle = 8),
+		/datum/ambient_site_kind/planet/tribal = list(/datum/overmap/planet/jungle = 12),
+		/datum/ambient_site_kind/planet/lava_fisher = list(/datum/overmap/planet/lava = 15),
+		/datum/ambient_site_kind/planet/boat_fisher = list(/datum/overmap/planet/beach = 18),
 		/datum/ambient_site_kind/planet/peddler = list(
-			/datum/overmap/planet/jungle = 20,
-			/datum/overmap/planet/lava = 10,
-			/datum/overmap/planet/beach = 25,
-			/datum/overmap/planet/ice = 20,
-			/datum/overmap/planet/wasteland = 20,
+			/datum/overmap/planet/jungle = 6,
+			/datum/overmap/planet/lava = 4,
+			/datum/overmap/planet/beach = 8,
+			/datum/overmap/planet/ice = 6,
+			/datum/overmap/planet/wasteland = 6,
 		),
 	)
 	var/datum/ambient_planet/record = allocate(/datum/ambient_planet)
@@ -96,7 +96,7 @@
 		if(kind.npc_type)
 			TEST_ASSERT(ispath(kind.npc_type, /mob/living/basic/ambient_npc/planet), "[kind_type] brings out [kind.npc_type], not a planet person")
 	var/datum/ambient_site_kind/planet/miner/miner_kind = allocate(/datum/ambient_site_kind/planet/miner)
-	TEST_ASSERT_EQUAL(miner_kind.field_chance, 30, "Miners are not on asteroid fields three times in ten")
+	TEST_ASSERT_EQUAL(miner_kind.field_chance, 10, "Miners are not on asteroid fields one time in ten")
 
 	// Bigger hunting bands deeper out; a guard with the caravan past green
 	var/datum/ambient_site_kind/planet/tribal/tribal = allocate(/datum/ambient_site_kind/planet/tribal)

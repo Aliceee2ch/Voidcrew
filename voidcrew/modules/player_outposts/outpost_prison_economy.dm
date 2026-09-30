@@ -103,6 +103,7 @@
 	if(!outpost.treasury?.adjust_money(amount, reason))
 		return FALSE
 	paid_total += amount
+	outpost.record_income(OUTPOST_INCOME_PRISON, reason, amount)
 	return TRUE
 
 /// Deposits the whole credits owed; the fraction waits for the next deposit. Returns what was deposited.

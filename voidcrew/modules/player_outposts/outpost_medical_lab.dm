@@ -27,6 +27,7 @@
 	desc = "An auto-surgeon, two sleepers and two cryo cells."
 	price = OUTPOST_MEDICAL_LAB_COST
 	template_type = /datum/map_template/outpost_upgrade/medical_lab
+	area_type = /area/voidcrew/player_outpost/service_room/medical_lab
 	/// Pass key (ckey) -> list("expiry" = world.time)
 	var/list/passes = list()
 

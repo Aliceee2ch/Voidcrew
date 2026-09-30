@@ -1170,6 +1170,8 @@ GLOBAL_LIST_INIT(outpost_prisoner_leisure, outpost_prisoner_leisure_types())
 	// A held cake saved for a party is not a meal (outpost_prison_pastimes.dm).
 	var/obj/item/food/meal = (istype(prisoner.held_item, /obj/item/food) && !prisoner.prison.reserved_supply(prisoner.held_item, prisoner)) ? prisoner.held_item : null
 	if(meal)
+		// Set down on the table while they eat, it stays theirs
+		claim(meal)
 		food_ref = WEAKREF(meal)
 		return go_to_seat()
 	meal = prisoner.prison.find_supply(prisoner, FALSE)

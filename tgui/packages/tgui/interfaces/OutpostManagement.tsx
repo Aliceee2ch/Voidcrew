@@ -91,6 +91,8 @@ type Pricing = {
   prices?: PriceRow[];
   ledger?: LedgerEntry[] | null;
   totals?: ServiceTotal[] | null;
+  /** Credits taken in the last hour, refunds off; null without income access */
+  last_hour?: number | null;
 };
 type ShopDetail = {
   kind: 'shop';
@@ -195,6 +197,9 @@ export type OutpostData = {
   ship_bay_installed: BooleanLike;
   ship_bay_cost: number;
   ship_bay_denial: string | null;
+  ship_bay_preview?: string | null;
+  ship_bay_width?: number;
+  ship_bay_height?: number;
   upgrade_catalog: UpgradeEntry[];
   upgrades: UpgradeStatus[];
   upgrade_surveying: BooleanLike;
@@ -618,26 +623,9 @@ function HarbourFrame({ data, act }: Props) {
           />
         </div>
       ) : null}
-      {data.ship_bay_installed ? null : (
-        <div className="Outpost__field-row">
-          <span className="Outpost__label">Ship bay</span>
-          <span className="Outpost__grow Outpost__mono Outpost__muted">
-            {credits(data.ship_bay_cost)} · 100 iron · 50 glass
-          </span>
-          <Button
-            icon="hammer"
-            disabled={!data.can_manage || !!data.ship_bay_denial}
-            tooltip={data.ship_bay_denial || undefined}
-            onClick={() => act('install_ship_bay')}
-          >
-            Install
-          </Button>
-        </div>
-      )}
     </>
   );
-  const hasFoot =
-    silos.length > 1 || servers.length > 1 || !data.ship_bay_installed;
+  const hasFoot = silos.length > 1 || servers.length > 1;
   return (
     <Frame
       title="At the outpost"
@@ -945,6 +933,30 @@ function serviceRooms(data: OutpostData): ServiceRoom[] {
   return (data.services || []).filter((room) => !!room?.id);
 }
 
+/** The ship bay is sold in the rooms list, though the server keeps it apart from the rooms. */
+const SHIP_BAY_ID = '_ship_bay';
+
+function shipBayEntry(data: OutpostData): UpgradeEntry {
+  return {
+    id: SHIP_BAY_ID,
+    name: 'Ship Bay',
+    desc: 'A private hangar for one ship, with a bar and workshops along the back wall.',
+    price: data.ship_bay_cost,
+    width: data.ship_bay_width || 0,
+    height: data.ship_bay_height || 0,
+    preview: data.ship_bay_preview || null,
+  };
+}
+
+function shipBayStatus(data: OutpostData): UpgradeStatus {
+  return {
+    id: SHIP_BAY_ID,
+    state: data.ship_bay_installed ? 'installed' : 'available',
+    denial: data.ship_bay_denial,
+    manage_denial: null,
+  };
+}
+
 const SHOP_STATES: Choice[] = [
   { id: 'open', name: 'Open' },
   { id: 'closed', name: 'Closed' },
@@ -1104,18 +1116,24 @@ function RoomDetail({
   onPlace: (id: string) => void;
 }) {
   const state = status?.state || 'available';
+  const bay = entry.id === SHIP_BAY_ID;
   const foot = (
     <div className="Outpost__buy">
       {state === 'available' ? (
         <>
           <span className="Outpost__price">
             {entry.price > 0 ? credits(entry.price) : 'Free'}
+            {bay ? ' · 100 iron · 50 glass' : null}
           </span>
           <Button.Confirm
             icon="cart-shopping"
             disabled={!status || !!status.denial}
             tooltip={status?.denial || undefined}
-            onClick={() => act('buy_upgrade', { id: entry.id })}
+            onClick={() =>
+              bay
+                ? act('install_ship_bay')
+                : act('buy_upgrade', { id: entry.id })
+            }
           >
             Buy
           </Button.Confirm>
@@ -1168,11 +1186,13 @@ function RoomsTab({
   act,
   onPlace,
 }: Props & { onPlace: (id: string) => void }) {
-  const catalog = data.upgrade_catalog || [];
+  const catalog = [...(data.upgrade_catalog || []), shipBayEntry(data)];
   const rooms = serviceRooms(data);
   const [chosen, setChosen] = useState<string | null>(null);
   const statusOf = (id: string) =>
-    (data.upgrades || []).find((entry) => entry.id === id);
+    id === SHIP_BAY_ID
+      ? shipBayStatus(data)
+      : (data.upgrades || []).find((entry) => entry.id === id);
   const stateOf = (id: string) => statusOf(id)?.state || 'available';
   const groups = [
     { title: 'Built', state: 'installed' },
@@ -1182,15 +1202,6 @@ function RoomsTab({
     ...group,
     entries: catalog.filter((entry) => stateOf(entry.id) === group.state),
   }));
-  if (catalog.length === 0) {
-    return (
-      <div className="Outpost__page Outpost__page--single">
-        <Frame title="Rooms" icon="cubes" fill>
-          <None>No rooms</None>
-        </Frame>
-      </div>
-    );
-  }
   const fallback =
     catalog.find((entry) => stateOf(entry.id) === 'ready') ||
     catalog.find((entry) => stateOf(entry.id) === 'available') ||
@@ -2329,9 +2340,17 @@ function PricingTab({ data, act }: Props) {
       {takings ? (
         <div className="Outpost__col">
           <Frame title="Takings" icon="coins" fill>
+            {typeof pricing.last_hour === 'number' ? (
+              <div className="Outpost__total">
+                <span>Last hour</span>
+                <span className="Outpost__mono">
+                  {credits(pricing.last_hour)}
+                </span>
+              </div>
+            ) : null}
             {totals.length > 0 ? (
               <>
-                <Section title="By service" />
+                <Section title="By source" />
                 {totals.map((entry) => (
                   <div className="Outpost__row" key={entry.service}>
                     <span className="Outpost__plain">

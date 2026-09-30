@@ -43,7 +43,7 @@
 	if(clean && !length(thing.mergers))
 		thing.mergers = null
 	members -= thing
-	// VOIDCREW EDIT CHANGE - original cleared origin before comparing it, so any member leaving
+	// VOIDCREW EDIT CHANGE START - original cleared origin before comparing it, so any member leaving
 	// left the group with no origin. Its next Refresh() then found nothing, dropped every member
 	// and deleted the group, and a new GetMergeGroup() that deferred to it got no group at all.
 	if(origin == thing)

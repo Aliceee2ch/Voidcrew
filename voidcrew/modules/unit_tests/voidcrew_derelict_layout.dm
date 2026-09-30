@@ -9,6 +9,9 @@
 		TEST_ASSERT(site, "The [shell_type] derelict did not build")
 		var/datum/outpost_upgrade/prison/wing = site.outpost_upgrades["prison"]
 		TEST_ASSERT(wing?.installed, "The prison wing was not installed for [shell_type]")
+		var/datum/powernet/wing_net = wing.room_apc()?.terminal?.powernet
+		TEST_ASSERT_NOTNULL(wing_net, "The joined prison wing has no powernet for [shell_type]")
+		TEST_ASSERT_EQUAL(wing_net, site.outpost_area.apc?.terminal?.powernet, "The joined prison wing's APC did not join the habitat grid for [shell_type]")
 		var/obj/machinery/door/airlock/external/door = site.derelict_prison_airlock?.resolve()
 		TEST_ASSERT(istype(door), "The joined prison airlock did not resolve for [shell_type]")
 		TEST_ASSERT_EQUAL(get_area(door), site.outpost_area, "The joined prison airlock is not in the outpost area for [shell_type]")
@@ -67,6 +70,10 @@
 	TEST_ASSERT(generator.powernet, "The generator has no powernet once anchored")
 	TEST_ASSERT_EQUAL(generator.powernet, site.outpost_area.apc.terminal.powernet, "The generator's powernet does not match the outpost APC's grid")
 
+	// Once the habitat is fuelled and running again, the joined prison wing powers up with it too.
+	var/datum/outpost_upgrade/prison/wing = site.outpost_upgrades["prison"]
+	TEST_ASSERT_EQUAL(wing.room_apc()?.terminal?.powernet, generator.powernet, "The prison wing's APC net does not match the habitat's once refuelled")
+
 /datum/unit_test/voidcrew_derelict_berth_dark
 	parent_type = /datum/unit_test/voidcrew_derelict
 
@@ -88,6 +95,13 @@
 		if(istype(place))
 			hangar_areas[place] = TRUE
 	TEST_ASSERT(length(hangar_areas), "No hangar area was found on the built berth block")
+	// Some tubes spawn broken at random (light.dm post_machine_initialize); only working ones must come back
+	var/list/obj/machinery/light/working = list()
+	for(var/area/voidcrew/outpost_hangar/place as anything in hangar_areas)
+		for(var/obj/machinery/light/fixture in place)
+			if(fixture.on)
+				working += fixture
+	TEST_ASSERT(length(working), "The berth has no working lights to darken")
 
 	site.set_berth_dark(berth, TRUE)
 	for(var/area/voidcrew/outpost_hangar/place as anything in hangar_areas)
@@ -102,9 +116,9 @@
 	for(var/area/voidcrew/outpost_hangar/place as anything in hangar_areas)
 		TEST_ASSERT(place.lightswitch, "A relit berth area kept its lightswitch off")
 		TEST_ASSERT_EQUAL(place.base_lighting_alpha, 110, "A relit berth area did not restore its floodlight")
-		for(var/obj/machinery/light/fixture in place)
-			TEST_ASSERT(fixture.on, "A light stayed off in a relit berth")
 		for(var/obj/machinery/status_display/outpost_berth/sign in place)
 			TEST_ASSERT_EQUAL(sign.current_mode, SD_MESSAGE, "A berth sign did not relight")
+	for(var/obj/machinery/light/fixture as anything in working)
+		TEST_ASSERT(fixture.on, "A light stayed off in a relit berth (status [fixture.status])")
 
 	qdel(berth)

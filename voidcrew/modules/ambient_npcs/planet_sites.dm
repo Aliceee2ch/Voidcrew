@@ -121,27 +121,27 @@
 /datum/ambient_site_kind/planet/miner
 	name = "miner's camp"
 	planet_chances = list(
-		/datum/overmap/planet/jungle = 25,
-		/datum/overmap/planet/lava = 40,
-		/datum/overmap/planet/beach = 15,
-		/datum/overmap/planet/ice = 40,
-		/datum/overmap/planet/wasteland = 35,
+		/datum/overmap/planet/jungle = 8,
+		/datum/overmap/planet/lava = 12,
+		/datum/overmap/planet/beach = 5,
+		/datum/overmap/planet/ice = 12,
+		/datum/overmap/planet/wasteland = 12,
 	)
-	field_chance = 30
+	field_chance = 10
 	spot_room = 1
 	npc_type = /mob/living/basic/ambient_npc/planet/miner
 
 /// Owner item 7: a cannibal cooking a man over a fire. Jungle worlds.
 /datum/ambient_site_kind/planet/cannibal
 	name = "cannibal's fire"
-	planet_chances = list(/datum/overmap/planet/jungle = 35)
+	planet_chances = list(/datum/overmap/planet/jungle = 8)
 	spot_room = 2
 	npc_type = /mob/living/basic/ambient_npc/planet/cannibal
 
 /// Owner item 8: a band of hunters with spears. Jungle worlds; bigger bands deeper out.
 /datum/ambient_site_kind/planet/tribal
 	name = "hunters' camp"
-	planet_chances = list(/datum/overmap/planet/jungle = 60)
+	planet_chances = list(/datum/overmap/planet/jungle = 12)
 	min_npcs = 3
 	max_npcs = 5
 	spot_room = 3
@@ -158,13 +158,13 @@
 /// Owner item 9: a miner fishing a lava river. Lava worlds.
 /datum/ambient_site_kind/planet/lava_fisher
 	name = "lava fisher's bank"
-	planet_chances = list(/datum/overmap/planet/lava = 50)
+	planet_chances = list(/datum/overmap/planet/lava = 15)
 	npc_type = /mob/living/basic/ambient_npc/planet/lava_fisher
 
 /// Owner item 10: a fisher in a boat out on the ocean. Beach worlds.
 /datum/ambient_site_kind/planet/boat_fisher
 	name = "fishing boat"
-	planet_chances = list(/datum/overmap/planet/beach = 60)
+	planet_chances = list(/datum/overmap/planet/beach = 18)
 	spot_on_water = TRUE
 	npc_type = /mob/living/basic/ambient_npc/planet/boat_fisher
 
@@ -172,11 +172,11 @@
 /datum/ambient_site_kind/planet/peddler
 	name = "peddler's caravan"
 	planet_chances = list(
-		/datum/overmap/planet/jungle = 20,
-		/datum/overmap/planet/lava = 10,
-		/datum/overmap/planet/beach = 25,
-		/datum/overmap/planet/ice = 20,
-		/datum/overmap/planet/wasteland = 20,
+		/datum/overmap/planet/jungle = 6,
+		/datum/overmap/planet/lava = 4,
+		/datum/overmap/planet/beach = 8,
+		/datum/overmap/planet/ice = 6,
+		/datum/overmap/planet/wasteland = 6,
 	)
 	min_npcs = 2
 	max_npcs = 3

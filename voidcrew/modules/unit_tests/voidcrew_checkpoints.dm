@@ -606,24 +606,17 @@
 				// Losing the console, its panel and the captain must not stop or restart the job.
 				qdel(panel)
 				qdel(terminal)
-				captain.key = null
+				captain.death()
 				qdel(job)
 				TEST_ASSERT(!QDELETED(job), "An ordinary deletion stopped a reconstruction that had pieces")
 				interrupted = TRUE
 	TEST_ASSERT(interrupted, "The interruption point was never reached")
-	TEST_ASSERT_EQUAL(job.state, "commissioning", "The finished hull did not wait for its absent captain")
+	// Finished, the hull is handed over at once, and it is still its captain's while they are dead
+	TEST_ASSERT(QDELETED(job), "The finished hull was not handed over at once")
 	TEST_ASSERT(original_lighting && room_lighting[2] != original_lighting[2], "The floodlit room recorded no lighting to restore")
 	TEST_ASSERT(first_room.base_lighting_alpha == original_lighting[2] && first_room.base_lighting_color == original_lighting[1], "The finished hull kept the construction floodlights")
-	TEST_ASSERT_EQUAL(job.status_line(), "Awaiting captain", "The waiting job reported the wrong status")
-	TEST_ASSERT(IS_WEAKREF_OF(job, bay.rebuild_owner), "The finished hull released its bay before commissioning")
-	check_bay_refuses_visitors(home, bay, "while waiting for the captain")
-	TEST_ASSERT_EQUAL(job.visits_done, job.visit_total, "Some visits never ran")
-	var/visits = job.visits_done
-	TEST_ASSERT(!job.try_commission(), "The hull was handed over with no captain present")
-	// The captain returns in a new body; the finished hull goes to them without new pieces.
-	captain = make_player(get_turf(home.management_console), "registrycaptain")
-	TEST_ASSERT(job.try_commission(), "The returning captain could not take command")
-	TEST_ASSERT_EQUAL(job.visits_done, visits, "Commissioning placed more pieces")
+	TEST_ASSERT_NOTNULL(bay.ship, "The finished hull did not take the bay")
+	TEST_ASSERT(!bay.ship.abandoned, "The finished hull was left to be claimed while its captain was only dead")
 	TEST_ASSERT(!iswallturf(broken_wall), "A broken wall was rebuilt")
 	for(var/turf/tile as anything in bay_turfs(bay))
 		for(var/obj/machinery/autolathe/fixture in tile)
@@ -745,13 +738,13 @@
 /datum/unit_test/voidcrew_checkpoints/unclaimed/build_hull(datum/checkpoint_construction/job, obj/structure/overmap/dynamic/player_outpost/registry_test/home, datum/outpost_berth/ship_bay/bay, mob/living/carbon/human/captain, obj/structure/overmap/ship/original, datum/ship_checkpoint_ui/registry_test/panel, datum/ship_checkpoint/snapshot)
 	var/before_personal = personal.account_balance
 	captain.key = null
-	job.fast_forward()
-	TEST_ASSERT_EQUAL(job.state, "commissioning", "The finished hull did not wait for its captain")
+	// Nobody holds the captain's key: finished, the hull is handed over at once to be claimed
+	var/steps = 0
+	while(!QDELETED(job) && !job.committed && steps++ < 50)
+		job.fast_forward(1)
 	var/held = job.held_balance
 	TEST_ASSERT(held > 0, "Commitment did not hold the original's balance")
-	// The wait runs out with nobody to take command.
-	job.captain_wait_until = world.time
-	TEST_ASSERT(job.try_commission(), "The unclaimed hull was never handed over")
+	job.fast_forward()
 	TEST_ASSERT(QDELETED(job), "The unclaimed reconstruction did not finish")
 	var/obj/structure/overmap/ship/rebuilt = bay.ship
 	TEST_ASSERT_NOTNULL(rebuilt, "The unclaimed hull did not take the bay")

@@ -368,6 +368,17 @@
 	max_target_distance = AMBIENT_PATH_LENGTH
 	planning_subtrees = list(/datum/ai_planning_subtree/ambient_routine)
 
+// Their AI time, for the Ambient NPCs line in the MC tab (SSambient_npcs.note_ai_cost())
+/datum/ai_controller/basic_controller/ambient_npc/SelectBehaviors(seconds_per_tick)
+	var/start = TICK_USAGE_REAL
+	. = ..()
+	SSambient_npcs.note_ai_cost(start)
+
+/datum/ai_controller/basic_controller/ambient_npc/ProcessBehavior(seconds_per_tick, datum/ai_behavior/behavior)
+	var/start = TICK_USAGE_REAL
+	. = ..()
+	SSambient_npcs.note_ai_cost(start)
+
 /// Long walks. The leash is kept by the NPC's own Move(), which refuses a step off it.
 /datum/ai_movement/jps/ambient
 	maximum_length = AMBIENT_PATH_LENGTH

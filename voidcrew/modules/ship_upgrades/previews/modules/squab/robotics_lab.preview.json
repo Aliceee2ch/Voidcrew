@@ -1,0 +1,28 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/robotics_lab.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 3,
+   "png": "squab_robotics_lab.png",
+   "src_md5": "3fb717a7bfc13b7f3e675a1c9293141d",
+   "themes": {
+    "cheap_frigate": {
+     "connector": [
+      1,
+      1
+     ],
+     "height": 3,
+     "png": "squab_robotics_lab_cheap_frigate.png",
+     "src_md5": "4c1da651b96501522ba4f730a289dae4",
+     "width": 8
+    }
+   },
+   "width": 8
+  }
+ },
+ "tile_px": 32
+}

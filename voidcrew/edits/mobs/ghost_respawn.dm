@@ -18,7 +18,7 @@
 
 	var/respawn_delay = CONFIG_GET(number/respawn_delay)
 	if(respawn_delay)
-		notice += " You must wait [DisplayTimeText(respawn_delay)] after death first."
+		notice += " You must wait [DisplayTimeText(respawn_delay)] after death first, unless you died in the [ZONE_NAME_GREEN]."
 
 	return notice
 
@@ -59,7 +59,11 @@
  */
 /datum/action/cooldown/respawn/proc/refresh_respawn_delay()
 	var/delay = CONFIG_GET(number/respawn_delay)
-	var/time_of_death = owner?.persistent_client?.time_of_death
+	var/datum/persistent_client/persistent_client = owner?.persistent_client
+	var/time_of_death = persistent_client?.time_of_death
+	//A death in the Neutral Zone waives the delay (see green_zone_respawn.dm).
+	if(persistent_client?.died_in_green_zone())
+		time_of_death = 0
 	next_use_time = (delay && time_of_death) ? (time_of_death + delay) : 0
 	if(next_use_time > world.time)
 		START_PROCESSING(SSfastprocess, src)
@@ -85,6 +89,15 @@
 	return TRUE
 
 /datum/action/cooldown/respawn/Activate(atom/target)
+	//A new character expires every clone the old one owns (cloning_vat.dm), paid ones included.
+	var/list/clones = get_owned_cloning_vats(owner)
+	if(length(clones))
+		var/obj/machinery/cloning_vat/first = clones[1]
+		var/where = length(clones) > 1 ? "your [length(clones)] clones" : "your clone at [first.clone_site_name()]"
+		if(tgui_alert(owner, "Respawning abandons [where]. Respawn anyway?", "Respawn", list("Respawn", "Cancel")) != "Respawn")
+			return TRUE
+		if(QDELETED(owner))
+			return TRUE
 	//abandon_mob() runs its own confirmation prompts and delay checks. Deliberately no
 	//StartCooldown() here - the delay is driven by the owner's time of death instead.
 	owner.abandon_mob()
@@ -103,6 +116,8 @@
 	. = ..()
 	if(!.)
 		return
+	//The clone chooser's button and alert, when this player owns a clone (clone_wake.dm)
+	setup_clone_wake(src)
 	if(locate(/datum/action/cooldown/respawn) in actions)
 		return
 	var/datum/action/cooldown/respawn/respawn_button = new(src)

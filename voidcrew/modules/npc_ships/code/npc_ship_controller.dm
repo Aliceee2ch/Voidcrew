@@ -202,6 +202,7 @@
  */
 /datum/ai_controller/npc_ship/proc/on_being_targeted_by_player(datum/source, obj/structure/overmap/ship/aggressor)
 	SIGNAL_HANDLER
+	npc_metric_player_aggression(get_ship(), aggressor, "targeting")
 	var/obj/structure/overmap/ship/our_target = get_target()
 	var/combat_state = get_combat_state()
 
@@ -227,6 +228,7 @@
  */
 /datum/ai_controller/npc_ship/proc/on_weapons_locked_by_player(datum/source, obj/structure/overmap/ship/aggressor)
 	SIGNAL_HANDLER
+	npc_metric_player_aggression(get_ship(), aggressor, "weapons_lock")
 	var/obj/structure/overmap/ship/our_target = get_target()
 	var/combat_state = get_combat_state()
 
@@ -341,6 +343,7 @@
 	if(old_state != new_state)
 		var/obj/structure/overmap/ship/npc/state_ship = get_ship()
 		log_shuttle("NPC_SHIP: [state_ship?.name || "unknown vessel"] combat state: [old_state || "none"] -> [new_state]")
+		npc_metric_combat_state(src, old_state, new_state)
 
 	// Track when a retreat began; retreat_escape gives up after NPC_RETREAT_TIME_LIMIT
 	if(old_state == NPC_COMBAT_RETREATING && new_state != NPC_COMBAT_RETREATING)
@@ -494,6 +497,11 @@
 	// our own state is enough to know the ring is ours to stop.
 	if(target && !QDELETED(target) && get_combat_state() == NPC_COMBAT_HAILING)
 		target.stop_hail_ringing()
+
+	// Same for the financial-scan loop: scan_wealth only stops it on completion, so
+	// a scan abandoned here left it playing aboard the target with no scan running.
+	if(target && !QDELETED(target) && get_combat_state() == NPC_COMBAT_SCANNING)
+		stop_scan_sound(target)
 
 	// Barter mode is a property of one encounter, not of us - don't carry an empty
 	// wallet finding over onto whoever we target next.
@@ -870,6 +878,7 @@
 
 	// Notify target ship
 	target.ship_notify("Wave [wave_number]: [length(wave_boarders)] hostiles have boarded!", "SECURITY", SHIP_NOTIFY_DANGER, 'voidcrew/sound/warn3.ogg', 25)
+	npc_metric_boarding_wave(src, wave_number, length(wave_boarders))
 
 	return TRUE
 
@@ -957,6 +966,7 @@
 
 	var/current_wave = blackboard[BB_NPC_BOARDING_WAVE] || 1
 	SEND_SIGNAL(src, COMSIG_BOARDING_WAVE_COMPLETE, current_wave)
+	npc_metric_wave_ended(src, current_wave, "cleared")
 
 	// Check if this was the final wave
 	if(current_wave < get_boarding_wave_count())
@@ -1095,6 +1105,7 @@
 	if(boss)
 		set_blackboard_key(BB_NPC_BOARDING_BOSS, boss)
 		RegisterSignal(boss, COMSIG_LIVING_DEATH, PROC_REF(on_boss_death))
+		npc_metric_boss_deployed(src, boss)
 
 	// Announce boss arrival
 	target.ship_notify("WARNING: Enemy Commander incoming via drop pod!", "SECURITY", SHIP_NOTIFY_DANGER, 'voidcrew/sound/warn3.ogg', 25)
@@ -1409,6 +1420,7 @@
 
 	if(!ship || !target)
 		return
+	npc_metric_wave_ended(src, current_wave, "timed_out")
 
 	// Clean up current wave boarders
 	var/list/wave_boarders = blackboard[BB_NPC_BOARDING_WAVE_BOARDERS]

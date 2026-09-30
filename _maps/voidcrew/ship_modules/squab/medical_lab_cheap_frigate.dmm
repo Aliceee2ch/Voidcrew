@@ -1,0 +1,243 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"aEK" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 4;
+	layer = 2.5
+	},
+/obj/modular_map_connector,
+/obj/effect/turf_decal/tile/blue/half{
+	dir = 8
+	},
+/turf/open/floor/iron/textured,
+/area/template_noop)
+"cjv" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 4;
+	layer = 2.5
+	},
+/obj/effect/turf_decal/siding/dark{
+	dir = 8
+	},
+/obj/structure/cable,
+/turf/template_noop,
+/area/template_noop)
+"cWy" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/turf_decal/siding/wideplating/dark,
+/obj/structure/railing/corner{
+	dir = 8
+	},
+/turf/template_noop,
+/area/template_noop)
+"dvq" = (
+/obj/machinery/chem_dispenser,
+/turf/open/floor/iron/textured_large,
+/area/template_noop)
+"fwE" = (
+/obj/effect/turf_decal/trimline/blue/line,
+/obj/structure/cable,
+/obj/structure/chair/office/light,
+/turf/open/floor/iron/edge,
+/area/template_noop)
+"fJF" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 4;
+	layer = 2.5
+	},
+/obj/machinery/newscaster/directional/south,
+/obj/effect/turf_decal/siding/dark{
+	dir = 8
+	},
+/obj/structure/railing{
+	dir = 4
+	},
+/turf/template_noop,
+/area/template_noop)
+"fJO" = (
+/obj/machinery/chem_heater,
+/obj/item/reagent_containers/cup/beaker{
+	pixel_x = -2;
+	pixel_y = 17
+	},
+/turf/open/floor/iron/textured_large,
+/area/template_noop)
+"kmq" = (
+/obj/machinery/chem_master,
+/obj/machinery/camera/autoname/directional/south,
+/turf/open/floor/iron/textured_large,
+/area/template_noop)
+"kIf" = (
+/obj/effect/turf_decal/siding/wideplating/dark{
+	dir = 4
+	},
+/obj/structure/table/glass,
+/obj/item/storage/medkit/brute{
+	pixel_x = 4;
+	pixel_y = -3
+	},
+/obj/item/storage/medkit/fire{
+	pixel_x = -3;
+	pixel_y = 4
+	},
+/obj/item/storage/medkit/advanced{
+	pixel_x = 5;
+	pixel_y = 9
+	},
+/turf/open/floor/iron/herringbone,
+/area/template_noop)
+"kRF" = (
+/obj/effect/turf_decal/siding/wideplating/dark{
+	dir = 4
+	},
+/obj/machinery/vending/medical,
+/turf/open/floor/iron/herringbone,
+/area/template_noop)
+"kUO" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 4;
+	layer = 2.5
+	},
+/obj/effect/turf_decal/tile/blue/half{
+	dir = 8
+	},
+/obj/structure/closet/secure_closet/chemical,
+/turf/open/floor/iron/textured,
+/area/template_noop)
+"kXK" = (
+/obj/effect/turf_decal/siding/wideplating/dark{
+	dir = 4
+	},
+/turf/open/floor/iron/herringbone,
+/area/template_noop)
+"mnE" = (
+/obj/effect/turf_decal/trimline/blue/line,
+/obj/structure/cable,
+/turf/open/floor/iron/edge,
+/area/template_noop)
+"mTp" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 4;
+	layer = 2.5
+	},
+/obj/effect/turf_decal/tile/blue/half{
+	dir = 8
+	},
+/obj/structure/cable,
+/turf/open/floor/iron/textured,
+/area/template_noop)
+"mXR" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 4;
+	layer = 2.5
+	},
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/turf_decal/trimline/blue/arrow_ccw{
+	dir = 8
+	},
+/obj/structure/cable,
+/turf/open/floor/iron/herringbone,
+/area/template_noop)
+"nLD" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/turf_decal/siding/wideplating/dark,
+/obj/structure/cable,
+/turf/template_noop,
+/area/template_noop)
+"pLi" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/turf_decal/siding/wideplating/dark,
+/obj/structure/railing{
+	layer = 3.4
+	},
+/obj/structure/cable,
+/turf/template_noop,
+/area/template_noop)
+"qLt" = (
+/obj/effect/turf_decal/siding/dark{
+	dir = 8
+	},
+/obj/effect/turf_decal/siding/thinplating/dark/corner,
+/obj/structure/cable,
+/turf/template_noop,
+/area/template_noop)
+"tcY" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/structure/extinguisher_cabinet/directional/north{
+	pixel_x = -6;
+	pixel_y = 28
+	},
+/obj/effect/turf_decal/siding/wideplating/dark,
+/obj/structure/railing/corner,
+/turf/template_noop,
+/area/template_noop)
+"tMA" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 4;
+	layer = 2.5
+	},
+/obj/effect/turf_decal/trimline/blue/arrow_ccw{
+	dir = 8
+	},
+/obj/structure/railing{
+	dir = 8
+	},
+/turf/open/floor/iron/herringbone,
+/area/template_noop)
+"wKc" = (
+/obj/effect/turf_decal/siding/thinplating/dark{
+	dir = 8;
+	layer = 2.5
+	},
+/obj/effect/turf_decal/trimline/blue/arrow_ccw{
+	dir = 4
+	},
+/turf/open/floor/iron/herringbone,
+/area/template_noop)
+"wZN" = (
+/obj/effect/decal/cleanable/dirt/dust,
+/obj/effect/turf_decal/siding/wideplating/dark{
+	dir = 6
+	},
+/turf/template_noop,
+/area/template_noop)
+
+(1,1,1) = {"
+kUO
+mTp
+aEK
+"}
+(2,1,1) = {"
+qLt
+cjv
+fJF
+"}
+(3,1,1) = {"
+tcY
+mnE
+fJO
+"}
+(4,1,1) = {"
+pLi
+fwE
+kmq
+"}
+(5,1,1) = {"
+cWy
+mnE
+dvq
+"}
+(6,1,1) = {"
+nLD
+mXR
+tMA
+"}
+(7,1,1) = {"
+wZN
+wKc
+wKc
+"}
+(8,1,1) = {"
+kIf
+kXK
+kRF
+"}

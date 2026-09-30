@@ -1,0 +1,34 @@
+{
+ "hulls": {
+  "nano_phalanx_d": {
+   "height": 30,
+   "png": "ship_nano_phalanx_d.png",
+   "slots": {
+    "phalanx_armory": [
+     46,
+     7
+    ],
+    "phalanx_bay_north": [
+     18,
+     27
+    ],
+    "phalanx_bay_south": [
+     18,
+     2
+    ],
+    "phalanx_lab": [
+     21,
+     18
+    ],
+    "phalanx_medical": [
+     21,
+     11
+    ]
+   },
+   "src_md5": "3ff8299f8dbe1c41f5e0dcaf12ce32fc",
+   "width": 56
+  }
+ },
+ "modules": {},
+ "tile_px": 32
+}

@@ -1,0 +1,48 @@
+{
+ "hulls": {},
+ "modules": {
+  "delta/delta_med_cryo.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 3,
+   "png": "delta_delta_med_cryo.png",
+   "src_md5": "fd58f7476b5039d8e630f3e3e4e5a85c",
+   "themes": {
+    "cult": {
+     "connector": [
+      1,
+      1
+     ],
+     "height": 3,
+     "png": "delta_delta_med_cryo_cult.png",
+     "src_md5": "11aeb99528d3101465ace3d3771c8834",
+     "width": 6
+    },
+    "lightship": {
+     "connector": [
+      1,
+      1
+     ],
+     "height": 3,
+     "png": "delta_delta_med_cryo_lightship.png",
+     "src_md5": "c9f318187bd661c4f60ad883c0b55349",
+     "width": 6
+    },
+    "syndicate": {
+     "connector": [
+      1,
+      1
+     ],
+     "height": 3,
+     "png": "delta_delta_med_cryo_syndicate.png",
+     "src_md5": "ac083212e004192a4989c343915c5e1f",
+     "width": 6
+    }
+   },
+   "width": 6
+  }
+ },
+ "tile_px": 32
+}

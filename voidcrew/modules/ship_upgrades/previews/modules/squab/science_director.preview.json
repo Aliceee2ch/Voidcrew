@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/science_director.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 2,
+   "png": "squab_science_director.png",
+   "src_md5": "2278880fcce97b042f12d1948c94e3d6",
+   "width": 3
+  }
+ },
+ "tile_px": 32
+}

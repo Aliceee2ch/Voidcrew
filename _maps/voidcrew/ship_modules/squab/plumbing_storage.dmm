@@ -1,0 +1,41 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"ipP" = (
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/modular_map_connector,
+/obj/machinery/plumbing/output,
+/obj/structure/cable,
+/turf/open/floor/iron/white/textured_large,
+/area/template_noop)
+"iRD" = (
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/structure/cable,
+/turf/open/floor/iron/white/textured_large,
+/area/template_noop)
+"pEp" = (
+/obj/item/radio/intercom/directional/south,
+/obj/effect/turf_decal/siding/wideplating_new/dark{
+	dir = 1
+	},
+/obj/structure/rack,
+/obj/item/construction/plumbing{
+	pixel_x = -2;
+	pixel_y = 6
+	},
+/obj/item/construction/plumbing,
+/obj/item/storage/box/plumbing,
+/turf/open/floor/iron/white/textured_large,
+/area/template_noop)
+
+(1,1,1) = {"
+ipP
+"}
+(2,1,1) = {"
+iRD
+"}
+(3,1,1) = {"
+pEp
+"}

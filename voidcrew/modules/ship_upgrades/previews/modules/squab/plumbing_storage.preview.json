@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/plumbing_storage.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 1,
+   "png": "squab_plumbing_storage.png",
+   "src_md5": "0aa43ae0444cad306fd1fbb847879fb5",
+   "width": 3
+  }
+ },
+ "tile_px": 32
+}

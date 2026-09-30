@@ -1,0 +1,16 @@
+{
+ "hulls": {},
+ "modules": {
+  "squab/nanite_lab.dmm": {
+   "connector": [
+    1,
+    1
+   ],
+   "height": 3,
+   "png": "squab_nanite_lab.png",
+   "src_md5": "89ebe57add41cbe1987a890331b15b63",
+   "width": 8
+  }
+ },
+ "tile_px": 32
+}

@@ -94,6 +94,8 @@
 	if(istype(I, /obj/item/ship_key))
 		attempt_claim_ship(I, user)
 		return TRUE
+	if(!check_crew_access(user))
+		return TRUE
 	// Handle star chart uploads
 	if(istype(I, /obj/item/disk/star_chart))
 		var/obj/item/disk/star_chart/chart = I
@@ -103,6 +105,80 @@
 		chart.upload_to_ship(current_ship, user)
 		return TRUE
 	return ..()
+
+// Item-side effects (including tools, emags and RCDs) run before attackby().
+/obj/machinery/computer/helm/base_item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	// Claiming an NPC hull establishes membership; the key validates ownership.
+	if(istype(tool, /obj/item/ship_key))
+		attempt_claim_ship(tool, user)
+		return ITEM_INTERACT_SUCCESS
+	if(!check_crew_access(user))
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/obj/machinery/computer/helm/base_ranged_item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	if(!check_crew_access(user))
+		return ITEM_INTERACT_BLOCKING
+	return ..()
+
+/obj/machinery/computer/helm/attack_paw(mob/living/user, list/modifiers)
+	// Peaceful clicks may open the locked UI; combat paw attacks damage machinery.
+	if(user.combat_mode && !check_crew_access(user))
+		return TRUE
+	return ..()
+
+/obj/machinery/computer/helm/attack_hulk(mob/living/carbon/user)
+	if(!check_crew_access(user))
+		return TRUE
+	return ..()
+
+/obj/machinery/computer/helm/attack_generic(mob/user, damage_amount = 0, damage_type = BRUTE, damage_flag = 0, sound_effect = TRUE, armor_penetration = 0)
+	if(!check_crew_access(user))
+		return FALSE
+	return ..()
+
+/obj/machinery/computer/helm/mech_melee_attack(obj/vehicle/sealed/mecha/mecha_attacker, mob/living/user)
+	if(!check_crew_access(user))
+		return FALSE
+	return ..()
+
+/obj/machinery/computer/helm/bullet_act(obj/projectile/hitting_projectile, def_zone, piercing_hit = FALSE)
+	if(ismob(hitting_projectile.firer) && !is_crew_member(hitting_projectile.firer))
+		return BULLET_ACT_BLOCK
+	return ..()
+
+/obj/machinery/computer/helm/hitby(atom/movable/hit_by, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
+	var/mob/thrower = throwingdatum?.get_thrower()
+	if(thrower && !is_crew_member(thrower))
+		return
+	return ..()
+
+/obj/machinery/computer/helm/mouse_drop_receive(mob/living/dropping, mob/user, params)
+	if(!check_crew_access(user))
+		return
+	// Later drags go straight to the component's signal handler.
+	LoadComponent(/datum/component/leanable/helm, dropping)
+
+/datum/component/leanable/helm/mousedrop_receive(atom/source, atom/movable/dropped, mob/user, params)
+	var/obj/machinery/computer/helm/console = source
+	if(!console.check_crew_access(user))
+		return COMPONENT_CANCEL_MOUSEDROPPED_ONTO
+	return ..()
+
+/obj/machinery/computer/helm/click_ctrl(mob/user)
+	if(!check_crew_access(user))
+		return CLICK_ACTION_BLOCKING
+	return ..()
+
+/obj/machinery/computer/helm/screwdriver_act(mob/living/user, obj/item/tool)
+	if(!check_crew_access(user))
+		return TRUE
+	// Keep checking while disconnecting: removal from the crew cancels the job.
+	if(circuit)
+		balloon_alert(user, "disconnecting monitor...")
+		if(tool.use_tool(src, user, time_to_unscrew, volume = 50, extra_checks = CALLBACK(src, PROC_REF(is_crew_member), user)))
+			deconstruct(TRUE)
+	return TRUE
 
 /// Attempts to claim the ship using an authorization key
 /obj/machinery/computer/helm/proc/attempt_claim_ship(obj/item/ship_key/key, mob/living/user)
@@ -114,6 +190,11 @@
 	var/obj/structure/overmap/ship/npc/npc_ship = key.get_ship()
 	if(npc_ship != current_ship)
 		to_chat(user, span_warning("This key is for a different vessel: [key.ship_name]"))
+		return FALSE
+
+	// A disabled player-owned hull still belongs to its crew, even with an old key.
+	if(npc_ship.player_controlled && !npc_ship.abandoned)
+		to_chat(user, span_warning("This vessel already belongs to a crew."))
 		return FALSE
 
 	// Check if key is valid (has AI controller) OR ship is abandoned OR ship is disabled (all claimable)
@@ -137,8 +218,11 @@
 
 /// Converts an NPC ship to player control
 /obj/machinery/computer/helm/proc/claim_npc_ship(obj/structure/overmap/ship/npc/npc_ship, mob/living/claimer)
+	if(npc_ship?.retired_by_checkpoint || npc_ship?.checkpoint_rebuilding)
+		return FALSE
 	if(!istype(npc_ship))
 		return FALSE
+	npc_metric_claimed(npc_ship, claimer, "key")
 
 	// Cancel abandonment timer if one is running
 	if(npc_ship.abandonment_timer)
@@ -258,6 +342,11 @@
 /obj/machinery/computer/helm/ui_data(mob/user)
 	// var/list/data = list()
 	var/list/data = ..()
+
+	// Keep an open console's lock current when crew membership or ownership changes.
+	data["isNotCrew"] = !is_crew_member(user)
+	data["isAbandoned"] = current_ship.abandoned
+	data["isRetired"] = current_ship.retired_by_checkpoint || current_ship.checkpoint_rebuilding
 
 	data["integrity"] = current_ship.get_integrity_percent()
 	data["overhealth"] = current_ship.get_overhealth_percent()
@@ -393,6 +482,10 @@
 				"ref" = REF(candidate),
 				"isEmpty" = FALSE,
 			))
+			var/obj/structure/overmap/dynamic/player_outpost/home = astype(candidate)
+			if(home?.ship_bay_installed && home.has_hangar_elevator())
+				// The docking fee this ship would owe, 0 when free or exempt (outpost_dock_fees.dm)
+				dock_options += list(list("name" = "[home.name] - Ship Bay", "ref" = REF(home), "isEmpty" = FALSE, "variant" = OUTPOST_DOCK_VARIANT_BAY, "label" = "Dock at ship bay", "fee" = home.dock_fee_for(current_ship, OUTPOST_DOCK_VARIANT_BAY)))
 	else
 		// Nebulas aren't a docking target. Concealment is the Cloak control's job,
 		// but sitting in one and being told only "empty space" reads as the console
@@ -406,6 +499,8 @@
 			"isEmpty" = TRUE,
 		))
 	data["dockOptions"] = dock_options
+	// A player outpost's ship bay fee waiting for the captain's approval (outpost_dock_fees.dm)
+	data["dockFeeQuote"] = current_ship.dock_fee_quote_data(user)
 
 	// Undock cooldown data (after docking)
 	data["undockCooldown"] = !COOLDOWN_FINISHED(current_ship, undock_cooldown)
@@ -514,6 +609,7 @@
 				fuel = 0,
 				maxFuel = 100,
 				enabled = E.enabled,
+				blocked = E.exhaust_blocked,
 				ref = REF(E)
 			)
 		else
@@ -522,6 +618,7 @@
 				fuel = E.return_fuel() || 0,
 				maxFuel = E.return_fuel_cap() || 100,
 				enabled = E.enabled,
+				blocked = E.exhaust_blocked,
 				ref = REF(E)
 			)
 		data["engineInfo"] += list(engine_data)
@@ -560,17 +657,11 @@
 		"viewRange" = SHIP_VIEW_RANGE,
 	)
 
-	// Check if user is a crew member of this ship
 	// Everything the ship has ever seen. Static because it only changes on a new
 	// discovery, which pushes a refresh (see get_charted_contacts), it is much
 	// the largest table the helm sends, and re-sending it every frame was the
 	// whole cost of charting the map as you go.
 	data["chartedContacts"] = current_ship.get_charted_contacts()
-
-	data["isNotCrew"] = !is_crew_member(user)
-
-	// Abandoned ship status
-	data["isAbandoned"] = current_ship?.abandoned
 
 	return data
 
@@ -626,11 +717,21 @@
 	var/mob/living/living_user = user
 	if(!istype(living_user) || !living_user.mind)
 		return FALSE
+	// Freshly built consoles must find their hull before applying its crew lock.
+	if(!current_ship)
+		attempt_ship_connection()
 	if(!current_ship?.ship_team)
 		return TRUE // No ship team set up, allow access
 	if(current_ship.abandoned)
 		return TRUE // Abandoned ships allow anyone to access for claiming
 	return (living_user.mind in current_ship.ship_team.members)
+
+/// The interactive version of the crew check; UI status polling stays silent.
+/obj/machinery/computer/helm/proc/check_crew_access(mob/user)
+	if(is_crew_member(user))
+		return TRUE
+	balloon_alert(user, "crew access only!")
+	return FALSE
 
 /**
  * The distress-beacon switch.
@@ -755,7 +856,8 @@
 		reset_jump()
 		return
 	// Extract ship parts from all players on the ship before jumping
-	extract_ship_parts_from_ship(current_ship, "bluespace_jump")
+	var/parts_extracted = extract_ship_parts_from_ship(current_ship, "bluespace_jump")
+	ship_metric_jumping(current_ship, parts_extracted)
 	// ignore_crew: the jump is supposed to take the crew with it, and the console
 	// asked for confirmation before any of this started.
 	if(current_ship.destroy_ship(TRUE, ignore_crew = TRUE))
@@ -782,7 +884,10 @@
 
 	var/obj/structure/overmap/ship/ship = get_ship_from_atom(src)
 	if(!ship && last_resort)
-		stack_trace("Failed to connect a helm to its ship, this is almost certainly a bug!")
+		// An outpost's staged rebuild has no ship record until it is commissioned.
+		var/obj/docking_port/mobile/voidcrew/port = SSshuttle.get_containing_shuttle(src)
+		if(!istype(port) || !port.checkpoint_construction)
+			stack_trace("Failed to connect a helm to its ship, this is almost certainly a bug!")
 
 	set_current_ship(ship)
 	return !!current_ship
@@ -1010,6 +1115,22 @@
 	switch(current_ship.state) // Ship state-limited topics
 		if(OVERMAP_SHIP_FLYING)
 			switch(action)
+				// A player outpost's ship bay fee (outpost_dock_fees.dm). Params are client data;
+				// the ship checks them against its quote.
+				if("approve_dock_fee")
+					var/mob/living/approver = usr
+					var/refusal = istype(approver) ? current_ship.approve_dock_fee(approver, params["ref"], params["variant"], params["amount"]) : "Crew authorization required."
+					if(refusal)
+						say(refusal)
+						playsound(src, 'sound/machines/terminal/terminal_error.ogg', 30)
+					return TRUE
+				if("decline_dock_fee")
+					var/mob/living/decliner = usr
+					var/refusal = istype(decliner) ? current_ship.decline_dock_fee(decliner, params["ref"]) : "Crew authorization required."
+					if(refusal)
+						say(refusal)
+						playsound(src, 'sound/machines/terminal/terminal_error.ogg', 30)
+					return TRUE
 				if("active_scan")
 					var/category = params["category"]
 					// active_scan() treats an unrecognised category as "no filter" and
@@ -1196,7 +1317,7 @@
 							playsound(src, 'sound/machines/terminal/terminal_error.ogg', 30)
 							return
 						current_ship.disengage_autopilot("docking", notify = FALSE)
-						current_ship.overmap_object_act(usr, dock_candidate)
+						current_ship.overmap_object_act(usr, dock_candidate, dock_variant = params["variant"])
 						return
 					current_ship.disengage_autopilot("docking", notify = FALSE)
 					// Only refusals come back as text; a dock that started is

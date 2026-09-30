@@ -28,10 +28,10 @@ import { formatMoney } from 'tgui-core/format';
 import { acquireHotKey, releaseHotKey } from 'tgui-core/hotkeys';
 import { KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP } from 'tgui-core/keycodes';
 import type { BooleanLike } from 'tgui-core/react';
-import { HelmPlane } from './Helm/HelmPlane';
 import { resolveAsset } from '../../tgui/assets';
 import { useBackend } from '../../tgui/backend';
 import { Window } from '../../tgui/layouts';
+import { HelmPlane } from './Helm/HelmPlane';
 
 // ===== Data =====
 

@@ -2,7 +2,7 @@
  * # Teleporter room
  *
  * The service room that puts a player outpost on the teleporter network (outpost_network.dm):
- * a network pad and an arrival spot beside it. Sold only as this upgrade; the pad has no board.
+ * a network pad, which people leave from and arrive on. Sold only as this upgrade; the pad has no board.
  *
  * The owner's levers are the arrival fare (Pricing tab), the arrival policy and allow list
  * (Services tab) and docking LOCKDOWN. The room's door stays public and the door tool refuses it
@@ -21,7 +21,7 @@
 	mappath = "voidcrew/_maps/map_files/outposts/outpost_upgrade_teleporter_clean.dmm"
 	outpost_style = OUTPOST_STYLE_CLEAN
 
-/// Marks where pad arrivals land. Removed once the room is installed.
+/// Marked where pad arrivals used to land, beside the pad. They land on the pad now; removed once the room is installed.
 /obj/effect/landmark/outpost_network_arrival
 	name = "network arrival spot"
 
@@ -50,19 +50,17 @@
 
 /datum/outpost_upgrade/service/teleporter/on_service_installed(mob/user)
 	var/obj/machinery/outpost_network_pad/pad
-	var/turf/arrival
 	for(var/turf/tile as anything in room_turfs())
 		if(!pad)
 			pad = locate(/obj/machinery/outpost_network_pad) in tile
 		var/obj/effect/landmark/outpost_network_arrival/mark = locate() in tile
 		if(mark)
-			arrival = tile
 			qdel(mark)
-	if(!pad || !arrival)
-		log_mapping("OUTPOST NETWORK: the teleporter room at '[outpost]' loaded without its [pad ? "arrival spot" : "pad"].")
+	if(!pad)
+		log_mapping("OUTPOST NETWORK: the teleporter room at '[outpost]' loaded without its pad.")
 		return
 	pad_ref = WEAKREF(pad)
-	pad.link_host(outpost, arrival)
+	pad.link_host(outpost)
 
 /datum/outpost_upgrade/service/teleporter/on_outpost_abandoned()
 	// The next owner starts from the defaults. Unowned, the pad takes no arrivals anyway.

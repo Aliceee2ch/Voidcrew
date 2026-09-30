@@ -112,8 +112,8 @@ Staff fill the stock cabinet in the back room and price each listing. Customers 
 Network pads send one person at a time from outpost to outpost. The network covers every player outpost with a Teleporter room and a public pad at each trading outpost, and trips can cross zones. Trading outpost pads only reach player outposts, never each other.
 
 - **The destination sets the fare.** It is taken from your ID account when the pad fires, never for leaving. Members of the destination and anyone arriving at a trading outpost travel free. A cancelled trip costs nothing.
-- **Charge time:** stand on the pad for 5 seconds, or 10 across zones. Stepping off, taking damage or passing out cancels the trip.
-- **Cooldowns:** 2 minutes between trips, and no trips for 60 seconds after you hurt, or are hurt by, another player.
+- **Charge time:** stand on the pad for 5 seconds, or 10 across zones. Stepping off, taking damage or passing out cancels the trip. You arrive on the other outpost's pad.
+- **Cooldown:** 2 minutes between trips. A pad someone is leaving from, or arriving on, is busy until they are gone.
 - **What stays behind:** other people, carried or pulled; animals; freight pods; contract goods and ship keys.
 
 The owner chooses who may arrive: **Open**, **Members**, **Allow list** (chosen outposts' pads) or **Closed**. Lockdown admits members only. With docking set to **By request**, an open pad admits members and approved crews only.

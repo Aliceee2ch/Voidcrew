@@ -173,23 +173,19 @@
 	return routes
 
 /**
- * Why nobody could walk out of the room right now, or null when some exterior door leads onto
- * open, breathable ground. "Exit blocked": every door is walled off, inside or out, by a wall or
- * something fixed that nobody can move. Clutter a player can wrench or break away never counts.
- * "Exit to vacuum": the way out has no safe air. The cloning chooser and the teleporter's
- * destination list show it as a warning; the teleporter also refuses arrivals on it.
+ * Why nobody could walk out of the room right now, or null when some exterior door opens. "Exit
+ * blocked": every door is walled off, inside or out, by a wall or something fixed that nobody can
+ * move. Clutter a player can wrench or break away never counts. The cloning chooser and the
+ * teleporter's destination list show it as a warning; the teleporter also refuses arrivals on it.
  */
 /datum/outpost_upgrade/service/proc/exit_denial()
-	var/open_exit = FALSE
 	for(var/list/route as anything in exit_routes())
 		var/turf/inside = route[1]
 		var/turf/exit = route[2]
 		if(outpost_exit_blocked(exit) || (inside && outpost_exit_blocked(inside)))
 			continue
-		open_exit = TRUE
-		if(outpost_exit_breathable(exit))
-			return null
-	return open_exit ? "Exit to vacuum" : "Exit blocked"
+		return null
+	return "Exit blocked"
 
 /**
  * Placement refusal for this room at `footprint` (footprint_at()), or null. A closed turf just
@@ -301,25 +297,6 @@
 	if((thing.flags_1 & ON_BORDER_1) || HAS_TRAIT(thing, TRAIT_CLIMBABLE))
 		return FALSE
 	return (thing.resistance_flags & INDESTRUCTIBLE) || HAS_TRAIT(thing, TRAIT_OUTPOST_PROPERTY)
-
-/// Breathable by the teleport safety numbers (is_safe_turf() in teleport.dm, which refuses indestructible floors itself)
-/proc/outpost_exit_breathable(turf/open/exit)
-	if(!isopenturf(exit))
-		return FALSE
-	var/datum/gas_mixture/air = exit.air
-	if(!air)
-		return FALSE
-	var/static/list/gases_to_check = list(
-		/datum/gas/oxygen = list(16, 100),
-		/datum/gas/nitrogen,
-		/datum/gas/carbon_dioxide = list(0, 10),
-	)
-	if(!check_gases(air.gases, gases_to_check))
-		return FALSE
-	if(air.temperature <= 270 || air.temperature >= 360)
-		return FALSE
-	var/pressure = air.return_pressure()
-	return pressure > 20 && pressure < 550
 
 // ===== SINGULARITY IMMUNITY =====
 

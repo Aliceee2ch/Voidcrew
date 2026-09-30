@@ -54,7 +54,7 @@
 	TEST_ASSERT_EQUAL(pad_a.network_host(), rig["home_a"], "The first pad is not on the network")
 	TEST_ASSERT_EQUAL(pad_b.network_host(), home_b, "The second pad is not on the network")
 	TEST_ASSERT(pad_b.arrival_turf && room_b.is_inside(pad_b.arrival_turf), "The arrival spot is not inside the room")
-	TEST_ASSERT(pad_b.arrival_turf != get_turf(pad_b), "Arrivals land on the departure pad")
+	TEST_ASSERT_EQUAL(pad_b.arrival_turf, get_turf(pad_b), "Arrivals do not land on the pad")
 	TEST_ASSERT_EQUAL(room_b.arrival_policy, "open", "Arrivals do not default to open")
 	TEST_ASSERT(!istype(pad_a, /obj/machinery/quantumpad), "The network pad is a quantum pad")
 
@@ -155,29 +155,11 @@
 	TEST_ASSERT_EQUAL(account.account_balance, 1000, "A refused trip charged the traveller")
 	home_b.outpost_prices -= "teleport_arrival"
 
-	// A combat stamp during the charge refuses completion (F-41)
+	// Someone who was just in a fight still travels
 	var/mob/living/carbon/human/attacker = make_market_visitor(beside, "netattacker", 0)
-	TEST_ASSERT_NULL(pad_a.start_trip(visitor, pad_b, 200), "The trip did not restart before the fight")
-	stamp_outpost_network_combat(visitor, attacker)
-	TEST_ASSERT_EQUAL(pad_a.finish_trip(), "You were just in a fight.", "A fight during the charge did not stop the trip")
-	visitor.mind.outpost_network_combat_until = 0
-	attacker.mind.outpost_network_combat_until = 0
-
-	// Shoves never stamp the combat lock; punches that land do, on both sides (F-35, B-15, R10)
 	attacker.set_combat_mode(TRUE)
-	GLOB.outpost_pvp_enforcement.on_outpost_pvp_unarmed_attack(visitor, attacker, list(RIGHT_CLICK = "1"))
-	TEST_ASSERT_EQUAL(visitor.mind.outpost_network_combat_until, 0, "A shove locked the traveller out of the network")
-	// The attack-hand signal fires before the hit roll: a swing alone locks nobody
 	GLOB.outpost_pvp_enforcement.on_outpost_pvp_unarmed_attack(visitor, attacker, list())
-	TEST_ASSERT_EQUAL(visitor.mind.outpost_network_combat_until, 0, "A punch that may have missed locked the traveller")
-	TEST_ASSERT_EQUAL(attacker.mind.outpost_network_combat_until, 0, "A punch that may have missed locked the attacker")
-	SEND_SIGNAL(visitor, COMSIG_HUMAN_GOT_PUNCHED, attacker, 0, BRUTE)
-	TEST_ASSERT_EQUAL(visitor.mind.outpost_network_combat_until, 0, "A harmless punch locked the traveller")
-	SEND_SIGNAL(visitor, COMSIG_HUMAN_GOT_PUNCHED, attacker, 5, BRUTE)
-	TEST_ASSERT(visitor.mind.outpost_network_combat_until > world.time, "A landed punch did not lock the traveller out of the network")
-	TEST_ASSERT(attacker.mind.outpost_network_combat_until > world.time, "A landed punch did not lock the attacker out of the network")
-	visitor.mind.outpost_network_combat_until = 0
-	attacker.mind.outpost_network_combat_until = 0
+	TEST_ASSERT_NULL(pad_a.departure_denial(visitor), "A fight stopped the traveller leaving")
 
 	// What cannot travel
 	TEST_ASSERT_EQUAL(pad_a.departure_denial(attacker), "Stand on the pad.", "Someone off the pad could leave")
@@ -269,12 +251,12 @@
 	TEST_ASSERT_EQUAL(home_b.set_door_access(owner_b, room_door, "members"), "Stays public.", "The teleporter room's door could be keyed")
 	TEST_ASSERT_EQUAL(outpost_door_access_of(room_door), "public", "The teleporter room's door was keyed")
 
-	// A room that opens onto vacuum takes no arrivals (F-03)
+	// A room that opens onto space still takes arrivals: what is outside is the owner's business
 	var/list/exits = room_b.exit_turfs()
 	TEST_ASSERT(length(exits), "The teleporter room has no exit")
 	var/turf/exit = exits[1]
 	exit = exit.ChangeTurf(/turf/open/space/basic)
-	TEST_ASSERT_EQUAL(pad_b.arrival_denial(visitor, pad_a), "Exit to vacuum", "A room opening onto vacuum took arrivals")
+	TEST_ASSERT_NULL(pad_b.arrival_denial(visitor, pad_a), "A room opening onto space refused arrivals")
 	exit.ChangeTurf(/turf/open/floor/iron)
 
 	// A blocked arrival spot refuses arrivals
@@ -331,7 +313,7 @@
 	pad_a.committing_turf = pad_b.arrival_turf
 	TEST_ASSERT(outpost_network_may_cross(visitor, pad_b.arrival_turf, "outpost_network"), "The committing trip could not cross")
 	TEST_ASSERT(!outpost_network_may_cross(visitor, pad_b.arrival_turf, "quantum"), "Another channel could cross")
-	TEST_ASSERT(!outpost_network_may_cross(visitor, get_turf(pad_b), "outpost_network"), "A trip could cross onto another tile")
+	TEST_ASSERT(!outpost_network_may_cross(visitor, get_step(pad_b, NORTH), "outpost_network"), "A trip could cross onto another tile")
 	pad_a.committing_ref = null
 	pad_a.committing_turf = null
 
@@ -379,11 +361,12 @@
 	TEST_ASSERT_EQUAL(pad_a.start_trip(traveller, pad_b, 200), "Pad in use.", "A second confirm restarted the charge")
 	TEST_ASSERT_EQUAL(pad_a.charge_target_ref?.resolve(), pad_b, "The charge changed its destination")
 
-	// B-14: a pad receiving a trip still sends its own travellers, including toward the charging pad
+	// Arrivals land on the pad: a pad with someone on the way in holds its own departures, and a pad
+	// someone is leaving from takes no arrivals
 	var/mob/living/carbon/human/outbound = make_market_visitor(get_turf(pad_b), "netoutbound", 1000)
 	TEST_ASSERT(pad_b.is_receiving(), "The second pad is not receiving")
-	TEST_ASSERT_NULL(pad_b.departure_denial(outbound), "A receiving pad refused its own departure: [pad_b.departure_denial(outbound)]")
-	TEST_ASSERT_NULL(pad_a.arrival_denial(outbound, pad_b), "A pad charging a departure refused an arrival: [pad_a.arrival_denial(outbound, pad_b)]")
+	TEST_ASSERT_EQUAL(pad_b.departure_denial(outbound), "Pad in use.", "A pad with an arrival on the way let someone leave")
+	TEST_ASSERT_EQUAL(pad_a.arrival_denial(outbound, pad_b), "Pad in use", "A pad someone was leaving from took an arrival")
 
 	TEST_ASSERT_NULL(pad_a.finish_trip(), "The trip did not finish")
 	TEST_ASSERT_EQUAL(get_turf(traveller), pad_b.arrival_turf, "The traveller did not arrive")

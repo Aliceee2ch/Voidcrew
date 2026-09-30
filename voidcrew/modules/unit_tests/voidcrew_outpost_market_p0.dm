@@ -133,9 +133,9 @@
 	tear.start_disaster()
 	TEST_ASSERT(QDELETED(tear), "A reality tear in a service room was not neutralized")
 
-	// F-03: the exit reads vacuum, then blocked, then clear
+	// F-03: an exit onto space is open; a wall is blocked; then clear
 	outside = outside.ChangeTurf(/turf/open/space/basic)
-	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit to vacuum", "An exit onto space was not reported")
+	TEST_ASSERT_NULL(blueprint.exit_denial(), "An exit onto space was reported: [blueprint.exit_denial()]")
 	outside = outside.ChangeTurf(/turf/closed/wall)
 	TEST_ASSERT_EQUAL(blueprint.exit_denial(), "Exit blocked", "A wall against the door was not reported")
 	outside = outside.ChangeTurf(/turf/open/floor/iron)

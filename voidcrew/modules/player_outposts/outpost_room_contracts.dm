@@ -169,16 +169,14 @@
 	if(!pad)
 		. += "no network pad"
 		return
-	if(pad.network_host() != outpost || !pad.arrival_turf)
+	if(pad.network_host() != outpost || pad.arrival_turf != get_turf(pad))
 		. += "the pad is not linked"
 		return
-	if(pad.arrival_turf == get_turf(pad) || get_dist(pad, pad.arrival_turf) > 2)
-		. += "the arrival spot is not beside the pad"
 	if(!pad.pad_step_off_turf())
 		. += "the pad has no free tile beside it"
 	var/list/visitor = visitor_reach()
-	if(!visitor[get_turf(pad)] || !visitor[pad.arrival_turf])
-		. += "a visitor cannot walk to the pad and from the arrival spot"
+	if(!visitor[get_turf(pad)])
+		. += "a visitor cannot walk to the pad"
 
 /datum/outpost_upgrade/service/medical_lab/contract_problems()
 	. = ..()

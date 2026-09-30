@@ -13,8 +13,10 @@
  *   taking damage, or falling unconscious cancels it; nothing is charged.
  * * The destination decides who arrives and what it costs. The fare is paid at departure from
  *   the traveller's ID account into the destination's treasury. Nobody pays to leave.
+ * * They arrive on the destination's pad. A pad someone is leaving from, or someone is on the way
+ *   to, is in use.
  * * Trader pads reach player pads only, never each other.
- * * A 2 minute cooldown per traveller and a 60 s lock after any damaging player hit.
+ * * A 2 minute cooldown per traveller.
  *
  * The pad needs no power: an owner who cut it could strand every visitor who arrived by it.
  */
@@ -24,19 +26,7 @@ GLOBAL_LIST_EMPTY(outpost_network_pads)
 /// ckey -> world.time the traveller may depart again
 GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 
-/datum/mind
-	/// world.time until which this mind may not use the outpost network (it just fought another player)
-	var/outpost_network_combat_until = 0
-
 // ===== LOCKS =====
-
-/// Stamps the network's combat lock on both minds. Called only for hits that deal damage (outpost_security.dm).
-/proc/stamp_outpost_network_combat(mob/living/victim, mob/living/offender)
-	if(!istype(victim) || !istype(offender) || victim == offender || !victim.mind || !offender.mind)
-		return
-	var/until = world.time + OUTPOST_NETWORK_COMBAT_LOCK
-	victim.mind.outpost_network_combat_until = until
-	offender.mind.outpost_network_combat_until = until
 
 /// Whether `user` crews any ship this outpost has banned
 /obj/structure/overmap/dynamic/player_outpost/proc/crews_banned_ship(mob/user)
@@ -95,7 +85,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/network_id
 	/// The trader or player outpost this pad serves
 	var/datum/weakref/host_ref
-	/// Where arrivals land: a tile beside the pad
+	/// Where arrivals land: the pad's own tile
 	var/turf/arrival_turf
 	/// Zone of the host's overmap tile, cached once known (outposts never move)
 	var/zone_type
@@ -144,9 +134,9 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	is_trader = TRUE
 
 /// Links the pad to its outpost. Player pads are linked by their Teleporter room, trader pads by spawn_network_pad().
-/obj/machinery/outpost_network_pad/proc/link_host(obj/structure/overmap/host, turf/arrival)
+/obj/machinery/outpost_network_pad/proc/link_host(obj/structure/overmap/host)
 	host_ref = WEAKREF(host)
-	arrival_turf = arrival
+	arrival_turf = get_turf(src)
 	zone_type = null
 	get_zone()
 
@@ -253,12 +243,12 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/ready_at = traveller.ckey && GLOB.outpost_network_ready_at[traveller.ckey]
 	if(ready_at && world.time < ready_at)
 		return "Recharging ([round((ready_at - world.time) / (1 SECONDS))] s)."
-	if(traveller.mind && world.time < traveller.mind.outpost_network_combat_until)
-		return "You were just in a fight."
 	var/mob/living/current = charging_ref?.resolve()
 	if(current && current != traveller)
 		return "Pad in use."
-	// An inbound trip lands on the arrival spot, not the pad, so it never holds departures
+	// Someone on the way in lands on the pad
+	if(is_receiving())
+		return "Pad in use."
 	return null
 
 /// A mob the traveller carries at any depth (bags, holders, cards, body bags), or null. A cyborg's own brain is fine.
@@ -316,7 +306,9 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 		var/exit_denial = room?.exit_denial()
 		if(exit_denial)
 			return exit_denial
-	// One inbound trip at a time. A traveller charging out from here does not block arrivals.
+	// Arrivals land on the pad: not while someone is leaving from it, and one inbound trip at a time
+	if(is_charging())
+		return "Pad in use"
 	if(!ignore_busy && is_receiving())
 		return "Busy"
 	return null
@@ -340,7 +332,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 			return "Not on the list"
 	return "Closed"
 
-/// Whether the arrival tile can take someone: open, clear of dense fixtures, and (at a player outpost) breathable
+/// Whether the arrival tile can take someone: open and clear of dense fixtures
 /obj/machinery/outpost_network_pad/proc/arrival_tile_denial()
 	var/turf/open/tile = arrival_turf
 	if(!istype(tile))
@@ -348,29 +340,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	for(var/obj/thing in tile)
 		if(outpost_exit_fixed_blocker(thing))
 			return "Arrival blocked"
-	if(!is_trader && outpost_network_air_unsafe(tile))
-		return "Arrival unsafe"
 	return null
-
-/**
- * The gas, pressure and temperature tests of is_safe_turf() without its floor-type gate, which
- * refuses every indestructible floor (teleport.dm). TRUE when a person should not arrive here.
- */
-/proc/outpost_network_air_unsafe(turf/open/tile)
-	var/datum/gas_mixture/air = tile?.air
-	if(!air)
-		return TRUE
-	var/static/list/gases_to_check = list(
-		/datum/gas/oxygen = list(16, 100),
-		/datum/gas/nitrogen,
-		/datum/gas/carbon_dioxide = list(0, 10),
-	)
-	if(!check_gases(air.gases, gases_to_check))
-		return TRUE
-	if(air.temperature <= 270 || air.temperature >= 360)
-		return TRUE
-	var/pressure = air.return_pressure()
-	return pressure <= 20 || pressure >= 550
 
 // ===== THE TRIP =====
 
@@ -412,7 +382,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	charge_alpha = transporter_dematerialise(traveller, charge_time)
 	playsound(src, 'sound/machines/terminal/terminal_alert.ogg', 40, TRUE)
 	playsound(destination.arrival_turf, 'sound/machines/terminal/terminal_alert.ogg', 40, TRUE)
-	destination.arrival_turf.visible_message(span_notice("The arrival spot beside [destination] lights up. Someone is on the way."), vision_distance = 7)
+	destination.arrival_turf.visible_message(span_notice("[destination] lights up. Someone is on the way."), vision_distance = 7)
 	if(charge_timer)
 		deltimer(charge_timer)
 	charge_timer = addtimer(CALLBACK(src, PROC_REF(finish_trip)), charge_time, TIMER_STOPPABLE)
@@ -601,7 +571,7 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 		return occupant
 	return null
 
-/// A free open tile beside the pad (not the arrival spot), or null
+/// A free open tile beside the pad, or null
 /obj/machinery/outpost_network_pad/proc/pad_step_off_turf()
 	for(var/direction in GLOB.cardinals)
 		var/turf/open/aside = get_step(src, direction)
@@ -646,6 +616,10 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 	var/mob/living/visitor = arrived
 	if(!istype(visitor) || !visitor.client || !network_host())
 		return
+	// The window is for stepping onto the pad, not for arriving on it
+	var/turf/came_from = get_turf(old_loc)
+	if(!came_from || came_from.z != z || get_dist(came_from, src) > 1)
+		return
 	INVOKE_ASYNC(src, TYPE_PROC_REF(/datum, ui_interact), visitor)
 
 // ===== TRADER PADS =====
@@ -670,14 +644,13 @@ GLOBAL_LIST_EMPTY(outpost_network_ready_at)
 		log_mapping("OUTPOST NETWORK: no free concourse tile for [name]'s network pad; it is off the network.")
 		return null
 	var/obj/machinery/outpost_network_pad/trader/pad = new(spot[1])
-	pad.link_host(src, spot[2])
+	pad.link_host(src)
 	// The same protection as a service room's fixtures: property, explosion and singularity proof
 	var/datum/outpost_upgrade/service/teleporter/prototype = GLOB.outpost_upgrade_catalog["teleporter"]
 	if(istype(prototype))
 		prototype.protect_fixture(pad)
 	else
 		pad.AddElement(/datum/element/outpost_property)
-	new /obj/effect/turf_decal/box/white(spot[2])
 	network_pad_ref = WEAKREF(pad)
 	return pad
 

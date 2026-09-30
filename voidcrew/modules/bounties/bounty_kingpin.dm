@@ -31,8 +31,8 @@
  *   unclaimed (run out, withdrawn), it leaves him in the lounge, alive, uncuffed and in business,
  *   when he is alive within his goons' leash of the sofa; otherwise he is removed as any criminal is,
  *   and gone.
- * - Talking: a radial on him. "We're here for you" and "Walk away" only show once his posting
- *   is up, open and lists him for that crew's ship; the first gets his confront line and starts the
+ * - Talking: a radial on him. "We're here for you" and "Walk away" only show once that crew's
+ *   ship has taken his open posting from the board; the first gets his confront line and starts the
  *   shootout. Any attack on him or a goon starts it too. A warrant shown to him, or a reach for his
  *   wrists, only gets the confront line.
  * - The shootout (/datum/bounty_kingpin_crew): a 0.6 s telegraph where nobody fires ("the goons
@@ -453,14 +453,14 @@ GLOBAL_LIST_EMPTY(bounty_kingpin_marks)
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_talk_check(mob/living/user)
 	return kingpin_can_talk() && kingpin_in_talk_range(user)
 
-/// Whether `user`'s crew has a live reason to confront him: his posting is up and open, and lists him for their ship (public, or private and offered/taken by them)
+/// Whether `user`'s crew has a live reason to confront him: his posting is up and open, and their ship took it from the board
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_confrontable(mob/living/user)
 	var/datum/criminal_bounty/kingpin/posting = kingpin_posting()
 	if(!posting?.is_open())
 		return FALSE
-	return posting.board_visible_to(get_crew_ship(user))
+	return posting.is_hunting(get_crew_ship(user))
 
-/// The talk radial for `user`. "We're here for you" and "Walk away" only while his posting is open to them; "I'll take it" only while he has offered their crew his job. Sleeps.
+/// The talk radial for `user`. "We're here for you" and "Walk away" only while their crew is hunting him; "I'll take it" only while he has offered their crew his job. Sleeps.
 /mob/living/basic/bounty_criminal/kingpin/proc/kingpin_open_talk(mob/living/user)
 	if(!kingpin_talk_check(user))
 		return

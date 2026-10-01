@@ -857,6 +857,7 @@
 /obj/item/storage/toolbox/emergency{
 	pixel_y = 2
 	},
+/obj/item/storage/box/rndboards/all,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/bridge)
 "oCg" = (

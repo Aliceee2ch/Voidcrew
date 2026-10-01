@@ -16,7 +16,6 @@
         "Backpack": {
           "/obj/item/evidencebag": 1,
           "/obj/item/gun/energy/e_gun/hos": 1,
-          "/obj/item/melee/baton/security/loaded/hos": 1,
           "/obj/item/melee/baton/telescopic/gold": 1
         },
         "Belt": null,
@@ -70,17 +69,30 @@
         "ID": "job_2",
         "Name": "Patrolling Officer",
         "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_2",
-        "BaseOutfit": "/datum/outfit/spacepol",
+        "BaseOutfit": "/datum/outfit/job/security",
         "Category": "Security",
         "Slots": 2,
         "Officer": true,
         "Equipment": {
-          "belt": "",
-          "ears": "/obj/item/radio/headset/headset_sec/alt",
-          "l_pocket": "",
-          "mask": ""
+          "head": "/obj/item/clothing/head/soft/sec"
         },
         "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_30",
+        "Name": "Quartermaster",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_30",
+        "BaseOutfit": "/datum/outfit/job/quartermaster",
+        "Category": "Cargo",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": {
+          "head": "/obj/item/clothing/head/beret/cargo",
+          "suit": "/obj/item/clothing/suit/hooded/wintercoat/cargo/qm"
+        },
+        "Backpack": {},
         "Belt": null,
         "Extra": null
       }
@@ -89,12 +101,14 @@
       {
         "ID": "job_14",
         "Name": "Captain",
-        "Outfit": "/datum/outfit/job/captain/syndicate",
-        "BaseOutfit": "",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_14",
+        "BaseOutfit": "/datum/outfit/job/captain/syndicate",
         "Category": "Command",
         "Slots": 1,
         "Officer": false,
-        "Equipment": null,
+        "Equipment": {
+          "l_pocket": ""
+        },
         "Backpack": null,
         "Belt": null,
         "Extra": null
@@ -152,19 +166,38 @@
         "ID": "job_25",
         "Name": "Patrolling Officer",
         "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_25",
-        "BaseOutfit": "/datum/outfit/spacepol",
+        "BaseOutfit": "/datum/outfit/job/security",
         "Category": "Security",
         "Slots": 2,
         "Officer": true,
         "Equipment": {
-          "belt": "",
-          "ears": "/obj/item/radio/headset/headset_sec/alt",
-          "glasses": "/obj/item/clothing/glasses/hud/security/sunglasses",
+          "ears": "/obj/item/radio/headset/syndicate/alt",
+          "gloves": "/obj/item/clothing/gloves/color/black/security/blu",
+          "head": "/obj/item/clothing/head/hats/hos/beret/syndicate",
           "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
-          "l_pocket": "",
+          "suit": "/obj/item/clothing/suit/armor/bulletproof",
           "uniform": "/obj/item/clothing/under/syndicate"
         },
         "Backpack": null,
+        "Belt": null,
+        "Extra": null
+      },
+      {
+        "ID": "job_17",
+        "Name": "Quartermaster",
+        "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_17",
+        "BaseOutfit": "/datum/outfit/job/quartermaster",
+        "Category": "Cargo",
+        "Slots": 1,
+        "Officer": false,
+        "Equipment": {
+          "head": "/obj/item/clothing/head/hats/hos/beret/syndicate",
+          "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
+          "neck": "/obj/item/clothing/neck/large_scarf/syndie",
+          "suit": "/obj/item/clothing/suit/hooded/wintercoat/cargo/qm",
+          "uniform": "/obj/item/clothing/under/syndicate"
+        },
+        "Backpack": {},
         "Belt": null,
         "Extra": null
       }
@@ -212,14 +245,17 @@
           "ID": "job_5",
           "Name": "Cargo Mechanic",
           "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_5",
-          "BaseOutfit": "/datum/outfit/outpost_mechanic",
+          "BaseOutfit": "/datum/outfit/job/cargo_tech",
           "Category": "Cargo",
           "Slots": 1,
           "Officer": false,
           "Equipment": {
+            "belt": "/obj/item/storage/belt/utility",
+            "gloves": "/obj/item/clothing/gloves/color/fyellow/old",
             "head": "/obj/item/clothing/head/utility/hardhat/welding/orange",
-            "id": "/obj/item/card/id/advanced",
-            "uniform": "/obj/item/clothing/under/rank/cargo/miner"
+            "r_pocket": "/obj/item/modular_computer/pda/cargo",
+            "suit": "/obj/item/clothing/suit/apron/overalls",
+            "uniform": "/obj/item/clothing/under/rank/engineering/engineer/hazard"
           },
           "Backpack": null,
           "Belt": null,
@@ -228,19 +264,21 @@
       ],
       "syndicate_black": [
         {
-          "ID": "job_17",
+          "ID": "job_29",
           "Name": "Cargo Mechanic",
-          "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_17",
-          "BaseOutfit": "/datum/outfit/outpost_mechanic",
+          "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_29",
+          "BaseOutfit": "/datum/outfit/job/cargo_tech",
           "Category": "Cargo",
           "Slots": 1,
           "Officer": false,
           "Equipment": {
-            "gloves": "/obj/item/clothing/gloves/combat",
+            "belt": "/obj/item/storage/belt/utility",
+            "gloves": "/obj/item/clothing/gloves/color/fyellow/old",
             "head": "/obj/item/clothing/head/utility/hardhat/welding/orange",
-            "id": "/obj/item/card/id/advanced/black/syndicate_command",
-            "shoes": "/obj/item/clothing/shoes/combat",
-            "uniform": "/obj/item/clothing/under/rank/cargo/miner"
+            "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
+            "r_pocket": "/obj/item/modular_computer/pda/cargo",
+            "suit": "/obj/item/clothing/suit/apron/overalls",
+            "uniform": "/obj/item/clothing/under/rank/engineering/engineer/hazard"
           },
           "Backpack": null,
           "Belt": null,
@@ -254,20 +292,17 @@
           "ID": "job_6",
           "Name": "Surgeon",
           "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_6",
-          "BaseOutfit": "/datum/outfit/deathmatch_loadout/battler/surgeon",
+          "BaseOutfit": "/datum/outfit/job/doctor",
           "Category": "Medical",
           "Slots": 1,
           "Officer": false,
           "Equipment": {
-            "belt": "/obj/item/storage/belt/medical",
-            "glasses": "",
             "gloves": "/obj/item/clothing/gloves/latex/nitrile",
-            "id": "/obj/item/card/id/advanced",
-            "l_hand": "/obj/item/storage/medkit/surgery",
-            "l_pocket": "",
-            "r_pocket": ""
+            "head": "/obj/item/clothing/head/utility/surgerycap",
+            "mask": "/obj/item/clothing/mask/surgical",
+            "suit": "/obj/item/clothing/suit/apron/surgical"
           },
-          "Backpack": {},
+          "Backpack": null,
           "Belt": null,
           "Extra": null
         }
@@ -277,23 +312,17 @@
           "ID": "job_18",
           "Name": "Surgeon",
           "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_18",
-          "BaseOutfit": "/datum/outfit/deathmatch_loadout/battler/surgeon",
+          "BaseOutfit": "/datum/outfit/job/doctor/interdyne",
           "Category": "Medical",
           "Slots": 1,
           "Officer": false,
           "Equipment": {
-            "belt": "/obj/item/storage/belt/medical",
-            "glasses": "",
             "gloves": "/obj/item/clothing/gloves/latex/coroner",
-            "head": "/obj/item/clothing/head/utility/surgerycap/black",
-            "id": "/obj/item/card/id/advanced/black/syndicate_command",
-            "l_hand": "/obj/item/storage/medkit/surgery",
-            "l_pocket": "",
-            "mask": "/obj/item/clothing/mask/bandana",
-            "r_pocket": "",
-            "uniform": "/obj/item/clothing/under/rank/medical/scrubs/coroner"
+            "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
+            "mask": "/obj/item/clothing/mask/surgical",
+            "suit": "/obj/item/clothing/suit/apron/surgical"
           },
-          "Backpack": {},
+          "Backpack": null,
           "Belt": null,
           "Extra": null
         }
@@ -500,16 +529,16 @@
           "ID": "job_9",
           "Name": "Chef",
           "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_9",
-          "BaseOutfit": "/datum/outfit/deathmatch_loadout/chef/upgraded",
+          "BaseOutfit": "/datum/outfit/job/cook",
           "Category": "Service",
           "Slots": 1,
           "Officer": false,
           "Equipment": {
-            "belt": "",
-            "id": "/obj/item/card/id/advanced"
+            "gloves": "/obj/item/clothing/gloves/the_sleeping_carp"
           },
           "Backpack": {
-            "/obj/item/holosign_creator/robot_seat/restaurant": 1,
+            "/obj/item/choice_beacon/ingredient": 1,
+            "/obj/item/knife/butcher": 1,
             "/obj/item/sharpener": 1
           },
           "Belt": null,
@@ -521,17 +550,17 @@
           "ID": "job_21",
           "Name": "Chef",
           "Outfit": "/datum/outfit/job/workshop_patrol_bee_job_21",
-          "BaseOutfit": "/datum/outfit/deathmatch_loadout/chef/upgraded",
+          "BaseOutfit": "/datum/outfit/job/cook",
           "Category": "Service",
           "Slots": 1,
           "Officer": false,
           "Equipment": {
-            "belt": "",
-            "id": "/obj/item/card/id/advanced/black/syndicate_command/crew_id",
-            "uniform": "/obj/item/clothing/under/syndicate/sniper"
+            "gloves": "/obj/item/clothing/gloves/the_sleeping_carp",
+            "id": "/obj/item/card/id/advanced/black/syndicate_command/captain_id/syndie_spare"
           },
           "Backpack": {
-            "/obj/item/holosign_creator/robot_seat/restaurant": 1,
+            "/obj/item/choice_beacon/ingredient": 1,
+            "/obj/item/knife/butcher": 1,
             "/obj/item/sharpener": 1
           },
           "Belt": null,

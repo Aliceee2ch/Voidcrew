@@ -11,10 +11,8 @@
 	pixel_y = 8
 	},
 /obj/effect/decal/cleanable/dirt,
-/obj/item/storage/medkit{
-	pixel_y = 28
-	},
-/obj/structure/secure_safe/directional/north,
+/obj/structure/closet/wall/medical/directional/north,
+/obj/item/storage/medkit/regular,
 /turf/template_noop,
 /area/template_noop)
 "soC" = (

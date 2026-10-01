@@ -1,6 +1,6 @@
 
 /datum/ship_theme/patrol_bee_standard
-	job_slots = list(list(name = "Captain", officer = TRUE, outfit = /datum/outfit/job/workshop_patrol_bee_job_1, category = "Command", slots = 1), list(name = "Ship Engineer", officer = FALSE, outfit = /datum/outfit/job/engineer/gloved, category = "Engineering", slots = 1), list(name = "Atmospheric Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_27, category = "Engineering", slots = 1), list(name = "Cargo Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_28, category = "Cargo", slots = 1), list(name = "Patrolling Officer", officer = TRUE, outfit = /datum/outfit/job/workshop_patrol_bee_job_2, category = "Security", slots = 2))
+	job_slots = list(list(name = "Captain", officer = TRUE, outfit = /datum/outfit/job/workshop_patrol_bee_job_1, category = "Command", slots = 1), list(name = "Ship Engineer", officer = FALSE, outfit = /datum/outfit/job/engineer/gloved, category = "Engineering", slots = 1), list(name = "Atmospheric Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_27, category = "Engineering", slots = 1), list(name = "Cargo Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_28, category = "Cargo", slots = 1), list(name = "Patrolling Officer", officer = TRUE, outfit = /datum/outfit/job/workshop_patrol_bee_job_2, category = "Security", slots = 2), list(name = "Quartermaster", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_30, category = "Cargo", slots = 1))
 	id = "standard"
 	name = "NanoTrasen"
 	for_ship = /datum/map_template/shuttle/voidcrew/patrol_bee
@@ -10,7 +10,7 @@
 
 /datum/ship_theme/patrol_bee_syndicate_black
 	part_cost = list()
-	job_slots = list(list(name = "Captain", officer = FALSE, outfit = /datum/outfit/job/captain/syndicate, category = "Command", slots = 1), list(name = "Ship Engineer", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_12, category = "Engineering", slots = 1), list(name = "Atmospheric Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_13, category = "Engineering", slots = 1), list(name = "Cargo Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_24, category = "Cargo", slots = 1), list(name = "Patrolling Officer", officer = TRUE, outfit = /datum/outfit/job/workshop_patrol_bee_job_25, category = "Security", slots = 2))
+	job_slots = list(list(name = "Captain", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_14, category = "Command", slots = 1), list(name = "Ship Engineer", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_12, category = "Engineering", slots = 1), list(name = "Atmospheric Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_13, category = "Engineering", slots = 1), list(name = "Cargo Technician", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_24, category = "Cargo", slots = 1), list(name = "Patrolling Officer", officer = TRUE, outfit = /datum/outfit/job/workshop_patrol_bee_job_25, category = "Security", slots = 2), list(name = "Quartermaster", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_17, category = "Cargo", slots = 1))
 	id = "syndicate_black"
 	name = "Syndicate Black"
 	for_ship = /datum/map_template/shuttle/voidcrew/patrol_bee
@@ -41,7 +41,7 @@
 
 /datum/ship_upgrade_module/patrol_bee_cargo_mech_bay
 	part_cost = list()
-	job_slots_add_by_theme = list("standard" = list(list(name = "Cargo Mechanic", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_5, category = "Cargo", slots = 1)), "syndicate_black" = list(list(name = "Cargo Mechanic", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_17, category = "Cargo", slots = 1)))
+	job_slots_add_by_theme = list("standard" = list(list(name = "Cargo Mechanic", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_5, category = "Cargo", slots = 1)), "syndicate_black" = list(list(name = "Cargo Mechanic", officer = FALSE, outfit = /datum/outfit/job/workshop_patrol_bee_job_29, category = "Cargo", slots = 1)))
 	id = "cargo_mech_bay"
 	name = "Cargo Mech Bay"
 	slot = "Upper_Cargo"

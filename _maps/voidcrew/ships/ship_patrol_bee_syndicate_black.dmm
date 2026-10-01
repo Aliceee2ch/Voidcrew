@@ -33,6 +33,9 @@
 /area/shuttle/voidcrew/patrol_bee/closet)
 "aji" = (
 /obj/structure/closet/crate,
+/obj/item/stack/sheet/glass{
+	amount = 10
+	},
 /obj/item/stack/sheet/iron/twenty,
 /obj/item/stack/sheet/mineral/plasma/thirty,
 /turf/open/floor/catwalk_floor,
@@ -64,28 +67,12 @@
 	id = "whiteship_starboard";
 	name = "Starboard Doors Control"
 	},
-/obj/item/clipboard{
-	pixel_x = -6;
-	pixel_y = 3
-	},
-/obj/item/pen/fourcolor{
-	pixel_x = -6;
-	pixel_y = 2
-	},
-/obj/item/paper{
-	pixel_x = 7;
-	pixel_y = 3
-	},
-/obj/item/paper{
-	pixel_x = 7;
-	pixel_y = 5
-	},
-/obj/structure/table/reinforced/plastitaniumglass,
+/obj/machinery/suit_storage_unit/industrial/loader,
 /turf/open/floor/iron/dark/textured,
 /area/shuttle/voidcrew/patrol_bee/south_cargo_bay)
 "aRr" = (
 /obj/machinery/light/small/directional/east,
-/turf/open/floor/iron,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/service)
 "aZD" = (
 /obj/effect/turf_decal/stripes/line{
@@ -186,7 +173,7 @@
 /obj/machinery/atmospherics/components/unary/vent_pump/on{
 	dir = 1
 	},
-/turf/open/floor/iron,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/service)
 "clm" = (
 /obj/effect/turf_decal/stripes/line{
@@ -358,7 +345,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden{
 	dir = 4
 	},
-/turf/open/floor/iron,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/service)
 "gcL" = (
 /turf/closed/wall/mineral/plastitanium,
@@ -459,7 +446,7 @@
 "hCy" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/machinery/light/small/built/directional/east,
-/obj/machinery/suit_storage_unit/syndicate,
+/obj/machinery/suit_storage_unit/nuke_med,
 /turf/open/floor/iron/smooth,
 /area/shuttle/voidcrew/patrol_bee/main_hall)
 "hFl" = (
@@ -532,10 +519,8 @@
 /area/shuttle/voidcrew/patrol_bee/dormitories)
 "iTa" = (
 /obj/structure/cable,
-/obj/machinery/power/smes{
-	dir = 4
-	},
-/turf/open/floor/plating/airless,
+/obj/machinery/power/smes/full,
+/turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "iTV" = (
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
@@ -623,10 +608,8 @@
 /area/shuttle/voidcrew/patrol_bee/north_cargo_bay)
 "krc" = (
 /obj/structure/cable,
-/obj/machinery/power/smes{
-	dir = 4
-	},
-/turf/open/floor/plating/airless,
+/obj/machinery/power/smes/full,
+/turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "krg" = (
 /obj/machinery/computer/monitor{
@@ -700,11 +683,8 @@
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/north_cargo_bay)
 "lHM" = (
-/obj/machinery/power/smes{
-	dir = 4
-	},
 /obj/structure/cable,
-/turf/open/floor/plating/airless,
+/turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "lHN" = (
 /obj/structure/cable,
@@ -824,8 +804,14 @@
 /turf/open/floor/iron/smooth_large,
 /area/shuttle/voidcrew/patrol_bee/south_cargo_bay)
 "olP" = (
-/obj/structure/cable,
 /obj/machinery/light/small/built/directional/south,
+/obj/structure/cable,
+/obj/machinery/power/port_gen/pacman{
+	anchored = 1
+	},
+/obj/machinery/power/terminal{
+	dir = 4
+	},
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "onb" = (
@@ -890,7 +876,7 @@
 /area/shuttle/voidcrew/patrol_bee/dormitories)
 "oKp" = (
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
-/turf/open/floor/iron,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/service)
 "oZq" = (
 /obj/structure/cable,
@@ -1038,21 +1024,19 @@
 /obj/item/stack/cable_coil{
 	pixel_y = -1
 	},
-/obj/item/multitool{
-	pixel_x = -6
-	},
+/obj/item/multitool,
 /obj/machinery/light/small/directional/north,
 /obj/machinery/power/terminal{
 	dir = 8
 	},
 /obj/structure/cable,
-/obj/item/storage/toolbox/mechanical{
-	pixel_x = 10;
-	pixel_y = 4
-	},
 /obj/item/storage/toolbox/electrical{
-	pixel_x = 10;
-	pixel_y = -2
+	pixel_x = 1;
+	pixel_y = 6
+	},
+/obj/item/storage/toolbox/mechanical{
+	pixel_x = -2;
+	pixel_y = -1
 	},
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
@@ -1105,9 +1089,6 @@
 /obj/structure/cable,
 /turf/open/floor/iron/smooth_large,
 /area/shuttle/voidcrew/patrol_bee/south_cargo_bay)
-"spL" = (
-/turf/open/floor/iron,
-/area/shuttle/voidcrew/patrol_bee/service)
 "stm" = (
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/patrol_bee/bridge)
@@ -1213,21 +1194,20 @@
 	pixel_x = -2;
 	pixel_y = 15
 	},
-/obj/machinery/light/built/directional/west,
 /obj/item/storage/fancy/donut_box{
 	pixel_y = 1
 	},
+/obj/machinery/light/directional/west,
 /turf/open/floor/carpet/donk,
 /area/shuttle/voidcrew/patrol_bee/service)
 "tIC" = (
 /obj/machinery/airalarm/directional/west,
 /obj/effect/mapping_helpers/airalarm/all_access,
-/obj/structure/cable,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "tMY" = (
 /obj/machinery/light/small/broken/directional/east,
-/turf/open/floor/iron,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/service)
 "tVj" = (
 /obj/machinery/atmospherics/components/unary/vent_pump/on,
@@ -1387,7 +1367,7 @@
 	dir = 4
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
-/turf/open/floor/iron,
+/turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/service)
 "xqw" = (
 /obj/effect/turf_decal/stripes/line{
@@ -1417,8 +1397,7 @@
 /turf/closed/wall/mineral/plastitanium,
 /area/shuttle/voidcrew/patrol_bee/north_cargo_bay)
 "xDh" = (
-/obj/structure/cable,
-/obj/machinery/power/port_gen/pacman/pre_loaded,
+/obj/machinery/power/smes/full,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "xKD" = (
@@ -1446,9 +1425,6 @@
 /obj/structure/cable,
 /turf/open/floor/iron/smooth_large,
 /area/shuttle/voidcrew/patrol_bee/south_cargo_bay)
-"yex" = (
-/turf/open/floor/catwalk_floor,
-/area/shuttle/voidcrew/patrol_bee/engineering)
 "yko" = (
 /obj/effect/spawner/structure/window/reinforced/plasma/plastitanium,
 /obj/machinery/door/firedoor,
@@ -1496,7 +1472,7 @@ pkh
 pRZ
 kBR
 pRZ
-lHM
+iTa
 rwG
 pRZ
 pkh
@@ -1518,7 +1494,7 @@ pkh
 pkh
 pRZ
 iTa
-dWm
+pRZ
 rrk
 aji
 rwG
@@ -1542,9 +1518,9 @@ pkh
 pRZ
 rtL
 tIC
-yex
+xKD
 olP
-pRZ
+dWm
 pkh
 "}
 (5,1,1) = {"
@@ -1567,7 +1543,7 @@ krg
 qAJ
 xKD
 xDh
-pRZ
+dWm
 pkh
 "}
 (6,1,1) = {"
@@ -1589,8 +1565,8 @@ rwG
 rwG
 rwG
 wQd
-rwG
-pRZ
+lHM
+dWm
 pkh
 "}
 (7,1,1) = {"
@@ -1877,13 +1853,13 @@ bVL
 ryB
 hiQ
 dta
-spL
+txQ
 oKp
 xdx
 lcv
 fLG
 cdJ
-spL
+txQ
 iTV
 hoP
 wsZ
@@ -1901,12 +1877,12 @@ bVL
 iym
 dta
 aRr
-spL
+txQ
 tMY
 txQ
-spL
-spL
-spL
+txQ
+txQ
+txQ
 iTV
 uzk
 txm

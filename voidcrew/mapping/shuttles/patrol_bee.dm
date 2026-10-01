@@ -1,9 +1,9 @@
 /datum/map_template/shuttle/voidcrew/patrol_bee
 	name = "Patrol Bee"
-	catalog_desc = ""
+	catalog_desc = "The NT Patrol Bee is a once-proud Nanotrasen patrol cruiser, forgotten and left to drift in favour of the more mobile Delta-class models. Consists of every module you'd need ranging from cargo ending with service."
 	suffix = "patrol_bee_nanotrasen"
 	short_name = "Patrol Bee"
-	part_requirements = list(PART_CLASS_MISC = 0)
+	part_requirements = list()
 	has_upgrade_slots = TRUE
 	upgrade_slot_ids = list("Upper_Cargo", "closet", "cleanroom", "service", "security_bay")
 	player_hidden = FALSE

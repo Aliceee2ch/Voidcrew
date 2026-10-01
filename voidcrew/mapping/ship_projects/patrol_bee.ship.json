@@ -1,7 +1,7 @@
 {
   "Version": 1,
   "ID": "patrol_bee",
-  "Description": "",
+  "Description": "The NT Patrol Bee is a once-proud Nanotrasen patrol cruiser, forgotten and left to drift in favour of the more mobile Delta-class models. Consists of every module you'd need ranging from cargo ending with service.",
   "Hull": {
     "Type": "/datum/map_template/shuttle/voidcrew/patrol_bee",
     "Name": "Patrol Bee",
@@ -201,6 +201,7 @@
     "module/pharmacy_lab": {},
     "module/research_lab": {},
     "module/riot_gera_bay": {},
+    "ship": {},
     "theme/syndicate_black": {}
   },
   "PortDirection": 2

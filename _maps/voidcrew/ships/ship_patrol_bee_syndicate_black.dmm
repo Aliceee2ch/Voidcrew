@@ -43,7 +43,9 @@
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "ako" = (
-/obj/machinery/portable_atmospherics/canister/oxygen,
+/obj/machinery/atmospherics/components/tank/air{
+	dir = 8
+	},
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "akp" = (
@@ -367,8 +369,9 @@
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/bridge)
 "gEV" = (
-/obj/structure/closet/emcloset/anchored,
 /obj/structure/sign/poster/official/random/directional/north,
+/obj/machinery/portable_atmospherics/canister/oxygen,
+/obj/structure/closet/wall/emergency/directional/east,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "gFz" = (
@@ -460,6 +463,7 @@
 /obj/machinery/airalarm/directional/west,
 /obj/effect/mapping_helpers/airalarm/all_access,
 /obj/structure/cable,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/general/visible,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "ikU" = (
@@ -546,6 +550,7 @@
 	dir = 8
 	},
 /obj/machinery/firealarm/directional/south,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/general/visible,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "jsI" = (
@@ -957,6 +962,9 @@
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "qIA" = (
 /obj/machinery/portable_atmospherics/canister/air,
+/obj/machinery/atmospherics/components/unary/portables_connector/visible{
+	dir = 8
+	},
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "qJv" = (

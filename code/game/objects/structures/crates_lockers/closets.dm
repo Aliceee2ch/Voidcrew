@@ -485,7 +485,7 @@ GLOBAL_LIST_EMPTY(roundstart_station_closets)
 	var/atom/location = drop_location()
 	if(!location)
 		return
-	for(var/atom/movable/AM in location)
+	for(var/atom/movable/AM in expand_slime_extract_piles(location.contents)) // VOIDCREW EDIT: collect piled extracts subject to normal capacity checks.
 		if(AM != src && insert(AM, mapload) == LOCKER_FULL) // limit reached
 			if(mapload) // Yea, it's a mapping issue. Blame mappers.
 				log_mapping("Closet storage capacity of [type] exceeded on mapload at [AREACOORD(src)]")
@@ -600,6 +600,7 @@ GLOBAL_LIST_EMPTY(roundstart_station_closets)
 	else
 		return open(user)
 
+// VOIDCREW EDIT START - PR #123: ship systems and overmap integration.
 /obj/structure/closet/handle_deconstruct(disassembled)
 	dump_contents()
 	if(obj_flags & NO_DEBRIS_AFTER_DECONSTRUCTION)
@@ -623,6 +624,7 @@ GLOBAL_LIST_EMPTY(roundstart_station_closets)
 	if(card_reader_installed)
 		new /obj/item/stock_parts/card_reader(drop_location())
 
+// VOIDCREW EDIT END
 /obj/structure/closet/atom_break(damage_flag)
 	. = ..()
 	if(!broken)
@@ -728,6 +730,7 @@ GLOBAL_LIST_EMPTY(roundstart_station_closets)
 	return TRUE
 
 /// returns TRUE if attackBy call shouldn't be continued (because tool was used/closet was of wrong type), FALSE if otherwise
+// VOIDCREW EDIT START - PR #123: ship systems and overmap integration.
 /obj/structure/closet/proc/tool_interact(obj/item/weapon, mob/living/user)
 	. = TRUE
 	var/obj/item/card/id/id = null
@@ -929,6 +932,7 @@ GLOBAL_LIST_EMPTY(roundstart_station_closets)
 	else
 		return FALSE
 
+// VOIDCREW EDIT END
 /obj/structure/closet/wrench_act_secondary(mob/living/user, obj/item/tool)
 	if(!anchorable)
 		balloon_alert(user, "no anchor bolts!")

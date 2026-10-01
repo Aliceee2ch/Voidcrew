@@ -524,7 +524,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 /datum/storage/proc/handle_mass_pickup(mob/user, list/things, atom/thing_loc, list/rejections, datum/progressbar/progress)
 	for(var/obj/item/thing in things)
 		things -= thing
-		if(thing.loc != thing_loc)
+		if(thing.loc != thing_loc && !(istype(thing.loc, /obj/structure/slime_extract_pile) && thing.loc.loc == thing_loc)) // VOIDCREW EDIT: bulk collection can reach piled cores on this turf.
 			continue
 		if(thing.type in rejections) // To limit bag spamming: any given type only complains once
 			continue
@@ -745,7 +745,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
  */
 /datum/storage/proc/collect_on_turf(obj/item/thing, mob/user)
 	var/atom/holder = thing.loc
-	var/list/pick_up = holder.contents.Copy()
+	var/list/pick_up = expand_slime_extract_piles(holder.contents).Copy() // VOIDCREW EDIT: include the actual cores inside floor piles.
 
 	if(collection_mode == COLLECT_SAME)
 		pick_up = typecache_filter_list(pick_up, typecacheof(thing.type))
@@ -926,6 +926,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	return open_storage_on_signal(source, user) ? CLICK_ACTION_SUCCESS : NONE
 
 /// Opens the storage to the mob, showing them the contents to their UI.
+// VOIDCREW EDIT START - PR #284: Port MonkeStation soft-crit item use.
 /datum/storage/proc/open_storage(mob/living/to_show)
 	if(isobserver(to_show))
 		show_contents(to_show)
@@ -972,6 +973,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 
 
 /// Async version of putting something into a mobs hand.
+// VOIDCREW EDIT END
 /datum/storage/proc/put_in_hands_async(mob/to_show, obj/item/toremove)
 	if(!to_show.put_in_hands(toremove))
 		if(!silent)

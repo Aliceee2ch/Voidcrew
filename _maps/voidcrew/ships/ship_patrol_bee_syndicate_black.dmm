@@ -29,6 +29,7 @@
 	dir = 4
 	},
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/closet)
 "aji" = (
@@ -38,6 +39,7 @@
 	},
 /obj/item/stack/sheet/iron/twenty,
 /obj/item/stack/sheet/mineral/plasma/thirty,
+/obj/machinery/firealarm/directional/south,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "ako" = (
@@ -103,6 +105,7 @@
 	dir = 4
 	},
 /obj/structure/cable,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/dormitories)
 "bvE" = (
@@ -166,6 +169,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/security_office)
 "cdJ" = (
@@ -268,6 +272,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/cleanroom)
 "eyJ" = (
@@ -378,6 +383,7 @@
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/main_hall)
 "gIR" = (
+/obj/machinery/firealarm/directional/east,
 /turf/open/floor/iron/white/small,
 /area/shuttle/voidcrew/patrol_bee/closet)
 "gUf" = (
@@ -407,6 +413,7 @@
 	dir = 4
 	},
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/north_cargo_bay)
 "hiQ" = (
@@ -538,6 +545,7 @@
 /obj/machinery/power/terminal{
 	dir = 8
 	},
+/obj/machinery/firealarm/directional/south,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "jsI" = (
@@ -680,6 +688,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/north_cargo_bay)
 "lHM" = (
@@ -780,6 +789,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/bridge)
 "obI" = (
@@ -790,6 +800,7 @@
 	dir = 4
 	},
 /obj/structure/cable,
+/obj/machinery/door/firedoor,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "oie" = (
@@ -929,6 +940,7 @@
 "pTn" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/chair/stool/directional/west,
+/obj/machinery/firealarm/directional/east,
 /turf/open/floor/iron/grimy,
 /area/shuttle/voidcrew/patrol_bee/dormitories)
 "qwN" = (
@@ -1138,6 +1150,7 @@
 	dir = 4
 	},
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/south_cargo_bay)
 "tqi" = (
@@ -1276,6 +1289,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/service)
 "vCv" = (
@@ -1343,6 +1357,7 @@
 /obj/machinery/door/airlock/engineering{
 	name = "Engineering"
 	},
+/obj/machinery/door/firedoor,
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "wYF" = (
@@ -1389,6 +1404,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/door/airlock/hatch,
+/obj/machinery/door/firedoor,
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/south_cargo_bay)
 "xsq" = (

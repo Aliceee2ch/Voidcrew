@@ -127,11 +127,11 @@
 /turf/open/floor/iron/small,
 /area/shuttle/voidcrew/patrol_bee/bridge)
 "bpq" = (
-/obj/machinery/power/shuttle_engine/propulsion/left{
-	dir = 8
-	},
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/structure/cable,
+/obj/machinery/power/shuttle_engine/ship/electric{
+	dir = 4
+	},
 /turf/open/floor/plating/airless,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "bwo" = (
@@ -275,11 +275,11 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/north_cargo_bay)
 "eac" = (
-/obj/machinery/power/shuttle_engine/propulsion/left{
-	dir = 8
-	},
 /obj/structure/cable,
 /obj/structure/window/reinforced/spawner/directional/east,
+/obj/machinery/power/shuttle_engine/ship/electric{
+	dir = 4
+	},
 /turf/open/floor/plating/airless,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "eoQ" = (
@@ -1087,11 +1087,11 @@
 /turf/open/floor/catwalk_floor,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "rIz" = (
-/obj/machinery/power/shuttle_engine/propulsion/left{
-	dir = 8
-	},
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/structure/cable,
+/obj/machinery/power/shuttle_engine/ship/electric{
+	dir = 4
+	},
 /turf/open/floor/plating/airless,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "rOa" = (

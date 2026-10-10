@@ -636,11 +636,11 @@
 /turf/open/floor/plating,
 /area/shuttle/voidcrew/patrol_bee/cleanroom)
 "kBR" = (
-/obj/machinery/power/shuttle_engine/propulsion/left{
-	dir = 8
-	},
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/structure/cable,
+/obj/machinery/power/shuttle_engine/ship/electric{
+	dir = 4
+	},
 /turf/open/floor/plating/airless,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "kCQ" = (
@@ -1255,22 +1255,22 @@
 /turf/open/floor/iron/dark/small,
 /area/shuttle/voidcrew/patrol_bee/bridge)
 "uHC" = (
-/obj/machinery/power/shuttle_engine/propulsion/left{
-	dir = 8
-	},
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/structure/cable,
+/obj/machinery/power/shuttle_engine/ship/electric{
+	dir = 4
+	},
 /turf/open/floor/plating/airless,
 /area/shuttle/voidcrew/patrol_bee/atmospherics)
 "uRU" = (
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
 /area/shuttle/voidcrew/patrol_bee/closet)
 "uWR" = (
-/obj/machinery/power/shuttle_engine/propulsion/left{
-	dir = 8
-	},
 /obj/structure/cable,
 /obj/structure/window/reinforced/spawner/directional/east,
+/obj/machinery/power/shuttle_engine/ship/electric{
+	dir = 4
+	},
 /turf/open/floor/plating/airless,
 /area/shuttle/voidcrew/patrol_bee/engineering)
 "vbH" = (
